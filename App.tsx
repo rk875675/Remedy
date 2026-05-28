@@ -1,3 +1,4 @@
+// HUMAN INPUT NEEDED: This file is dead code now that expo-router handles routing via app/_layout.tsx. Safe to delete.
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 

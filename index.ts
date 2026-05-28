@@ -1,3 +1,4 @@
+// HUMAN INPUT NEEDED: This file is dead code now that package.json uses "expo-router/entry". Safe to delete.
 import { registerRootComponent } from 'expo';
 
 import App from './App';

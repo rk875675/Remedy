@@ -1,0 +1,39 @@
+/**
+ * TabBarIcon — renders an Ionicons glyph, switching between outline (inactive)
+ * and filled (active) based on the `focused` prop from React Navigation's
+ * tabBarIcon callback.
+ *
+ * Usage in app/(tabs)/_layout.tsx:
+ *   tabBarIcon: ({ focused, color }) => (
+ *     <TabBarIcon focused={focused} color={color} outlineName="home-outline" filledName="home" />
+ *   )
+ *
+ * Any new tab only needs to supply outlineName / filledName — no inline icon
+ * logic required in _layout.tsx.
+ */
+
+import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
+import { TAB_ICON_SIZE } from '../../constants/navigation';
+
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
+
+type TabBarIconProps = {
+  focused: boolean;
+  color: string;
+  outlineName: IoniconsName;
+  filledName: IoniconsName;
+  /** Override size — defaults to TAB_ICON_SIZE */
+  size?: number;
+};
+
+export function TabBarIcon({ focused, color, outlineName, filledName, size }: TabBarIconProps) {
+  return (
+    <Ionicons
+      name={focused ? filledName : outlineName}
+      size={size ?? TAB_ICON_SIZE}
+      color={color}
+    />
+  );
+}

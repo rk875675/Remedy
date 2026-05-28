@@ -1,0 +1,32 @@
+---
+description: Remedy app — project rules for every prompt
+alwaysApply: true
+---
+
+# Remedy — Cursor Rules
+
+## What this app is
+A React Native + Expo iOS app for back pain rehab. Back pain only for V1. See @PRD.md for full spec.
+
+## Tech stack (locked — do not suggest alternatives)
+- React Native + Expo (managed workflow)
+- Supabase — auth, database, edge functions
+- Upstash Redis — rate limiting
+- Superwall — paywall UI
+- Apple IAP / StoreKit — subscriptions
+- PostHog — analytics
+- Resend — transactional email
+- Cloudflare Stream — video (prod); Supabase Storage — video (dev/placeholders)
+- expo-av — video playback
+
+## Rules
+1. Never add features not in PRD.md. If something is unclear, output `// HUMAN INPUT NEEDED:` and stop.
+2. Never modify working code outside the stated scope of the current prompt.
+3. Never install new packages without listing them and asking first.
+4. Minimal diffs only. No refactors unless explicitly asked.
+5. Placeholder videos stay as placeholders until told otherwise.
+6. If the PRD doesn't cover a case, say so — don't invent behavior.
+7. Use TypeScript strictly. No `any`.
+8. Prefer Supabase Edge Functions over direct third-party calls from the client.
+9. Always run commands yourself (migrations, installs, builds, etc.). Never ask the user to run commands you can execute.
+10. Onboarding icons: use simple geometric Unicode symbols (▬ ○ △ ⊕ ◐ ♡ ☽ etc.) rendered inside dark circles (dark bg, white text). No emojis, no colored icons, no hyper-realistic icons. Monochrome, minimal, abstract. Same style as OptionCard's `icon` prop.
