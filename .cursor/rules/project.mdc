@@ -28,5 +28,15 @@ A React Native + Expo iOS app for back pain rehab. Back pain only for V1. See @P
 6. If the PRD doesn't cover a case, say so — don't invent behavior.
 7. Use TypeScript strictly. No `any`.
 8. Prefer Supabase Edge Functions over direct third-party calls from the client.
-9. Always run commands yourself (migrations, installs, builds, etc.). Never ask the user to run commands you can execute.
+9. **Execute, don't delegate.** You are the operator — run every command, migration, build, test, and verification query yourself in the same turn. Never end a task by handing the user a command or SQL to run later.
+   - **Migrations:** After writing or editing a file in `supabase/migrations/`, immediately run `supabase db push --linked --yes` (or `supabase db reset` locally if that's the active workflow). Do not stop at "apply this migration."
+   - **Verification SQL:** If a task calls for validating DB state, run the query yourself (`supabase db query --linked --yes "..."` or equivalent) and report pass/fail with actual output. Never output "here's a query you can run" as the deliverable.
+   - **Other commands:** Installs, builds, deploys, lint, tests — run them yourself unless blocked.
+   - **When blocked:** Say exactly what you tried, the error, and what is missing (e.g. Docker not running, no linked project). Only then ask the user to unblock — not as a default shortcut.
 10. Onboarding icons: use simple geometric Unicode symbols (▬ ○ △ ⊕ ◐ ♡ ☽ etc.) rendered inside dark circles (dark bg, white text). No emojis, no colored icons, no hyper-realistic icons. Monochrome, minimal, abstract. Same style as OptionCard's `icon` prop.
+
+## Secret & Environment Key Safety
+- Never hardcode or log secret keys, API keys, tokens, or credentials anywhere in the codebase — not in source files, comments, logs, or test files.
+- All secrets go in environment variables only. On the client, only `EXPO_PUBLIC_` prefixed vars are allowed — never anything sensitive.
+- Sensitive keys (Supabase service role, Apple, Cloudflare, Upstash, Superwall) belong in Supabase secrets or CI/CD env config — never in the app bundle.
+- If you ever output, reference, or accidentally expose a real secret key in any file: STOP immediately, comment `// ⚠️ SECRET EXPOSED — ROTATE THIS KEY NOW`, and tell me exactly which key and file before doing anything else.

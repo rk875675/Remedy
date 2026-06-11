@@ -86,7 +86,6 @@
 **Problem:** Health apps have notoriously bad retention. Users open once and forget.
 
 **Solution:**
-- **Streak system** — consecutive days with completed sessions; one missed day breaks it (creates urgency)
 - **Pain trending** — show users their pain score improving over time ("Your pain is down 2 points this week")
 - **Structured weekly schedule** — app tells you exactly what to do today, no decision fatigue
 - Push notifications at user's preferred time ("Time for your session")
@@ -103,7 +102,7 @@
 - Mid-session exit saves progress (which exercise they were on)
 - Cold start does **not** auto-resume the session — user must tap "Continue Session" intentionally
 - Session pauses automatically if app goes to background
-- If app is killed mid-session, partial completion is not counted as a full session (streak not incremented)
+- If app is killed mid-session, partial completion is not counted as a full session
 
 ---
 
@@ -164,7 +163,6 @@
   - `paywall_viewed`, `trial_started`, `subscription_converted`, `subscription_cancelled`
   - `session_started`, `session_completed`, `session_abandoned`
   - `pain_checkin_submitted` (with before/after values)
-  - `streak_broken`, `streak_milestone`
 - Alert on: paywall view → trial drop-off, session abandonment spikes
 
 ---

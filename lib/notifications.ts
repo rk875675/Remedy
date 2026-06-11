@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { supabase } from './supabase';
 
@@ -22,7 +23,7 @@ export async function requestPermissions(userId: string): Promise<string | null>
   if (!isGranted) return null;
 
   const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId: undefined,
+    projectId: Constants.expoConfig?.extra?.eas?.projectId,
   });
   const token = tokenData.data;
 

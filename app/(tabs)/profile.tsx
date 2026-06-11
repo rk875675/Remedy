@@ -24,7 +24,135 @@ import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import type { Profile } from '../../types/database';
 
 const STORAGE_NOTIF = 'remedy_notifications_enabled';
+const STORAGE_NOTIF_TIME = 'remedy_notification_time';
 const STORAGE_DAY_OFFSET = 'dev_day_offset';
+
+const HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const MINUTE_OPTIONS = [0, 15, 30, 45];
+const PERIOD_OPTIONS = ['AM', 'PM'] as const;
+
+type Period = 'AM' | 'PM';
+
+function to24h(displayHour: number, minute: number, period: Period): { hour: number; minute: number } {
+  let hour = displayHour;
+  if (period === 'AM' && displayHour === 12) hour = 0;
+  else if (period === 'PM' && displayHour !== 12) hour = displayHour + 12;
+  return { hour, minute };
+}
+
+function from24h(hour: number, minute: number): { displayHour: number; minute: number; period: Period } {
+  const period: Period = hour < 12 ? 'AM' : 'PM';
+  let displayHour = hour % 12;
+  if (displayHour === 0) displayHour = 12;
+  return { displayHour, minute, period };
+}
+
+interface TimePickerProps {
+  hour24: number;
+  minute: number;
+  onChange: (hour24: number, minute: number) => void;
+}
+
+function TimePicker({ hour24, minute, onChange }: TimePickerProps) {
+  const { displayHour, period } = from24h(hour24, minute);
+
+  function selectHour(h: number) {
+    hapticSelection();
+    const { hour, minute: m } = to24h(h, minute, period);
+    onChange(hour, m);
+  }
+
+  function selectMinute(m: number) {
+    hapticSelection();
+    const { hour } = to24h(displayHour, m, period);
+    onChange(hour, m);
+  }
+
+  function selectPeriod(p: Period) {
+    hapticSelection();
+    const { hour, minute: m } = to24h(displayHour, minute, p);
+    onChange(hour, m);
+  }
+
+  return (
+    <View style={tpStyles.container}>
+      <View style={tpStyles.column}>
+        {HOUR_OPTIONS.map((h) => (
+          <TouchableOpacity
+            key={h}
+            style={[tpStyles.cell, displayHour === h && tpStyles.cellSelected]}
+            onPress={() => selectHour(h)}
+            activeOpacity={0.7}
+          >
+            <Text style={[tpStyles.cellText, displayHour === h && tpStyles.cellTextSelected]}>
+              {h}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={tpStyles.column}>
+        {MINUTE_OPTIONS.map((m) => (
+          <TouchableOpacity
+            key={m}
+            style={[tpStyles.cell, minute === m && tpStyles.cellSelected]}
+            onPress={() => selectMinute(m)}
+            activeOpacity={0.7}
+          >
+            <Text style={[tpStyles.cellText, minute === m && tpStyles.cellTextSelected]}>
+              {String(m).padStart(2, '0')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={tpStyles.column}>
+        {PERIOD_OPTIONS.map((p) => (
+          <TouchableOpacity
+            key={p}
+            style={[tpStyles.cell, period === p && tpStyles.cellSelected]}
+            onPress={() => selectPeriod(p)}
+            activeOpacity={0.7}
+          >
+            <Text style={[tpStyles.cellText, period === p && tpStyles.cellTextSelected]}>
+              {p}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const tpStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 8,
+  },
+  column: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  cell: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+  },
+  cellSelected: {
+    backgroundColor: colors.secondary,
+  },
+  cellText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  cellTextSelected: {
+    color: colors.surface,
+    fontWeight: '700',
+  },
+});
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -33,20 +161,28 @@ export default function ProfileScreen() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [reminderHour, setReminderHour] = useState(9);
+  const [reminderMinute, setReminderMinute] = useState(0);
   const [dayOffset, setDayOffset] = useState(0);
 
   useEffect(() => {
     if (!user) return;
 
     (async () => {
-      const [profileRes, notifPref, offsetStr] = await Promise.all([
+      const [profileRes, notifPref, notifTime, offsetStr] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         AsyncStorage.getItem(STORAGE_NOTIF),
+        AsyncStorage.getItem(STORAGE_NOTIF_TIME),
         AsyncStorage.getItem(STORAGE_DAY_OFFSET),
       ]);
 
       setProfile(profileRes.data);
       setNotificationsEnabled(notifPref === 'true');
+      if (notifTime) {
+        const parsed = JSON.parse(notifTime) as { hour: number; minute: number };
+        setReminderHour(parsed.hour);
+        setReminderMinute(parsed.minute);
+      }
       setDayOffset(offsetStr ? parseInt(offsetStr, 10) : 0);
     })();
   }, [user]);
@@ -67,10 +203,17 @@ export default function ProfileScreen() {
 
     if (value) {
       await requestPermissions(user!.id);
-      await scheduleDailyReminder(9, 0);
+      await scheduleDailyReminder(reminderHour, reminderMinute);
     } else {
       await cancelReminders();
     }
+  }
+
+  async function handleReminderTimeChange(hour24: number, minute: number) {
+    setReminderHour(hour24);
+    setReminderMinute(minute);
+    await AsyncStorage.setItem(STORAGE_NOTIF_TIME, JSON.stringify({ hour: hour24, minute }));
+    await scheduleDailyReminder(hour24, minute);
   }
 
   async function adjustDayOffset(delta: number) {
@@ -145,7 +288,7 @@ export default function ProfileScreen() {
       <Text style={styles.sectionLabel}>Account</Text>
       <View style={styles.settingsCard}>
         <View style={styles.settingsRow}>
-          <Text style={styles.settingsRowLabel}>Notifications</Text>
+          <Text style={styles.settingsRowLabel}>Daily reminder</Text>
           <Switch
             value={notificationsEnabled}
             onValueChange={handleNotificationToggle}
@@ -153,6 +296,16 @@ export default function ProfileScreen() {
             thumbColor={notificationsEnabled ? colors.surface : '#F4F4F4'}
           />
         </View>
+        {notificationsEnabled && (
+          <>
+            <View style={styles.divider} />
+            <TimePicker
+              hour24={reminderHour}
+              minute={reminderMinute}
+              onChange={handleReminderTimeChange}
+            />
+          </>
+        )}
         <View style={styles.divider} />
         <View style={styles.settingsRow}>
           <Text style={styles.settingsRowLabel}>App Version</Text>

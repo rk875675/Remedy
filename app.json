@@ -29,6 +29,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "f8162900-2cb8-48e3-a3bb-2d82f0ef184d"
+      }
+    },
     "plugins": [
       "expo-router",
       "expo-apple-authentication",

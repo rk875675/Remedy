@@ -28,7 +28,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.footer}>
-        <ContinueButton label="Get Started" onPress={() => router.push('/(onboarding)/education')} />
+        <ContinueButton label="Get Started" onPress={() => router.push('/(onboarding)/disclaimer' as any)} />
         <TouchableOpacity style={styles.signOutButton} onPress={signOut} activeOpacity={0.7}>
           <Text style={styles.signOutText}>
             {user?.email ? `${user.email} · ` : ''}Sign Out

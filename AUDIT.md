@@ -114,12 +114,12 @@ Audit date: May 25, 2026. Zero code changes. Facts only.
 **(tabs)/index.tsx** (Home)
 - Renders: time-based greeting, today's session card OR rest day, rotating "Did you know" insight carousel, stat cards (sessions this week, program progress, avg pain last 7 days).
 - Data: Supabase `user_programs`, `profiles.is_dev`, `programs`, `program_sessions`, `session_exercises`, `session_completions`, `pain_checkins`; AsyncStorage `remedy_reset_pending`, `dev_day_offset`; hardcoded `INSIGHTS` strings.
-- Issues: empty/minimal home if no `user_programs` row; streak not displayed (`lib/streak.ts` unused); no PRD "pain trending down" summary; dev day offset only affects display for `is_dev` users; program progress on home uses DB `current_week` while progress tab uses calendar-computed week.
+- Issues: empty/minimal home if no `user_programs` row; no PRD "pain trending down" summary; dev day offset only affects display for `is_dev` users; program progress on home uses DB `current_week` while progress tab uses calendar-computed week.
 
 **(tabs)/progress.tsx**
 - Renders: pain trend line chart (before/after), Mon–Sun completion circles, program progress bar + estimated completion date.
 - Data: Supabase `session_completions`, `pain_checkins`, `user_programs`, `programs`; AsyncStorage reset flag.
-- Issues: chart requires ≥3 days with before-pain data; `computedWeek` from calendar elapsed time may diverge from home tab's DB `current_week`; streak not shown.
+- Issues: chart requires ≥3 days with before-pain data; `computedWeek` from calendar elapsed time may diverge from home tab's DB `current_week`.
 
 **(tabs)/profile.tsx**
 - Renders: name/email card, notifications toggle, hardcoded app version 0.1.0, dev tools (simulate day, reset progress, force paywall) when `profiles.is_dev`, sign out.
@@ -160,8 +160,6 @@ Audit date: May 25, 2026. Zero code changes. Facts only.
 **lib/entitlements.ts** — reads `entitlements` and `profiles.is_dev`; `isPremium` checks `is_premium`, `expires_at`, `subscription_status`.
 
 **lib/superwall.tsx** — optional SuperwallProvider; no-op fallbacks in Expo Go.
-
-**lib/streak.ts** — `calculateStreak()` from `session_completions`; never imported by any screen.
 
 **lib/notifications.ts** — permission request, push token → `profiles.push_token`, daily local reminder at 9:00; `projectId: undefined` may fail token fetch without EAS project ID.
 
@@ -287,7 +285,6 @@ No HUMAN INPUT NEEDED comments in app/ or components/ route files.
 
 ### Visually built but not functionally connected
 
-- Streak (`lib/streak.ts`) — referenced in education copy only; not on home or progress.
 - Onboarding review screen — UI only, no persistence.
 - finalizing screen — cosmetic, no program creation.
 - match "Start My Free Trial" — saves onboarding only, does not start trial or open paywall.
@@ -328,11 +325,11 @@ Cross-reference against PRD.md MVP scope (§4) and feature sections (§6–§14)
 
 ### Progress tracking (§6.6)
 - Partial: weekly completion circles, pain trend chart, program progress bar on progress tab.
-- Missing: streak display anywhere; home "pain trending down" quick summary.
+- Missing: home "pain trending down" quick summary.
 
 ### Home screen (§6.7)
 - Partial: today's session card, rest day, program progress stat, avg pain stat, sessions this week.
-- Missing: current streak; pain trend summary line.
+- Missing: pain trend summary line.
 
 ### Paywall + subscription (§6.8, §9)
 - Partial: paywall screen, Superwall integration scaffold, restore button, pricing copy.
@@ -383,7 +380,7 @@ Listed only flows that can complete successfully with a configured Supabase proj
 - Expo Go "Start Dev Trial" → tabs (client entitlements write blocked by RLS; premium state stale even if write succeeded).
 - Superwall purchase → premium (verify-purchase not called from client).
 - Completing full 5-week program (weeks 3–5 sessions not in DB).
-- Streak tracking, push notification delivery, analytics funnel, real subscription billing.
+- Push notification delivery, analytics funnel, real subscription billing.
 
 ---
 

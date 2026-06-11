@@ -261,8 +261,23 @@ export default function HomeScreen() {
         {greeting}{firstName ? `, ${firstName}` : ''}
       </Text>
 
-      {/* Today's session or rest day */}
-      {todaySession ? (
+      {/* Today's session, rest day, or program completion */}
+      {userProgram && userProgram.current_week > durationWeeks ? (
+        <View style={styles.sessionCard}>
+          <Text style={styles.sessionLabel}>Program Complete</Text>
+          <Text style={styles.sessionTitle}>You finished your program!</Text>
+          <Text style={styles.restTip}>
+            You completed the full Back Pain Relief Program. View your summary or restart for another round.
+          </Text>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() => router.push('/program-complete')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.startButtonText}>View Summary</Text>
+          </TouchableOpacity>
+        </View>
+      ) : todaySession ? (
         <View style={styles.sessionCard}>
           <View style={styles.sessionCardHeader}>
             <Text style={styles.sessionLabel}>Today's Session</Text>

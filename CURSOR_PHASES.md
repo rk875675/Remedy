@@ -457,14 +457,12 @@ Layout (warm, clean):
   - Duration and exercise count
   - "Start Session" button (colors.primary)
   - If rest day: show "Rest Day" card with a brief tip
-- Streak row: flame icon + "X day streak"
 - Program progress bar: "Week 2 of 5"
 - Pain summary if data exists: "Your pain is trending down" with average score
 
 Data fetching:
 - Query user_programs to get current week/session
 - Query program_sessions + session_exercises for today's session
-- Query session_completions for streak calculation (consecutive days)
 - Query pain_checkins for pain trend (last 7 days average)
 
 --- SESSION PLAYER: app/session/[id].tsx ---
@@ -491,13 +489,6 @@ Full-screen player flow:
    - Pain check-in: same 1–10 slider (type: 'after')
    - "Done" button → insert session_completions row, update user_programs current_session, navigate home
 
---- STREAK LOGIC ---
-
-A streak increments when a session_completions row is inserted for a new calendar day.
-If no session completed today but one was completed yesterday, streak is maintained.
-If last completion was 2+ days ago, streak resets to 0.
-Calculate streak in a helper function `lib/streak.ts` — query session_completions ordered by completed_at.
-
 --- CONSTRAINTS ---
 - No real video URLs — placeholder rectangle only until Phase 7
 - Do not touch auth, onboarding, or paywall files
@@ -518,9 +509,9 @@ Calculate streak in a helper function `lib/streak.ts` — query session_completi
 **Cursor prompt:**
 
 ```
-Context: @PRD.md @DECISIONS.md @.cursor/rules/project.mdc @types/database.ts @lib/supabase.ts @context/AuthContext.tsx @constants/colors.ts @lib/streak.ts
+Context: @PRD.md @DECISIONS.md @.cursor/rules/project.mdc @types/database.ts @lib/supabase.ts @context/AuthContext.tsx @constants/colors.ts
 
-Goal: Build the progress screen showing pain trend, streak, weekly completion, and program progress.
+Goal: Build the progress screen showing pain trend, weekly completion, and program progress.
 
 --- SCREEN: app/(tabs)/progress.tsx ---
 
@@ -532,16 +523,12 @@ Sections (scrollable):
    - Use react-native-gifted-charts or Victory Native — ask me to confirm install before adding
    - If fewer than 3 data points: show "Complete more sessions to see your trend" placeholder
 
-2. Streak card:
-   - Current streak (large number)
-   - "X sessions completed total"
-
-3. Weekly completion:
+2. Weekly completion:
    - 7 circles representing the week (Mon–Sun)
    - Filled = session completed that day (colors.primary), empty = no session
    - "X/4 sessions this week" below
 
-4. Program progress:
+3. Program progress:
    - "Week X of 5" progress bar
    - Estimated completion date
 

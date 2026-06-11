@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter, Stack, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { colors } from '../../constants/colors';
@@ -19,17 +19,30 @@ const slides = [
   {
     icon: '◐',
     title: 'Track your\nprogress',
-    body: 'See your pain trend, build your streak, and watch your mobility improve week over week.',
+    body: 'See your pain trend and watch your mobility improve week over week.',
   },
 ];
 
 export default function EducationScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState(0);
 
   const slide = slides[page];
   const isLast = page === slides.length - 1;
+
+  // Intercept swipe-back / hardware back when on slide 2+ so it steps back
+  // through slides rather than jumping to disclaimer.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
+      if (page > 0) {
+        e.preventDefault();
+        setPage(p => p - 1);
+      }
+    });
+    return unsubscribe;
+  }, [navigation, page]);
 
   function handleNext() {
     if (isLast) {
@@ -41,7 +54,7 @@ export default function EducationScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ gestureEnabled: false, headerShown: false }} />
+      <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.content}>
           <View style={styles.iconArea}>
@@ -59,6 +72,13 @@ export default function EducationScreen() {
             ))}
           </View>
           <ContinueButton label={isLast ? 'Continue' : 'Next'} onPress={handleNext} />
+          <TouchableOpacity
+            style={styles.signInLink}
+            onPress={() => router.push('/(auth)/sign-in' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.signInText}>Already have an account? <Text style={styles.signInBold}>Sign in</Text></Text>
+          </TouchableOpacity>
         </View>
       </View>
     </>
@@ -121,5 +141,17 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: colors.textPrimary,
     width: 24,
+  },
+  signInLink: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  signInText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  signInBold: {
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
 });

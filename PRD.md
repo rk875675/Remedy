@@ -63,7 +63,7 @@ There's no consumer product that gives them a real, structured program — the k
 - Onboarding questionnaire with interstitial stats/insight screens
 - Back pain program only (4–6 weeks, personalized by onboarding answers)
 - Video session player (placeholder videos during development)
-- Daily session tracking + streak
+- Daily session tracking
 - Pain check-in (before/after each session)
 - Paywall + subscription (monthly + annual)
 
@@ -107,7 +107,7 @@ Onboarding alternates between questions and interstitial insight screens. The go
 2. Tap "Start Session" → session player launches
 3. Session player: one exercise at a time, video + timer + rep/set guide
 4. End of session: pain check-in (1–10 slider, before vs after)
-5. Completion screen → streak updated, next session preview
+5. Completion screen → next session preview
 
 ---
 
@@ -151,14 +151,12 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Stored per session for progress view later
 
 ### 6.6 Progress Tracking
-- Streak (consecutive days with a completed session)
 - Weekly completion (e.g., "3/4 sessions this week")
 - Pain trend graph (average pain score over time)
 - Program progress bar (Week 2 of 5)
 
 ### 6.7 Home Screen
 - Today's session card (or rest day indicator)
-- Current streak
 - Quick pain summary ("Your pain is trending down 📉")
 - Program progress
 

@@ -1,15 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, extractUserIdFromJwt } from '../_shared/ratelimit.ts';
-
-// HUMAN INPUT NEEDED: Apple verification endpoint
-// StoreKit 2 uses the App Store Server API (api.storekit.itunes.apple.com)
-// Legacy uses verifyReceipt (buy.itunes.apple.com / sandbox.itunes.apple.com)
-// Configure APPLE_SHARED_SECRET and APPLE_ISSUER_ID / APPLE_KEY_ID / APPLE_PRIVATE_KEY
-// in Supabase secrets depending on which approach you use.
-
-const APPLE_VERIFY_URL = 'https://api.storekit.itunes.apple.com/inApps/v1/transactions';
-const APPLE_SANDBOX_URL = 'https://api.storekit-sandbox.itunes.apple.com/inApps/v1/transactions';
+import { verifyAppleTransaction } from '../_shared/apple.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -63,16 +55,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // HUMAN INPUT NEEDED: Replace with actual Apple StoreKit 2 / App Store Server API verification.
-    // This requires generating a signed JWT using your App Store Connect API key
-    // (APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY set via `supabase secrets set`).
-    // For now, we trust the transaction and grant entitlement.
-    // In production, call:
-    //   GET ${APPLE_VERIFY_URL}/${transactionId}
-    //   with Authorization: Bearer <signed-jwt>
-    // and validate the signed transaction response.
-
-    const isValid = true; // Placeholder — replace with real verification
+    const appleResult = await verifyAppleTransaction(transactionId);
+    const isValid = appleResult.valid;
 
     if (!isValid) {
       return new Response(
@@ -86,7 +70,7 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const isTrial = false; // HUMAN INPUT NEEDED: determine from Apple transaction info
+    const isTrial = appleResult.inTrialPeriod ?? false;
     const now = new Date().toISOString();
     const expiresAt = new Date(
       Date.now() + (productId === 'com.remedyapp.annual' ? 365 : 30) * 24 * 60 * 60 * 1000,

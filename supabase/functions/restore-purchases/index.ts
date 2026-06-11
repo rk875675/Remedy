@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, extractUserIdFromJwt } from '../_shared/ratelimit.ts';
-
-// HUMAN INPUT NEEDED: Same Apple verification setup as verify-purchase.
-// Re-verify the original transaction with Apple before re-granting.
+import { verifyAppleTransaction } from '../_shared/apple.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -57,10 +55,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // HUMAN INPUT NEEDED: Verify originalTransactionId with Apple App Store Server API.
-    // GET https://api.storekit.itunes.apple.com/inApps/v1/transactions/{originalTransactionId}
-    // Validate signed transaction, check expiration, revocation status.
-    const isValid = true; // Placeholder — replace with real verification
+    const appleResult = await verifyAppleTransaction(originalTransactionId);
+    const isValid = appleResult.valid;
 
     if (!isValid) {
       return new Response(

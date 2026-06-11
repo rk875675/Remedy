@@ -135,9 +135,16 @@ export default function SignInScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.legal}>
-        By continuing, you agree to our Terms of Service and Privacy Policy
-      </Text>
+      <View style={styles.legalRow}>
+        <Text style={styles.legal}>By continuing, you agree to our </Text>
+        <TouchableOpacity onPress={() => router.push('/(legal)/terms' as any)} activeOpacity={0.7}>
+          <Text style={[styles.legal, styles.legalLink]}>Terms of Service</Text>
+        </TouchableOpacity>
+        <Text style={styles.legal}> and </Text>
+        <TouchableOpacity onPress={() => router.push('/(legal)/privacy' as any)} activeOpacity={0.7}>
+          <Text style={[styles.legal, styles.legalLink]}>Privacy Policy</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -197,11 +204,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  legalRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
   legal: {
     fontSize: 12,
     color: colors.textSecondary,
-    textAlign: 'center',
     lineHeight: 18,
-    paddingHorizontal: 16,
+  },
+  legalLink: {
+    color: colors.primary,
   },
 });

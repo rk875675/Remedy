@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
@@ -57,6 +57,27 @@ export default function SessionPlayerScreen() {
   const [skippedExercises, setSkippedExercises] = useState<Set<number>>(new Set());
   const [breatheIn, setBreatheIn] = useState(true);
   const [nextSession, setNextSession] = useState<ProgramSession | null>(null);
+  const [isProgramCompleted, setIsProgramCompleted] = useState(false);
+
+  const player = useVideoPlayer(null, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+
+  // Sync video source → player whenever the URL resolves for a new exercise
+  useEffect(() => {
+    if (videoUrl) {
+      player.replace({ uri: videoUrl });
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [videoUrl, player]);
+
+  // Sync mute toggle → player
+  useEffect(() => {
+    player.muted = isMuted;
+  }, [isMuted, player]);
 
   const sessionStartTime = useRef(Date.now());
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -174,14 +195,18 @@ export default function SessionPlayerScreen() {
     if (!user || !id) return;
     const { data: up } = await supabase
       .from('user_programs')
-      .select('*')
+      .select('*, programs(sessions_per_week)')
       .eq('user_id', user.id)
       .single();
     if (!up) return;
 
+    const sessionsPerWeek =
+      (up as unknown as { programs: { sessions_per_week: number } }).programs
+        ?.sessions_per_week ?? 4;
+
     let nextSess = up.current_session + 1;
     let nextWeek = up.current_week;
-    if (nextSess > 4) {
+    if (nextSess > sessionsPerWeek) {
       nextSess = 1;
       nextWeek = Math.min(nextWeek + 1, 5);
     }
@@ -305,21 +330,37 @@ export default function SessionPlayerScreen() {
 
     const { data: up } = await supabase
       .from('user_programs')
-      .select('*')
+      .select('*, programs(sessions_per_week, duration_weeks)')
       .eq('user_id', user.id)
       .single();
 
     if (up) {
+      const prog = (
+        up as unknown as { programs: { sessions_per_week: number; duration_weeks: number } }
+      ).programs;
+      const sessionsPerWeek = prog?.sessions_per_week ?? 4;
+      const durationWeeks = prog?.duration_weeks ?? 5;
+
       let nextSess = up.current_session + 1;
       let nextWeek = up.current_week;
-      if (nextSess > 4) {
+      if (nextSess > sessionsPerWeek) {
         nextSess = 1;
-        nextWeek = Math.min(nextWeek + 1, 5);
+        nextWeek = up.current_week + 1;
       }
-      await supabase
-        .from('user_programs')
-        .update({ current_session: nextSess, current_week: nextWeek })
-        .eq('user_id', user.id);
+
+      if (nextWeek > durationWeeks) {
+        // Program finished — write completion sentinel; no valid session to advance to.
+        setIsProgramCompleted(true);
+        await supabase
+          .from('user_programs')
+          .update({ current_week: durationWeeks + 1, current_session: 1 })
+          .eq('user_id', user.id);
+      } else {
+        await supabase
+          .from('user_programs')
+          .update({ current_session: nextSess, current_week: nextWeek })
+          .eq('user_id', user.id);
+      }
     }
 
     setPhase('complete');
@@ -414,13 +455,11 @@ export default function SessionPlayerScreen() {
 
         <View style={styles.videoContainer}>
           {videoUrl ? (
-            <Video
-              source={{ uri: videoUrl }}
+            <VideoView
+              player={player}
               style={styles.videoFullScreen}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping
-              isMuted={isMuted}
+              contentFit="cover"
+              nativeControls={false}
             />
           ) : videoError ? (
             <View style={styles.videoPlaceholder}>
@@ -534,7 +573,7 @@ export default function SessionPlayerScreen() {
 
       <Text style={styles.warmCopy}>{warmCopy}</Text>
 
-      {nextSession && (
+      {nextSession && !isProgramCompleted && (
         <View style={styles.nextSessionPreview}>
           <Text style={styles.nextSessionLabel}>Next session</Text>
           <Text style={styles.nextSessionTitle}>{nextSession.title}</Text>
@@ -545,10 +584,16 @@ export default function SessionPlayerScreen() {
         style={[styles.primaryButton, { marginTop: 24 }]}
         onPress={() => {
           hapticPrimaryAction();
-          router.replace('/(tabs)');
+          if (isProgramCompleted) {
+            router.replace('/program-complete');
+          } else {
+            router.replace('/(tabs)');
+          }
         }}
       >
-        <Text style={styles.primaryButtonText}>Back to Home</Text>
+        <Text style={styles.primaryButtonText}>
+          {isProgramCompleted ? 'View Summary' : 'Back to Home'}
+        </Text>
       </TouchableOpacity>
     </View>
   );

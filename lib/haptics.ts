@@ -8,7 +8,7 @@
  *   tabSwitch        — user presses a bottom tab
  *   selection        — option card, toggle, any multi-choice select
  *   primaryAction    — ContinueButton, "Start session", paywall purchase
- *   success          — session complete, streak milestone, onboarding done
+ *   success          — session complete, onboarding done
  *   warning          — destructive confirm (sign out, reset), validation error
  *   error            — hard failure (network error, auth error)
  */
