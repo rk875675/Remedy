@@ -15,9 +15,14 @@
     "ios": {
       "supportsTablet": true,
       "usesAppleSignIn": true,
-      "bundleIdentifier": "com.remedyapp.ios"
+      "bundleIdentifier": "com.remedyapp.ios",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -29,11 +34,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "f8162900-2cb8-48e3-a3bb-2d82f0ef184d"
-      }
-    },
     "plugins": [
       "expo-router",
       "expo-apple-authentication",
@@ -41,13 +41,28 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "15.1",
+            "extraPods": [
+              {
+                "name": "AppCheckCore",
+                "version": "11.2.0"
+              }
+            ]
           },
           "android": {
             "minSdkVersion": 21
           }
         }
-      ]
-    ]
+      ],
+      "expo-localization",
+      "expo-iap"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f8162900-2cb8-48e3-a3bb-2d82f0ef184d"
+      }
+    },
+    "owner": "remedyappco"
   }
 }
