@@ -113,17 +113,15 @@ export default function ProgressScreen() {
     const up = upRes.data;
     setUserProgram(up);
 
-    // Fetch program metadata (needs program_id from user_programs)
-    if (up) {
-      const { data: prog } = await supabase
-        .from('programs')
+    // Plan duration comes from the active plan snapshot, not the legacy programs table.
+    if (up?.active_plan_id) {
+      const { data: planMeta } = await supabase
+        .from('user_program_plans')
         .select('duration_weeks')
-        .eq('id', up.program_id)
+        .eq('id', up.active_plan_id)
         .single();
 
-      if (prog) {
-        setDurationWeeks(prog.duration_weeks);
-      }
+      setDurationWeeks(planMeta?.duration_weeks ?? 5);
     }
 
     setBeforeData([]);
