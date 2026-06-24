@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { identifyUser, resetAnalytics } from '../lib/analytics';
 
 type AuthContextType = {
   session: Session | null;
@@ -36,14 +37,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        if (_event === 'SIGNED_OUT' || _event === 'TOKEN_REFRESHED') {
-          setSession(newSession);
-          return;
-        }
+      (event, newSession) => {
+        // The initial session is handled by the getSession() call above; acting on it
+        // here too would double-fire profile creation/identify.
+        if (event === 'INITIAL_SESSION') return;
+
         setSession(newSession);
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') return;
+
+        // Never await heavy work (profile/analytics) inside this callback — it can stall
+        // the OAuth code exchange (supabase-js#1429). Defer it to the next tick.
         if (newSession?.user) {
-          await ensureProfile(newSession.user);
+          const signedInUser = newSession.user;
+          setTimeout(() => {
+            void ensureProfile(signedInUser);
+            identifyUser(signedInUser.id);
+          }, 0);
         }
       },
     );
@@ -91,10 +100,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     try {
-      await supabase.auth.signOut();
+      // Local scope: clear the session immediately without waiting on a network
+      // round-trip to revoke the refresh token (that lag is what users feel). Safe
+      // because all data is gated by RLS on user_id.
+      await supabase.auth.signOut({ scope: 'local' });
     } catch {
       // Force clear even if signOut API call fails (e.g. deleted user)
     }
+    resetAnalytics();
     setSession(null);
   }
 

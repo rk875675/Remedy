@@ -7,7 +7,11 @@ import { LineChart, BarChart } from 'react-native-gifted-charts';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
+import { hapticSelection } from '../../lib/haptics';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { UserProgram } from '../../types/database';
 
 type ChartPoint = { value: number; label?: string };
@@ -30,7 +34,6 @@ export default function ProgressScreen() {
   const [totalSessions, setTotalSessions] = useState(0);
   const [weeklyBarData, setWeeklyBarData] = useState<BarPoint[]>([]);
   const [userProgram, setUserProgram] = useState<UserProgram | null>(null);
-  const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [durationWeeks, setDurationWeeks] = useState(5);
   const [loaded, setLoaded] = useState(false);
 
@@ -114,12 +117,11 @@ export default function ProgressScreen() {
     if (up) {
       const { data: prog } = await supabase
         .from('programs')
-        .select('sessions_per_week, duration_weeks')
+        .select('duration_weeks')
         .eq('id', up.program_id)
         .single();
 
       if (prog) {
-        setSessionsPerWeek(prog.sessions_per_week);
         setDurationWeeks(prog.duration_weeks);
       }
     }
@@ -145,37 +147,29 @@ export default function ProgressScreen() {
     () => computeWeekDays(allActivityCompletions, weekOffset),
     [allActivityCompletions, weekOffset],
   );
-  const displayWeekCount = displayWeekDays.filter(Boolean).length;
 
   // Allow navigating up to 52 weeks back regardless of program start date
   const minWeekOffset = -52;
 
-  // Program Progress: derive current week from elapsed calendar days since start.
-  // This reflects where the user *should* be in time, independently of DB current_week.
-  const computedWeek = userProgram?.started_at
-    ? Math.max(
-        1,
-        Math.min(
-          Math.floor(
-            (Date.now() - new Date(userProgram.started_at).getTime()) /
-              (7 * 24 * 60 * 60 * 1000),
-          ) + 1,
-          durationWeeks,
-        ),
-      )
-    : (userProgram?.current_week ?? 1);
+  // Program progress follows DB current_week (advances on session completion), same as Home.
+  const programWeek = userProgram
+    ? Math.min(userProgram.current_week, durationWeeks)
+    : 1;
+  const isProgramComplete = userProgram
+    ? userProgram.current_week > durationWeeks
+    : false;
 
-  const estimatedEnd = userProgram
-    ? getEstimatedCompletion(computedWeek, durationWeeks)
+  const estimatedEnd = userProgram && !isProgramComplete
+    ? getEstimatedCompletion(programWeek, durationWeeks)
     : null;
 
   if (!loaded) {
     return (
       <TabFadeWrapper>
         <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.skeletonBlock} />
-          <View style={styles.skeletonSmall} />
-          <View style={styles.skeletonBlock} />
+          <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonBlock} />
+          <Skeleton height={100} borderRadius={radius.card} style={styles.skeletonBlock} />
+          <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonBlock} />
         </View>
       </TabFadeWrapper>
     );
@@ -199,7 +193,11 @@ export default function ProgressScreen() {
               <TouchableOpacity
                 key={r}
                 style={[styles.rangePill, painRange === r && styles.rangePillActive]}
-                onPress={() => setPainRange(r)}
+                onPress={() => {
+                  hapticSelection();
+                  setPainRange(r);
+                }}
+                activeOpacity={0.7}
               >
                 <Text style={[styles.rangePillText, painRange === r && styles.rangePillTextActive]}>
                   {r === '2w' ? '14D' : r === '1m' ? '1M' : '3M'}
@@ -231,9 +229,9 @@ export default function ProgressScreen() {
               xAxisLabelTextStyle={{ fontSize: 9, color: colors.textSecondary }}
               maxValue={10}
               noOfSections={5}
-              rulesColor="#E8E0DC"
+              rulesColor={colors.border}
               yAxisColor="transparent"
-              xAxisColor="#E8E0DC"
+              xAxisColor={colors.border}
               hideRules={false}
               yAxisLabelWidth={PAIN_Y_AXIS_W}
             />
@@ -264,7 +262,11 @@ export default function ProgressScreen() {
               <TouchableOpacity
                 key={r}
                 style={[styles.rangePill, activityRange === r && styles.rangePillActive]}
-                onPress={() => setActivityRange(r)}
+                onPress={() => {
+                  hapticSelection();
+                  setActivityRange(r);
+                }}
+                activeOpacity={0.7}
               >
                 <Text style={[styles.rangePillText, activityRange === r && styles.rangePillTextActive]}>
                   {r === '1m' ? '1M' : r === '3m' ? '3M' : '6M'}
@@ -288,9 +290,9 @@ export default function ProgressScreen() {
               frontColor={colors.primary}
               yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
               xAxisLabelTextStyle={{ fontSize: 8, color: colors.textSecondary }}
-              rulesColor="#E8E0DC"
+              rulesColor={colors.border}
               yAxisColor="transparent"
-              xAxisColor="#E8E0DC"
+              xAxisColor={colors.border}
               hideRules={false}
               yAxisLabelWidth={PAIN_Y_AXIS_W}
             />
@@ -360,9 +362,6 @@ export default function ProgressScreen() {
             </View>
           ))}
         </View>
-        <Text style={styles.weekSummary}>
-          {displayWeekCount}/{sessionsPerWeek} sessions completed
-        </Text>
       </View>
 
       {/* Program Progress */}
@@ -370,13 +369,15 @@ export default function ProgressScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Program Progress</Text>
           <Text style={styles.progressLabel}>
-            Week {computedWeek} of {durationWeeks}
+            {isProgramComplete
+              ? 'Program complete'
+              : `Week ${programWeek} of ${durationWeeks}`}
           </Text>
           <View style={styles.progressTrack}>
             <View
               style={[
                 styles.progressFill,
-                { width: `${Math.min((computedWeek / durationWeeks) * 100, 100)}%` },
+                { width: `${Math.min((programWeek / durationWeeks) * 100, 100)}%` },
               ]}
             />
           </View>
@@ -384,6 +385,9 @@ export default function ProgressScreen() {
             <Text style={styles.estimatedEnd}>
               Estimated completion: {estimatedEnd}
             </Text>
+          )}
+          {isProgramComplete && (
+            <Text style={styles.estimatedEnd}>You finished your program!</Text>
           )}
         </View>
       )}
@@ -555,24 +559,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 20,
+    letterSpacing: -0.3,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.card,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.low,
   },
   cardTitle: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     marginBottom: 12,
   },
   cardHeaderRow: {
@@ -588,9 +589,9 @@ const styles = StyleSheet.create({
   rangePill: {
     paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: radius.chip,
     borderWidth: 1.5,
-    borderColor: '#E8E0DC',
+    borderColor: colors.border,
   },
   rangePillActive: {
     backgroundColor: colors.primary,
@@ -600,6 +601,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.textSecondary,
+    letterSpacing: 0.4,
   },
   rangePillTextActive: {
     color: '#FFFFFF',
@@ -609,6 +611,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 4,
+    fontVariant: ['tabular-nums'],
   },
   placeholder: {
     fontSize: 15,
@@ -639,7 +642,6 @@ const styles = StyleSheet.create({
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
   },
   weekNavRow: {
     flexDirection: 'row',
@@ -660,7 +662,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   weekNavArrowDisabled: {
-    color: '#D0C8C3',
+    color: colors.textTertiary,
   },
   weekNavCenter: {
     flex: 1,
@@ -670,12 +672,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
-  },  dayCircle: {
+  },
+  dayCircle: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: radius.circle,
     borderWidth: 2,
-    borderColor: '#E8E0DC',
+    borderColor: colors.border,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
@@ -692,11 +695,6 @@ const styles = StyleSheet.create({
   dayInsideLabelFilled: {
     color: '#FFFFFF',
   },
-  weekSummary: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
   progressLabel: {
     fontSize: 16,
     fontWeight: '600',
@@ -705,30 +703,22 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 8,
-    backgroundColor: '#E8E0DC',
+    backgroundColor: colors.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     borderRadius: 4,
   },
   estimatedEnd: {
     fontSize: 13,
+    lineHeight: 20,
     color: colors.textSecondary,
   },
   skeletonBlock: {
-    height: 180,
-    backgroundColor: '#E8E0DC',
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  skeletonSmall: {
-    height: 100,
-    backgroundColor: '#E8E0DC',
-    borderRadius: 16,
     marginBottom: 16,
   },
 });

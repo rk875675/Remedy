@@ -5,14 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
+import { PersonalizationBubble } from '../../components/onboarding/PersonalizationBubble';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
-import type { OnboardingAnswers } from '../../types/database';
+import { type } from '../../constants/typography';
+import type { MainGoal } from '../../types/database';
 
 const ICON_SIZE = 17;
 const ICON_COLOR = '#FFFFFF';
 
-const options: { label: string; icon: React.ReactNode; value: OnboardingAnswers['main_goal'] }[] = [
+const options: { label: string; icon: React.ReactNode; value: MainGoal }[] = [
   { label: 'Reduce daily pain', icon: <Ionicons name="heart-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'reduce_pain' },
   { label: 'Get back to working out', icon: <Ionicons name="trending-up-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'return_to_exercise' },
   { label: 'Sleep better', icon: <Ionicons name="moon-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'sleep' },
@@ -24,26 +27,39 @@ export default function Q6Screen() {
   const insets = useSafeAreaInsets();
   const { answers, setAnswer } = useOnboarding();
 
+  const selected = answers.main_goal ?? [];
+
+  function toggle(val: MainGoal) {
+    const next = selected.includes(val)
+      ? selected.filter((v) => v !== val)
+      : [...selected, val];
+    setAnswer('main_goal', next);
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
-      <View style={styles.content}>
-        <Text style={styles.heading}>What's your main goal?</Text>
-        <View style={styles.options}>
-          {options.map((opt) => (
-            <OptionCard
-              key={opt.value}
-              label={opt.label}
-              icon={opt.icon}
-              selected={answers.main_goal === opt.value}
-              onPress={() => setAnswer('main_goal', opt.value)}
-            />
-          ))}
+      <PersonalizingLayout>
+        <View style={styles.content}>
+          <Text style={styles.heading}>What's your main goal?</Text>
+          <Text style={styles.subheading}>Select all that apply</Text>
+          <View style={styles.options}>
+            {options.map((opt) => (
+              <OptionCard
+                key={opt.value}
+                label={opt.label}
+                icon={opt.icon}
+                selected={selected.includes(opt.value)}
+                onPress={() => toggle(opt.value)}
+              />
+            ))}
+          </View>
+          <PersonalizationBubble field="main_goal" value={selected[0]} />
         </View>
-      </View>
+      </PersonalizingLayout>
 
       <ContinueButton
         onPress={() => router.push('/(onboarding)/q1')}
-        disabled={!answers.main_goal}
+        disabled={selected.length === 0}
       />
     </View>
   );
@@ -60,10 +76,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 26,
-    fontWeight: '700',
+    ...type.question,
     color: colors.textPrimary,
-    marginBottom: 28,
+    marginBottom: 6,
+  },
+  subheading: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 24,
   },
   options: {
     gap: 12,

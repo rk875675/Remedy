@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as StoreReview from 'expo-store-review';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { hapticSelection } from '../../lib/haptics';
 
 const STARS = [1, 2, 3, 4, 5];
 
@@ -61,7 +63,14 @@ export default function ReviewScreen() {
 
           <View style={styles.stars}>
             {STARS.map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
+              <TouchableOpacity
+                key={star}
+                onPress={() => {
+                  hapticSelection();
+                  setRating(star);
+                }}
+                activeOpacity={0.7}
+              >
                 <Text style={[styles.star, star <= rating && styles.starActive]}>
                   ★
                 </Text>
@@ -120,13 +129,15 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
+    lineHeight: 34,
+    letterSpacing: -0.3,
   },
   subheading: {
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   stars: {
     flexDirection: 'row',
@@ -135,22 +146,22 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 40,
-    color: '#E8E0DC',
+    color: colors.border,
   },
   starActive: {
-    color: colors.primary,
+    color: colors.warning,
   },
   input: {
     width: '100%',
     height: 100,
-    borderRadius: 12,
+    borderRadius: radius.button,
     backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingTop: 14,
     fontSize: 16,
     color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#E8E0DC',
+    borderColor: colors.border,
   },
   footer: {
     paddingTop: 20,

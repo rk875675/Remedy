@@ -5,8 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
+import { PersonalizationBubble } from '../../components/onboarding/PersonalizationBubble';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { type } from '../../constants/typography';
 import type { OnboardingAnswers } from '../../types/database';
 
 const options: { label: string; value: OnboardingAnswers['pain_duration'] }[] = [
@@ -22,7 +24,7 @@ export default function Q2Screen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
-      <PersonalizingLayout step={2} totalSteps={5}>
+      <PersonalizingLayout>
         <View style={styles.content}>
           <Text style={styles.heading}>How long have you had it?</Text>
           <View style={styles.options}>
@@ -35,6 +37,7 @@ export default function Q2Screen() {
               />
             ))}
           </View>
+          <PersonalizationBubble field="pain_duration" value={answers.pain_duration} />
         </View>
       </PersonalizingLayout>
 
@@ -57,8 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 26,
-    fontWeight: '700',
+    ...type.question,
     color: colors.textPrimary,
     marginBottom: 28,
   },

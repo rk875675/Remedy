@@ -1,0 +1,6 @@
+-- 010_seed_demo_k_gm.sql
+--
+-- Placeholder stub. This migration version was applied directly to the remote
+-- database from another environment ("seed_demo_k_gm") and its SQL is not in
+-- this repo. This empty file exists only so local migration history matches
+-- the remote `supabase_migrations.schema_migrations` table.

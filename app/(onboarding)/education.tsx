@@ -1,64 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter, Stack, useNavigation } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 
-const slides = [
-  {
-    icon: '◎',
-    title: 'Structured rehab,\nin your pocket',
-    body: 'Real PT-designed programs that guide you through every session — not random YouTube stretches.',
-  },
-  {
-    icon: '✦',
-    title: 'Designed by\nlicensed PTs',
-    body: 'Every exercise is selected and sequenced by a licensed physical therapist for safe, progressive recovery.',
-  },
-  {
-    icon: '◐',
-    title: 'Track your\nprogress',
-    body: 'See your pain trend and watch your mobility improve week over week.',
-  },
-];
+const slide = {
+  icon: '◎',
+  title: 'Structured rehab, in your pocket',
+  body: 'Real PT-designed programs that guide you through every session — built for recovery, not random workouts.',
+};
 
 export default function EducationScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [page, setPage] = useState(0);
-
-  const slide = slides[page];
-  const isLast = page === slides.length - 1;
-
-  // Intercept swipe-back / hardware back when on slide 2+ so it steps back
-  // through slides rather than jumping to disclaimer.
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
-      if (page > 0) {
-        e.preventDefault();
-        setPage(p => p - 1);
-      }
-    });
-    return unsubscribe;
-  }, [navigation, page]);
-
-  function handleNext() {
-    if (isLast) {
-      router.push('/(onboarding)/q6');
-    } else {
-      setPage(page + 1);
-    }
-  }
 
   return (
     <>
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.content}>
-          <View style={styles.iconArea}>
-            <Text style={styles.icon}>{slide.icon}</Text>
+          <View style={styles.iconWrap}>
+            <View style={styles.iconHalo} />
+            <View style={styles.iconArea}>
+              <Text style={styles.icon}>{slide.icon}</Text>
+            </View>
           </View>
 
           <Text style={styles.title}>{slide.title}</Text>
@@ -66,16 +34,11 @@ export default function EducationScreen() {
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.dotsRow}>
-            {slides.map((_, i) => (
-              <View key={i} style={[styles.dot, i === page && styles.dotActive]} />
-            ))}
-          </View>
-          <ContinueButton label={isLast ? 'Continue' : 'Next'} onPress={handleNext} />
+          <ContinueButton label="Continue" onPress={() => router.push('/(onboarding)/q0')} />
           <TouchableOpacity
             style={styles.signInLink}
-            onPress={() => router.push('/(auth)/sign-in' as any)}
-            activeOpacity={0.7}
+            onPress={() => router.push('/(auth)/sign-in')}
+            activeOpacity={0.6}
           >
             <Text style={styles.signInText}>Already have an account? <Text style={styles.signInBold}>Sign in</Text></Text>
           </TouchableOpacity>
@@ -96,14 +59,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconArea: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.textPrimary,
+  iconWrap: {
+    width: 128,
+    height: 128,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
+  },
+  iconHalo: {
+    position: 'absolute',
+    width: 128,
+    height: 128,
+    borderRadius: radius.circle,
+    backgroundColor: colors.primaryMuted,
+  },
+  iconArea: {
+    width: 100,
+    height: 100,
+    borderRadius: radius.circle,
+    backgroundColor: colors.textPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.medium,
   },
   icon: {
     fontSize: 40,
@@ -111,11 +88,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
+    fontFamily: serifFont,
     fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 38,
+    lineHeight: 40,
   },
   body: {
     fontSize: 16,
@@ -127,31 +105,17 @@ const styles = StyleSheet.create({
   footer: {
     gap: 20,
   },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E8E0DC',
-  },
-  dotActive: {
-    backgroundColor: colors.textPrimary,
-    width: 24,
-  },
   signInLink: {
     alignItems: 'center',
     paddingVertical: 4,
   },
   signInText: {
     fontSize: 13,
+    lineHeight: 20,
     color: colors.textSecondary,
   },
   signInBold: {
-    color: colors.textPrimary,
+    color: colors.primary,
     fontWeight: '600',
   },
 });

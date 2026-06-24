@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   View,
   Text,
   StyleSheet,
@@ -14,10 +15,37 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
+import { hapticPrimaryAction } from '../../lib/haptics';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
-import type { ProgramSession, UserProgram } from '../../types/database';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { MiniRing } from '../../components/ui/MiniRing';
+import type { UserPlanSession, UserProgram } from '../../types/database';
 
-type SessionWithExerciseCount = ProgramSession & { exercise_count: number };
+type SessionWithExerciseCount = UserPlanSession & { exercise_count: number };
+
+function InsightDot({ active }: { active: boolean }) {
+  const anim = useRef(new Animated.Value(active ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: active ? 1 : 0,
+      duration: 250,
+      easing: Easing.inOut(Easing.cubic),
+      // Width + color interpolation cannot use the native driver.
+      useNativeDriver: false,
+    }).start();
+  }, [active]);
+
+  const width = anim.interpolate({ inputRange: [0, 1], outputRange: [5, 16] });
+  const backgroundColor = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.border, colors.secondary],
+  });
+
+  return <Animated.View style={[styles.insightDot, { width, backgroundColor }]} />;
+}
 
 const INSIGHTS: readonly string[] = [
   'Studies show that consistent structured exercise reduces back pain by up to 60% within 4 weeks.',
@@ -37,6 +65,7 @@ export default function HomeScreen() {
   const [userProgram, setUserProgram] = useState<UserProgram | null>(null);
   const [todaySession, setTodaySession] = useState<SessionWithExerciseCount | null>(null);
   const [nextSessionId, setNextSessionId] = useState<string | null>(null);
+  const [isRestDay, setIsRestDay] = useState(false);
   const [sessionsThisWeek, setSessionsThisWeek] = useState(0);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [durationWeeks, setDurationWeeks] = useState(5);
@@ -53,13 +82,15 @@ export default function HomeScreen() {
     const interval = setInterval(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 400,
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
       }).start(() => {
         setInsightIndex((i) => (i + 1) % INSIGHTS.length);
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 400,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }).start();
       });
@@ -102,6 +133,25 @@ export default function HomeScreen() {
     }
     setUserProgram(up);
 
+    // The app reads ONLY the resolved plan snapshot for playback. Without an active
+    // plan (e.g. before paywall assignment) there is nothing to show yet.
+    const planId = up.active_plan_id;
+    if (!planId) {
+      setLoaded(true);
+      return;
+    }
+
+    // Plan meta (duration / cadence) comes from the snapshot header, not the legacy
+    // programs table.
+    const { data: planMeta } = await supabase
+      .from('user_program_plans')
+      .select('duration_weeks, sessions_per_week')
+      .eq('id', planId)
+      .single();
+
+    const planSessionsPerWeek = planMeta?.sessions_per_week ?? 4;
+    const planDurationWeeks = planMeta?.duration_weeks ?? 5;
+
     // -----------------------------------------------------------------------
     // Determine which week/session to display.
     // Non-dev: always use DB values. Dev with offset: derive from simulated date.
@@ -115,47 +165,31 @@ export default function HomeScreen() {
       const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
 
       if (offset !== 0) {
-        const { data: devProg } = await supabase
-          .from('programs')
-          .select('sessions_per_week, duration_weeks')
-          .eq('id', up.program_id)
-          .single();
-
-        if (devProg) {
-          const startMs = new Date(up.started_at).getTime();
-          const rawDays = Math.floor((Date.now() - startMs) / 86400000) + offset;
-          const daysSinceStart = Math.max(0, rawDays);
-          displayWeek = Math.min(
-            Math.floor(daysSinceStart / 7) + 1,
-            devProg.duration_weeks,
-          );
-          const dayInWeek = daysSinceStart % 7;
-          displaySession = dayInWeek < devProg.sessions_per_week
-            ? dayInWeek + 1
-            : devProg.sessions_per_week + 1;
-        }
+        const startMs = new Date(up.started_at).getTime();
+        const rawDays = Math.floor((Date.now() - startMs) / 86400000) + offset;
+        const daysSinceStart = Math.max(0, rawDays);
+        displayWeek = Math.min(Math.floor(daysSinceStart / 7) + 1, planDurationWeeks);
+        const dayInWeek = daysSinceStart % 7;
+        displaySession = dayInWeek < planSessionsPerWeek
+          ? dayInWeek + 1
+          : planSessionsPerWeek + 1;
       }
     }
 
     // -----------------------------------------------------------------------
-    // Parallel fetch: today's session + program meta + this week completions
+    // Parallel fetch: today's resolved session + this week completions
     // + pain (last 7 days).
     // -----------------------------------------------------------------------
     const weekMondayISO = thisWeekMondayISO();
     const sevenDaysAgoISO = nDaysAgoISO(7);
 
-    const [sessionRes, progRes, weekCompRes, painRes, totalCompRes] = await Promise.all([
+    const [sessionRes, weekCompRes, painRes, totalCompRes] = await Promise.all([
       supabase
-        .from('program_sessions')
+        .from('user_plan_sessions')
         .select('*')
-        .eq('program_id', up.program_id)
+        .eq('plan_id', planId)
         .eq('week_number', displayWeek)
         .eq('session_number', displaySession)
-        .single(),
-      supabase
-        .from('programs')
-        .select('sessions_per_week, duration_weeks')
-        .eq('id', up.program_id)
         .single(),
       supabase
         .from('session_completions')
@@ -174,10 +208,8 @@ export default function HomeScreen() {
         .eq('user_id', user.id),
     ]);
 
-    if (progRes.data) {
-      setSessionsPerWeek(progRes.data.sessions_per_week);
-      setDurationWeeks(progRes.data.duration_weeks);
-    }
+    setSessionsPerWeek(planSessionsPerWeek);
+    setDurationWeeks(planDurationWeeks);
 
     setSessionsThisWeek(weekCompRes.count ?? 0);
     setTotalSessions(totalCompRes.count ?? 0);
@@ -185,16 +217,23 @@ export default function HomeScreen() {
     const sessionData = sessionRes.data;
     if (sessionData) {
       const { count } = await supabase
-        .from('session_exercises')
+        .from('user_plan_session_exercises')
         .select('*', { count: 'exact', head: true })
-        .eq('session_id', sessionData.id);
+        .eq('plan_session_id', sessionData.id);
 
       setTodaySession({ ...sessionData, exercise_count: count ?? 0 });
+      setNextSessionId(null);
+      setIsRestDay(false);
     } else {
+      // A missing session is a genuine rest day only when we've run past the week's
+      // scheduled sessions. Any other miss means the session just isn't loaded — don't
+      // mislabel it as "Recovery Day".
+      setTodaySession(null);
+      setIsRestDay(displaySession > planSessionsPerWeek);
       const { data: nextSess } = await supabase
-        .from('program_sessions')
+        .from('user_plan_sessions')
         .select('id')
-        .eq('program_id', up.program_id)
+        .eq('plan_id', planId)
         .gt('week_number', displayWeek)
         .order('week_number', { ascending: true })
         .order('session_number', { ascending: true })
@@ -242,9 +281,9 @@ export default function HomeScreen() {
     return (
       <TabFadeWrapper>
         <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.skeletonHeader} />
-          <View style={styles.skeletonCard} />
-          <View style={styles.skeletonCard} />
+          <Skeleton height={32} width={200} borderRadius={8} style={styles.skeletonHeader} />
+          <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonCard} />
+          <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonCard} />
         </View>
       </TabFadeWrapper>
     );
@@ -267,14 +306,35 @@ export default function HomeScreen() {
           <Text style={styles.sessionLabel}>Program Complete</Text>
           <Text style={styles.sessionTitle}>You finished your program!</Text>
           <Text style={styles.restTip}>
-            You completed the full Back Pain Relief Program. View your summary or restart for another round.
+            You completed your full program. View your summary or restart for another round.
           </Text>
           <TouchableOpacity
             style={styles.startButton}
-            onPress={() => router.push('/program-complete')}
-            activeOpacity={0.8}
+            onPress={() => {
+              hapticPrimaryAction();
+              router.push('/program-complete');
+            }}
+            activeOpacity={0.85}
           >
             <Text style={styles.startButtonText}>View Summary</Text>
+          </TouchableOpacity>
+        </View>
+      ) : userProgram && !userProgram.active_plan_id ? (
+        <View style={styles.sessionCard}>
+          <Text style={styles.sessionLabel}>Almost there</Text>
+          <Text style={styles.sessionTitle}>Your program needs to be built</Text>
+          <Text style={styles.restTip}>
+            Tap below to generate your personalized sessions from your quiz answers.
+          </Text>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() => {
+              hapticPrimaryAction();
+              router.replace('/building-plan');
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.startButtonText}>Build My Program</Text>
           </TouchableOpacity>
         </View>
       ) : todaySession ? (
@@ -290,24 +350,46 @@ export default function HomeScreen() {
 
           <Text style={styles.sessionTitle}>{todaySession.title}</Text>
 
-          <Text style={styles.sessionMeta}>
-            {todaySession.duration_minutes} min · {todaySession.exercise_count} exercises
+          <View style={styles.sessionWeekProgressBlock}>
+            <View style={styles.sessionWeekDotsRow}>
+              {Array.from({ length: sessionsPerWeek }, (_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.sessionWeekDot,
+                    i < sessionsThisWeek && styles.sessionWeekDotFilled,
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={styles.sessionWeekDotsLabel}>
+              {sessionsThisWeek} of {sessionsPerWeek} sessions this week
+            </Text>
+          </View>
+
+          <Text style={styles.sessionMetaLine}>
+            {todaySession.estimated_minutes} min · {todaySession.exercise_count} exercise{todaySession.exercise_count !== 1 ? 's' : ''}
           </Text>
 
           <TouchableOpacity
             style={styles.startButton}
-            onPress={() => router.push(`/session/${todaySession.id}`)}
-            activeOpacity={0.8}
+            onPress={() => {
+              hapticPrimaryAction();
+              router.push(`/session/${todaySession.id}`);
+            }}
+            activeOpacity={0.85}
           >
             <Text style={styles.startButtonText}>Start Session</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.sessionCard}>
-          <Text style={styles.sessionLabel}>Rest Day</Text>
-          <Text style={styles.sessionTitle}>Recovery Day</Text>
+          <Text style={styles.sessionLabel}>{isRestDay ? 'Rest Day' : 'Up Next'}</Text>
+          <Text style={styles.sessionTitle}>{isRestDay ? 'Recovery Day' : 'Your next session'}</Text>
           <Text style={styles.restTip}>
-            Recovery is part of the program. Try a short walk or gentle stretching today.
+            {isRestDay
+              ? 'Recovery is part of the program. Try a short walk or gentle stretching today.'
+              : 'Your next session is ready whenever you are.'}
           </Text>
           {nextSessionId && (
             <TouchableOpacity
@@ -315,7 +397,9 @@ export default function HomeScreen() {
               activeOpacity={0.7}
               style={styles.nextSessionButton}
             >
-              <Text style={styles.nextSessionLink}>View next session →</Text>
+              <Text style={styles.nextSessionLink}>
+                {isRestDay ? 'View next session →' : 'Start session →'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -327,13 +411,7 @@ export default function HomeScreen() {
         <Text style={styles.insightText}>{INSIGHTS[insightIndex]}</Text>
         <View style={styles.insightDots}>
           {INSIGHTS.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.insightDot,
-                i === insightIndex && styles.insightDotActive,
-              ]}
-            />
+            <InsightDot key={i} active={i === insightIndex} />
           ))}
         </View>
       </Animated.View>
@@ -341,13 +419,16 @@ export default function HomeScreen() {
       {/* Stacked stat cards */}
       {userProgram && (
         <>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Program Progress</Text>
-            <Text style={styles.statValue}>
-              Week {userProgram.current_week}
-              <Text style={styles.statValueDim}> of {durationWeeks}</Text>
-            </Text>
-            <Text style={styles.statHint}>
+          <View style={[styles.statCard, styles.programProgressCard]}>
+            <Text style={[styles.statLabel, styles.programProgressLabel]}>Program Progress</Text>
+            <View style={styles.programProgressWeekRow}>
+              <Text style={[styles.statValue, styles.programProgressWeek]}>
+                Week {userProgram.current_week}
+                <Text style={styles.statValueDim}> of {durationWeeks}</Text>
+              </Text>
+              <MiniRing value={userProgram.current_week} total={durationWeeks} size={80} />
+            </View>
+            <Text style={[styles.statHint, styles.programProgressHint]}>
               {durationWeeks - userProgram.current_week > 0
                 ? `${durationWeeks - userProgram.current_week} week${durationWeeks - userProgram.current_week !== 1 ? 's' : ''} to go`
                 : 'Program complete!'}
@@ -422,20 +503,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 24,
+    letterSpacing: -0.3,
   },
 
-  // Session / rest day card — same container, more vertical room
+  // Session / rest day card — the hero; highest elevation on screen
   sessionCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.card,
     paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 36,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.high,
     marginBottom: 16,
   },
   sessionCardHeader: {
@@ -445,52 +523,84 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sessionWeekBadge: {
-    backgroundColor: colors.primary + '18',
+    backgroundColor: colors.primaryMuted,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 10,
+    borderRadius: radius.chip,
   },
   sessionWeekBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.primaryDeep,
+    letterSpacing: 0.4,
   },
   sessionLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 1.2,
   },
   sessionTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 24,
+    marginBottom: 16,
     lineHeight: 30,
   },
-  sessionMeta: {
+  sessionWeekProgressBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sessionWeekDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sessionWeekDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.border,
+  },
+  sessionWeekDotFilled: {
+    backgroundColor: colors.primary,
+  },
+  sessionWeekDotsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  sessionMetaLine: {
     fontSize: 14,
     fontWeight: '500',
     color: colors.textSecondary,
+    lineHeight: 21,
     marginBottom: 20,
   },
   startButton: {
     height: 56,
-    borderRadius: 14,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   startButtonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   restTip: {
     fontSize: 15,
     color: colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: 20,
   },
   nextSessionButton: {
@@ -502,30 +612,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Rotating insight card
+  // Rotating insight card — supporting tier, low elevation
   insightCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.card,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.low,
   },
   insightTag: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.secondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
   insightText: {
     fontSize: 15,
     color: colors.textPrimary,
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: 14,
   },
   insightDots: {
@@ -533,34 +639,44 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   insightDot: {
-    width: 5,
     height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#E0D8D4',
-  },
-  insightDotActive: {
-    backgroundColor: colors.secondary,
-    width: 14,
+    borderRadius: radius.circle,
   },
 
-  // Stacked full-width stat cards
+  // Stacked full-width stat cards — supporting tier, low elevation
   statCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.card,
     padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 12,
+    ...shadows.low,
+  },
+  programProgressCard: {
+    paddingBottom: 32,
+  },
+  programProgressWeekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    marginTop: -2,
+  },
+  programProgressLabel: {
+    marginBottom: 0,
+  },
+  programProgressWeek: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  programProgressHint: {
+    marginTop: -22,
   },
   statLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     marginBottom: 6,
   },
   statValue: {
@@ -568,6 +684,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 4,
+    fontVariant: ['tabular-nums'],
   },
   statValueDim: {
     fontSize: 20,
@@ -576,27 +693,22 @@ const styles = StyleSheet.create({
   },
   statHint: {
     fontSize: 14,
-    color: colors.secondary,
+    lineHeight: 21,
+    color: colors.primary,
   },
   statReduction: {
     fontSize: 14,
+    lineHeight: 21,
     fontWeight: '700',
-    color: colors.secondary,
+    color: colors.primary,
     marginBottom: 4,
   },
 
   // Skeletons
   skeletonHeader: {
-    height: 32,
-    width: 200,
-    backgroundColor: '#E8E0DC',
-    borderRadius: 8,
     marginBottom: 24,
   },
   skeletonCard: {
-    height: 180,
-    backgroundColor: '#E8E0DC',
-    borderRadius: 16,
     marginBottom: 16,
   },
 });

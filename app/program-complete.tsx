@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../constants/colors';
-import { hapticPrimaryAction, hapticSuccess } from '../lib/haptics';
+import { colors, serifFont } from '../constants/colors';
+import { radius } from '../constants/spacing';
+import { shadows } from '../constants/shadows';
+import { hapticPrimaryAction, hapticCelebration } from '../lib/haptics';
 
 export default function ProgramCompleteScreen() {
   const router = useRouter();
@@ -23,10 +26,16 @@ export default function ProgramCompleteScreen() {
   const [daysActive, setDaysActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
-  const iconScale = React.useRef(new Animated.Value(0)).current;
+  const iconScale = useRef(new Animated.Value(0)).current;
+  const revealAnims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
 
   useEffect(() => {
-    hapticSuccess();
+    // Three-beat celebration: light → medium → success.
+    hapticCelebration();
     Animated.spring(iconScale, {
       toValue: 1,
       friction: 4,
@@ -34,6 +43,24 @@ export default function ProgramCompleteScreen() {
       useNativeDriver: true,
     }).start();
   }, [iconScale]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.stagger(
+        80,
+        revealAnims.map((anim) =>
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ),
+      ),
+    ]).start();
+  }, [loaded]);
 
   useEffect(() => {
     if (!user) return;
@@ -66,6 +93,20 @@ export default function ProgramCompleteScreen() {
     router.replace('/(tabs)');
   }
 
+  function revealStyle(index: number) {
+    return {
+      opacity: revealAnims[index],
+      transform: [
+        {
+          translateY: revealAnims[index].interpolate({
+            inputRange: [0, 1],
+            outputRange: [12, 0],
+          }),
+        },
+      ],
+    };
+  }
+
   return (
     <ScrollView
       style={[styles.container, { paddingTop: insets.top + 32 }]}
@@ -73,7 +114,9 @@ export default function ProgramCompleteScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Animated.View style={[styles.iconWrap, { transform: [{ scale: iconScale }] }]}>
-        <Text style={styles.iconText}>🎉</Text>
+        <View style={styles.iconCircle}>
+          <Text style={styles.iconText}>❋</Text>
+        </View>
       </Animated.View>
 
       <Text style={styles.heading}>Program Complete</Text>
@@ -82,7 +125,7 @@ export default function ProgramCompleteScreen() {
       </Text>
 
       {loaded && (
-        <View style={styles.statsCard}>
+        <Animated.View style={[styles.statsCard, revealStyle(0)]}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{totalSessions}</Text>
             <Text style={styles.statLabel}>Sessions{'\n'}Completed</Text>
@@ -92,20 +135,22 @@ export default function ProgramCompleteScreen() {
             <Text style={styles.statValue}>{daysActive}</Text>
             <Text style={styles.statLabel}>Days{'\n'}Active</Text>
           </View>
-        </View>
+        </Animated.View>
       )}
 
-      <Text style={styles.congrats}>
+      <Animated.Text style={[styles.congrats, revealStyle(1)]}>
         That&apos;s real work. Consistent movement is what changes things — and you showed up.
-      </Text>
+      </Animated.Text>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleRestart} activeOpacity={0.85}>
-        <Text style={styles.primaryButtonText}>Restart Program</Text>
-      </TouchableOpacity>
+      <Animated.View style={[styles.buttonGroup, revealStyle(2)]}>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleRestart} activeOpacity={0.85}>
+          <Text style={styles.primaryButtonText}>Restart Program</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={handleGoHome} activeOpacity={0.8}>
-        <Text style={styles.secondaryButtonText}>Go to Home</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={handleGoHome} activeOpacity={0.7}>
+          <Text style={styles.secondaryButtonText}>Go to Home</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -120,46 +165,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.primary + '18',
+    width: 120,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 28,
   },
+  iconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: radius.circle,
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.high,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.35,
+  },
   iconText: {
-    fontSize: 44,
+    fontSize: 42,
+    color: '#FFFFFF',
+    lineHeight: 50,
   },
   heading: {
     fontSize: 32,
+    fontFamily: serifFont,
     fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   subheading: {
     fontSize: 17,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
     marginBottom: 36,
     paddingHorizontal: 8,
   },
   statsCard: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.card,
     paddingVertical: 28,
     paddingHorizontal: 16,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    ...shadows.medium,
     marginBottom: 32,
   },
   statBox: {
@@ -171,47 +225,55 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
     marginBottom: 6,
+    fontVariant: ['tabular-nums'],
   },
   statLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 1.2,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   statDivider: {
     width: 1,
     height: 52,
-    backgroundColor: '#F0EBE7',
+    backgroundColor: colors.borderLight,
   },
   congrats: {
     fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
     fontStyle: 'italic',
     marginBottom: 40,
     paddingHorizontal: 8,
   },
+  buttonGroup: {
+    width: '100%',
+  },
   primaryButton: {
     height: 56,
-    borderRadius: 16,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     marginBottom: 14,
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   primaryButtonText: {
     fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   secondaryButton: {
     height: 52,
-    borderRadius: 16,
+    borderRadius: radius.button,
     borderWidth: 1.5,
     borderColor: colors.primary + '40',
     alignItems: 'center',

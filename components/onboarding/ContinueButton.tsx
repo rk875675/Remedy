@@ -1,6 +1,8 @@
-import React from 'react';
-import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction } from '../../lib/haptics';
 
 type ContinueButtonProps = {
@@ -14,38 +16,70 @@ export function ContinueButton({
   onPress,
   disabled = false,
 }: ContinueButtonProps) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  function handlePressIn() {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  }
+
+  function handlePressOut() {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 6,
+    }).start();
+  }
+
   function handlePress() {
     hapticPrimaryAction();
     onPress();
   }
 
   return (
-    <TouchableOpacity
-      style={[styles.button, disabled && styles.buttonDisabled]}
-      onPress={handlePress}
-      disabled={disabled}
-      activeOpacity={0.8}
-    >
-      <Text style={styles.text}>{label}</Text>
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale }], width: '100%' }}>
+      <Pressable
+        style={[styles.button, disabled && styles.buttonDisabled]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+      >
+        <Text style={[styles.text, disabled && styles.textDisabled]}>{label}</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
     height: 54,
-    borderRadius: 14,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#C9D2CC',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   text: {
     fontSize: 17,
     fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  textDisabled: {
     color: '#FFFFFF',
   },
 });

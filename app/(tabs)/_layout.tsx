@@ -17,14 +17,20 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopColor: '#E8E0DC',
+          borderTopWidth: 0,
           height: TAB_BAR_HEIGHT,
           paddingBottom: TAB_BAR_PADDING_BOTTOM,
           paddingTop: 8,
+          shadowColor: '#1C1C1E',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
+          elevation: 8,
         },
         tabBarLabelStyle: {
           fontSize: TAB_LABEL_SIZE,
-          fontWeight: '500',
+          fontWeight: '600',
+          letterSpacing: 0.1,
         },
       }}
       screenListeners={{

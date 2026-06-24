@@ -7,10 +7,13 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../../lib/haptics';
 
 let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null;
@@ -25,17 +28,31 @@ try {
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isSignUp = mode === 'signup';
   const [loading, setLoading] = useState(false);
 
   async function handleAppleSignIn() {
     hapticPrimaryAction();
     try {
       setLoading(true);
+
+      // Nonce binding: Apple hashes the nonce into the identity token; Supabase
+      // re-hashes the raw nonce we pass and compares. A mismatch (or no nonce) lets a
+      // stolen token be replayed, so we generate a raw nonce, send its SHA-256 to Apple,
+      // and the raw value to Supabase.
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce,
+      );
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
 
       if (!credential.identityToken) {
@@ -45,6 +62,7 @@ export default function SignInScreen() {
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
+        nonce: rawNonce,
       });
 
       if (error) throw error;
@@ -98,8 +116,16 @@ export default function SignInScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.logoWrap}>
+          <View style={styles.logoHalo} />
+          <View style={styles.logoCircle}>
+            <Text style={styles.logoText}>R</Text>
+          </View>
+        </View>
         <Text style={styles.appName}>Remedy</Text>
-        <Text style={styles.tagline}>Your back pain, finally fixed.</Text>
+        <Text style={styles.tagline}>
+          {isSignUp ? 'Create your account to save your plan.' : 'Your back pain, finally fixed.'}
+        </Text>
       </View>
 
       <View style={styles.buttons}>
@@ -107,7 +133,7 @@ export default function SignInScreen() {
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
             buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={12}
+            cornerRadius={14}
             style={styles.appleButton}
             onPress={handleAppleSignIn}
           />
@@ -126,7 +152,7 @@ export default function SignInScreen() {
           style={styles.emailButton}
           onPress={() => {
             hapticPrimaryAction();
-            router.push('/(auth)/email');
+            router.push(isSignUp ? '/(auth)/email?mode=signup' : '/(auth)/email');
           }}
           disabled={loading}
           activeOpacity={0.8}
@@ -137,11 +163,11 @@ export default function SignInScreen() {
 
       <View style={styles.legalRow}>
         <Text style={styles.legal}>By continuing, you agree to our </Text>
-        <TouchableOpacity onPress={() => router.push('/(legal)/terms' as any)} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.push('/(legal)/terms' as any)} activeOpacity={0.6}>
           <Text style={[styles.legal, styles.legalLink]}>Terms of Service</Text>
         </TouchableOpacity>
         <Text style={styles.legal}> and </Text>
-        <TouchableOpacity onPress={() => router.push('/(legal)/privacy' as any)} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.push('/(legal)/privacy' as any)} activeOpacity={0.6}>
           <Text style={[styles.legal, styles.legalLink]}>Privacy Policy</Text>
         </TouchableOpacity>
       </View>
@@ -161,14 +187,48 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
   },
+  logoWrap: {
+    width: 88,
+    height: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  logoHalo: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: radius.circle,
+    backgroundColor: colors.primaryMuted,
+  },
+  logoCircle: {
+    width: 66,
+    height: 66,
+    borderRadius: radius.circle,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.high,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.3,
+  },
+  logoText: {
+    fontSize: 32,
+    fontFamily: serifFont,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   appName: {
     fontSize: 36,
+    fontFamily: serifFont,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   tagline: {
     fontSize: 18,
+    lineHeight: 27,
     color: colors.textSecondary,
   },
   buttons: {
@@ -180,12 +240,13 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: radius.button,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.textSecondary,
+    borderColor: colors.border,
+    ...shadows.low,
   },
   googleButtonText: {
     fontSize: 17,
@@ -194,15 +255,19 @@ const styles = StyleSheet.create({
   },
   emailButton: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   emailButtonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   legalRow: {
     flexDirection: 'row',

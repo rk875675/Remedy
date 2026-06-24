@@ -1,30 +1,62 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { colors } from '../../constants/colors';
+import { useOnboarding } from '../../context/OnboardingContext';
+import type { OnboardingAnswers } from '../../types/database';
 
 type PersonalizingLayoutProps = {
-  step: number;
-  totalSteps: number;
   children: React.ReactNode;
 };
 
-const bars = [
-  { label: 'Pain profile', stepsRange: [1, 2] },
-  { label: 'Activity level', stepsRange: [3, 4] },
-  { label: 'Preferences', stepsRange: [4, 5] },
+type AnswerField = keyof Omit<
+  OnboardingAnswers,
+  'id' | 'user_id' | 'completed_at' | 'created_at'
+>;
+
+const bars: { label: string; fields: AnswerField[] }[] = [
+  { label: 'Pain profile', fields: ['main_goal', 'pain_location'] },
+  { label: 'Activity level', fields: ['pain_duration', 'pain_type'] },
+  {
+    label: 'Preferences',
+    fields: ['activity_level', 'pain_trigger', 'equipment', 'sessions_per_week_preference'],
+  },
 ];
 
-export function PersonalizingLayout({ step, totalSteps, children }: PersonalizingLayoutProps) {
+function segmentProgress(answers: Partial<Record<AnswerField, unknown>>, fields: AnswerField[]): number {
+  const answered = fields.filter((field) => answers[field] != null).length;
+  return answered / fields.length;
+}
+
+function AnimatedBarFill({ progress }: { progress: number }) {
+  const animated = useRef(new Animated.Value(progress)).current;
+
+  useEffect(() => {
+    Animated.timing(animated, {
+      toValue: progress,
+      duration: 350,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progress, animated]);
+
+  const width = animated.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  return <Animated.View style={[styles.barFill, { width }]} />;
+}
+
+export function PersonalizingLayout({ children }: PersonalizingLayoutProps) {
+  const { answers } = useOnboarding();
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Personalizing your plan</Text>
 
       <View style={styles.barsContainer}>
         {bars.map((bar) => {
-          const progress = Math.min(
-            Math.max((step - bar.stepsRange[0] + 1) / (bar.stepsRange[1] - bar.stepsRange[0] + 1), 0),
-            1,
-          );
+          const progress = segmentProgress(answers, bar.fields);
 
           return (
             <View key={bar.label} style={styles.barRow}>
@@ -32,7 +64,7 @@ export function PersonalizingLayout({ step, totalSteps, children }: Personalizin
                 {bar.label}
               </Text>
               <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${progress * 100}%` }]} />
+                <AnimatedBarFill progress={progress} />
               </View>
             </View>
           );
@@ -72,7 +104,7 @@ const styles = StyleSheet.create({
   },
   barTrack: {
     height: 6,
-    backgroundColor: '#E8E0DC',
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },

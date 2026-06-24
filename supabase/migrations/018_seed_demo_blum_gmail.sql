@@ -1,0 +1,5 @@
+-- 018_seed_demo_blum_gmail.sql
+--
+-- Placeholder stub. This migration version was applied directly to the remote
+-- database as a one-off demo seed for blum@gmail and its SQL is not in this repo.
+-- This empty file exists only so local migration history matches the remote table.

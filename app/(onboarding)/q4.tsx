@@ -8,6 +8,7 @@ import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { type } from '../../constants/typography';
 import type { OnboardingAnswers } from '../../types/database';
 
 const ICON_SIZE = 17;
@@ -27,7 +28,7 @@ export default function Q4Screen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
-      <PersonalizingLayout step={4} totalSteps={5}>
+      <PersonalizingLayout>
         <View style={styles.content}>
           <Text style={styles.heading}>What's your activity level?</Text>
           <View style={styles.options}>
@@ -63,8 +64,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 26,
-    fontWeight: '700',
+    ...type.question,
     color: colors.textPrimary,
     marginBottom: 28,
   },

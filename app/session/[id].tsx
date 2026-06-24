@@ -7,15 +7,84 @@ import {
   Dimensions,
   Alert,
   Animated,
+  Easing,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { trackEvent } from '../../lib/analytics';
 import { colors } from '../../constants/colors';
-import { hapticSuccess, hapticWarning, hapticPrimaryAction, hapticSelection } from '../../lib/haptics';
-import type { Exercise, ProgramSession } from '../../types/database';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
+import {
+  hapticSessionComplete,
+  hapticWarning,
+  hapticPrimaryAction,
+  hapticSelection,
+} from '../../lib/haptics';
+import { Skeleton } from '../../components/ui/Skeleton';
+import type { Exercise, UserPlanSession } from '../../types/database';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+// --- Rest timer depleting ring ---
+const REST_RING_SIZE = 220;
+const REST_RING_STROKE = 10;
+const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
+const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
+
+function RestRing({ seconds, total }: { seconds: number; total: number }) {
+  const progress = useRef(new Animated.Value(Math.min(seconds / total, 1))).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: Math.max(0, (seconds - 1) / total),
+      duration: 1000,
+      easing: Easing.linear,
+      // SVG props cannot be driven natively.
+      useNativeDriver: false,
+    }).start();
+  }, [seconds]);
+
+  const strokeDashoffset = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [REST_RING_CIRCUMFERENCE, 0],
+  });
+
+  return (
+    <View style={styles.restRingWrap}>
+      <Svg width={REST_RING_SIZE} height={REST_RING_SIZE}>
+        <Circle
+          cx={REST_RING_SIZE / 2}
+          cy={REST_RING_SIZE / 2}
+          r={REST_RING_RADIUS}
+          stroke={colors.primaryMuted}
+          strokeWidth={REST_RING_STROKE}
+          fill="none"
+        />
+        <AnimatedCircle
+          cx={REST_RING_SIZE / 2}
+          cy={REST_RING_SIZE / 2}
+          r={REST_RING_RADIUS}
+          stroke={colors.primary}
+          strokeWidth={REST_RING_STROKE}
+          strokeLinecap="round"
+          strokeDasharray={REST_RING_CIRCUMFERENCE}
+          strokeDashoffset={strokeDashoffset}
+          fill="none"
+          transform={`rotate(-90 ${REST_RING_SIZE / 2} ${REST_RING_SIZE / 2})`}
+        />
+      </Svg>
+      <View style={styles.restRingCenter}>
+        <Text style={styles.restTimer}>{seconds}</Text>
+        <Text style={styles.restTimerUnit}>seconds</Text>
+      </View>
+    </View>
+  );
+}
 
 type Phase = 'preview' | 'checkin_before' | 'exercise' | 'rest' | 'checkin_after' | 'complete';
 
@@ -49,6 +118,7 @@ export default function SessionPlayerScreen() {
   const [painBefore, setPainBefore] = useState(5);
   const [painAfter, setPainAfter] = useState(5);
   const [restSeconds, setRestSeconds] = useState(0);
+  const [restTotal, setRestTotal] = useState(1);
   const [loaded, setLoaded] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
@@ -56,7 +126,7 @@ export default function SessionPlayerScreen() {
   const [isMuted, setIsMuted] = useState(true);
   const [skippedExercises, setSkippedExercises] = useState<Set<number>>(new Set());
   const [breatheIn, setBreatheIn] = useState(true);
-  const [nextSession, setNextSession] = useState<ProgramSession | null>(null);
+  const [nextSession, setNextSession] = useState<UserPlanSession | null>(null);
   const [isProgramCompleted, setIsProgramCompleted] = useState(false);
 
   const player = useVideoPlayer(null, (p) => {
@@ -84,28 +154,59 @@ export default function SessionPlayerScreen() {
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const breatheRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const completionScale = useRef(new Animated.Value(0)).current;
+  const completeStatAnims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
   const sliderWidth = useRef(0);
 
   useEffect(() => {
     if (!id) return;
 
+    // The player reads the resolved snapshot. The route id is a user_plan_sessions.id.
+    // Per-exercise sets/reps/rest come from the resolved plan row (not the base
+    // exercise); name/video/instructions come from the joined exercise.
     Promise.all([
       supabase
-        .from('program_sessions')
-        .select('title, duration_minutes, week_number, session_number')
+        .from('user_plan_sessions')
+        .select('title, estimated_minutes, week_number, session_number')
         .eq('id', id)
         .single(),
       supabase
-        .from('session_exercises')
-        .select('order_index, exercises(*)')
-        .eq('session_id', id)
+        .from('user_plan_session_exercises')
+        .select('order_index, sets, reps, duration_seconds, rest_seconds, exercises(*)')
+        .eq('plan_session_id', id)
         .order('order_index', { ascending: true }),
     ]).then(([metaRes, exercisesRes]) => {
-      if (metaRes.data) setSessionMeta(metaRes.data);
+      if (metaRes.data) {
+        setSessionMeta({
+          title: metaRes.data.title,
+          duration_minutes: metaRes.data.estimated_minutes,
+          week_number: metaRes.data.week_number,
+          session_number: metaRes.data.session_number,
+        });
+      }
       if (exercisesRes.data) {
         const exs = exercisesRes.data
-          .map((row) => (row as unknown as { exercises: Exercise }).exercises)
-          .filter(Boolean);
+          .map((row) => {
+            const r = row as unknown as {
+              sets: number | null;
+              reps: number | null;
+              duration_seconds: number | null;
+              rest_seconds: number;
+              exercises: Exercise | null;
+            };
+            if (!r.exercises) return null;
+            return {
+              ...r.exercises,
+              sets: r.sets ?? r.exercises.sets,
+              reps: r.reps ?? r.exercises.reps,
+              duration_seconds: r.duration_seconds ?? r.exercises.duration_seconds,
+              rest_seconds: r.rest_seconds ?? r.exercises.rest_seconds,
+            };
+          })
+          .filter((e): e is Exercise => e !== null);
         setExercises(exs);
         setExerciseCount(exs.length);
       }
@@ -180,13 +281,28 @@ export default function SessionPlayerScreen() {
 
   useEffect(() => {
     if (phase === 'complete') {
-      hapticSuccess();
+      // Two-beat finish: impact lands with the checkmark, success settles after.
+      hapticSessionComplete();
       Animated.spring(completionScale, {
         toValue: 1,
         friction: 4,
         tension: 60,
         useNativeDriver: true,
       }).start();
+      Animated.sequence([
+        Animated.delay(250),
+        Animated.stagger(
+          80,
+          completeStatAnims.map((anim) =>
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: 320,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+          ),
+        ),
+      ]).start();
       fetchNextSession();
     }
   }, [phase]);
@@ -195,26 +311,31 @@ export default function SessionPlayerScreen() {
     if (!user || !id) return;
     const { data: up } = await supabase
       .from('user_programs')
-      .select('*, programs(sessions_per_week)')
+      .select('active_plan_id, current_week, current_session')
       .eq('user_id', user.id)
       .single();
-    if (!up) return;
+    if (!up || !up.active_plan_id) return;
 
-    const sessionsPerWeek =
-      (up as unknown as { programs: { sessions_per_week: number } }).programs
-        ?.sessions_per_week ?? 4;
+    const { data: plan } = await supabase
+      .from('user_program_plans')
+      .select('sessions_per_week, duration_weeks')
+      .eq('id', up.active_plan_id)
+      .single();
+
+    const sessionsPerWeek = plan?.sessions_per_week ?? 4;
+    const durationWeeks = plan?.duration_weeks ?? 5;
 
     let nextSess = up.current_session + 1;
     let nextWeek = up.current_week;
     if (nextSess > sessionsPerWeek) {
       nextSess = 1;
-      nextWeek = Math.min(nextWeek + 1, 5);
+      nextWeek = Math.min(nextWeek + 1, durationWeeks);
     }
 
     const { data } = await supabase
-      .from('program_sessions')
+      .from('user_plan_sessions')
       .select('*')
-      .eq('program_id', up.program_id)
+      .eq('plan_id', up.active_plan_id)
       .eq('week_number', nextWeek)
       .eq('session_number', nextSess)
       .single();
@@ -224,6 +345,7 @@ export default function SessionPlayerScreen() {
 
   function startRest(seconds: number) {
     setRestSeconds(seconds);
+    setRestTotal(Math.max(seconds, 1));
     setPhase('rest');
     restTimerRef.current = setInterval(() => {
       setRestSeconds((prev) => {
@@ -238,7 +360,8 @@ export default function SessionPlayerScreen() {
   }
 
   function skipRest() {
-    hapticSelection();
+    // Navigation advance — stronger than a selection tick.
+    hapticPrimaryAction();
     if (restTimerRef.current) clearInterval(restTimerRef.current);
     advanceExercise();
   }
@@ -284,7 +407,7 @@ export default function SessionPlayerScreen() {
             if (user && id) {
               await supabase.from('session_completions').insert({
                 user_id: user.id,
-                program_session_id: id,
+                plan_session_id: id,
                 duration_seconds: Math.round((Date.now() - sessionStartTime.current) / 1000),
               });
             }
@@ -303,10 +426,16 @@ export default function SessionPlayerScreen() {
       score: painBefore,
       type: 'before' as const,
     });
+    trackEvent('session_started', {
+      sessionId: id,
+      weekNumber: sessionMeta?.week_number,
+      sessionNumber: sessionMeta?.session_number,
+    });
     setPhase('exercise');
   }
 
   async function handleComplete() {
+    hapticPrimaryAction();
     if (!user || !id) return;
 
     const durationSeconds = Math.round((Date.now() - sessionStartTime.current) / 1000);
@@ -315,7 +444,7 @@ export default function SessionPlayerScreen() {
       .from('session_completions')
       .insert({
         user_id: user.id,
-        program_session_id: id,
+        plan_session_id: id,
         duration_seconds: durationSeconds,
       })
       .select()
@@ -330,26 +459,41 @@ export default function SessionPlayerScreen() {
 
     const { data: up } = await supabase
       .from('user_programs')
-      .select('*, programs(sessions_per_week, duration_weeks)')
+      .select('active_plan_id, current_week, current_session')
       .eq('user_id', user.id)
       .single();
 
+    let completedWeek: number | null = null;
+    let endedWeek = false;
+    let programDone = false;
     if (up) {
-      const prog = (
-        up as unknown as { programs: { sessions_per_week: number; duration_weeks: number } }
-      ).programs;
-      const sessionsPerWeek = prog?.sessions_per_week ?? 4;
-      const durationWeeks = prog?.duration_weeks ?? 5;
+      let sessionsPerWeek = 4;
+      let durationWeeks = 5;
+      if (up.active_plan_id) {
+        const { data: plan } = await supabase
+          .from('user_program_plans')
+          .select('sessions_per_week, duration_weeks')
+          .eq('id', up.active_plan_id)
+          .single();
+        if (plan) {
+          sessionsPerWeek = plan.sessions_per_week;
+          durationWeeks = plan.duration_weeks;
+        }
+      }
 
       let nextSess = up.current_session + 1;
       let nextWeek = up.current_week;
       if (nextSess > sessionsPerWeek) {
+        // Just finished the last session of the week → eligible for the weekly ramp.
         nextSess = 1;
         nextWeek = up.current_week + 1;
+        completedWeek = up.current_week;
+        endedWeek = true;
       }
 
       if (nextWeek > durationWeeks) {
         // Program finished — write completion sentinel; no valid session to advance to.
+        programDone = true;
         setIsProgramCompleted(true);
         await supabase
           .from('user_programs')
@@ -363,14 +507,26 @@ export default function SessionPlayerScreen() {
       }
     }
 
+    trackEvent('session_completed', {
+      sessionId: id,
+      weekNumber: sessionMeta?.week_number,
+      sessionNumber: sessionMeta?.session_number,
+    });
+
+    // End-of-week (and not the final week): route to the weekly hybrid ramp.
+    if (endedWeek && completedWeek !== null && !programDone) {
+      router.replace(`/weekly-ramp?week=${completedWeek}`);
+      return;
+    }
+
     setPhase('complete');
   }
 
   if (!loaded) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.skeletonVideo} />
-        <View style={styles.skeletonText} />
+        <Skeleton height={SCREEN_WIDTH * 0.65} borderRadius={0} style={styles.skeletonVideo} />
+        <Skeleton height={24} width={160} borderRadius={6} style={styles.skeletonText} />
       </View>
     );
   }
@@ -410,7 +566,7 @@ export default function SessionPlayerScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.restLabel}>Rest</Text>
-        <Text style={styles.restTimer}>{restSeconds}s</Text>
+        <RestRing seconds={restSeconds} total={restTotal} />
 
         {nextEx && (
           <View style={styles.nextExPreview}>
@@ -559,26 +715,70 @@ export default function SessionPlayerScreen() {
 
       <Text style={styles.completeTitle}>Session Complete!</Text>
 
-      <View style={styles.completeStats}>
+      <Animated.View
+        style={[
+          styles.completeStats,
+          {
+            opacity: completeStatAnims[0],
+            transform: [
+              {
+                translateY: completeStatAnims[0].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [10, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
         <Text style={styles.completeStatText}>{durationMin} min</Text>
         <Text style={styles.completeStatDivider}>·</Text>
         <Text style={styles.completeStatText}>{completedCount} exercises</Text>
-      </View>
+      </Animated.View>
 
-      {painDelta > 0 && (
-        <Text style={styles.painDelta}>
-          Pain: {painBefore} → {painAfter} — nice work
-        </Text>
-      )}
+      <Animated.View
+        style={{
+          opacity: completeStatAnims[1],
+          transform: [
+            {
+              translateY: completeStatAnims[1].interpolate({
+                inputRange: [0, 1],
+                outputRange: [10, 0],
+              }),
+            },
+          ],
+        }}
+      >
+        {painDelta > 0 && (
+          <Text style={styles.painDelta}>
+            Pain: {painBefore} → {painAfter} — nice work
+          </Text>
+        )}
+      </Animated.View>
 
-      <Text style={styles.warmCopy}>{warmCopy}</Text>
+      <Animated.View
+        style={{
+          alignItems: 'center',
+          opacity: completeStatAnims[2],
+          transform: [
+            {
+              translateY: completeStatAnims[2].interpolate({
+                inputRange: [0, 1],
+                outputRange: [10, 0],
+              }),
+            },
+          ],
+        }}
+      >
+        <Text style={styles.warmCopy}>{warmCopy}</Text>
 
-      {nextSession && !isProgramCompleted && (
-        <View style={styles.nextSessionPreview}>
-          <Text style={styles.nextSessionLabel}>Next session</Text>
-          <Text style={styles.nextSessionTitle}>{nextSession.title}</Text>
-        </View>
-      )}
+        {nextSession && !isProgramCompleted && (
+          <View style={styles.nextSessionPreview}>
+            <Text style={styles.nextSessionLabel}>Next session</Text>
+            <Text style={styles.nextSessionTitle}>{nextSession.title}</Text>
+          </View>
+        )}
+      </Animated.View>
 
       <TouchableOpacity
         style={[styles.primaryButton, { marginTop: 24 }]}
@@ -619,20 +819,46 @@ function SessionPreviewScreen({
   const entryOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(entryOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    Animated.timing(entryOpacity, {
+      toValue: 1,
+      duration: 500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
 
+    // Organic breathing pulse — easeInOut so the turnarounds feel soft.
     Animated.loop(
       Animated.sequence([
-        Animated.timing(scaleAnim, { toValue: 1.06, duration: 2200, useNativeDriver: true }),
-        Animated.timing(scaleAnim, { toValue: 0.95, duration: 2200, useNativeDriver: true }),
+        Animated.timing(scaleAnim, {
+          toValue: 1.06,
+          duration: 2200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 2200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
       ]),
     ).start();
 
     Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(ringScale, { toValue: 1.55, duration: 2000, useNativeDriver: true }),
-          Animated.timing(ringOpacity, { toValue: 0, duration: 2000, useNativeDriver: true }),
+          Animated.timing(ringScale, {
+            toValue: 1.55,
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringOpacity, {
+            toValue: 0,
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
         ]),
         Animated.parallel([
           Animated.timing(ringScale, { toValue: 0.85, duration: 0, useNativeDriver: true }),
@@ -666,9 +892,7 @@ function SessionPreviewScreen({
         <Animated.View
           style={[previewStyles.figureCircle, { transform: [{ scale: scaleAnim }] }]}
         >
-          <View style={previewStyles.personHead} />
-          <View style={previewStyles.personTorso} />
-          <View style={previewStyles.personLegs} />
+          <Text style={previewStyles.figureGlyph}>✦</Text>
         </Animated.View>
       </View>
 
@@ -749,41 +973,27 @@ const previewStyles = StyleSheet.create({
   figureCircle: {
     width: 110,
     height: 110,
-    borderRadius: 55,
-    backgroundColor: colors.primary + '12',
+    borderRadius: radius.circle,
+    backgroundColor: colors.primaryMuted,
     borderWidth: 1.5,
     borderColor: colors.primary + '28',
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.15,
   },
-  personHead: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    marginBottom: 5,
-  },
-  personTorso: {
-    width: 32,
-    height: 24,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: colors.primary,
-  },
-  personLegs: {
-    width: 38,
-    height: 14,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    backgroundColor: colors.primary + '60',
-    marginTop: 2,
+  figureGlyph: {
+    fontSize: 44,
+    color: colors.primary,
+    lineHeight: 52,
   },
   preLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     marginBottom: 8,
   },
   title: {
@@ -799,22 +1009,23 @@ const previewStyles = StyleSheet.create({
     marginBottom: 20,
   },
   badge: {
-    backgroundColor: colors.primary + '18',
+    backgroundColor: colors.primaryMuted,
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 10,
+    borderRadius: radius.chip,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.primaryDeep,
+    letterSpacing: 0.4,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#F0EBE7',
+    borderColor: colors.borderLight,
     paddingVertical: 14,
     width: '100%',
     justifyContent: 'center',
@@ -828,40 +1039,45 @@ const previewStyles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   statPillLabel: {
     fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 1.2,
     marginTop: 1,
   },
   statPillDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#F0EBE7',
+    backgroundColor: colors.borderLight,
   },
   tip: {
     fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: 32,
     paddingHorizontal: 8,
   },
   beginButton: {
     height: 56,
-    borderRadius: 16,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   beginButtonText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 });
 
@@ -887,8 +1103,12 @@ function PainCheckinView({
   function handleSliderTouch(pageX: number) {
     sliderRef.current?.measure((_x, _y, width, _height, px) => {
       const position = Math.max(0, Math.min(pageX - px, width));
-      const val = Math.round((position / width) * 9) + 1;
-      onValueChange(Math.max(1, Math.min(10, val)));
+      const val = Math.max(1, Math.min(10, Math.round((position / width) * 9) + 1));
+      // Notched feel: tick only when the integer value actually changes.
+      if (val !== value) {
+        hapticSelection();
+        onValueChange(val);
+      }
     });
   }
 
@@ -910,9 +1130,19 @@ function PainCheckinView({
         onResponderGrant={(e) => handleSliderTouch(e.nativeEvent.pageX)}
         onResponderMove={(e) => handleSliderTouch(e.nativeEvent.pageX)}
       >
-        <View style={styles.sliderFill} />
-        {thumbPosition !== null && (
-          <View style={[styles.sliderThumb, { left: thumbPosition }]} />
+        {sliderLayoutWidth > 0 && (
+          <View style={styles.sliderFill} pointerEvents="none">
+            <Svg width={sliderLayoutWidth} height={8}>
+              <Defs>
+                <SvgLinearGradient id="painScale" x1="0" y1="0.5" x2="1" y2="0.5">
+                  <Stop offset="0" stopColor={colors.primary} />
+                  <Stop offset="0.5" stopColor={colors.warning} />
+                  <Stop offset="1" stopColor={colors.secondary} />
+                </SvgLinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width={sliderLayoutWidth} height={8} rx={4} fill="url(#painScale)" />
+            </Svg>
+          </View>
         )}
         <View style={styles.sliderTicks}>
           {Array.from({ length: 10 }, (_, i) => (
@@ -925,6 +1155,9 @@ function PainCheckinView({
             />
           ))}
         </View>
+        {thumbPosition !== null && (
+          <View style={[styles.sliderThumb, { left: thumbPosition }]} />
+        )}
       </View>
 
       <Text style={styles.sliderHint}>1 = No pain · 10 = Severe pain</Text>
@@ -958,6 +1191,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
     marginBottom: 32,
+    fontVariant: ['tabular-nums'],
   },
 
   // Slider
@@ -973,21 +1207,20 @@ const styles = StyleSheet.create({
     right: 0,
     top: 20,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E8E0DC',
+    borderRadius: radius.circle,
+    opacity: 0.85,
   },
   sliderThumb: {
     position: 'absolute',
     top: 10,
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    borderRadius: radius.circle,
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.primary,
+    ...shadows.medium,
+    shadowOpacity: 0.18,
   },
   sliderTicks: {
     position: 'absolute',
@@ -1003,26 +1236,31 @@ const styles = StyleSheet.create({
   sliderTick: {
     width: 4,
     height: 4,
-    borderRadius: 2,
-    backgroundColor: '#D0C8C3',
+    borderRadius: radius.circle,
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
   sliderTickActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'rgba(255,255,255,0.95)',
   },
   sliderHint: {
     fontSize: 13,
+    lineHeight: 20,
     color: colors.textSecondary,
     marginBottom: 32,
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 
   primaryButton: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   primaryButtonDisabled: {
     opacity: 0.4,
@@ -1031,20 +1269,44 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 
   // Rest
   restLabel: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textSecondary,
-    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 20,
+  },
+  restRingWrap: {
+    width: REST_RING_SIZE,
+    height: REST_RING_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 28,
+  },
+  restRingCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   restTimer: {
     fontSize: 64,
     fontWeight: '700',
     color: colors.primary,
-    marginBottom: 20,
+    lineHeight: 70,
+    fontVariant: ['tabular-nums'],
+  },
+  restTimerUnit: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginTop: 2,
   },
   nextExPreview: {
     alignItems: 'center',
@@ -1055,7 +1317,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     marginBottom: 4,
   },
   nextExName: {
@@ -1077,14 +1339,17 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 10,
+    borderRadius: radius.button,
     borderWidth: 1.5,
-    borderColor: colors.textSecondary,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.low,
   },
   skipButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.textSecondary,
+    letterSpacing: 0.2,
   },
 
   // Exercise top bar
@@ -1116,9 +1381,10 @@ const styles = StyleSheet.create({
   skipExButton: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 8,
+    borderRadius: radius.chip,
     borderWidth: 1.5,
-    borderColor: colors.textSecondary,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   skipExButtonText: {
     fontSize: 13,
@@ -1185,11 +1451,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     marginBottom: 12,
+    fontVariant: ['tabular-nums'],
   },
   exerciseInstructions: {
     fontSize: 15,
     color: colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 23,
   },
 
   // Rep tracker
@@ -1206,9 +1473,9 @@ const styles = StyleSheet.create({
   repCircle: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.circle,
     borderWidth: 2,
-    borderColor: '#E8E0DC',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -1247,11 +1514,14 @@ const styles = StyleSheet.create({
   completeIconWrap: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: radius.circle,
     backgroundColor: colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    ...shadows.high,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.35,
   },
   completeIcon: {
     fontSize: 36,
@@ -1300,7 +1570,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     marginBottom: 4,
   },
   nextSessionTitle: {
@@ -1311,23 +1581,17 @@ const styles = StyleSheet.create({
 
   // Skeleton
   skeletonVideo: {
-    height: SCREEN_WIDTH * 0.65,
     marginTop: 60,
-    backgroundColor: '#E8E0DC',
   },
   skeletonText: {
-    height: 24,
-    width: 160,
     marginHorizontal: 24,
     marginTop: 16,
-    backgroundColor: '#E8E0DC',
-    borderRadius: 6,
   },
   retryButton: {
     marginTop: 12,
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: radius.chip,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },

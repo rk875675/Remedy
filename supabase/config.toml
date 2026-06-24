@@ -1,0 +1,17 @@
+project_id = "vgqmvekjttywwadpftre"
+
+# Rule 13: the newer asymmetric JWT signing-key format can be incompatible with the
+# Edge gateway's built-in verify_jwt. verify-purchase and restore-purchases enforce auth
+# themselves — they call supabase.auth.getUser(token) and reject missing/invalid tokens —
+# so we disable the gateway check on them to stay resilient to the key format. All other
+# functions keep the default verify_jwt = true.
+[functions.verify-purchase]
+verify_jwt = false
+
+[functions.restore-purchases]
+verify_jwt = false
+
+# Public email deep-link bridge: hit by email clients/browsers (no JWT). It only issues a
+# 302 to the app scheme and never touches the token, so leaving it unauthenticated is safe.
+[functions.auth-bridge]
+verify_jwt = false

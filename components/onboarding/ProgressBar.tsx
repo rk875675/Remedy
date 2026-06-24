@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { colors } from '../../constants/colors';
 
 type ProgressBarProps = {
@@ -9,10 +9,26 @@ type ProgressBarProps = {
 
 export function ProgressBar({ current, total }: ProgressBarProps) {
   const progress = Math.min(current / total, 1);
+  const animated = useRef(new Animated.Value(progress)).current;
+
+  useEffect(() => {
+    Animated.timing(animated, {
+      toValue: progress,
+      duration: 350,
+      easing: Easing.inOut(Easing.cubic),
+      // Width interpolation cannot use the native driver.
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  const width = animated.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={styles.track}>
-      <View style={[styles.fill, { width: `${progress * 100}%` }]} />
+      <Animated.View style={[styles.fill, { width }]} />
     </View>
   );
 }
@@ -20,7 +36,7 @@ export function ProgressBar({ current, total }: ProgressBarProps) {
 const styles = StyleSheet.create({
   track: {
     height: 4,
-    backgroundColor: '#E8E0DC',
+    backgroundColor: colors.border,
     borderRadius: 2,
     overflow: 'hidden',
   },

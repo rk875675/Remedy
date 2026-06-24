@@ -8,16 +8,19 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError, hapticSelection } from '../../lib/haptics';
 
 export default function EmailAuthScreen() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(mode === 'signup');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,6 +60,33 @@ export default function EmailAuthScreen() {
       const err = e as { message?: string };
       hapticError();
       setError(err.message ?? 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setError(null);
+    setSuccess(null);
+    if (!email.trim()) {
+      hapticError();
+      setError('Enter your email first, then tap reset.');
+      return;
+    }
+    hapticPrimaryAction();
+    setLoading(true);
+    try {
+      // redirectTo becomes {{ .RedirectTo }} in the recovery email template, which links
+      // through the auth-bridge function and lands on remedy://auth-callback.
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: 'remedy://auth-callback',
+      });
+      if (resetError) throw resetError;
+      setSuccess('Check your email for a password reset link.');
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      hapticError();
+      setError(err.message ?? 'Could not send reset email');
     } finally {
       setLoading(false);
     }
@@ -130,6 +160,7 @@ export default function EmailAuthScreen() {
             setSuccess(null);
           }}
           style={styles.toggleButton}
+          activeOpacity={0.6}
         >
           <Text style={styles.toggleText}>
             {isSignUp
@@ -138,7 +169,18 @@ export default function EmailAuthScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        {!isSignUp && (
+          <TouchableOpacity
+            onPress={handleForgotPassword}
+            style={styles.toggleButton}
+            disabled={loading}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.forgotText}>Forgot password?</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.6}>
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -163,56 +205,65 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   errorContainer: {
     backgroundColor: '#FFF3E0',
-    borderRadius: 10,
+    borderRadius: radius.chip,
     padding: 12,
     borderWidth: 1,
     borderColor: colors.warning,
   },
   errorText: {
     fontSize: 14,
+    lineHeight: 21,
     color: colors.warning,
     textAlign: 'center',
   },
   successContainer: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 10,
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.chip,
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.secondary,
+    borderColor: colors.primary,
   },
   successText: {
     fontSize: 14,
-    color: colors.secondary,
+    lineHeight: 21,
+    color: colors.primaryDeep,
     textAlign: 'center',
   },
   input: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: radius.button,
     backgroundColor: colors.surface,
     paddingHorizontal: 16,
     fontSize: 16,
     color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   submitButton: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
+    ...shadows.medium,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
   },
   submitButtonDisabled: {
     opacity: 0.6,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitButtonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   toggleButton: {
     alignItems: 'center',
@@ -221,6 +272,10 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 15,
     color: colors.primary,
+  },
+  forgotText: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   backButton: {
     alignItems: 'center',

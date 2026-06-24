@@ -1,40 +1,104 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { useAuth } from '../../context/AuthContext';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
   const { resetAnswers } = useOnboarding();
+
+  const logoScale = useRef(new Animated.Value(0.7)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const nameOpacity = useRef(new Animated.Value(0)).current;
+  const nameTranslate = useRef(new Animated.Value(10)).current;
+  const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const subtitleTranslate = useRef(new Animated.Value(10)).current;
+  const footerOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     resetAnswers();
   }, []);
 
+  useEffect(() => {
+    const fadeUp = (opacity: Animated.Value, translate: Animated.Value) =>
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translate, {
+          toValue: 0,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]);
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 12,
+          bounciness: 8,
+        }),
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.stagger(90, [
+        fadeUp(nameOpacity, nameTranslate),
+        fadeUp(subtitleOpacity, subtitleTranslate),
+        Animated.timing(footerOpacity, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 24 }]}>
       <View style={styles.content}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoText}>R</Text>
-        </View>
-        <Text style={styles.appName}>Remedy</Text>
-        <Text style={styles.subtitle}>Your back pain, finally fixed.</Text>
+        <Animated.View
+          style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
+        >
+          <View style={styles.logoHalo} />
+          <View style={styles.logoCircle}>
+            <Text style={styles.logoText}>R</Text>
+          </View>
+        </Animated.View>
+        <Animated.Text
+          style={[styles.appName, { opacity: nameOpacity, transform: [{ translateY: nameTranslate }] }]}
+        >
+          Remedy
+        </Animated.Text>
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            { opacity: subtitleOpacity, transform: [{ translateY: subtitleTranslate }] },
+          ]}
+        >
+          Your back pain, finally fixed.
+        </Animated.Text>
       </View>
 
-      <View style={styles.footer}>
-        <ContinueButton label="Get Started" onPress={() => router.push('/(onboarding)/disclaimer' as any)} />
-        <TouchableOpacity style={styles.signOutButton} onPress={signOut} activeOpacity={0.7}>
-          <Text style={styles.signOutText}>
-            {user?.email ? `${user.email} · ` : ''}Sign Out
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Animated.View style={[styles.footer, { opacity: footerOpacity }]}>
+        <ContinueButton label="Get Started" onPress={() => router.push('/(onboarding)/education')} />
+      </Animated.View>
     </View>
   );
 }
@@ -50,41 +114,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
-    marginBottom: 24,
+  logoWrap: {
+    width: 112,
+    height: 112,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 24,
+  },
+  logoHalo: {
+    position: 'absolute',
+    width: 112,
+    height: 112,
+    borderRadius: radius.circle,
+    backgroundColor: colors.primaryMuted,
+  },
+  logoCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: radius.circle,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.high,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.3,
   },
   logoText: {
-    fontSize: 38,
+    fontSize: 40,
+    fontFamily: serifFont,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   appName: {
-    fontSize: 40,
+    fontSize: 42,
+    fontFamily: serifFont,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 18,
+    lineHeight: 27,
     color: colors.textSecondary,
   },
   footer: {
     paddingBottom: 8,
     gap: 16,
-  },
-  signOutButton: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  signOutText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
   },
 });
