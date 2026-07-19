@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -17,7 +18,12 @@ import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
-import { hapticPrimaryAction } from '../../lib/haptics';
+import { hapticPrimaryAction, hapticSelection } from '../../lib/haptics';
+import {
+  scheduleStretchReminders,
+  cancelStretchReminders,
+  getNextStretchTime,
+} from '../../lib/notifications';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { MiniRing } from '../../components/ui/MiniRing';
@@ -56,6 +62,165 @@ const INSIGHTS: readonly string[] = [
   'Rest alone rarely fixes back pain. Targeted exercise retrains the muscles that protect your spine.',
   'Most chronic back pain improves significantly within 4–6 weeks of consistent, focused movement.',
 ];
+
+const STRETCH_KEYS = {
+  enabled: 'remedy_stretch_enabled',
+  interval: 'remedy_stretch_interval',
+  start: 'remedy_stretch_start_hour',
+  end: 'remedy_stretch_end_hour',
+  paused: 'remedy_stretch_paused',
+} as const;
+
+function formatCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// Nudge card shown when the user has no reminder of any kind set up.
+// Tapping "Set up" navigates to the Profile tab.
+function NotifNudgeCard() {
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
+
+  const checkVisibility = useCallback(async () => {
+    const [daily, stretch] = await AsyncStorage.multiGet([
+      'remedy_notifications_enabled',
+      'remedy_stretch_enabled',
+    ]);
+    setVisible(daily[1] !== 'true' && stretch[1] !== 'true');
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkVisibility();
+    }, [checkVisibility]),
+  );
+
+  if (!visible) return null;
+
+  return (
+    <TouchableOpacity
+      style={styles.nudgeCard}
+      onPress={() => {
+        hapticPrimaryAction();
+        router.push('/(tabs)/profile');
+      }}
+      activeOpacity={0.85}
+    >
+      <View style={styles.nudgeIcon}>
+        <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+      </View>
+      <View style={styles.nudgeText}>
+        <Text style={styles.nudgeTitle}>Set up your reminders</Text>
+        <Text style={styles.nudgeBody}>Daily sessions and stretch breaks keep recovery on track.</Text>
+      </View>
+      <Text style={styles.nudgeChevron}>›</Text>
+    </TouchableOpacity>
+  );
+}
+
+// Live countdown to the next stretch reminder. Reads its settings from
+// AsyncStorage (written by the Profile tab) and self-hides when disabled.
+function StretchReminderCard() {
+  const [enabled, setEnabled] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [intervalMin, setIntervalMin] = useState(60);
+  const [startHour, setStartHour] = useState(9);
+  const [endHour, setEndHour] = useState(18);
+  const [nextTime, setNextTime] = useState<Date | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  const load = useCallback(async () => {
+    const map = Object.fromEntries(
+      await AsyncStorage.multiGet([
+        STRETCH_KEYS.enabled,
+        STRETCH_KEYS.interval,
+        STRETCH_KEYS.start,
+        STRETCH_KEYS.end,
+        STRETCH_KEYS.paused,
+      ]),
+    );
+    const isEnabled = map[STRETCH_KEYS.enabled] === 'true';
+    setEnabled(isEnabled);
+    setPaused(map[STRETCH_KEYS.paused] === 'true');
+    const intervalRaw = map[STRETCH_KEYS.interval];
+    const startRaw = map[STRETCH_KEYS.start];
+    const endRaw = map[STRETCH_KEYS.end];
+    if (intervalRaw) setIntervalMin(parseInt(intervalRaw, 10));
+    if (startRaw) setStartHour(parseInt(startRaw, 10));
+    if (endRaw) setEndHour(parseInt(endRaw, 10));
+    setNextTime(isEnabled ? await getNextStretchTime() : null);
+    setNow(Date.now());
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  useEffect(() => {
+    if (!enabled || paused) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [enabled, paused]);
+
+  // When the countdown elapses, reschedule so the next slot's time is picked up.
+  useEffect(() => {
+    if (!enabled || paused || !nextTime) return;
+    if (now >= nextTime.getTime()) {
+      (async () => {
+        await scheduleStretchReminders(intervalMin, startHour, endHour);
+        setNextTime(await getNextStretchTime());
+      })();
+    }
+  }, [now, nextTime, enabled, paused, intervalMin, startHour, endHour]);
+
+  const handlePause = useCallback(async () => {
+    hapticSelection();
+    await cancelStretchReminders();
+    await AsyncStorage.setItem(STRETCH_KEYS.paused, 'true');
+    setPaused(true);
+    setNextTime(null);
+  }, []);
+
+  const handleResume = useCallback(async () => {
+    hapticSelection();
+    await scheduleStretchReminders(intervalMin, startHour, endHour);
+    await AsyncStorage.setItem(STRETCH_KEYS.paused, 'false');
+    setPaused(false);
+    setNextTime(await getNextStretchTime());
+  }, [intervalMin, startHour, endHour]);
+
+  if (!enabled) return null;
+
+  const remainingMs = nextTime ? nextTime.getTime() - now : 0;
+  const valueText = paused
+    ? 'Paused'
+    : nextTime
+    ? `Next stretch in ${formatCountdown(remainingMs)}`
+    : 'No more reminders today';
+
+  return (
+    <View style={styles.stretchCard}>
+      <View style={styles.stretchCardText}>
+        <Text style={styles.stretchCardLabel}>Stretch Break</Text>
+        <Text style={styles.stretchCardValue}>{valueText}</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.stretchCardButton}
+        onPress={paused ? handleResume : handlePause}
+        activeOpacity={0.8}
+        accessibilityLabel={paused ? 'Resume stretch reminders' : 'Pause stretch reminders'}
+      >
+        <Text style={styles.stretchCardButtonText}>{paused ? '▶' : '❚❚'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -145,12 +310,35 @@ export default function HomeScreen() {
     // programs table.
     const { data: planMeta } = await supabase
       .from('user_program_plans')
-      .select('duration_weeks, sessions_per_week')
+      .select('duration_weeks, sessions_per_week, start_week')
       .eq('id', planId)
       .single();
 
     const planSessionsPerWeek = planMeta?.sessions_per_week ?? 4;
     const planDurationWeeks = planMeta?.duration_weeks ?? 5;
+
+    // Recovery: complete_session (migration 021) advances the pointer to the next week
+    // BEFORE the weekly ramp decision is recorded, and weekly-ramp is a one-shot
+    // navigation with no other entry point. If the app was force-quit (or the screen
+    // dismissed) before confirming, the decision is lost forever with no intensity bump
+    // ever applied — send the user back there until it's actually recorded.
+    // Gated on start_week: a retake's snapshot only contains sessions from its own
+    // start_week onward, so a "completed week" before that belongs to a prior
+    // (superseded) plan and was never meant to be ramped on this one.
+    const planStartWeek = planMeta?.start_week ?? 1;
+    if (up.current_week > planStartWeek && up.current_week <= planDurationWeeks) {
+      const completedWeek = up.current_week - 1;
+      const { data: rampDecision } = await supabase
+        .from('user_weekly_ramp_decisions')
+        .select('id')
+        .eq('plan_id', planId)
+        .eq('week_number', completedWeek)
+        .maybeSingle();
+      if (!rampDecision) {
+        router.replace(`/weekly-ramp?week=${completedWeek}`);
+        return;
+      }
+    }
 
     // -----------------------------------------------------------------------
     // Determine which week/session to display.
@@ -228,19 +416,31 @@ export default function HomeScreen() {
       // A missing session is a genuine rest day only when we've run past the week's
       // scheduled sessions. Any other miss means the session just isn't loaded — don't
       // mislabel it as "Recovery Day".
+      const restDay = displaySession > planSessionsPerWeek;
       setTodaySession(null);
-      setIsRestDay(displaySession > planSessionsPerWeek);
-      const { data: nextSess } = await supabase
-        .from('user_plan_sessions')
-        .select('id')
-        .eq('plan_id', planId)
-        .gt('week_number', displayWeek)
-        .order('week_number', { ascending: true })
-        .order('session_number', { ascending: true })
-        .limit(1);
+      setIsRestDay(restDay);
+      setNextSessionId(null);
 
-      if (nextSess && nextSess.length > 0) {
-        setNextSessionId(nextSess[0].id);
+      // Only peek at next week's session on a legitimate rest day (the "up next"
+      // preview). When it's NOT a rest day, the row for the pointer's own
+      // week/session is simply missing — a plan data gap, not a rest day — and
+      // offering a future week's session as "Start" would let the user complete it
+      // while the server pointer (complete_session's guard) still sits on the
+      // missing current session, permanently skipping it with no recovery path.
+      // Surface nothing rather than a broken shortcut; the gap needs repair.
+      if (restDay) {
+        const { data: nextSess } = await supabase
+          .from('user_plan_sessions')
+          .select('id')
+          .eq('plan_id', planId)
+          .gt('week_number', displayWeek)
+          .order('week_number', { ascending: true })
+          .order('session_number', { ascending: true })
+          .limit(1);
+
+        if (nextSess && nextSess.length > 0) {
+          setNextSessionId(nextSess[0].id);
+        }
       }
     }
 
@@ -299,6 +499,9 @@ export default function HomeScreen() {
       <Text style={styles.greeting}>
         {greeting}{firstName ? `, ${firstName}` : ''}
       </Text>
+
+      <NotifNudgeCard />
+      <StretchReminderCard />
 
       {/* Today's session, rest day, or program completion */}
       {userProgram && userProgram.current_week > durationWeeks ? (
@@ -468,6 +671,7 @@ export default function HomeScreen() {
   );
 }
 
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning';
@@ -504,6 +708,88 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 24,
     letterSpacing: -0.3,
+  },
+
+  // Reminders nudge card — shown when no reminders are configured
+  nudgeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    ...shadows.low,
+  },
+  nudgeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  nudgeText: {
+    flex: 1,
+  },
+  nudgeTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  nudgeBody: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  nudgeChevron: {
+    fontSize: 22,
+    color: colors.textTertiary,
+    marginLeft: 8,
+  },
+
+  // Stretch break countdown card
+  stretchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.card,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 16,
+  },
+  stretchCardText: {
+    flex: 1,
+  },
+  stretchCardLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  stretchCardValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  stretchCardButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  stretchCardButtonText: {
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: '700',
   },
 
   // Session / rest day card — the hero; highest elevation on screen

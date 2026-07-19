@@ -2,12 +2,25 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
+import { clearPendingPurchase } from '../lib/pendingPurchase';
+
+export type DeleteAccountError =
+  | 'missing_auth'
+  | 'invalid_auth'
+  | 'rate_limited'
+  | 'delete_failed'
+  | 'request_failed';
+
+export type DeleteAccountResult =
+  | { success: true }
+  | { success: false; error: DeleteAccountError };
 
 type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<DeleteAccountResult>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -15,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   signOut: async () => {},
+  deleteAccount: async () => ({ success: false, error: 'request_failed' }),
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -67,7 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('id', user.id)
       .single();
 
-    if (error && error.code === 'PGRST116') {
+    if (!error) return true;
+
+    if (error.code === 'PGRST116') {
+      // Row genuinely missing (handle_new_user trigger failed, or the row was
+      // deleted) — repair it now so downstream FK-dependent writes don't silently
+      // fail. Requires the profiles_insert_own RLS policy (migration 033).
       const { error: insertError } = await supabase.from('profiles').insert({
         id: user.id,
         display_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
@@ -76,7 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return !insertError;
     }
 
-    return !error;
+    // Any other error (network blip, timeout, transient 5xx) is not proof the
+    // session/account is invalid — signing the user out here would kill a
+    // perfectly good session over a flaky connection. Fail open.
+    return true;
   }
 
   async function ensureProfile(user: User) {
@@ -107,8 +129,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Force clear even if signOut API call fails (e.g. deleted user)
     }
+    // The stashed paywall transaction is device-scoped. Left behind, it would be
+    // verified onto the NEXT account signed in on this device, granting them premium
+    // against this user's Apple subscription. The owner can always recover their
+    // entitlement via Restore Purchases.
+    await clearPendingPurchase();
     resetAnalytics();
     setSession(null);
+  }
+
+  async function deleteAccount(): Promise<DeleteAccountResult> {
+    // Server-side deletion first (hard-deletes the auth user + every cascaded row via
+    // the delete-account edge function) — only clear local state once that succeeds, so
+    // a network failure can't leave the app thinking the account is gone when it isn't.
+    try {
+      const { data, error } = await supabase.functions.invoke<{
+        success: boolean;
+        error?: DeleteAccountError;
+      }>('delete-account', { body: { confirm: true } });
+
+      if (error || !data?.success) {
+        return { success: false, error: data?.error ?? 'request_failed' };
+      }
+    } catch {
+      return { success: false, error: 'request_failed' };
+    }
+
+    try {
+      // Local scope only: the account no longer exists server-side, so there is no
+      // refresh token left to revoke — just drop the cached session.
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // Ignore — local state is cleared below regardless.
+    }
+    await clearPendingPurchase();
+    resetAnalytics();
+    setSession(null);
+    return { success: true };
   }
 
   return (
@@ -118,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: session?.user ?? null,
         loading,
         signOut,
+        deleteAccount,
       }}
     >
       {children}

@@ -122,6 +122,9 @@ export type Entitlement = {
   trial_started_at: string | null;
   trial_ends_at: string | null;
   expires_at: string | null;
+  // Informational: the granting Apple transaction came from the Sandbox environment.
+  // Never used to gate access.
+  is_sandbox: boolean;
   updated_at: string;
 };
 
@@ -713,7 +716,27 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      complete_session: {
+        Args: {
+          p_plan_session_id: string;
+          p_duration_seconds: number;
+          p_pain_after?: number | null;
+        };
+        Returns: {
+          completion_id: string;
+          ended_week: boolean;
+          completed_week: number | null;
+          program_done: boolean;
+        };
+      };
+      restart_program: {
+        Args: {
+          p_reset_started_at?: boolean;
+        };
+        Returns: undefined;
+      };
+    };
     Enums: Record<string, never>;
   };
 };

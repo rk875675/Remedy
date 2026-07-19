@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
 import type { PainTrigger } from '../../types/database';
@@ -14,19 +14,20 @@ import type { PainTrigger } from '../../types/database';
 const ICON_SIZE = 17;
 const ICON_COLOR = '#FFFFFF';
 
+// Trimmed to four broad triggers. The PainTrigger enum still carries `exercise`/`other`
+// for back-compat, but the UI folds those into the remaining options.
 const options: { label: string; icon: React.ReactNode; value: PainTrigger }[] = [
   { label: 'Sitting too long', icon: <Ionicons name="desktop-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'sitting' },
-  { label: 'Bending forward', icon: <Ionicons name="trending-down-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'bending' },
-  { label: 'Standing', icon: <Ionicons name="body-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'standing' },
-  { label: 'Morning stiffness', icon: <Ionicons name="moon-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'morning' },
-  { label: 'Exercise', icon: <Ionicons name="barbell-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'exercise' },
-  { label: 'Other', icon: <Ionicons name="ellipsis-horizontal-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'other' },
+  { label: 'Bending or lifting', icon: <Ionicons name="trending-down-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'bending' },
+  { label: 'Standing or walking', icon: <Ionicons name="walk-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'standing' },
+  { label: 'Mornings / after rest', icon: <Ionicons name="moon-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'morning' },
 ];
 
 export default function Q5Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers, setAnswer } = useOnboarding();
+  useTrackOnboardingStep('q5');
 
   const selected = answers.pain_trigger ?? [];
 

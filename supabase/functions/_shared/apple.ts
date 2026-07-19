@@ -11,7 +11,14 @@ import { X509Certificate, cryptoProvider } from 'https://esm.sh/@peculiar/x509@1
 cryptoProvider.set(crypto as unknown as Crypto);
 
 const BUNDLE_ID = 'com.remedyapp.ios';
-const ALLOWED_PRODUCT_IDS = new Set(['com.remedyapp.monthly', 'com.remedyapp.annual']);
+// Must cover every product the Superwall paywall can sell — the live paywall uses the
+// `.no.trial` variants; rejecting them here fails verification after a real purchase.
+const ALLOWED_PRODUCT_IDS = new Set([
+  'com.remedyapp.monthly',
+  'com.remedyapp.annual',
+  'com.remedyapp.monthly.no.trial',
+  'com.remedyapp.annual.no.trial',
+]);
 const APPLE_AUD = 'appstoreconnect-v1';
 const APPLE_PROD_BASE = 'https://api.storekit.itunes.apple.com';
 const APPLE_SANDBOX_BASE = 'https://api.storekit-sandbox.itunes.apple.com';
@@ -28,6 +35,12 @@ export interface AppleVerifyResult {
   productId?: string;
   expiresDate?: number;
   inTrialPeriod?: boolean;
+  // Apple's stable per-subscription identifier. Used to bind one subscription to one
+  // account (anti-fraud) — never the client-supplied transactionId.
+  originalTransactionId?: string;
+  // Informational only (from the transaction's `environment` claim). Recorded on the
+  // entitlement row for visibility; NEVER a reason to reject a grant.
+  isSandbox?: boolean;
 }
 
 async function buildAppleAuthJwt(
@@ -84,7 +97,10 @@ function validateTransactionClaims(tx: Record<string, unknown>): AppleVerifyResu
   const inTrialPeriod =
     tx['offerType'] === 1 && tx['offerDiscountType'] === 'FREE_TRIAL';
 
-  return { valid: true, productId, expiresDate, inTrialPeriod };
+  const originalTransactionId = tx['originalTransactionId'] as string | undefined;
+  const isSandbox = tx['environment'] === 'Sandbox';
+
+  return { valid: true, productId, expiresDate, inTrialPeriod, originalTransactionId, isSandbox };
 }
 
 // Full verification of an Apple-signed JWS (used for both the App Store Server API
@@ -148,6 +164,18 @@ async function verifyAppleSignedJws(jws: string): Promise<AppleVerifyResult> {
   return validateTransactionClaims(tx);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// "Wrong environment / not indexed yet" signal: the App Store Server API returns 404
+// (TransactionIdNotFound) when the transaction lives in the other environment — the
+// modern equivalent of legacy verifyReceipt's 21007 — and also, transiently, for brand
+// new sandbox transactions it hasn't indexed yet.
+function shouldTryOtherEnvironment(result: AppleVerifyResult): boolean {
+  return result.error === 'transaction_not_found';
+}
+
 async function callAppleTransactionApi(
   transactionId: string,
   authJwt: string,
@@ -177,15 +205,81 @@ async function callAppleTransactionApi(
   return verifyAppleSignedJws(body.signedTransactionInfo);
 }
 
+// Subscription statuses endpoint — Apple's recommended primary lookup for auto-renewable
+// subscriptions. Returns every subscription group with its latest signed transactions;
+// we verify each candidate JWS (newest first) and accept the first that validates.
+async function callAppleSubscriptionsApi(
+  transactionId: string,
+  authJwt: string,
+  sandbox: boolean,
+): Promise<AppleVerifyResult> {
+  const base = sandbox ? APPLE_SANDBOX_BASE : APPLE_PROD_BASE;
+  let resp: Response;
+  try {
+    resp = await fetch(`${base}/inApps/v1/subscriptions/${encodeURIComponent(transactionId)}`, {
+      headers: { Authorization: `Bearer ${authJwt}` },
+    });
+  } catch {
+    return { valid: false, error: 'apple_network_error' };
+  }
+
+  if (!resp.ok) {
+    if (resp.status === 401) return { valid: false, error: 'apple_auth_failed' };
+    if (resp.status === 404) return { valid: false, error: 'transaction_not_found' };
+    return { valid: false, error: `apple_api_error_${resp.status}` };
+  }
+
+  const body = await resp.json() as {
+    data?: { lastTransactions?: { signedTransactionInfo?: string }[] }[];
+  };
+  const candidates = (body.data ?? [])
+    .flatMap((group) => group.lastTransactions ?? [])
+    .map((t) => t.signedTransactionInfo)
+    .filter((jws): jws is string => typeof jws === 'string' && jws.length > 0);
+  if (candidates.length === 0) {
+    return { valid: false, error: 'missing_signed_transaction' };
+  }
+
+  let lastFailure: AppleVerifyResult = { valid: false, error: 'missing_signed_transaction' };
+  for (const jws of candidates) {
+    const verified = await verifyAppleSignedJws(jws);
+    if (verified.valid) return verified;
+    lastFailure = verified;
+  }
+  return lastFailure;
+}
+
+// Production first, then sandbox on a wrong-environment signal. Sandbox indexes brand
+// new transactions slowly, so retry it up to `sandboxRetries` extra times with a 3s
+// delay before giving up on this endpoint.
+async function withEnvironmentFallback(
+  call: (sandbox: boolean) => Promise<AppleVerifyResult>,
+  sandboxRetries = 2,
+): Promise<AppleVerifyResult> {
+  const prod = await call(false);
+  if (prod.valid || !shouldTryOtherEnvironment(prod)) return prod;
+
+  let sandbox = await call(true);
+  for (let i = 0; i < sandboxRetries && !sandbox.valid && shouldTryOtherEnvironment(sandbox); i++) {
+    await sleep(3000);
+    sandbox = await call(true);
+  }
+  return sandbox;
+}
+
 /**
- * Verify a StoreKit 2 transaction against Apple. Strategy (per Apple's guidance + the
- * unreliable-sandbox reality):
- *   1. App Store Server API: production, then sandbox on a 404.
- *   2. Fallback: cryptographically verify the client-supplied signed JWS
- *      (`signedTransactionFallback`, the expo-iap purchaseToken) against Apple's root.
+ * Verify a StoreKit 2 transaction against Apple, per Apple's guidance: production
+ * first, sandbox fallback, environment never a reason to reject. Chain:
+ *   1. Subscription statuses endpoint: production → sandbox (with 2 extra sandbox
+ *      retries at 3s — sandbox indexes new transactions slowly).
+ *   2. Transaction lookup endpoint: production → sandbox (same retry policy).
+ *   3. Client-supplied Apple-signed JWS (`signedTransactionFallback`, the expo-iap
+ *      purchaseToken), cryptographically verified — chain pinned to Apple Root CA G3,
+ *      signature checked, bundleId/product/revocation/expiry claims enforced. Covers
+ *      sandbox's API 404ing transactions it hasn't indexed yet.
  *
- * The fallback is fully verified (chain-pinned to Apple Root CA G3 + signature + claims),
- * so it is safe to grant on — an unverified JWS is attacker-forgeable and never trusted.
+ * The winning transaction's `environment` claim is surfaced as `isSandbox`
+ * (informational only — recorded on the entitlement, never blocks the grant).
  *
  * Reads three Supabase secrets: APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY.
  */
@@ -199,9 +293,7 @@ export async function verifyAppleTransaction(
 
   const tryFallback = async (apiResult: AppleVerifyResult): Promise<AppleVerifyResult> => {
     if (signedTransactionFallback) {
-      const fb = await verifyAppleSignedJws(signedTransactionFallback);
-      if (fb.valid) return fb;
-      return fb;
+      return verifyAppleSignedJws(signedTransactionFallback);
     }
     return apiResult;
   };
@@ -221,17 +313,25 @@ export async function verifyAppleTransaction(
     return tryFallback({ valid: false, error: 'apple_jwt_sign_failed' });
   }
 
-  if (transactionId) {
-    const prod = await callAppleTransactionApi(transactionId, authJwt, false);
-    if (prod.valid) return prod;
-    if (prod.error === 'transaction_not_found') {
-      const sandbox = await callAppleTransactionApi(transactionId, authJwt, true);
-      if (sandbox.valid) return sandbox;
-      return tryFallback(sandbox);
-    }
-    return tryFallback(prod);
+  if (!transactionId) {
+    // No transaction id (e.g. restore with only a JWS) — verify the JWS directly.
+    return tryFallback({ valid: false, error: 'no_transaction_id' });
   }
 
-  // No transaction id (e.g. restore with only a JWS) — verify the JWS directly.
-  return tryFallback({ valid: false, error: 'no_transaction_id' });
+  // 1. Subscription statuses (Apple's recommended lookup for auto-renewables).
+  const viaSubscriptions = await withEnvironmentFallback((sandbox) =>
+    callAppleSubscriptionsApi(transactionId, authJwt, sandbox),
+  );
+  if (viaSubscriptions.valid) return viaSubscriptions;
+
+  // 2. Transaction lookup (plain production → sandbox; retries already spent above,
+  //    and more would push past the client's 30s watchdog).
+  const viaTransaction = await withEnvironmentFallback(
+    (sandbox) => callAppleTransactionApi(transactionId, authJwt, sandbox),
+    0,
+  );
+  if (viaTransaction.valid) return viaTransaction;
+
+  // 3. Client-provided signed JWS.
+  return tryFallback(viaTransaction);
 }

@@ -10,7 +10,14 @@ const MAX_JWS_LEN = 16384;
 const bodySchema = z
   .object({
     transactionId: z.string().min(1).max(256).optional(),
-    productId: z.enum(['com.remedyapp.monthly', 'com.remedyapp.annual']).optional(),
+    productId: z
+      .enum([
+        'com.remedyapp.monthly',
+        'com.remedyapp.annual',
+        'com.remedyapp.monthly.no.trial',
+        'com.remedyapp.annual.no.trial',
+      ])
+      .optional(),
     signedTransaction: z.string().max(MAX_JWS_LEN).nullable().optional(),
   })
   .strict()
@@ -98,11 +105,30 @@ Deno.serve(async (req: Request) => {
     // Use the verified transaction's product + expiry — never the client's claim.
     const verifiedProductId = appleResult.productId;
     const isTrial = appleResult.inTrialPeriod ?? false;
+
+    // Anti-fraud: bind one Apple subscription to one account. Prefer Apple's verified
+    // originalTransactionId; fall back to the client transactionId only if Apple didn't
+    // return one. Reject if this subscription is already linked to a different user so a
+    // shared signedTransaction can't unlock premium on multiple accounts.
+    const boundTxId = appleResult.originalTransactionId ?? transactionId ?? null;
+    if (boundTxId) {
+      const { data: conflict } = await supabaseAdmin
+        .from('entitlements')
+        .select('user_id')
+        .eq('original_transaction_id', boundTxId)
+        .neq('user_id', user.id)
+        .maybeSingle();
+      if (conflict) {
+        return json({ success: false, error: 'transaction_already_linked' }, 409);
+      }
+    }
+
     const now = new Date().toISOString();
     const expiresAt = appleResult.expiresDate
       ? new Date(appleResult.expiresDate).toISOString()
       : new Date(
-          Date.now() + (verifiedProductId === 'com.remedyapp.annual' ? 365 : 30) * 24 * 60 * 60 * 1000,
+          Date.now() +
+            (verifiedProductId.startsWith('com.remedyapp.annual') ? 365 : 30) * 24 * 60 * 60 * 1000,
         ).toISOString();
 
     const { data: entitlement, error: upsertError } = await supabaseAdmin
@@ -113,10 +139,11 @@ Deno.serve(async (req: Request) => {
           is_premium: true,
           subscription_status: isTrial ? 'trial' : 'active',
           product_id: verifiedProductId,
-          original_transaction_id: transactionId ?? null,
+          original_transaction_id: boundTxId,
           trial_started_at: isTrial ? now : null,
           trial_ends_at: isTrial ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null,
           expires_at: expiresAt,
+          is_sandbox: appleResult.isSandbox ?? false,
           updated_at: now,
         },
         { onConflict: 'user_id' },

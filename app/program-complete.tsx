@@ -81,16 +81,15 @@ export default function ProgramCompleteScreen() {
   async function handleRestart() {
     hapticPrimaryAction();
     if (!user) return;
-    await supabase
-      .from('user_programs')
-      .update({ current_week: 1, current_session: 1 })
-      .eq('user_id', user.id);
-    router.replace('/(tabs)');
+    // Server-side reset: direct client UPDATE on user_programs was revoked
+    // (migration 029) so the pointer can never be set to arbitrary values.
+    await supabase.rpc('restart_program');
+    router.dismissTo('/(tabs)');
   }
 
   function handleGoHome() {
     hapticPrimaryAction();
-    router.replace('/(tabs)');
+    router.dismissTo('/(tabs)');
   }
 
   function revealStyle(index: number) {

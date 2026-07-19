@@ -7,7 +7,7 @@ import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { PersonalizationBubble } from '../../components/onboarding/PersonalizationBubble';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
 import type { PainType } from '../../types/database';
@@ -25,6 +25,7 @@ export default function Q3Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers, setAnswer } = useOnboarding();
+  useTrackOnboardingStep('q3');
 
   const selected = answers.pain_type ?? [];
 
@@ -34,9 +35,6 @@ export default function Q3Screen() {
       : [...selected, val];
     setAnswer('pain_type', next);
   }
-
-  const showWarning =
-    selected.includes('sharp') && answers.pain_duration === 'acute';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
@@ -56,12 +54,6 @@ export default function Q3Screen() {
             ))}
           </View>
 
-          {showWarning && (
-            <Text style={styles.warning}>
-              This sounds like it could be acute. We recommend seeing a doctor
-              first — you can still continue.
-            </Text>
-          )}
           <PersonalizationBubble field="pain_type" value={selected[0]} />
         </View>
       </PersonalizingLayout>
@@ -96,12 +88,5 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: 12,
-  },
-  warning: {
-    marginTop: 16,
-    fontSize: 14,
-    color: colors.warning,
-    lineHeight: 20,
-    paddingHorizontal: 4,
   },
 });

@@ -11,8 +11,6 @@ export default function OnboardingLayout() {
         gestureEnabled: true,
         ...screenTransitionOptions,
       }}
-    >
-      <Stack.Screen name="disclaimer" options={{ gestureEnabled: false }} />
-    </Stack>
+    />
   );
 }

@@ -7,7 +7,7 @@ import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { PersonalizationBubble } from '../../components/onboarding/PersonalizationBubble';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
 import type { MainGoal } from '../../types/database';
@@ -16,8 +16,8 @@ const ICON_SIZE = 17;
 const ICON_COLOR = '#FFFFFF';
 
 const options: { label: string; icon: React.ReactNode; value: MainGoal }[] = [
-  { label: 'Reduce daily pain', icon: <Ionicons name="heart-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'reduce_pain' },
-  { label: 'Get back to working out', icon: <Ionicons name="trending-up-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'return_to_exercise' },
+  { label: 'Reduce daily pain', icon: <Ionicons name="bandage-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'reduce_pain' },
+  { label: 'Get back to working out', icon: <Ionicons name="barbell-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'return_to_exercise' },
   { label: 'Sleep better', icon: <Ionicons name="moon-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'sleep' },
   { label: 'Improve mobility', icon: <Ionicons name="walk-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'mobility' },
 ];
@@ -26,6 +26,7 @@ export default function Q6Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers, setAnswer } = useOnboarding();
+  useTrackOnboardingStep('q6');
 
   const selected = answers.main_goal ?? [];
 

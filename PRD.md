@@ -130,10 +130,15 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - All onboarding answers stored to user profile for future personalization
 
 ### 6.3 Programs
-- **V1: Back pain only.** One core program with variants based on onboarding answers (activity level + pain type drive the variant)
-- Each program: 4–6 weeks, 3–5 sessions/week, ~15–20 min per session
-- Each session: 4–7 exercises with video, sets/reps or duration, rest time
-- Programs structured with progressive difficulty (Week 1 = foundational, Week 4+ = strengthening/loading)
+- **V1: Back pain only.** Slot-based master template with personalization driven by onboarding answers (pain type, location, activity level, equipment, pain duration, goal).
+- Each program: **5–10 weeks** (length set by chronicity: acute → 5 weeks, subacute → 7 weeks, chronic → 10 weeks)
+- Session frequency: **daily or every other day** (user picks in onboarding; maps to 3–5 sessions/week)
+- Each session: 5 exercises with video, sets/reps or duration, rest time; ~15–20 min
+- Three rotating session types — **Mobility & Relief**, **Stability & Core**, **Strength & Function** — each always containing all component types but with different emphasis
+- Programs structured with progressive difficulty across three phases: Early (mobility + activation), Mid (balanced), Late (strength-dominant)
+- **Progression (catalog v3):** each week has an intensity target (1–5) that rises across the program; exercise selection climbs intensity-laddered movement patterns toward it (e.g. Clamshell → Glute Bridge → Single-Leg Bridge → Hip Thrust), so the same slot serves harder variants as the user progresses. Reps double-progress (base → ~+25%) within the weeks a variant is held, then reset when a harder variant swaps in. Strength and activation work are capped at 15 reps — beyond that the ladder hands out a harder variant, not more endurance reps. In the late phase the dedicated relief day is replaced by a second strength day (late ≈ 2/3 strength for 3×/week users); mobility and recovery stay embedded in every session's warm-up and cooldown slots.
+- **Dosing:** core-stability isometrics use McGill-style dosing (8–10 sec holds × descending reps, e.g. Bird Dog 3×5×10s), not long continuous holds; loaded strength work is 2–3 sets of 8–15 reps with "last 2 reps hard, ~2 in reserve" load guidance in the instructions
+- Exercise catalog: 30 active exercises across bodyweight (19), bands/dumbbell (6), and gym (5) tiers, linked by movement-pattern intensity ladders
 - Program designed and recorded by licensed PT partner
 - **During development: placeholder videos only** (static image or looping placeholder clip). Real videos added when PT partner content is ready. No fake exercise videos — clearly marked as placeholder in code and UI.
 
@@ -211,10 +216,11 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Content format: short exercise videos (30–90 seconds each), clean background, clear demo of movement with cues
 
 ### Content Specs (V1)
-- ~40–60 total exercise videos across both programs
+- **~30 total exercise videos** (29 exercises in the active catalog)
 - Each video: PT on camera, clear form demo, 1–2 verbal cues, no talking head intro/outro
 - Simple, clean production — good lighting, neutral background, no fancy editing needed
 - Voiceover or on-screen text for key cues (e.g., "Keep your core engaged")
+- See `scripts/shot_list.md` for the complete per-exercise filming guide
 
 ---
 

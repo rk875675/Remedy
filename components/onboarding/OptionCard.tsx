@@ -8,12 +8,20 @@ import { hapticSelection } from '../../lib/haptics';
 type OptionCardProps = {
   label: string;
   icon?: React.ReactNode;
+  iconStyle?: 'circle' | 'plain';
   subtitle?: string;
   selected: boolean;
   onPress: () => void;
 };
 
-export function OptionCard({ label, icon, subtitle, selected, onPress }: OptionCardProps) {
+export function OptionCard({
+  label,
+  icon,
+  iconStyle = 'circle',
+  subtitle,
+  selected,
+  onPress,
+}: OptionCardProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
   function handlePressIn() {
@@ -48,11 +56,12 @@ export function OptionCard({ label, icon, subtitle, selected, onPress }: OptionC
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        {icon && (
-          <View style={[styles.iconCircle, selected && styles.iconCircleSelected]}>
-            {icon}
-          </View>
-        )}
+        {icon &&
+          (iconStyle === 'plain' ? (
+            <View style={styles.iconPlain}>{icon}</View>
+          ) : (
+            <View style={[styles.iconCircle, selected && styles.iconCircleSelected]}>{icon}</View>
+          ))}
         <View style={styles.textContainer}>
           <Text style={[styles.label, selected && styles.labelSelected]}>
             {label}
@@ -100,6 +109,11 @@ const styles = StyleSheet.create({
   },
   iconCircleSelected: {
     backgroundColor: colors.primary,
+  },
+  iconPlain: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textContainer: {
     flex: 1,

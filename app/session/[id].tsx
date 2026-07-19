@@ -26,6 +26,7 @@ import {
   hapticSelection,
 } from '../../lib/haptics';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { orderedEquipmentForExercises } from '../../lib/equipment';
 import type { Exercise, UserPlanSession } from '../../types/database';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -97,7 +98,35 @@ const WARM_COPY = [
   'One session closer to feeling better.',
 ];
 
+// Friendly label for a session's dominant phase — surfaced as "Main Focus" on
+// the preview screen so it's meaningful without repeating the session title.
+const PHASE_LABEL: Record<string, string> = {
+  mobility: 'Mobility',
+  activation: 'Activation',
+  strength: 'Strength',
+  recovery: 'Recovery',
+};
+
 const BREATHING_CYCLE_MS = 4000;
+
+// One-line dose summary, e.g. "3 sets × 5 × 10s holds", "3 sets × 12 reps",
+// "2 sets × 40s". withSets=false drops the set prefix (used for set-rest,
+// where the set counter is shown separately).
+function formatDose(
+  ex: Pick<Exercise, 'sets' | 'reps' | 'duration_seconds'>,
+  withSets: boolean,
+): string {
+  const dose = ex.duration_seconds
+    ? ex.reps
+      ? `${ex.reps} × ${ex.duration_seconds}s holds`
+      : `${ex.duration_seconds}s`
+    : ex.reps
+      ? `${ex.reps} reps`
+      : '';
+  if (!dose) return '';
+  const sets = ex.sets && ex.sets > 0 ? ex.sets : 1;
+  return withSets && sets > 1 ? `${sets} sets × ${dose}` : dose;
+}
 
 export default function SessionPlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -112,6 +141,7 @@ export default function SessionPlayerScreen() {
     duration_minutes: number;
     week_number: number;
     session_number: number;
+    phase: string;
   } | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [exerciseIndex, setExerciseIndex] = useState(0);
@@ -120,14 +150,22 @@ export default function SessionPlayerScreen() {
   const [restSeconds, setRestSeconds] = useState(0);
   const [restTotal, setRestTotal] = useState(1);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  // Hold-rep dosing: exercises with BOTH reps and duration_seconds are "reps of
+  // timed holds" (e.g. Bird Dog 5 x 10s per side) — the countdown cycles per hold.
+  const [holdRep, setHoldRep] = useState(1);
+  // Set tracking: every exercise runs `sets` times with rest_seconds between sets
+  // (rest_seconds is the catalog's between-set rest prescription).
+  const [setIndex, setSetIndex] = useState(1);
+  const [restKind, setRestKind] = useState<'set' | 'exercise'>('exercise');
   const [skippedExercises, setSkippedExercises] = useState<Set<number>>(new Set());
   const [breatheIn, setBreatheIn] = useState(true);
   const [nextSession, setNextSession] = useState<UserPlanSession | null>(null);
   const [isProgramCompleted, setIsProgramCompleted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const player = useVideoPlayer(null, (p) => {
     p.loop = true;
@@ -144,14 +182,10 @@ export default function SessionPlayerScreen() {
     }
   }, [videoUrl, player]);
 
-  // Sync mute toggle → player
-  useEffect(() => {
-    player.muted = isMuted;
-  }, [isMuted, player]);
-
   const sessionStartTime = useRef(Date.now());
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdRepRef = useRef(1);
   const breatheRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const completionScale = useRef(new Animated.Value(0)).current;
   const completeStatAnims = useRef([
@@ -161,8 +195,10 @@ export default function SessionPlayerScreen() {
   ]).current;
   const sliderWidth = useRef(0);
 
-  useEffect(() => {
+  const loadSession = useCallback(() => {
     if (!id) return;
+    setLoaded(false);
+    setLoadError(false);
 
     // The player reads the resolved snapshot. The route id is a user_plan_sessions.id.
     // Per-exercise sets/reps/rest come from the resolved plan row (not the base
@@ -170,7 +206,7 @@ export default function SessionPlayerScreen() {
     Promise.all([
       supabase
         .from('user_plan_sessions')
-        .select('title, estimated_minutes, week_number, session_number')
+        .select('title, estimated_minutes, week_number, session_number, phase')
         .eq('id', id)
         .single(),
       supabase
@@ -185,6 +221,7 @@ export default function SessionPlayerScreen() {
           duration_minutes: metaRes.data.estimated_minutes,
           week_number: metaRes.data.week_number,
           session_number: metaRes.data.session_number,
+          phase: metaRes.data.phase,
         });
       }
       if (exercisesRes.data) {
@@ -210,9 +247,22 @@ export default function SessionPlayerScreen() {
         setExercises(exs);
         setExerciseCount(exs.length);
       }
+      // A failed query must surface a retry — swallowing it lets the player run with
+      // zero exercises, which used to fall through to the completion UI without ever
+      // recording a completion.
+      if (metaRes.error || exercisesRes.error) {
+        setLoadError(true);
+      }
+      setLoaded(true);
+    }).catch(() => {
+      setLoadError(true);
       setLoaded(true);
     });
   }, [id]);
+
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
 
   useEffect(() => {
     return () => {
@@ -222,28 +272,13 @@ export default function SessionPlayerScreen() {
     };
   }, []);
 
+  // Video loads once per exercise (NOT per set — set changes must not refetch).
   useEffect(() => {
-    if (phase !== 'exercise' || !exercises[exerciseIndex]) return;
-
     const ex = exercises[exerciseIndex];
+    if (!ex) return;
+
     setVideoUrl(null);
     setVideoError(false);
-
-    if (ex.duration_seconds) {
-      setCountdown(ex.duration_seconds);
-      countdownRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) clearInterval(countdownRef.current);
-            handleExerciseDone();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      setCountdown(0);
-    }
 
     if (ex.cloudflare_stream_id) {
       supabase.functions
@@ -259,11 +294,43 @@ export default function SessionPlayerScreen() {
     } else if (ex.video_url) {
       setVideoUrl(ex.video_url);
     }
+  }, [exerciseIndex, exercises]);
+
+  // Countdown runs per set: re-armed on every set of every exercise.
+  useEffect(() => {
+    if (phase !== 'exercise' || !exercises[exerciseIndex]) return;
+
+    const ex = exercises[exerciseIndex];
+
+    if (ex.duration_seconds) {
+      const holdDuration = ex.duration_seconds;
+      const holdReps = ex.reps && ex.reps > 0 ? ex.reps : 1;
+      holdRepRef.current = 1;
+      setHoldRep(1);
+      setCountdown(holdDuration);
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (holdRepRef.current < holdReps) {
+              holdRepRef.current += 1;
+              setHoldRep(holdRepRef.current);
+              return holdDuration;
+            }
+            if (countdownRef.current) clearInterval(countdownRef.current);
+            handleSetDone();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setCountdown(0);
+    }
 
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [exerciseIndex, phase, exercises]);
+  }, [exerciseIndex, setIndex, phase, exercises]);
 
   useEffect(() => {
     if (phase === 'rest') {
@@ -343,7 +410,8 @@ export default function SessionPlayerScreen() {
     if (data) setNextSession(data);
   }, [user, id]);
 
-  function startRest(seconds: number) {
+  function startRest(seconds: number, kind: 'set' | 'exercise') {
+    setRestKind(kind);
     setRestSeconds(seconds);
     setRestTotal(Math.max(seconds, 1));
     setPhase('rest');
@@ -351,7 +419,7 @@ export default function SessionPlayerScreen() {
       setRestSeconds((prev) => {
         if (prev <= 1) {
           if (restTimerRef.current) clearInterval(restTimerRef.current);
-          advanceExercise();
+          advanceAfterRest(kind);
           return 0;
         }
         return prev - 1;
@@ -359,15 +427,25 @@ export default function SessionPlayerScreen() {
     }, 1000);
   }
 
+  function advanceAfterRest(kind: 'set' | 'exercise') {
+    if (kind === 'set') {
+      setSetIndex((i) => i + 1);
+      setPhase('exercise');
+    } else {
+      advanceExercise();
+    }
+  }
+
   function skipRest() {
     // Navigation advance — stronger than a selection tick.
     hapticPrimaryAction();
     if (restTimerRef.current) clearInterval(restTimerRef.current);
-    advanceExercise();
+    advanceAfterRest(restKind);
   }
 
   function advanceExercise() {
     const nextIndex = exerciseIndex + 1;
+    setSetIndex(1);
     if (nextIndex >= exercises.length) {
       setPhase('checkin_after');
     } else {
@@ -376,11 +454,20 @@ export default function SessionPlayerScreen() {
     }
   }
 
-  function handleExerciseDone() {
+  // One SET finished (timer elapsed or Done tapped). rest_seconds is the
+  // prescribed between-set rest; it is also used as the transition rest before
+  // the next exercise.
+  function handleSetDone() {
     if (countdownRef.current) clearInterval(countdownRef.current);
     const currentEx = exercises[exerciseIndex];
+    const totalSets = currentEx.sets && currentEx.sets > 0 ? currentEx.sets : 1;
+    if (setIndex < totalSets) {
+      startRest(currentEx.rest_seconds, 'set');
+      return;
+    }
+    // All sets done — move on to the next exercise (or finish the session).
     if (exerciseIndex < exercises.length - 1) {
-      startRest(currentEx.rest_seconds);
+      startRest(currentEx.rest_seconds, 'exercise');
     } else {
       setPhase('checkin_after');
     }
@@ -395,24 +482,21 @@ export default function SessionPlayerScreen() {
 
   function handleExit() {
     hapticWarning();
+    // Exiting mid-session does NOT record a completion. Writing one here inserted an
+    // unguarded completion for an unfinished session (inflating counts and creating a
+    // duplicate-completion vector). The pointer is untouched, so this session stays
+    // current and can simply be resumed.
     Alert.alert(
       'Exit session?',
-      'Your progress will be saved.',
+      'This session isn\u2019t finished yet \u2014 you can resume it anytime.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Exit',
           style: 'destructive',
-          onPress: async () => {
-            if (user && id) {
-              await supabase.from('session_completions').insert({
-                user_id: user.id,
-                plan_session_id: id,
-                duration_seconds: Math.round((Date.now() - sessionStartTime.current) / 1000),
-              });
-            }
-            router.replace('/(tabs)');
-          },
+          // Pop back to the existing tabs entry (dismissTo) rather than stacking a
+          // duplicate — Home refreshes via its focus effect.
+          onPress: () => router.dismissTo('/(tabs)'),
         },
       ],
     );
@@ -435,76 +519,47 @@ export default function SessionPlayerScreen() {
   }
 
   async function handleComplete() {
-    hapticPrimaryAction();
     if (!user || !id) return;
+    // Guard against double submission (double-tap / re-render). Server also rejects a
+    // second completion via the pointer guard, but this avoids the wasted round-trip and
+    // a misleading error path.
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    hapticPrimaryAction();
 
     const durationSeconds = Math.round((Date.now() - sessionStartTime.current) / 1000);
 
-    const { data: completion } = await supabase
-      .from('session_completions')
-      .insert({
-        user_id: user.id,
-        plan_session_id: id,
-        duration_seconds: durationSeconds,
-      })
-      .select()
-      .single();
-
-    await supabase.from('pain_checkins').insert({
-      user_id: user.id,
-      session_completion_id: completion?.id ?? null,
-      score: painAfter,
-      type: 'after' as const,
+    // Authoritative, pointer-guarded completion. The server only accepts the session
+    // that matches the user's current week/session, writes the completion + after-checkin,
+    // and advances the pointer atomically (see migration 021).
+    const { data, error } = await supabase.rpc('complete_session', {
+      p_plan_session_id: id,
+      p_duration_seconds: durationSeconds,
+      p_pain_after: painAfter,
     });
 
-    const { data: up } = await supabase
-      .from('user_programs')
-      .select('active_plan_id, current_week, current_session')
-      .eq('user_id', user.id)
-      .single();
+    if (error || !data) {
+      setIsSubmitting(false);
+      // Most likely the session isn't the user's current one (deep-link / replay / already
+      // completed). Don't corrupt UI state — send them back to Home where the real next
+      // session is surfaced.
+      hapticWarning();
+      Alert.alert(
+        'Could not save this session',
+        'This session is no longer your current one. Returning you to your plan.',
+        [{ text: 'OK', onPress: () => router.dismissTo('/(tabs)') }],
+      );
+      return;
+    }
 
-    let completedWeek: number | null = null;
-    let endedWeek = false;
-    let programDone = false;
-    if (up) {
-      let sessionsPerWeek = 4;
-      let durationWeeks = 5;
-      if (up.active_plan_id) {
-        const { data: plan } = await supabase
-          .from('user_program_plans')
-          .select('sessions_per_week, duration_weeks')
-          .eq('id', up.active_plan_id)
-          .single();
-        if (plan) {
-          sessionsPerWeek = plan.sessions_per_week;
-          durationWeeks = plan.duration_weeks;
-        }
-      }
+    const result = data as {
+      ended_week: boolean;
+      completed_week: number | null;
+      program_done: boolean;
+    };
 
-      let nextSess = up.current_session + 1;
-      let nextWeek = up.current_week;
-      if (nextSess > sessionsPerWeek) {
-        // Just finished the last session of the week → eligible for the weekly ramp.
-        nextSess = 1;
-        nextWeek = up.current_week + 1;
-        completedWeek = up.current_week;
-        endedWeek = true;
-      }
-
-      if (nextWeek > durationWeeks) {
-        // Program finished — write completion sentinel; no valid session to advance to.
-        programDone = true;
-        setIsProgramCompleted(true);
-        await supabase
-          .from('user_programs')
-          .update({ current_week: durationWeeks + 1, current_session: 1 })
-          .eq('user_id', user.id);
-      } else {
-        await supabase
-          .from('user_programs')
-          .update({ current_session: nextSess, current_week: nextWeek })
-          .eq('user_id', user.id);
-      }
+    if (result.program_done) {
+      setIsProgramCompleted(true);
     }
 
     trackEvent('session_completed', {
@@ -514,8 +569,8 @@ export default function SessionPlayerScreen() {
     });
 
     // End-of-week (and not the final week): route to the weekly hybrid ramp.
-    if (endedWeek && completedWeek !== null && !programDone) {
-      router.replace(`/weekly-ramp?week=${completedWeek}`);
+    if (result.ended_week && result.completed_week !== null && !result.program_done) {
+      router.replace(`/weekly-ramp?week=${result.completed_week}`);
       return;
     }
 
@@ -531,6 +586,36 @@ export default function SessionPlayerScreen() {
     );
   }
 
+  // A session with no exercises must never start: with an empty list the exercise
+  // phase has nothing to render and the player used to fall through straight to the
+  // "Session Complete!" screen without writing a completion or advancing the program
+  // pointer. Covers both load errors and legitimately empty/partial plan rows.
+  if (loadError || exercises.length === 0) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <Text style={styles.loadErrorTitle}>Could not load this session</Text>
+        <Text style={styles.loadErrorText}>
+          Check your connection and try again.
+        </Text>
+        <TouchableOpacity
+          style={[styles.primaryButton, { marginTop: 24 }]}
+          onPress={() => {
+            hapticPrimaryAction();
+            loadSession();
+          }}
+        >
+          <Text style={styles.primaryButtonText}>Try again</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.loadErrorBack}
+          onPress={() => router.dismissTo('/(tabs)')}
+        >
+          <Text style={styles.loadErrorBackText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const currentExercise = exercises[exerciseIndex];
 
   // --- SESSION PREVIEW ---
@@ -539,6 +624,7 @@ export default function SessionPlayerScreen() {
       <SessionPreviewScreen
         sessionMeta={sessionMeta}
         exerciseCount={exerciseCount}
+        equipmentItems={orderedEquipmentForExercises(exercises)}
         onBegin={() => setPhase('checkin_before')}
         onBack={() => router.back()}
         insets={insets}
@@ -562,33 +648,43 @@ export default function SessionPlayerScreen() {
 
   // --- REST TIMER ---
   if (phase === 'rest') {
-    const nextEx = exercises[exerciseIndex + 1];
+    // Between sets the "up next" is the SAME exercise's next set; between
+    // exercises it is the next exercise in the session.
+    const isSetRest = restKind === 'set';
+    const nextEx = isSetRest ? currentExercise : exercises[exerciseIndex + 1];
+    const nextSetNumber = setIndex + 1;
     return (
-      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
-        <Text style={styles.restLabel}>Rest</Text>
-        <RestRing seconds={restSeconds} total={restTotal} />
-
-        {nextEx && (
-          <View style={styles.nextExPreview}>
-            <Text style={styles.nextExLabel}>Up next</Text>
-            <Text style={styles.nextExName}>{nextEx.name}</Text>
-            <Text style={styles.nextExDuration}>
-              {nextEx.duration_seconds
-                ? `${nextEx.duration_seconds}s`
-                : nextEx.reps
-                  ? `${nextEx.reps} reps`
-                  : ''}
-            </Text>
-          </View>
-        )}
-
-        <Text style={styles.breatheCue}>
-          {breatheIn ? 'Breathe in\u2026' : 'Breathe out\u2026'}
-        </Text>
-
-        <TouchableOpacity style={styles.skipButton} onPress={skipRest}>
-          <Text style={styles.skipButtonText}>Skip Rest</Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={handleExit} style={[styles.exitButton, styles.restExitButton]}>
+          <Text style={styles.exitButtonText}>✕</Text>
         </TouchableOpacity>
+
+        <View style={[styles.centered, styles.restBody, { paddingBottom: insets.bottom }]}>
+          <Text style={styles.restLabel}>Rest</Text>
+          <RestRing seconds={restSeconds} total={restTotal} />
+
+          {nextEx && (
+            <View style={styles.nextExCard}>
+              <Text style={styles.nextExLabel}>
+                {isSetRest
+                  ? `Up next — Set ${nextSetNumber} of ${nextEx.sets ?? 1}`
+                  : 'Up next'}
+              </Text>
+              <Text style={styles.nextExName}>{nextEx.name}</Text>
+              <Text style={styles.nextExDuration}>
+                {formatDose(nextEx, !isSetRest)}
+              </Text>
+            </View>
+          )}
+
+          <Text style={styles.breatheCue}>
+            {breatheIn ? 'Breathe in\u2026' : 'Breathe out\u2026'}
+          </Text>
+
+          <TouchableOpacity style={styles.skipButton} onPress={skipRest}>
+            <Text style={styles.skipButtonText}>Skip Rest</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -598,15 +694,28 @@ export default function SessionPlayerScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.exerciseTopBar}>
-          <TouchableOpacity onPress={handleExit} style={styles.exitButton}>
-            <Text style={styles.exitButtonText}>✕</Text>
-          </TouchableOpacity>
-          <Text style={styles.exerciseProgress}>
-            {exerciseIndex + 1} / {exercises.length}
-          </Text>
-          <TouchableOpacity onPress={handleSkipExercise} style={styles.skipExButton}>
-            <Text style={styles.skipExButtonText}>Skip</Text>
-          </TouchableOpacity>
+          <View style={styles.exerciseTopRow}>
+            <TouchableOpacity onPress={handleExit} style={styles.exitButton}>
+              <Text style={styles.exitButtonText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.exerciseProgress}>
+              {exerciseIndex + 1} / {exercises.length}
+            </Text>
+            <TouchableOpacity onPress={handleSkipExercise} style={styles.skipExButton}>
+              <Text style={styles.skipExButtonText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.exerciseProgressBar}>
+            {exercises.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.exerciseProgressSegment,
+                  i <= exerciseIndex && styles.exerciseProgressSegmentFilled,
+                ]}
+              />
+            ))}
+          </View>
         </View>
 
         <View style={styles.videoContainer}>
@@ -644,22 +753,23 @@ export default function SessionPlayerScreen() {
               <Text style={styles.videoPlaceholderText}>{currentExercise.name}</Text>
             </View>
           )}
-          <TouchableOpacity
-            style={styles.muteButton}
-            onPress={() => {
-              hapticSelection();
-              setIsMuted((m) => !m);
-            }}
-          >
-            <Text style={styles.muteButtonText}>{isMuted ? '⊗' : '◉'}</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.exerciseInfo}>
           <Text style={styles.exerciseName}>{currentExercise.name}</Text>
 
+          {(currentExercise.sets ?? 1) > 1 && (
+            <Text style={styles.setIndicator}>
+              Set {setIndex} of {currentExercise.sets}
+            </Text>
+          )}
+
           {currentExercise.duration_seconds ? (
-            <Text style={styles.countdownText}>{countdown}s remaining</Text>
+            <Text style={styles.countdownText}>
+              {currentExercise.reps
+                ? `Hold ${holdRep} of ${currentExercise.reps} — ${countdown}s`
+                : `${countdown}s remaining`}
+            </Text>
           ) : currentExercise.reps ? (
             <Text style={styles.countdownText}>{currentExercise.reps} reps</Text>
           ) : null}
@@ -671,13 +781,15 @@ export default function SessionPlayerScreen() {
           )}
         </View>
 
-        {!currentExercise.duration_seconds && (
-          <View style={[styles.bottomButtonWrap, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => { hapticPrimaryAction(); handleExerciseDone(); }}>
-              <Text style={styles.primaryButtonText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Always available — on timed exercises it ends the current set early
+            (finish ahead of the timer) without skipping the whole exercise. */}
+        <View style={[styles.bottomButtonWrap, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => { hapticPrimaryAction(); handleSetDone(); }}>
+            <Text style={styles.primaryButtonText}>
+              {setIndex < (currentExercise.sets ?? 1) ? `Set ${setIndex} Done` : 'Done'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -691,12 +803,20 @@ export default function SessionPlayerScreen() {
         onValueChange={setPainAfter}
         buttonLabel="Done"
         onSubmit={handleComplete}
+        submitting={isSubmitting}
         insets={insets}
       />
     );
   }
 
   // --- COMPLETE ---
+  // Explicitly gated on phase: this block must be reachable only after handleComplete()
+  // succeeded (server-side completion written, pointer advanced) — never as a render
+  // fall-through from another phase.
+  if (phase !== 'complete') {
+    return <View style={styles.container} />;
+  }
+
   const durationMin = Math.round((Date.now() - sessionStartTime.current) / 60000);
   const completedCount = exercises.length - skippedExercises.size;
   const painDelta = painBefore - painAfter;
@@ -717,7 +837,7 @@ export default function SessionPlayerScreen() {
 
       <Animated.View
         style={[
-          styles.completeStats,
+          styles.completeSummaryCard,
           {
             opacity: completeStatAnims[0],
             transform: [
@@ -731,13 +851,29 @@ export default function SessionPlayerScreen() {
           },
         ]}
       >
-        <Text style={styles.completeStatText}>{durationMin} min</Text>
-        <Text style={styles.completeStatDivider}>·</Text>
-        <Text style={styles.completeStatText}>{completedCount} exercises</Text>
+        <View style={styles.completeStatItem}>
+          <Text style={styles.completeStatValue}>{durationMin}</Text>
+          <Text style={styles.completeStatUnit}>min</Text>
+        </View>
+        <View style={styles.completeStatDividerVert} />
+        <View style={styles.completeStatItem}>
+          <Text style={styles.completeStatValue}>{completedCount}</Text>
+          <Text style={styles.completeStatUnit}>exercises</Text>
+        </View>
+        {painDelta > 0 && (
+          <>
+            <View style={styles.completeStatDividerVert} />
+            <View style={styles.completeStatItem}>
+              <Text style={styles.completeStatValue}>-{painDelta}</Text>
+              <Text style={styles.completeStatUnit}>pain</Text>
+            </View>
+          </>
+        )}
       </Animated.View>
 
       <Animated.View
         style={{
+          alignItems: 'center',
           opacity: completeStatAnims[1],
           transform: [
             {
@@ -749,36 +885,30 @@ export default function SessionPlayerScreen() {
           ],
         }}
       >
-        {painDelta > 0 && (
-          <Text style={styles.painDelta}>
-            Pain: {painBefore} → {painAfter} — nice work
-          </Text>
-        )}
-      </Animated.View>
-
-      <Animated.View
-        style={{
-          alignItems: 'center',
-          opacity: completeStatAnims[2],
-          transform: [
-            {
-              translateY: completeStatAnims[2].interpolate({
-                inputRange: [0, 1],
-                outputRange: [10, 0],
-              }),
-            },
-          ],
-        }}
-      >
         <Text style={styles.warmCopy}>{warmCopy}</Text>
-
-        {nextSession && !isProgramCompleted && (
-          <View style={styles.nextSessionPreview}>
-            <Text style={styles.nextSessionLabel}>Next session</Text>
-            <Text style={styles.nextSessionTitle}>{nextSession.title}</Text>
-          </View>
-        )}
       </Animated.View>
+
+      {nextSession && !isProgramCompleted && (
+        <Animated.View
+          style={[
+            styles.nextSessionCard,
+            {
+              opacity: completeStatAnims[2],
+              transform: [
+                {
+                  translateY: completeStatAnims[2].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.nextSessionLabel}>Next session</Text>
+          <Text style={styles.nextSessionTitle}>{nextSession.title}</Text>
+        </Animated.View>
+      )}
 
       <TouchableOpacity
         style={[styles.primaryButton, { marginTop: 24 }]}
@@ -787,7 +917,7 @@ export default function SessionPlayerScreen() {
           if (isProgramCompleted) {
             router.replace('/program-complete');
           } else {
-            router.replace('/(tabs)');
+            router.dismissTo('/(tabs)');
           }
         }}
       >
@@ -800,73 +930,36 @@ export default function SessionPlayerScreen() {
 }
 
 // --- Session Preview Component ---
+// The whole point of this screen is to surface what the home card doesn't:
+// equipment needed, time, exercise count, and the session's main focus.
+// No decorative icon — the stat grid below is the content.
 function SessionPreviewScreen({
   sessionMeta,
   exerciseCount,
+  equipmentItems,
   onBegin,
   onBack,
   insets,
 }: {
-  sessionMeta: { title: string; duration_minutes: number; week_number: number; session_number: number } | null;
+  sessionMeta: { title: string; duration_minutes: number; week_number: number; session_number: number; phase: string } | null;
   exerciseCount: number;
+  equipmentItems: string[];
   onBegin: () => void;
   onBack: () => void;
   insets: { top: number; bottom: number };
 }) {
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const ringScale = useRef(new Animated.Value(0.85)).current;
-  const ringOpacity = useRef(new Animated.Value(0.5)).current;
   const entryOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(entryOpacity, {
       toValue: 1,
-      duration: 500,
+      duration: 400,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
+  }, [entryOpacity]);
 
-    // Organic breathing pulse — easeInOut so the turnarounds feel soft.
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.06,
-          duration: 2200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.95,
-          duration: 2200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(ringScale, {
-            toValue: 1.55,
-            duration: 2000,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(ringOpacity, {
-            toValue: 0,
-            duration: 2000,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(ringScale, { toValue: 0.85, duration: 0, useNativeDriver: true }),
-          Animated.timing(ringOpacity, { toValue: 0.5, duration: 0, useNativeDriver: true }),
-        ]),
-      ]),
-    ).start();
-  }, [scaleAnim, ringScale, ringOpacity, entryOpacity]);
+  const focusLabel = sessionMeta ? PHASE_LABEL[sessionMeta.phase] ?? sessionMeta.phase : '';
 
   return (
     <Animated.View
@@ -875,55 +968,48 @@ function SessionPreviewScreen({
         { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 32), opacity: entryOpacity },
       ]}
     >
-      <TouchableOpacity
-        style={[previewStyles.backButton, { top: insets.top + 8 }]}
-        onPress={onBack}
-      >
-        <Text style={previewStyles.backButtonText}>✕</Text>
-      </TouchableOpacity>
-
-      <View style={previewStyles.figureArea}>
-        <Animated.View
-          style={[
-            previewStyles.figureRing,
-            { transform: [{ scale: ringScale }], opacity: ringOpacity },
-          ]}
-        />
-        <Animated.View
-          style={[previewStyles.figureCircle, { transform: [{ scale: scaleAnim }] }]}
-        >
-          <Text style={previewStyles.figureGlyph}>✦</Text>
-        </Animated.View>
+      <View style={[previewStyles.topBar, { marginTop: 8 }]}>
+        <TouchableOpacity style={previewStyles.backButton} onPress={onBack}>
+          <Text style={previewStyles.backButtonText}>✕</Text>
+        </TouchableOpacity>
+        {sessionMeta && (
+          <View style={previewStyles.badge}>
+            <Text style={previewStyles.badgeText}>
+              W{sessionMeta.week_number} · S{sessionMeta.session_number}
+            </Text>
+          </View>
+        )}
       </View>
 
-      <Text style={previewStyles.preLabel}>Get ready</Text>
-      {sessionMeta && (
-        <>
-          <Text style={previewStyles.title}>{sessionMeta.title}</Text>
-          <View style={previewStyles.badgeRow}>
-            <View style={previewStyles.badge}>
-              <Text style={previewStyles.badgeText}>
-                W{sessionMeta.week_number} · S{sessionMeta.session_number}
-              </Text>
-            </View>
-          </View>
-          <View style={previewStyles.statsRow}>
-            <View style={previewStyles.statPill}>
-              <Text style={previewStyles.statPillValue}>{sessionMeta.duration_minutes}</Text>
-              <Text style={previewStyles.statPillLabel}>min</Text>
-            </View>
-            <View style={previewStyles.statPillDivider} />
-            <View style={previewStyles.statPill}>
-              <Text style={previewStyles.statPillValue}>{exerciseCount}</Text>
-              <Text style={previewStyles.statPillLabel}>exercises</Text>
-            </View>
-          </View>
-        </>
-      )}
+      <View style={previewStyles.body}>
+        <Text style={previewStyles.preLabel}>Session Preview</Text>
+        {sessionMeta && <Text style={previewStyles.title}>{sessionMeta.title}</Text>}
 
-      <Text style={previewStyles.tip}>
-        Find a slightly open space and a mat if you have one. You're about to move.
-      </Text>
+        <View style={previewStyles.grid}>
+          <View style={previewStyles.gridTile}>
+            <Text style={previewStyles.gridValue}>{sessionMeta?.duration_minutes ?? '—'}</Text>
+            <Text style={previewStyles.gridLabel}>Minutes</Text>
+          </View>
+          <View style={previewStyles.gridTile}>
+            <Text style={previewStyles.gridValue}>{exerciseCount}</Text>
+            <Text style={previewStyles.gridLabel}>Exercises</Text>
+          </View>
+          <View style={[previewStyles.gridTile, previewStyles.gridTileWide]}>
+            <Text style={previewStyles.gridValueSmall}>{focusLabel || '—'}</Text>
+            <Text style={previewStyles.gridLabel}>Main Focus</Text>
+          </View>
+          <View style={[previewStyles.gridTile, previewStyles.gridTileWide]}>
+            <View style={previewStyles.equipmentList}>
+              {equipmentItems.map((item) => (
+                <Text key={item} style={previewStyles.equipmentItem}>
+                  {item}
+                </Text>
+              ))}
+            </View>
+            <Text style={previewStyles.gridLabel}>Equipment Needed</Text>
+          </View>
+        </View>
+      </View>
 
       <TouchableOpacity style={previewStyles.beginButton} onPress={() => { hapticPrimaryAction(); onBegin(); }} activeOpacity={0.85}>
         <Text style={previewStyles.beginButtonText}>Let's go</Text>
@@ -936,13 +1022,14 @@ const previewStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingHorizontal: 24,
+  },
+  topBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
+    justifyContent: 'space-between',
   },
   backButton: {
-    position: 'absolute',
-    left: 20,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -954,59 +1041,6 @@ const previewStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.textSecondary,
-  },
-  figureArea: {
-    width: 180,
-    height: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 36,
-  },
-  figureRing: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  figureCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1.5,
-    borderColor: colors.primary + '28',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.medium,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.15,
-  },
-  figureGlyph: {
-    fontSize: 44,
-    color: colors.primary,
-    lineHeight: 52,
-  },
-  preLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 32,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
   },
   badge: {
     backgroundColor: colors.primaryMuted,
@@ -1020,47 +1054,71 @@ const previewStyles = StyleSheet.create({
     color: colors.primaryDeep,
     letterSpacing: 0.4,
   },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.borderLight,
-    paddingVertical: 14,
-    width: '100%',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  statPill: {
+  body: {
     flex: 1,
-    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statPillValue: {
-    fontSize: 28,
+  preLabel: {
+    fontSize: 12,
     fontWeight: '700',
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-  },
-  statPillLabel: {
-    fontSize: 11,
-    fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    marginTop: 1,
+    marginBottom: 8,
   },
-  statPillDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: colors.borderLight,
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 28,
+    lineHeight: 34,
   },
-  tip: {
-    fontSize: 15,
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  gridTile: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    ...shadows.low,
+  },
+  gridTileWide: {
+    flexBasis: '100%',
+  },
+  gridValue: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+    marginBottom: 4,
+  },
+  gridValueSmall: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  equipmentList: {
+    gap: 2,
+    marginBottom: 4,
+  },
+  equipmentItem: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  gridLabel: {
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 23,
-    marginBottom: 32,
-    paddingHorizontal: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   beginButton: {
     height: 56,
@@ -1088,6 +1146,7 @@ function PainCheckinView({
   onValueChange,
   buttonLabel,
   onSubmit,
+  submitting = false,
   insets,
 }: {
   title: string;
@@ -1095,6 +1154,7 @@ function PainCheckinView({
   onValueChange: (v: number) => void;
   buttonLabel: string;
   onSubmit: () => void;
+  submitting?: boolean;
   insets: { top: number; bottom: number };
 }) {
   const sliderRef = useRef<View>(null);
@@ -1162,8 +1222,12 @@ function PainCheckinView({
 
       <Text style={styles.sliderHint}>1 = No pain · 10 = Severe pain</Text>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={onSubmit}>
-        <Text style={styles.primaryButtonText}>{buttonLabel}</Text>
+      <TouchableOpacity
+        style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
+        onPress={onSubmit}
+        disabled={submitting}
+      >
+        <Text style={styles.primaryButtonText}>{submitting ? 'Saving\u2026' : buttonLabel}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1308,9 +1372,23 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginTop: 2,
   },
-  nextExPreview: {
+  restExitButton: {
+    position: 'absolute',
+    top: 12,
+    left: 16,
+    zIndex: 10,
+  },
+  restBody: {
+    flex: 1,
+  },
+  nextExCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
     marginBottom: 16,
+    ...shadows.low,
   },
   nextExLabel: {
     fontSize: 12,
@@ -1354,11 +1432,28 @@ const styles = StyleSheet.create({
 
   // Exercise top bar
   exerciseTopBar: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: 10,
+  },
+  exerciseTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  },
+  exerciseProgressBar: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  exerciseProgressSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.borderLight,
+  },
+  exerciseProgressSegmentFilled: {
+    backgroundColor: colors.primary,
   },
   exitButton: {
     width: 36,
@@ -1417,24 +1512,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 16,
   },
-  muteButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  muteButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    lineHeight: 18,
-  },
-
   // Exercise info
   exerciseInfo: {
     padding: 24,
@@ -1445,6 +1522,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
+  },
+  setIndicator: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 6,
   },
   countdownText: {
     fontSize: 18,
@@ -1534,36 +1619,56 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 8,
   },
-  completeStats: {
+  completeSummaryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+    width: '100%',
+    ...shadows.low,
   },
-  completeStatText: {
-    fontSize: 16,
-    color: colors.textSecondary,
+  completeStatItem: {
+    flex: 1,
+    alignItems: 'center',
   },
-  completeStatDivider: {
-    fontSize: 16,
-    color: colors.textSecondary,
+  completeStatValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+    marginBottom: 2,
   },
-  painDelta: {
-    fontSize: 16,
+  completeStatUnit: {
+    fontSize: 12,
     fontWeight: '600',
-    color: colors.secondary,
-    marginBottom: 8,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  completeStatDividerVert: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.borderLight,
   },
   warmCopy: {
     fontSize: 15,
     color: colors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: 4,
+    marginBottom: 20,
   },
-  nextSessionPreview: {
-    marginTop: 20,
+  nextSessionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    width: '100%',
+    ...shadows.low,
   },
   nextSessionLabel: {
     fontSize: 12,
@@ -1599,5 +1704,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+
+  // ── Session load error ──
+  loadErrorTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  loadErrorText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  loadErrorBack: {
+    marginTop: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  loadErrorBackText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });

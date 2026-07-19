@@ -1,17 +1,59 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { AppLogo } from '../../components/brand/AppLogo';
+import {
+  useOnboarding,
+  getResumeStep,
+  ONBOARDING_FLOW,
+  ONBOARDING_STEP_PATHS,
+} from '../../context/OnboardingContext';
+import { useAuth } from '../../context/AuthContext';
+import { useUser } from '../../lib/superwall';
+import { hapticWarning } from '../../lib/haptics';
 import { colors, serifFont } from '../../constants/colors';
-import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { resetAnswers } = useOnboarding();
+  const { resetAnswers, answers, progress } = useOnboarding();
+  // A stale session (signed in during a previous test/session) is otherwise invisible
+  // here: tapping "Sign in" would silently bounce to the tabs (root guard treats an
+  // already-authed, fully-onboarded user on an auth route as misplaced) with no
+  // explanation. Surface it and offer a real way out instead.
+  const { user, signOut } = useAuth();
+  const { signOut: superwallSignOut } = useUser();
+
+  async function handleSignOut() {
+    hapticWarning();
+    void superwallSignOut();
+    await signOut();
+  }
+  // Saved progress means an unauthenticated user backed out to welcome mid-funnel; the
+  // root guard normally resumes them before this screen shows. Keep their answers and
+  // offer to continue rather than wiping (the old mount-reset silently lost everything).
+  // Resume target is clamped to the first step whose data is missing — jumping to the
+  // furthest-reached screen with earlier answers gone strands the user on match's
+  // "complete all questions" error.
+  const resumeStep = getResumeStep(progress, answers);
+  const canResume = resumeStep !== 'welcome';
+
+  function handleStart() {
+    if (canResume) {
+      // Push every step up to the resume target so swipe-back works through the quiz
+      // instead of dead-ending on a single orphaned screen.
+      const targetIndex = ONBOARDING_FLOW.indexOf(resumeStep);
+      for (let i = 1; i <= targetIndex; i++) {
+        router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
+      }
+      return;
+    }
+    // Fresh run: clear any orphaned answers/progress before beginning.
+    resetAnswers();
+    router.push('/(onboarding)/founder');
+  }
 
   const logoScale = useRef(new Animated.Value(0.7)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -20,10 +62,6 @@ export default function WelcomeScreen() {
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
   const subtitleTranslate = useRef(new Animated.Value(10)).current;
   const footerOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    resetAnswers();
-  }, []);
 
   useEffect(() => {
     const fadeUp = (opacity: Animated.Value, translate: Animated.Value) =>
@@ -74,12 +112,9 @@ export default function WelcomeScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 24 }]}>
       <View style={styles.content}>
         <Animated.View
-          style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
+          style={[{ marginBottom: 24 }, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
         >
-          <View style={styles.logoHalo} />
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>R</Text>
-          </View>
+          <AppLogo size="md" />
         </Animated.View>
         <Animated.Text
           style={[styles.appName, { opacity: nameOpacity, transform: [{ translateY: nameTranslate }] }]}
@@ -97,7 +132,25 @@ export default function WelcomeScreen() {
       </View>
 
       <Animated.View style={[styles.footer, { opacity: footerOpacity }]}>
-        <ContinueButton label="Get Started" onPress={() => router.push('/(onboarding)/education')} />
+        <ContinueButton label={canResume ? 'Continue' : 'Get Started'} onPress={handleStart} />
+        {user ? (
+          <TouchableOpacity style={styles.signInLink} onPress={handleSignOut} activeOpacity={0.6}>
+            <Text style={styles.signInText}>
+              Signed in as {user.email ?? 'an account'} on this device.{' '}
+              <Text style={styles.signInBold}>Sign out</Text>
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.signInLink}
+            onPress={() => router.navigate('/(auth)/sign-in')}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.signInText}>
+              Already have an account? <Text style={styles.signInBold}>Sign in</Text>
+            </Text>
+          </TouchableOpacity>
+        )}
       </Animated.View>
     </View>
   );
@@ -113,37 +166,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logoWrap: {
-    width: 112,
-    height: 112,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  logoHalo: {
-    position: 'absolute',
-    width: 112,
-    height: 112,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primaryMuted,
-  },
-  logoCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.high,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.3,
-  },
-  logoText: {
-    fontSize: 40,
-    fontFamily: serifFont,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   appName: {
     fontSize: 42,
@@ -161,5 +183,18 @@ const styles = StyleSheet.create({
   footer: {
     paddingBottom: 8,
     gap: 16,
+  },
+  signInLink: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  signInText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  signInBold: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

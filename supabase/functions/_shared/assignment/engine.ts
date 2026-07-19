@@ -78,6 +78,10 @@ export interface TemplateSession {
 }
 
 export interface TemplateInput {
+  // NOTE: loaded from program_templates but not yet consumed by buildPlan() —
+  // phase behavior currently comes from slot criteria + strength gating +
+  // the weekly intensity target. Wire these ratios in if session composition
+  // should shift by phase bucket in a future version.
   week_phase_plan: Record<string, Record<string, number>>;
   sessions: TemplateSession[];
 }
@@ -291,11 +295,33 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
     .sort((a, b) => a.session_index - b.session_index)
     .slice(0, sessionsPerWeek);
 
+  // Weekly intensity target (1..5) — selection climbs the replacement ladders
+  // toward this, and reps double-progress from the week an exercise's tier
+  // first becomes reachable (see resolveExercise). Acute users carry their
+  // negative starting_intensity_offset through the whole ramp, so a short acute
+  // program peaks below max intensity instead of racing to tier 5.
+  const targetTierForWeek = (week: number): number =>
+    clamp(1 + Math.round(weekFraction(week, durationWeeks) * 4) + startingOffset, 1, 5);
+  // enterWeekByTier[t] = first week whose target tier reaches t (targetTier is
+  // monotonic in week). Tiers never reached map to the final week.
+  const enterWeekByTier: number[] = [0, 1, 1, 1, 1, 1];
+  for (let t = 1; t <= 5; t++) {
+    let enter = durationWeeks;
+    for (let w = 1; w <= durationWeeks; w++) {
+      if (targetTierForWeek(w) >= t) {
+        enter = w;
+        break;
+      }
+    }
+    enterWeekByTier[t] = enter;
+  }
+
   const sessions: ResolvedSession[] = [];
 
   for (let week = startWeek; week <= durationWeeks; week++) {
     const fraction = weekFraction(week, durationWeeks);
     const bucket = phaseBucket(fraction);
+    const targetTier = targetTierForWeek(week);
     const isEarly = week <= earlyWeeks;
     const isBodyweightOnly =
       answers.pain_type.includes('sharp') &&
@@ -328,8 +354,18 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
       }
     }
 
-    for (let s = 0; s < blueprints.length; s++) {
-      const bp = blueprints[s];
+    // Late phase is strength-dominant (week_phase_plan late: strength ~0.5): the
+    // dedicated relief day is replaced by a second strength day once the program
+    // enters the late bucket. Mobility and recovery remain embedded in every
+    // session's warm-up and cooldown slots, so relief work never disappears.
+    const strengthBp = blueprints.find((b) => b.phase === 'strength');
+    const weekBlueprints =
+      bucket === 'late' && strengthBp && week >= strengthStartWeek
+        ? blueprints.map((b, i) => (i === 0 && b.phase === 'mobility' ? strengthBp : b))
+        : blueprints;
+
+    for (let s = 0; s < weekBlueprints.length; s++) {
+      const bp = weekBlueprints[s];
       const sessionNumber = s + 1;
       const sessionArea = resolveSessionArea(answers, rules, sessionNumber, sessionsPerWeek);
       const title = bp.title_template.replace('{area}', TITLE_AREA[answers.pain_location]);
@@ -371,6 +407,8 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
           morningFirstMobility,
           replacementByPattern,
           byId: makeById(equipmentPool),
+          targetTier,
+          ignoreIntensityCeiling: false,
         });
 
         if (!candidate) continue;
@@ -382,6 +420,8 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
           resolveExercise(candidate, chosen.length + 1, {
             fraction,
             week,
+            durationWeeks,
+            enterWeek: enterWeekByTier[clamp(candidate.intensity_tier, 1, 5)],
             intensityMult,
             restMult,
             startingOffset,
@@ -397,7 +437,7 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
         title,
         phase: bp.phase,
         estimated_minutes: estMinutes,
-        intensity_tier: clamp(1 + Math.round(fraction * 4), 1, 5),
+        intensity_tier: targetTier,
         exercises: chosen,
       });
     }
@@ -445,12 +485,25 @@ interface SelectArgs {
   morningFirstMobility: boolean;
   replacementByPattern: Map<string, string[]>;
   byId: Map<string, CatalogExercise>;
+  // Weekly intensity target (1..5). Selection never exceeds targetTier + 1 and
+  // scores proximity to it so the plan climbs the intensity ladders over weeks.
+  targetTier: number;
+  ignoreIntensityCeiling: boolean;
 }
 
 function passesHardFilters(ex: CatalogExercise, args: SelectArgs): boolean {
   const { rules, answers, slotArea, usedIds, excludeAggravates, isBodyweightOnly } = args;
   if (usedIds.has(ex.id)) return false;
   if (isBodyweightOnly && ex.equipment_tier !== 'open_space') return false;
+  // Weekly intensity ceiling — an exercise may lead the target by at most 1 tier.
+  if (!args.ignoreIntensityCeiling && ex.intensity_tier > args.targetTier + 1) return false;
+  // Slot-level cap (e.g. relief sessions cap activation at tier 2).
+  if (
+    args.crit.target_intensity_tier !== undefined &&
+    ex.intensity_tier > args.crit.target_intensity_tier
+  ) {
+    return false;
+  }
   // pain-area filter
   const allowedAreas = rules.pain_location.area_filter[answers.pain_location] ?? ['general'];
   if (!ex.pain_areas.some((a) => allowedAreas.includes(a))) return false;
@@ -465,8 +518,16 @@ function passesHardFilters(ex: CatalogExercise, args: SelectArgs): boolean {
   }
   // contraindicated movement properties
   if (ex.aggravates.some((a) => excludeAggravates.has(a))) return false;
-  // fatigue budget — allow exceeding only if the session has nothing yet
-  if (args.hasPicked && args.fatigue + ex.fatigue_cost > args.fatigueBudget) return false;
+  // fatigue budget — allow exceeding only if the session has nothing yet.
+  // Recovery stretches are exempt: a cooldown must never be crowded out by
+  // heavier ladder picks earlier in the session.
+  if (
+    ex.phase !== 'recovery' &&
+    args.hasPicked &&
+    args.fatigue + ex.fatigue_cost > args.fatigueBudget
+  ) {
+    return false;
+  }
   // unused slotArea kept for scoring; referenced there
   void slotArea;
   return true;
@@ -495,6 +556,13 @@ function scoreExercise(ex: CatalogExercise, args: SelectArgs): number {
   const phaseMatch = effectivePhase && ex.phase === effectivePhase ? 1 : 0;
   const patternMatch = crit.movement_pattern && ex.movement_pattern === crit.movement_pattern ? 2 : 0;
   const morningBonus = morningFirstMobility && ex.phase === 'mobility' ? 0.75 : 0;
+  // Intensity proximity: prefer exercises whose tier sits at the weekly target so
+  // selection climbs the ladder (Clamshell -> Bridge -> SL Bridge -> Hip Thrust)
+  // instead of re-picking the week-1 winner forever. Weight is deliberately high
+  // enough to override static effectiveness/goal deltas between ladder rungs.
+  // Mobility/recovery pools are ~all tier 1, so this mostly shapes activation/strength.
+  const tierDistance = Math.min(3, Math.abs(args.targetTier - ex.intensity_tier));
+  const intensityProximity = (3 - tierDistance) / 3;
 
   return (
     w.effectiveness * (ex.effectiveness / 5) +
@@ -505,7 +573,8 @@ function scoreExercise(ex: CatalogExercise, args: SelectArgs): number {
     w.usefulness * (ex.usefulness / 5) +
     w.phase_match * phaseMatch +
     patternMatch +
-    morningBonus
+    morningBonus +
+    1.5 * intensityProximity
   );
 }
 
@@ -559,7 +628,17 @@ function selectForSlot(args: SelectArgs): CatalogExercise | null {
 
   // 4) Last resort: any equipment-appropriate, area/type-safe exercise.
   const anyCands = args.pool.filter((ex) => passesHardFilters(ex, args));
-  return pickBest(anyCands);
+  const anyBest = pickBest(anyCands);
+  if (anyBest) return anyBest;
+
+  // 5) Nothing fits under the weekly intensity ceiling — relax it rather than
+  // leave the slot empty (safety filters still apply).
+  if (!args.ignoreIntensityCeiling) {
+    const relaxed = { ...args, ignoreIntensityCeiling: true };
+    const relaxedCands = relaxed.pool.filter((ex) => passesHardFilters(ex, relaxed));
+    return pickBest(relaxedCands);
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -569,6 +648,10 @@ function selectForSlot(args: SelectArgs): CatalogExercise | null {
 interface IntensityCtx {
   fraction: number;
   week: number;
+  durationWeeks: number;
+  // First week this exercise's intensity tier becomes reachable — reps
+  // double-progress from base across the weeks the exercise is actually held.
+  enterWeek: number;
   intensityMult: number;
   restMult: number;
   startingOffset: number;
@@ -576,19 +659,34 @@ interface IntensityCtx {
   accelAfterWeek: number | null;
 }
 
+// Strength AND activation work stay at or below 15 reps; beyond that the ladder
+// should hand out a harder variant, not more endurance reps (e.g. never 3x20
+// glute bridges — swap to single-leg instead). Mobility/recovery are exempt.
+const WORK_REPS_CAP = 15;
+
 function resolveExercise(
   ex: CatalogExercise,
   orderIndex: number,
   ctx: IntensityCtx,
 ): ResolvedExercise {
-  // Reps grow ~0.9x -> 1.2x across the program, scaled by activity multiplier.
-  let repsFactor = ctx.intensityMult * (0.9 + 0.3 * ctx.fraction);
+  // Double progression: reps grow base -> ~1.25x base across the weeks this
+  // exercise is held (from the week its tier unlocked to program end), resetting
+  // whenever the ladder swaps in a harder variant.
+  const holdSpan = Math.max(1, ctx.durationWeeks - ctx.enterWeek);
+  const holdFraction = clamp((ctx.week - ctx.enterWeek) / holdSpan, 0, 1);
+  const isWork = ex.phase === 'strength' || ex.phase === 'activation';
+  // Activity level reduces volume for deconditioned users but never inflates
+  // strength/activation sets into endurance ranges — athletes progress via
+  // harder variants, not more reps of easy ones.
+  const activityMult = isWork ? Math.min(1, ctx.intensityMult) : ctx.intensityMult;
+  let repsFactor = activityMult * (1 + 0.25 * holdFraction);
   // Acute / negative starting offset: start gentler in the early weeks.
   if (ctx.startingOffset < 0 && ctx.isEarly) repsFactor *= 0.85;
   // return_to_exercise: accelerate loading after the configured week.
   if (ctx.accelAfterWeek !== null && ctx.week > ctx.accelAfterWeek) repsFactor *= 1.1;
 
-  const reps = ex.reps !== null ? Math.max(3, Math.round(ex.reps * repsFactor)) : null;
+  let reps = ex.reps !== null ? Math.max(3, Math.round(ex.reps * repsFactor)) : null;
+  if (reps !== null && isWork) reps = Math.min(reps, WORK_REPS_CAP);
   const durationSeconds =
     ex.duration_seconds !== null
       ? Math.max(10, Math.round(ex.duration_seconds * (0.9 + 0.2 * ctx.fraction)))
@@ -636,14 +734,11 @@ function buildNaming(
   const primary = rules.pain_location.title_focus[answers.pain_location] ?? 'Back';
   const primaryGoal = answers.main_goal[0];
 
-  // Decision: 1 goal → "<area> <goalFocus> Program"; >1 goals → generic name.
-  let name: string;
-  if (answers.main_goal.length === 1) {
-    const secondary = rules.main_goal.title_focus[primaryGoal] ?? 'Relief';
-    name = `${primary} ${secondary} Program`;
-  } else {
-    name = 'Personalized Recovery Program';
-  }
+  // Always name off the primary (first-selected) goal — consistent with how the
+  // tagline below is built. Multi-goal selections no longer collapse to a generic
+  // name; the first goal picked is treated as the user's main focus everywhere.
+  const secondary = rules.main_goal.title_focus[primaryGoal] ?? 'Relief';
+  const name = `${primary} ${secondary} Program`;
 
   const subtitle = rules.equipment.subtitle_when[answers.equipment] ?? null;
 

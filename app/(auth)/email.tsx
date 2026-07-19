@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
@@ -17,6 +18,7 @@ import { hapticPrimaryAction, hapticError, hapticSelection } from '../../lib/hap
 
 export default function EmailAuthScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -97,24 +99,34 @@ export default function EmailAuthScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <TouchableOpacity
+        style={[styles.backButton, { top: insets.top + 8 }]}
+        onPress={() => router.back()}
+        activeOpacity={0.6}
+        hitSlop={12}
+      >
+        <Text style={styles.backChevron}>‹</Text>
+      </TouchableOpacity>
+
       <View style={styles.content}>
-        <Text style={styles.title}>
-          {isSignUp ? 'Create Account' : 'Sign In'}
-        </Text>
+        <View style={styles.form}>
+          <Text style={styles.title}>
+            {isSignUp ? 'Create Account' : 'Sign In'}
+          </Text>
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
-        {success && (
-          <View style={styles.successContainer}>
-            <Text style={styles.successText}>{success}</Text>
-          </View>
-        )}
+          {success && (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>{success}</Text>
+            </View>
+          )}
 
-        <TextInput
+          <TextInput
           style={styles.input}
           placeholder="Email"
           placeholderTextColor={colors.textSecondary}
@@ -179,10 +191,7 @@ export default function EmailAuthScreen() {
             <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.6}>
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -197,17 +206,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 14,
+  },
+  form: {
+    width: '100%',
+    maxWidth: 400,
+    gap: 14,
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 4,
     letterSpacing: -0.3,
+    width: '100%',
   },
   errorContainer: {
+    width: '100%',
     backgroundColor: '#FFF3E0',
     borderRadius: radius.chip,
     padding: 12,
@@ -221,6 +239,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successContainer: {
+    width: '100%',
     backgroundColor: colors.primaryMuted,
     borderRadius: radius.chip,
     padding: 12,
@@ -234,6 +253,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
+    width: '100%',
     height: 52,
     borderRadius: radius.button,
     backgroundColor: colors.surface,
@@ -244,6 +264,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   submitButton: {
+    width: '100%',
     height: 52,
     borderRadius: radius.button,
     backgroundColor: colors.primary,
@@ -278,11 +299,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   backButton: {
+    position: 'absolute',
+    left: 16,
+    width: 40,
+    height: 40,
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
+    zIndex: 10,
   },
-  backText: {
-    fontSize: 15,
-    color: colors.textSecondary,
+  backChevron: {
+    fontSize: 34,
+    lineHeight: 34,
+    color: colors.textPrimary,
+    marginTop: -4,
   },
 });

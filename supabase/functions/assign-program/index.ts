@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { checkRateLimit, extractUserIdFromJwt } from '../_shared/ratelimit.ts';
+import { checkRateLimit } from '../_shared/ratelimit.ts';
 import { requestSchema, resolvedPlanSchema } from '../_shared/assignment/schema.ts';
 import {
   buildPlan,
@@ -39,17 +39,29 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'missing_auth' }, 401);
 
-    const jwtUserId = extractUserIdFromJwt(authHeader);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
 
-    // Rate limit: 20 assignments / 60s per user (preview calls included).
-    if (jwtUserId) {
+    // Server-authoritative identity: derive the acting user from the VERIFIED JWT, never a
+    // client-supplied user_id. An anon / publishable-key caller has no user, so getUser
+    // returns none and any path that touches a specific account is refused below. (Previously
+    // this used a decode-only helper that accepted a null-sub anon token and let body.user_id
+    // stand in for identity — a full auth bypass.)
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+    const authedUserId = user?.id ?? null;
+
+    // Rate limit: 20 assignments / 60s per verified user (preview calls included).
+    if (authedUserId) {
       const redisUrl = Deno.env.get('UPSTASH_REDIS_REST_URL');
       const redisToken = Deno.env.get('UPSTASH_REDIS_REST_TOKEN');
       if (redisUrl && redisToken) {
         const rl = await checkRateLimit(
           redisUrl,
           redisToken,
-          `ratelimit:assign-program:${jwtUserId}`,
+          `ratelimit:assign-program:${authedUserId}`,
           20,
           60,
         );
@@ -66,15 +78,42 @@ Deno.serve(async (req: Request) => {
     }
     const body = parsed.data;
 
-    // Resolve the acting user. A user may only assign for themselves.
-    const userId = body.user_id ?? jwtUserId;
-    if (!userId) return json({ error: 'missing_user' }, 400);
-    if (jwtUserId && jwtUserId !== userId) return json({ error: 'forbidden' }, 403);
+    // preview_only WITH inline answers is a pure, no-persistence computation (the
+    // pre-signup match screen) and stays open to anonymous callers. Every other path —
+    // persisting a plan, or loading a user's stored onboarding answers — acts on a specific
+    // account and requires a verified user. body.user_id is intentionally ignored.
+    const needsIdentity = !body.preview_only || !body.answers;
+    if (needsIdentity && !authedUserId) return json({ error: 'unauthorized' }, 401);
+    // Guaranteed non-null on every path that reads/writes a user's data (see needsIdentity).
+    const userId = authedUserId as string;
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    // --- Entitlement gate -----------------------------------------------------
+    // Persisting a full personalized program is a paid feature. preview_only=true (the
+    // pre-purchase match screen) stays open; the persistence path requires an active
+    // entitlement or a dev profile, so a free-tier user can't invoke this directly to
+    // generate + store a program without converting.
+    if (!body.preview_only) {
+      const [{ data: ent }, { data: prof }] = await Promise.all([
+        supabase
+          .from('entitlements')
+          .select('is_premium, subscription_status, expires_at')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase.from('profiles').select('is_dev').eq('id', userId).maybeSingle(),
+      ]);
+
+      const notExpired = !ent?.expires_at || new Date(ent.expires_at).getTime() > Date.now();
+      const entitled =
+        !!ent &&
+        ent.is_premium === true &&
+        notExpired &&
+        ['active', 'trial', 'dev_trial'].includes(ent.subscription_status);
+      const isDev = prof?.is_dev === true;
+
+      if (!entitled && !isDev) {
+        return json({ error: 'not_entitled' }, 403);
+      }
+    }
 
     // --- Load answers ---------------------------------------------------------
     let answers: Answers;
@@ -96,7 +135,7 @@ Deno.serve(async (req: Request) => {
     // --- Load rules / catalog / template -------------------------------------
     const [rulesRes, exercisesRes, templateRes, replacementsRes] = await Promise.all([
       supabase.from('assignment_rules').select('version, rules').eq('is_active', true).single(),
-      supabase.from('exercises').select('*'),
+      supabase.from('exercises').select('*').eq('is_assignable', true),
       supabase
         .from('program_templates')
         .select('id, week_phase_plan')
@@ -204,12 +243,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- Persist snapshot -----------------------------------------------------
-    // Supersede any currently-active plan for this user.
-    await supabase
-      .from('user_program_plans')
-      .update({ status: 'superseded', superseded_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .eq('status', 'active');
+    // Ordering matters for crash-safety. We build the ENTIRE new snapshot first (plan →
+    // sessions → exercises) while leaving the user's current active plan untouched. Only
+    // once the full snapshot is committed do we supersede the old plan(s) and repoint
+    // user_programs. If any insert fails partway, we delete the partial new plan (children
+    // cascade via FK) and return an error — the user keeps their existing active plan
+    // instead of being stranded with zero active plans / a broken pointer.
+    const newPlanIso = new Date().toISOString();
 
     const { data: planRow, error: planErr } = await supabase
       .from('user_program_plans')
@@ -232,6 +272,12 @@ Deno.serve(async (req: Request) => {
     if (planErr || !planRow) return json({ error: 'plan_insert_failed' }, 500);
     const planId = planRow.id as string;
 
+    // Best-effort cleanup of the half-written new plan so a failure can't leave a second
+    // dangling "active" plan behind. Children (sessions/exercises) cascade on delete.
+    const rollbackNewPlan = async () => {
+      await supabase.from('user_program_plans').delete().eq('id', planId);
+    };
+
     const { data: sessionRows, error: sessErr } = await supabase
       .from('user_plan_sessions')
       .insert(
@@ -246,7 +292,10 @@ Deno.serve(async (req: Request) => {
         })),
       )
       .select('id, week_number, session_number');
-    if (sessErr || !sessionRows) return json({ error: 'sessions_insert_failed' }, 500);
+    if (sessErr || !sessionRows) {
+      await rollbackNewPlan();
+      return json({ error: 'sessions_insert_failed' }, 500);
+    }
 
     const sessionIdByKey = new Map<string, string>();
     for (const row of sessionRows) {
@@ -272,8 +321,20 @@ Deno.serve(async (req: Request) => {
       const { error: exErr } = await supabase
         .from('user_plan_session_exercises')
         .insert(exerciseRows);
-      if (exErr) return json({ error: 'exercises_insert_failed' }, 500);
+      if (exErr) {
+        await rollbackNewPlan();
+        return json({ error: 'exercises_insert_failed' }, 500);
+      }
     }
+
+    // Snapshot fully materialized — now it is safe to supersede any previously-active
+    // plan(s) for this user (excluding the one we just created).
+    await supabase
+      .from('user_program_plans')
+      .update({ status: 'superseded', superseded_at: newPlanIso })
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .neq('id', planId);
 
     // Point user_programs at the new plan (create if missing). On a retake the start
     // week is the next incomplete week.
@@ -283,26 +344,42 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', userId)
       .maybeSingle();
 
+    // The plan snapshot is already committed and the old plan already superseded at
+    // this point — this write's only job is to point user_programs at it. If it fails
+    // (transient DB error, missing programs row on insert, etc.) we must NOT return a
+    // 200 with plan_id: the caller would think assignment succeeded while the pointer
+    // still references the old (now-superseded) plan or nothing at all, silently
+    // stranding the user. Surface the failure so the client's existing retry/recheck
+    // path (building-plan.tsx) runs instead.
+    let pointerError: { message: string } | null = null;
     if (existingUp) {
-      await supabase
+      // started_at is intentionally preserved: a retake mid-program continues the same
+      // journey (Profile's "In Program" stat), it doesn't restart the clock. The dev
+      // Reset Progress flow resets it explicitly via restart_program(p_reset_started_at).
+      const { error } = await supabase
         .from('user_programs')
         .update({
           active_plan_id: planId,
           current_week: plan.start_week,
           current_session: 1,
-          started_at: new Date().toISOString(),
         })
         .eq('user_id', userId);
+      pointerError = error;
     } else {
       // program_id is legacy-required; point at any seeded program for FK satisfaction.
       const { data: anyProgram } = await supabase.from('programs').select('id').limit(1).single();
-      await supabase.from('user_programs').insert({
+      const { error } = await supabase.from('user_programs').insert({
         user_id: userId,
         program_id: anyProgram?.id,
         active_plan_id: planId,
         current_week: plan.start_week,
         current_session: 1,
       });
+      pointerError = error;
+    }
+
+    if (pointerError) {
+      return json({ error: 'pointer_update_failed' }, 500);
     }
 
     return json({

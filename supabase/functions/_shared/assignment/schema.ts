@@ -35,6 +35,9 @@ export const answersSchema = z
 
 export const requestSchema = z
   .object({
+    // Accepted for backward compatibility with existing clients, but IGNORED by the
+    // function: identity is always taken from the verified JWT (see index.ts). Never used
+    // to select the acting account.
     user_id: z.string().uuid().optional(),
     start_week: z.number().int().min(1).max(52).optional(),
     preview_only: z.boolean().optional(),

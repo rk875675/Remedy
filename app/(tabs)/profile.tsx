@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -22,6 +25,8 @@ import {
   requestPermissions,
   scheduleDailyReminder,
   cancelReminders,
+  scheduleStretchReminders,
+  cancelStretchReminders,
 } from '../../lib/notifications';
 import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
@@ -36,137 +41,307 @@ import type { Entitlement, OnboardingAnswers, Profile, UserProgram } from '../..
 const STORAGE_NOTIF = 'remedy_notifications_enabled';
 const STORAGE_NOTIF_TIME = 'remedy_notification_time';
 const STORAGE_DAY_OFFSET = 'dev_day_offset';
+const STORAGE_STRETCH = 'remedy_stretch_enabled';
+const STORAGE_STRETCH_INTERVAL = 'remedy_stretch_interval';
+const STORAGE_STRETCH_START = 'remedy_stretch_start_hour';
+const STORAGE_STRETCH_END = 'remedy_stretch_end_hour';
+
+const STRETCH_INTERVAL_OPTIONS: { value: number; label: string; short: string }[] = [
+  { value: 30, label: '30 min', short: '30m' },
+  { value: 60, label: '60 min', short: '1h' },
+  { value: 90, label: '90 min', short: '90m' },
+  { value: 120, label: '2 hrs', short: '2h' },
+];
+
+function roundToQuarterHour(date: Date): { hour: number; minute: number } {
+  const totalMins = date.getHours() * 60 + date.getMinutes();
+  const rounded = Math.round(totalMins / 15) * 15;
+  return { hour: Math.floor(rounded / 60) % 24, minute: rounded % 60 };
+}
+
+function formatTime12(hour24: number, minute: number): string {
+  const h12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  const period = hour24 < 12 ? 'AM' : 'PM';
+  return `${h12}:${minute.toString().padStart(2, '0')} ${period}`;
+}
+
+function stretchIntervalLabel(minutes: number): string {
+  return STRETCH_INTERVAL_OPTIONS.find((opt) => opt.value === minutes)?.label ?? `${minutes} min`;
+}
 
 // ---------------------------------------------------------------------------
-// TimePicker (unchanged)
+// WheelTimePicker — pure-JS drum-roll time picker (no native module needed)
 // ---------------------------------------------------------------------------
-const HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const MINUTE_OPTIONS = [0, 15, 30, 45];
-const PERIOD_OPTIONS = ['AM', 'PM'] as const;
+const WHEEL_ITEM_H = 44;
+const WHEEL_VISIBLE = 5;
+const WHEEL_H = WHEEL_ITEM_H * WHEEL_VISIBLE;
+const WHEEL_PAD = WHEEL_ITEM_H * Math.floor(WHEEL_VISIBLE / 2);
 
-type Period = 'AM' | 'PM';
+const WHEEL_HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const WHEEL_MINUTES = ['00', '15', '30', '45'];
+const WHEEL_PERIODS = ['AM', 'PM'];
 
-function to24h(displayHour: number, minute: number, period: Period): { hour: number; minute: number } {
-  let hour = displayHour;
-  if (period === 'AM' && displayHour === 12) hour = 0;
-  else if (period === 'PM' && displayHour !== 12) hour = displayHour + 12;
-  return { hour, minute };
+interface WheelColumnProps {
+  items: string[];
+  initialIndex: number;
+  onSelect: (index: number) => void;
 }
 
-function from24h(hour: number, minute: number): { displayHour: number; minute: number; period: Period } {
-  const period: Period = hour < 12 ? 'AM' : 'PM';
-  let displayHour = hour % 12;
-  if (displayHour === 0) displayHour = 12;
-  return { displayHour, minute, period };
-}
+function WheelColumn({ items, initialIndex, onSelect }: WheelColumnProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const [activeIdx, setActiveIdx] = useState(initialIndex);
 
-interface TimePickerProps {
-  hour24: number;
-  minute: number;
-  onChange: (hour24: number, minute: number) => void;
-}
+  useEffect(() => {
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: initialIndex * WHEEL_ITEM_H, animated: false });
+    }, 0);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-function TimePicker({ hour24, minute, onChange }: TimePickerProps) {
-  const { displayHour, period } = from24h(hour24, minute);
-
-  function selectHour(h: number) {
-    hapticSelection();
-    const { hour, minute: m } = to24h(h, minute, period);
-    onChange(hour, m);
-  }
-
-  function selectMinute(m: number) {
-    hapticSelection();
-    const { hour } = to24h(displayHour, m, period);
-    onChange(hour, m);
-  }
-
-  function selectPeriod(p: Period) {
-    hapticSelection();
-    const { hour, minute: m } = to24h(displayHour, minute, p);
-    onChange(hour, m);
+  function handleMomentumScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const raw = e.nativeEvent.contentOffset.y;
+    const idx = Math.max(0, Math.min(items.length - 1, Math.round(raw / WHEEL_ITEM_H)));
+    setActiveIdx(idx);
+    onSelect(idx);
   }
 
   return (
-    <View style={tpStyles.container}>
-      <View style={tpStyles.column}>
-        {HOUR_OPTIONS.map((h) => (
-          <TouchableOpacity
-            key={h}
-            style={[tpStyles.cell, displayHour === h && tpStyles.cellSelected]}
-            onPress={() => selectHour(h)}
-            activeOpacity={0.7}
-          >
-            <Text style={[tpStyles.cellText, displayHour === h && tpStyles.cellTextSelected]}>
-              {h}
+    <View style={wStyles.column}>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={WHEEL_ITEM_H}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        contentContainerStyle={{ paddingVertical: WHEEL_PAD }}
+      >
+        {items.map((item, i) => (
+          <View key={i} style={wStyles.item}>
+            <Text style={i === activeIdx ? wStyles.itemActive : wStyles.itemInactive}>
+              {item}
             </Text>
-          </TouchableOpacity>
+          </View>
         ))}
-      </View>
-      <View style={tpStyles.column}>
-        {MINUTE_OPTIONS.map((m) => (
-          <TouchableOpacity
-            key={m}
-            style={[tpStyles.cell, minute === m && tpStyles.cellSelected]}
-            onPress={() => selectMinute(m)}
-            activeOpacity={0.7}
-          >
-            <Text style={[tpStyles.cellText, minute === m && tpStyles.cellTextSelected]}>
-              {String(m).padStart(2, '0')}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={tpStyles.column}>
-        {PERIOD_OPTIONS.map((p) => (
-          <TouchableOpacity
-            key={p}
-            style={[tpStyles.cell, period === p && tpStyles.cellSelected]}
-            onPress={() => selectPeriod(p)}
-            activeOpacity={0.7}
-          >
-            <Text style={[tpStyles.cellText, period === p && tpStyles.cellTextSelected]}>
-              {p}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      </ScrollView>
+      {/* Selection band — two hairlines framing the centre item */}
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <View style={[wStyles.selectionLine, { top: WHEEL_PAD }]} />
+        <View style={[wStyles.selectionLine, { top: WHEEL_PAD + WHEEL_ITEM_H }]} />
       </View>
     </View>
   );
 }
 
-const tpStyles = StyleSheet.create({
+interface WheelTimePickerProps {
+  hour24: number;
+  minute: number;
+  onChange: (hour24: number, minute: number) => void;
+}
+
+function WheelTimePicker({ hour24, minute, onChange }: WheelTimePickerProps) {
+  const displayH12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  const initMinIdx = Math.max(0, Math.round(minute / 15) % 4);
+  const initPeriodIdx: 0 | 1 = hour24 < 12 ? 0 : 1;
+
+  const st = useRef({ h12: displayH12, minIdx: initMinIdx, pIdx: initPeriodIdx });
+
+  function emit() {
+    const { h12, minIdx, pIdx } = st.current;
+    const h24 = pIdx === 0 ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
+    onChange(h24, minIdx * 15);
+  }
+
+  return (
+    <View style={wStyles.container}>
+      <WheelColumn
+        items={WHEEL_HOURS}
+        initialIndex={displayH12 - 1}
+        onSelect={(i) => { st.current.h12 = i + 1; emit(); }}
+      />
+      <Text style={wStyles.colon}>:</Text>
+      <WheelColumn
+        items={WHEEL_MINUTES}
+        initialIndex={initMinIdx}
+        onSelect={(i) => { st.current.minIdx = i; emit(); }}
+      />
+      <WheelColumn
+        items={WHEEL_PERIODS}
+        initialIndex={initPeriodIdx}
+        onSelect={(i) => { st.current.pIdx = i as 0 | 1; emit(); }}
+      />
+    </View>
+  );
+}
+
+const wStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 16,
-    gap: 8,
+    paddingVertical: 8,
+    gap: 4,
   },
   column: {
+    flex: 1,
+    height: WHEEL_H,
+    overflow: 'hidden',
+  },
+  item: {
+    height: WHEEL_ITEM_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemActive: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  itemInactive: {
+    fontSize: 18,
+    fontWeight: '400',
+    color: colors.textTertiary,
+  },
+  selectionLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  colon: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    paddingBottom: 2,
+  },
+});
+
+function formatHour(hour24: number): string {
+  if (hour24 === 0) return '12 AM';
+  if (hour24 === 12) return '12 PM';
+  return hour24 < 12 ? `${hour24} AM` : `${hour24 - 12} PM`;
+}
+
+interface CompactHourRangeProps {
+  startHour: number;
+  endHour: number;
+  onStartChange: (hour24: number) => void;
+  onEndChange: (hour24: number) => void;
+}
+
+function CompactHourRange({
+  startHour,
+  endHour,
+  onStartChange,
+  onEndChange,
+}: CompactHourRangeProps) {
+  return (
+    <View style={hrStyles.row}>
+      <View style={hrStyles.side}>
+        <TouchableOpacity
+          style={[hrStyles.btn, startHour <= 0 && hrStyles.btnDisabled]}
+          onPress={() => {
+            if (startHour > 0) {
+              hapticSelection();
+              onStartChange(startHour - 1);
+            }
+          }}
+          activeOpacity={0.7}
+          disabled={startHour <= 0}
+        >
+          <Text style={hrStyles.btnText}>−</Text>
+        </TouchableOpacity>
+        <Text style={hrStyles.time}>{formatHour(startHour)}</Text>
+        <TouchableOpacity
+          style={[hrStyles.btn, startHour >= endHour - 1 && hrStyles.btnDisabled]}
+          onPress={() => {
+            if (startHour < endHour - 1) {
+              hapticSelection();
+              onStartChange(startHour + 1);
+            }
+          }}
+          activeOpacity={0.7}
+          disabled={startHour >= endHour - 1}
+        >
+          <Text style={hrStyles.btnText}>+</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={hrStyles.dash}>–</Text>
+      <View style={hrStyles.side}>
+        <TouchableOpacity
+          style={[hrStyles.btn, endHour <= startHour + 1 && hrStyles.btnDisabled]}
+          onPress={() => {
+            if (endHour > startHour + 1) {
+              hapticSelection();
+              onEndChange(endHour - 1);
+            }
+          }}
+          activeOpacity={0.7}
+          disabled={endHour <= startHour + 1}
+        >
+          <Text style={hrStyles.btnText}>−</Text>
+        </TouchableOpacity>
+        <Text style={hrStyles.time}>{formatHour(endHour)}</Text>
+        <TouchableOpacity
+          style={[hrStyles.btn, endHour >= 23 && hrStyles.btnDisabled]}
+          onPress={() => {
+            if (endHour < 23) {
+              hapticSelection();
+              onEndChange(endHour + 1);
+            }
+          }}
+          activeOpacity={0.7}
+          disabled={endHour >= 23}
+        >
+          <Text style={hrStyles.btnText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const hrStyles = StyleSheet.create({
+  row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  side: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
-  cell: {
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: radius.chip,
-    backgroundColor: colors.background,
-  },
-  cellSelected: {
-    backgroundColor: colors.primary,
-    ...shadows.low,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.2,
-  },
-  cellText: {
+  dash: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: colors.textTertiary,
     fontWeight: '500',
   },
-  cellTextSelected: {
-    color: colors.surface,
-    fontWeight: '700',
+  btn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnDisabled: {
+    opacity: 0.3,
+  },
+  btnText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  time: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    minWidth: 52,
+    textAlign: 'center',
   },
 });
 
@@ -218,10 +393,10 @@ function getPlanInfo(entitlement: Entitlement | null): PlanInfo {
   }
 
   if (subscription_status === 'active') {
-    if (product_id === 'com.remedyapp.annual') {
+    if (product_id?.startsWith('com.remedyapp.annual')) {
       return { label: 'Annual Plan', isNegative: false, tappable: false };
     }
-    if (product_id === 'com.remedyapp.monthly') {
+    if (product_id?.startsWith('com.remedyapp.monthly')) {
       return { label: 'Monthly Plan', isNegative: false, tappable: false };
     }
     return { label: 'Active Plan', isNegative: false, tappable: false };
@@ -265,7 +440,7 @@ type UserProgramWithProgram = UserProgram & {
 // ---------------------------------------------------------------------------
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
   const { signOut: superwallSignOut } = useUser();
   const router = useRouter();
   const nameInputRef = useRef<TextInput>(null);
@@ -273,9 +448,17 @@ export default function ProfileScreen() {
   // Existing state
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [reminderHour, setReminderHour] = useState(9);
-  const [reminderMinute, setReminderMinute] = useState(0);
+  const [reminderHour, setReminderHour] = useState(() => roundToQuarterHour(new Date()).hour);
+  const [reminderMinute, setReminderMinute] = useState(() => roundToQuarterHour(new Date()).minute);
+  const [dailyExpanded, setDailyExpanded] = useState(false);
   const [dayOffset, setDayOffset] = useState(0);
+
+  // Stretch reminders
+  const [stretchEnabled, setStretchEnabled] = useState(false);
+  const [stretchInterval, setStretchInterval] = useState(60);
+  const [stretchStartHour, setStretchStartHour] = useState(9);
+  const [stretchEndHour, setStretchEndHour] = useState(18);
+  const [stretchExpanded, setStretchExpanded] = useState(false);
 
   // New state
   const [userProgramData, setUserProgramData] = useState<UserProgramWithProgram | null>(null);
@@ -291,7 +474,13 @@ export default function ProfileScreen() {
   // Restore state
   const [restoring, setRestoring] = useState(false);
 
-  useEffect(() => {
+  // Delete account state
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  // Reload on every focus (not just mount) so the plan card reflects a retake-rebuilt
+  // program or fresh completions as soon as the user returns to this tab.
+  useFocusEffect(
+    useCallback(() => {
     if (!user) return;
 
     (async () => {
@@ -304,6 +493,7 @@ export default function ProfileScreen() {
         notifPref,
         notifTime,
         offsetStr,
+        stretchPrefs,
         userProgramRes,
         answersRes,
         entitlementRes,
@@ -314,6 +504,12 @@ export default function ProfileScreen() {
         AsyncStorage.getItem(STORAGE_NOTIF),
         AsyncStorage.getItem(STORAGE_NOTIF_TIME),
         AsyncStorage.getItem(STORAGE_DAY_OFFSET),
+        AsyncStorage.multiGet([
+          STORAGE_STRETCH,
+          STORAGE_STRETCH_INTERVAL,
+          STORAGE_STRETCH_START,
+          STORAGE_STRETCH_END,
+        ]),
         supabase
           .from('user_programs')
           .select('*, programs(name, duration_weeks), user_program_plans(program_name, subtitle, duration_weeks)')
@@ -348,6 +544,19 @@ export default function ProfileScreen() {
         setReminderMinute(parsed.minute);
       }
       setDayOffset(offsetStr ? parseInt(offsetStr, 10) : 0);
+
+      const stretchMap = Object.fromEntries(stretchPrefs);
+      setStretchEnabled(stretchMap[STORAGE_STRETCH] === 'true');
+      if (stretchMap[STORAGE_STRETCH_INTERVAL]) {
+        setStretchInterval(parseInt(stretchMap[STORAGE_STRETCH_INTERVAL], 10));
+      }
+      if (stretchMap[STORAGE_STRETCH_START]) {
+        setStretchStartHour(parseInt(stretchMap[STORAGE_STRETCH_START], 10));
+      }
+      if (stretchMap[STORAGE_STRETCH_END]) {
+        setStretchEndHour(parseInt(stretchMap[STORAGE_STRETCH_END], 10));
+      }
+
       setUserProgramData(userProgramRes.data as UserProgramWithProgram | null);
       setOnboardingAnswers(answersRes.data);
       setEntitlement(entitlementRes.data);
@@ -365,7 +574,8 @@ export default function ProfileScreen() {
         setPainAvg(null);
       }
     })();
-  }, [user]);
+    }, [user]),
+  );
 
   if (!user) {
     return (
@@ -507,6 +717,77 @@ export default function ProfileScreen() {
   }
 
   // ---------------------------------------------------------------------------
+  // Delete account
+  // ---------------------------------------------------------------------------
+  function getDeleteAccountErrorMessage(error?: string): string {
+    if (error === 'rate_limited') {
+      return 'Too many attempts. Please wait a bit and try again.';
+    }
+    if (error === 'missing_auth' || error === 'invalid_auth') {
+      return 'Your session expired. Please sign in again and retry.';
+    }
+    return 'Something went wrong deleting your account. Check your connection and try again.';
+  }
+
+  function confirmDeleteAccount() {
+    hapticWarning();
+
+    const hasApplePlan =
+      entitlement?.subscription_status === 'active' || entitlement?.subscription_status === 'trial';
+
+    Alert.alert(
+      'Delete Account',
+      hasApplePlan
+        ? 'This permanently erases your profile, program, and history. This cannot be undone.\n\nDeleting your account does NOT cancel your Apple subscription — cancel it separately in Settings → Apple ID → Subscriptions to avoid future charges.'
+        : 'This permanently erases your profile, program, and history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            // Second, explicit confirmation — mirrors the industry-standard
+            // "delete my account" double-confirm pattern for irreversible actions.
+            Alert.alert(
+              'Are you absolutely sure?',
+              'Your account and all data will be permanently deleted. This action cannot be reversed.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete My Account',
+                  style: 'destructive',
+                  onPress: handleDeleteAccount,
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  }
+
+  async function handleDeleteAccount() {
+    if (deletingAccount) return;
+    setDeletingAccount(true);
+    try {
+      const result = await deleteAccount();
+      if (!result.success) {
+        Alert.alert('Delete Account', getDeleteAccountErrorMessage(result.error));
+        return;
+      }
+      // Reset Superwall identity so a deleted account's paywall assignment doesn't
+      // leak to the next person signing in on this device.
+      void superwallSignOut();
+      // No further navigation needed — clearing the session (inside deleteAccount)
+      // flips the root guard in app/_layout.tsx back to the signed-out flow.
+    } catch {
+      Alert.alert('Delete Account', getDeleteAccountErrorMessage());
+    } finally {
+      setDeletingAccount(false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Event handlers (all unchanged from original)
   // ---------------------------------------------------------------------------
   async function handleNotificationToggle(value: boolean) {
@@ -517,6 +798,7 @@ export default function ProfileScreen() {
       await requestPermissions(user!.id);
       await scheduleDailyReminder(reminderHour, reminderMinute);
     } else {
+      setDailyExpanded(false);
       await cancelReminders();
     }
   }
@@ -526,6 +808,44 @@ export default function ProfileScreen() {
     setReminderMinute(minute);
     await AsyncStorage.setItem(STORAGE_NOTIF_TIME, JSON.stringify({ hour: hour24, minute }));
     await scheduleDailyReminder(hour24, minute);
+  }
+
+  async function handleStretchToggle(value: boolean) {
+    setStretchEnabled(value);
+    await AsyncStorage.setItem(STORAGE_STRETCH, value ? 'true' : 'false');
+
+    if (value) {
+      await requestPermissions(user!.id);
+      await scheduleStretchReminders(stretchInterval, stretchStartHour, stretchEndHour);
+    } else {
+      setStretchExpanded(false);
+      await cancelStretchReminders();
+    }
+  }
+
+  async function handleStretchIntervalChange(interval: number) {
+    hapticSelection();
+    setStretchInterval(interval);
+    await AsyncStorage.setItem(STORAGE_STRETCH_INTERVAL, String(interval));
+    if (stretchEnabled) {
+      await scheduleStretchReminders(interval, stretchStartHour, stretchEndHour);
+    }
+  }
+
+  async function handleStretchStartChange(hour24: number) {
+    setStretchStartHour(hour24);
+    await AsyncStorage.setItem(STORAGE_STRETCH_START, String(hour24));
+    if (stretchEnabled) {
+      await scheduleStretchReminders(stretchInterval, hour24, stretchEndHour);
+    }
+  }
+
+  async function handleStretchEndChange(hour24: number) {
+    setStretchEndHour(hour24);
+    await AsyncStorage.setItem(STORAGE_STRETCH_END, String(hour24));
+    if (stretchEnabled) {
+      await scheduleStretchReminders(stretchInterval, stretchStartHour, hour24);
+    }
   }
 
   async function adjustDayOffset(delta: number) {
@@ -547,7 +867,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             hapticWarning();
-            await Promise.all([
+            const [completionsRes, checkinsRes, restartRes] = await Promise.all([
               supabase
                 .from('session_completions')
                 .delete()
@@ -556,15 +876,24 @@ export default function ProfileScreen() {
                 .from('pain_checkins')
                 .delete()
                 .eq('user_id', user!.id),
-              supabase
-                .from('user_programs')
-                .update({
-                  started_at: new Date().toISOString(),
-                  current_week: 1,
-                  current_session: 1,
-                })
-                .eq('user_id', user!.id),
+              // Server-side reset (migration 029): direct client UPDATE on
+              // user_programs is revoked so the pointer can't be forged.
+              supabase.rpc('restart_program', { p_reset_started_at: true }),
             ]);
+
+            // The three calls are independent — a partial failure (network, RLS,
+            // timeout) must not show "Done" while leaving e.g. completions deleted
+            // but the pointer still mid-program (or vice versa). Only flag the
+            // reset-pending state and report success once every part succeeded.
+            const failed = [completionsRes, checkinsRes, restartRes].some((r) => r.error);
+            if (failed) {
+              Alert.alert(
+                'Reset Incomplete',
+                'Something went wrong and progress could not be fully reset. Please check your connection and try again.',
+              );
+              return;
+            }
+
             await AsyncStorage.setItem('remedy_reset_pending', '1');
             Alert.alert('Done', 'Progress has been reset.', [
               {
@@ -678,7 +1007,10 @@ export default function ProfileScreen() {
             onPress={() => router.push('/onboarding-answers')}
             activeOpacity={0.7}
           >
-            <Text style={styles.chevronRowLabel}>View your onboarding answers</Text>
+            <View style={styles.chevronRowTextCol}>
+              <Text style={styles.chevronRowLabel}>Your answers</Text>
+              <Text style={styles.chevronRowCaption}>View or update to rebuild your program</Text>
+            </View>
             <Text style={styles.chevronIcon}>›</Text>
           </TouchableOpacity>
 
@@ -696,11 +1028,91 @@ export default function ProfileScreen() {
           {notificationsEnabled && (
             <>
               <View style={styles.divider} />
-              <TimePicker
-                hour24={reminderHour}
-                minute={reminderMinute}
-                onChange={handleReminderTimeChange}
-              />
+              <TouchableOpacity
+                style={styles.reminderSummaryRow}
+                onPress={() => setDailyExpanded((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.reminderSummaryText}>
+                  {formatTime12(reminderHour, reminderMinute)}
+                </Text>
+                <Text style={styles.chevronIcon}>{dailyExpanded ? '▴' : '▾'}</Text>
+              </TouchableOpacity>
+              {dailyExpanded && (
+                <WheelTimePicker
+                  hour24={reminderHour}
+                  minute={reminderMinute}
+                  onChange={handleReminderTimeChange}
+                />
+              )}
+            </>
+          )}
+        </View>
+
+        {/* ── STRETCH REMINDERS section ── */}
+        <Text style={styles.sectionLabel}>Stretch Reminders</Text>
+        <View style={styles.settingsCard}>
+          <View style={styles.settingsRow}>
+            <Text style={styles.settingsRowLabel}>Stretch reminders</Text>
+            <Switch
+              value={stretchEnabled}
+              onValueChange={handleStretchToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={stretchEnabled ? colors.surface : '#F4F4F4'}
+            />
+          </View>
+          {stretchEnabled && (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.reminderSummaryRow}
+                onPress={() => setStretchExpanded((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.reminderSummaryText}>
+                  Every {stretchIntervalLabel(stretchInterval).toLowerCase()} ·{' '}
+                  {formatHour(stretchStartHour)} – {formatHour(stretchEndHour)}
+                </Text>
+                <Text style={styles.chevronIcon}>{stretchExpanded ? '▴' : '▾'}</Text>
+              </TouchableOpacity>
+              {stretchExpanded && (
+                <View style={styles.stretchExpanded}>
+                  <View style={styles.compactSettingRow}>
+                    <Text style={styles.compactSettingLabel}>Every</Text>
+                    <View style={styles.compactIntervalRow}>
+                      {STRETCH_INTERVAL_OPTIONS.map((opt) => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[
+                            styles.compactChip,
+                            stretchInterval === opt.value && styles.compactChipSelected,
+                          ]}
+                          onPress={() => handleStretchIntervalChange(opt.value)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.compactChipText,
+                              stretchInterval === opt.value && styles.compactChipTextSelected,
+                            ]}
+                          >
+                            {opt.short}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={styles.compactSettingRow}>
+                    <Text style={styles.compactSettingLabel}>Hours</Text>
+                    <CompactHourRange
+                      startHour={stretchStartHour}
+                      endHour={stretchEndHour}
+                      onStartChange={handleStretchStartChange}
+                      onEndChange={handleStretchEndChange}
+                    />
+                  </View>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -828,6 +1240,20 @@ export default function ProfileScreen() {
           activeOpacity={0.6}
         >
           <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        {/* ── Delete Account (Apple guideline 5.1.1(v) requirement) ── */}
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          onPress={confirmDeleteAccount}
+          activeOpacity={0.6}
+          disabled={deletingAccount}
+        >
+          {deletingAccount ? (
+            <ActivityIndicator size="small" color={colors.textTertiary} />
+          ) : (
+            <Text style={styles.deleteAccountText}>Delete Account</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </TabFadeWrapper>
@@ -965,9 +1391,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
+  chevronRowTextCol: {
+    flex: 1,
+    marginRight: 12,
+    gap: 2,
+  },
   chevronRowLabel: {
     fontSize: 15,
     color: colors.textSecondary,
+  },
+  chevronRowCaption: {
+    fontSize: 12,
+    color: colors.textTertiary,
   },
   chevronIcon: {
     fontSize: 20,
@@ -978,6 +1413,60 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.borderLight,
     marginHorizontal: 20,
+  },
+
+  // ── Reminders ──
+  reminderSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  reminderSummaryText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginRight: 8,
+  },
+  stretchExpanded: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 14,
+  },
+  compactSettingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  compactSettingLabel: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    width: 52,
+  },
+  compactIntervalRow: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  compactChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.chip,
+    backgroundColor: colors.background,
+  },
+  compactChipSelected: {
+    backgroundColor: colors.primary,
+  },
+  compactChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  compactChipTextSelected: {
+    color: colors.surface,
   },
 
   // ── Developer section ──
@@ -1033,5 +1522,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.secondary,
+  },
+
+  // ── Delete Account ──
+  deleteAccountButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 2,
+  },
+  deleteAccountText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textTertiary,
   },
 });

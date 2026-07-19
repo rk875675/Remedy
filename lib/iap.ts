@@ -7,7 +7,15 @@ import { requireOptionalNativeModule } from 'expo';
 // verify-purchase / restore-purchases need. Guarded like lib/superwall so Expo Go (no
 // native module) degrades gracefully instead of crashing.
 
-const REMEDY_PRODUCT_IDS = ['com.remedyapp.monthly', 'com.remedyapp.annual'];
+// Must cover every product the Superwall paywall can sell — the live paywall uses the
+// `.no.trial` variants. A transaction whose product isn't listed here is invisible to
+// purchase capture/restore, which strands the user after a successful Apple charge.
+const REMEDY_PRODUCT_IDS = [
+  'com.remedyapp.monthly',
+  'com.remedyapp.annual',
+  'com.remedyapp.monthly.no.trial',
+  'com.remedyapp.annual.no.trial',
+];
 
 export type IosTransaction = {
   originalTransactionId: string;

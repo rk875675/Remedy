@@ -43,11 +43,25 @@ export default function WeeklyRampScreen() {
     (async () => {
       const { data: up } = await supabase
         .from('user_programs')
-        .select('active_plan_id')
+        .select('active_plan_id, current_week')
         .eq('user_id', user.id)
         .single();
       const pid = up?.active_plan_id ?? null;
-      if (!pid) {
+      if (!up || !pid) {
+        if (!cancelled) {
+          setPlanId(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // The ?week= param is only trusted when it matches the week the user actually
+      // just finished. complete_session advances the pointer to the next week before
+      // routing here, so the legitimate value is always current_week - 1. Anything
+      // else is a manual/stale deep link — recording a decision for it would ramp the
+      // wrong week's snapshot (the DB trigger blocks incomplete weeks, but an older
+      // completed week without a decision would still be accepted).
+      if (week !== up.current_week - 1) {
         if (!cancelled) {
           setPlanId(null);
           setLoading(false);
@@ -68,31 +82,23 @@ export default function WeeklyRampScreen() {
       if (sessionIds.length > 0) {
         const { data: comps } = await supabase
           .from('session_completions')
-          .select('id, completed_at')
+          .select('id')
           .eq('user_id', user.id)
           .in('plan_session_id', sessionIds);
         const compIds = (comps ?? []).map((c) => c.id);
 
         if (compIds.length > 0) {
-          const { data: afterRows } = await supabase
+          // before/after are both paired to their session via session_completion_id
+          // (complete_session links the before check-in at completion time, migration 027).
+          // Querying by completion id excludes orphaned `before` rows from abandoned starts.
+          const { data: checkinRows } = await supabase
             .from('pain_checkins')
-            .select('score')
+            .select('score, type')
             .eq('user_id', user.id)
-            .eq('type', 'after')
+            .in('type', ['before', 'after'])
             .in('session_completion_id', compIds);
-          after = (afterRows ?? []).map((r) => r.score);
-
-          const times = (comps ?? []).map((c) => new Date(c.completed_at).getTime());
-          const minISO = new Date(Math.min(...times) - 6 * 3600 * 1000).toISOString();
-          const maxISO = new Date(Math.max(...times)).toISOString();
-          const { data: beforeRows } = await supabase
-            .from('pain_checkins')
-            .select('score')
-            .eq('user_id', user.id)
-            .eq('type', 'before')
-            .gte('recorded_at', minISO)
-            .lte('recorded_at', maxISO);
-          before = (beforeRows ?? []).map((r) => r.score);
+          after = (checkinRows ?? []).filter((r) => r.type === 'after').map((r) => r.score);
+          before = (checkinRows ?? []).filter((r) => r.type === 'before').map((r) => r.score);
         }
       }
 
@@ -138,21 +144,25 @@ export default function WeeklyRampScreen() {
     });
 
     trackEvent('weekly_ramp_confirmed', { week, suggestion, decision, pain_delta: painDelta });
-    router.replace('/(tabs)');
+    router.dismissTo('/(tabs)');
   }
 
-  if (loading) {
+  // No active plan / invalid week param (shouldn't happen) — just continue. Deferred
+  // to an effect: calling a navigation side effect directly in the render body ran on
+  // every render (not just the transition into this state), violating React's
+  // no-side-effects-during-render rule and risking duplicate/racy navigation.
+  useEffect(() => {
+    if (!loading && !planId) {
+      router.dismissTo('/(tabs)');
+    }
+  }, [loading, planId]);
+
+  if (loading || !planId) {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
-  }
-
-  // No active plan (shouldn't happen) — just continue.
-  if (!planId) {
-    router.replace('/(tabs)');
-    return null;
   }
 
   const progressRecommended = suggestion === 'progress';

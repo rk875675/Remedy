@@ -198,3 +198,44 @@
 - V1 emails: welcome after signup, trial expiring reminder (Day 5 of 7), subscription confirmation
 - No marketing email campaigns at V1 — focus on in-app experience first
 - All emails triggered from Supabase Edge Functions (not client-side)
+
+---
+
+## 15. Post-paywall sign-up + purchase verification (Google sign-up "Something went wrong")
+
+**Problem:** Testing onboarding end-to-end, Google sign-up after the paywall landed on a bare "Something went wrong / Try again / Continue / Log Out" screen. The screen swallowed the real error, so the cause was invisible. Separately, re-testing the paywall was confusing: it would "skip" straight to sign-up, and even after canceling the sandbox sub the paywall wouldn't reappear.
+
+### The correct flow (do not "fix" this — it's intended)
+- **Sign-up happens AFTER the paywall.** Anonymous users go: onboarding → `match.tsx` (program screen) → tap "Start My Free Trial" → Superwall paywall → purchase → `/(auth)/sign-in?mode=signup` → `building-plan.tsx` persists answers, verifies the purchase, assigns the program. (Root guard: `app/_layout.tsx` lines ~71–73.)
+- **Sign-in bypasses the paywall** *only for accounts that already have a verified entitlement in the DB.* Signing into an account with no entitlement correctly routes to the paywall (`match.tsx`).
+- **Existing subscribers skip the paywall on purpose.** Superwall's `feature()` gate (and the campaign audience) intentionally don't re-sell to someone who already owns the entitlement — trying to would just hit Apple's "you're already subscribed" dead-end and annoy App Review.
+
+### Root causes found & fixes
+1. **The error screen hid the real reason.** `building-plan.tsx` called `setPhase('error')` with no detail.
+   - Fix: capture a real reason at every failure site (`fail(reason)` helper), and show a **Debug details** box on the error screen gated to `__DEV__ || profiles.is_dev`. Redesigned the screen (terracotta danger icon, full-width buttons, scrollable).
+2. **The client collapsed the server error.** `verify-purchase` returns a specific reason, but on a non-2xx supabase-js puts the JSON body on `error.context` (a `Response`), **not** `data` — so the client only saw a generic message.
+   - Fix: shared `lib/functionsError.ts` → `extractInvokeError(data, error)` reads `data.error` else `error.context.json().error`. Used by `building-plan.tsx` and `match.tsx` (restore).
+3. **`transaction_already_linked` stranded the user on the generic error.** An Apple `originalTransactionId` is **stable per Apple ID + subscription group** and Remedy binds one OID to one account (anti-fraud). A second account can never verify it.
+   - Fix: dedicated screen state — title "Subscription already in use," copy "linked to a different account — log out and sign in with the account that purchased it," and the primary button becomes **"Log Out & Sign In"** (retry is pointless). `handleRestore` in `match.tsx` now shows the same message instead of the misleading "No active subscription found."
+   - Server already enforces this correctly in **both** `verify-purchase` and `restore-purchases` (conflict check → 409), backed by the partial `UNIQUE(original_transaction_id)` index (migration `023`).
+4. **Dev testers got stranded too.** A dev user is already treated as premium, so a verify failure shouldn't block them.
+   - Fix: in `linkAccount`, if verify fails and `isDevUser` (server-set `profiles.is_dev`, never client), grant the dev trial + clear the stash and continue instead of throwing. Non-dev users still get strict verification.
+
+### Why the paywall "wouldn't pop up" (this was NOT a bug)
+The `onboarding_paywall` campaign (Superwall) has one audience rule: `size(device.activeEntitlements) == 0` — show only to non-subscribers. Superwall still saw the device as `ACTIVE` (entitlement `"pro"`), so `trigger_fire` returned `no_rule_match` → `no_presentation`. Confirmed via Superwall's event log.
+
+**Sandbox gotcha:** canceling a sandbox sub is not the same as expiring it — the current period stays active (annual ≈ 1 hr, monthly ≈ 5 min compressed), and StoreKit/Superwall cache until relaunch. To re-test the paywall: use a **fresh sandbox Apple ID** (fastest), or wait for expiry + force-quit/relaunch, or Clear Purchase History in App Store Connect. Canceling alone also does **not** free the OID binding — that needs a fresh sandbox ID or deleting the `entitlements` row for that OID.
+
+### How to diagnose next time
+- **App side:** the error screen's Debug box (dev/`is_dev` builds) prints the exact reason, e.g. `verify-purchase failed: transaction_already_linked (product=…, hasJws=…)`.
+- **Superwall side (why a paywall did/didn't show):** query the event log via the Superwall MCP `run_clickhouse_query` (org `22410`, app `45512`):
+  ```sql
+  SELECT ts, name, props FROM sw.events_rep
+  WHERE applicationId = 45512
+    AND name IN ('paywallPresentationRequest','trigger_fire','subscriptionStatus_didChange')
+    AND ts > now() - INTERVAL 2 HOUR
+  ORDER BY ts DESC LIMIT 10
+  ```
+  Look at `$status_reason` (`no_rule_match` = audience didn't match) and `subscriptionStatus_didChange.$status` / `$active_entitlement_ids` to see whether the device is seen as subscribed.
+
+**Files touched:** `app/building-plan.tsx`, `app/(onboarding)/match.tsx`, `lib/iap.ts`, `lib/functionsError.ts` (new). Server (`verify-purchase`, `restore-purchases`, migration `023`) already had the exclusive-OID model — no changes needed.

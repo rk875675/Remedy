@@ -23,7 +23,13 @@ const bars: { label: string; fields: AnswerField[] }[] = [
 ];
 
 function segmentProgress(answers: Partial<Record<AnswerField, unknown>>, fields: AnswerField[]): number {
-  const answered = fields.filter((field) => answers[field] != null).length;
+  const answered = fields.filter((field) => {
+    const value = answers[field];
+    if (value == null) return false;
+    // Multi-select fields store arrays; an emptied selection should drop the bar back.
+    if (Array.isArray(value) && value.length === 0) return false;
+    return true;
+  }).length;
   return answered / fields.length;
 }
 

@@ -93,11 +93,29 @@ Deno.serve(async (req: Request) => {
 
     // Product + expiry come from the verified transaction, not the client.
     const verifiedProductId = appleResult.productId;
+
+    // Anti-fraud: one Apple subscription → one account. Use Apple's verified
+    // originalTransactionId (fallback to the client value) and refuse to restore onto a
+    // second account.
+    const boundTxId = appleResult.originalTransactionId ?? originalTransactionId ?? null;
+    if (boundTxId) {
+      const { data: conflict } = await supabaseAdmin
+        .from('entitlements')
+        .select('user_id')
+        .eq('original_transaction_id', boundTxId)
+        .neq('user_id', user.id)
+        .maybeSingle();
+      if (conflict) {
+        return json({ success: false, error: 'transaction_already_linked' }, 409);
+      }
+    }
+
     const now = new Date().toISOString();
     const expiresAt = appleResult.expiresDate
       ? new Date(appleResult.expiresDate).toISOString()
       : new Date(
-          Date.now() + (verifiedProductId === 'com.remedyapp.annual' ? 365 : 30) * 24 * 60 * 60 * 1000,
+          Date.now() +
+            (verifiedProductId.startsWith('com.remedyapp.annual') ? 365 : 30) * 24 * 60 * 60 * 1000,
         ).toISOString();
 
     const { data: entitlement, error: upsertError } = await supabaseAdmin
@@ -108,8 +126,9 @@ Deno.serve(async (req: Request) => {
           is_premium: true,
           subscription_status: 'active',
           product_id: verifiedProductId,
-          original_transaction_id: originalTransactionId ?? null,
+          original_transaction_id: boundTxId,
           expires_at: expiresAt,
+          is_sandbox: appleResult.isSandbox ?? false,
           updated_at: now,
         },
         { onConflict: 'user_id' },

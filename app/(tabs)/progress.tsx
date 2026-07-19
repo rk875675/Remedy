@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,11 +13,17 @@ import { hapticSelection } from '../../lib/haptics';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import type { UserProgram } from '../../types/database';
-
-type ChartPoint = { value: number; label?: string };
-type BarPoint = { value: number; label: string; frontColor: string };
-type RawCheckin = { score: number; type: string; recorded_at: string };
-type RawCompletion = { completed_at: string };
+import {
+  computePainChart,
+  computeActivityChart,
+  computeWeekDays,
+  getWeekLabel,
+  getEstimatedCompletion,
+  type RawCheckin,
+  type RawCompletion,
+  type PainRange,
+  type ActivityRange,
+} from '../../lib/progress';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 // card uses padding:20, container uses paddingHorizontal:24 → 88px total eaten horizontally
@@ -29,25 +35,20 @@ export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  const [beforeData, setBeforeData] = useState<ChartPoint[]>([]);
-  const [afterData, setAfterData] = useState<ChartPoint[]>([]);
   const [totalSessions, setTotalSessions] = useState(0);
-  const [weeklyBarData, setWeeklyBarData] = useState<BarPoint[]>([]);
   const [userProgram, setUserProgram] = useState<UserProgram | null>(null);
   const [durationWeeks, setDurationWeeks] = useState(5);
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [loaded, setLoaded] = useState(false);
 
   // Raw data for range filtering
   const [allPainCheckins, setAllPainCheckins] = useState<RawCheckin[]>([]);
   const [allActivityCompletions, setAllActivityCompletions] = useState<RawCompletion[]>([]);
-  const [painRange, setPainRange] = useState<'2w' | '1m' | '3m'>('2w');
-  const [activityRange, setActivityRange] = useState<'1m' | '3m' | '6m'>('1m');
+  const [painRange, setPainRange] = useState<PainRange>('2w');
+  const [activityRange, setActivityRange] = useState<ActivityRange>('1m');
 
   // This Week navigation: 0 = current week, -1 = last week, etc.
   const [weekOffset, setWeekOffset] = useState(0);
-
-  // ScrollView ref for activity chart (manual horizontal scroll; no auto-scroll to keep y-axis visible)
-  const activityScrollRef = useRef<ScrollView>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,20 +57,17 @@ export default function ProgressScreen() {
     }, [user]),
   );
 
-  // Recompute pain chart when raw data or range changes
-  useEffect(() => {
-    if (allPainCheckins.length === 0) return;
+  // Charts are derived from raw data — no chart state to fall out of sync
+  const { beforeData, afterData, painRangeHasData } = useMemo(() => {
     const accountStart = userProgram?.started_at ? new Date(userProgram.started_at) : undefined;
-    const { bData, aData } = computePainChart(allPainCheckins, painRange, accountStart);
-    setBeforeData(bData);
-    setAfterData(aData);
+    const { bData, aData, rangeHasData } = computePainChart(allPainCheckins, painRange, accountStart);
+    return { beforeData: bData, afterData: aData, painRangeHasData: rangeHasData };
   }, [allPainCheckins, painRange, userProgram]);
 
-  // Recompute activity chart when raw data or range changes
-  useEffect(() => {
-    const bd = computeActivityChart(allActivityCompletions, activityRange);
-    setWeeklyBarData(bd);
-  }, [allActivityCompletions, activityRange]);
+  const weeklyBarData = useMemo(
+    () => computeActivityChart(allActivityCompletions, activityRange, colors.primary),
+    [allActivityCompletions, activityRange],
+  );
 
   async function fetchAll() {
     if (!user) return;
@@ -77,10 +75,7 @@ export default function ProgressScreen() {
     const resetPending = await AsyncStorage.getItem('remedy_reset_pending');
     if (resetPending) {
       await AsyncStorage.removeItem('remedy_reset_pending');
-      setBeforeData([]);
-      setAfterData([]);
       setTotalSessions(0);
-      setWeeklyBarData([]);
       setAllPainCheckins([]);
       setAllActivityCompletions([]);
       setUserProgram(null);
@@ -110,37 +105,41 @@ export default function ProgressScreen() {
         .order('completed_at', { ascending: true }),
     ]);
 
-    const up = upRes.data;
-    setUserProgram(up);
+    // Only overwrite state from responses that succeeded — a failed focus-refetch
+    // (e.g. offline) must not wipe previously loaded charts. PGRST116 ("no rows")
+    // from .single() is a legitimate no-program state, not a failure.
+    if (!upRes.error || upRes.error.code === 'PGRST116') {
+      const up = upRes.data;
+      setUserProgram(up);
 
-    // Read duration from the active plan snapshot — matches Home and session player
-    if (up?.active_plan_id) {
-      const { data: plan } = await supabase
-        .from('user_program_plans')
-        .select('duration_weeks')
-        .eq('id', up.active_plan_id)
-        .single();
+      // Read duration/cadence from the active plan snapshot — matches Home and
+      // session player.
+      if (up?.active_plan_id) {
+        const { data: plan } = await supabase
+          .from('user_program_plans')
+          .select('duration_weeks, sessions_per_week')
+          .eq('id', up.active_plan_id)
+          .single();
 
-      if (plan) {
-        setDurationWeeks(plan.duration_weeks);
+        if (plan) {
+          setDurationWeeks(plan.duration_weeks);
+          setSessionsPerWeek(plan.sessions_per_week);
+        }
       }
     }
 
-    setBeforeData([]);
-    setAfterData([]);
-
-    // Store raw data — useEffects will recompute charts from these
-    setAllPainCheckins(painRes.data ?? []);
-    setAllActivityCompletions(activityRes.data ?? []);
-
-    // --- Total sessions ---
-    setTotalSessions(totalRes.count ?? 0);
+    if (!painRes.error) setAllPainCheckins(painRes.data ?? []);
+    if (!activityRes.error) setAllActivityCompletions(activityRes.data ?? []);
+    if (!totalRes.error) setTotalSessions(totalRes.count ?? 0);
 
     setLoaded(true);
   }
 
   const hasEnoughData =
     allPainCheckins.filter((c) => c.type === 'before').length >= 3;
+  // The chart itself is range-filtered — with enough all-time data but nothing in the
+  // selected range, show a range-specific empty state instead of an empty chart.
+  const showPainChart = hasEnoughData && painRangeHasData;
 
   // Derive week day completions for the selected week offset from raw data
   const displayWeekDays = useMemo(
@@ -160,7 +159,12 @@ export default function ProgressScreen() {
     : false;
 
   const estimatedEnd = userProgram && !isProgramComplete
-    ? getEstimatedCompletion(programWeek, durationWeeks)
+    ? getEstimatedCompletion(
+        userProgram.current_week,
+        userProgram.current_session,
+        durationWeeks,
+        sessionsPerWeek,
+      )
     : null;
 
   if (!loaded) {
@@ -206,7 +210,7 @@ export default function ProgressScreen() {
             ))}
           </View>
         </View>
-        {hasEnoughData ? (
+        {showPainChart ? (
           <View style={{ marginTop: 12 }}>
             <LineChart
               data={beforeData}
@@ -225,6 +229,9 @@ export default function ProgressScreen() {
               dataPointsColor1={colors.textSecondary}
               dataPointsColor2={colors.primary}
               dataPointsRadius={3}
+              // Empty buckets have no value: interpolate between real points (dots
+              // hidden there) and never extrapolate a line beyond the real data.
+              extrapolateMissingValues={false}
               yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
               xAxisLabelTextStyle={{ fontSize: 9, color: colors.textSecondary }}
               maxValue={10}
@@ -248,7 +255,9 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <Text style={styles.placeholder}>
-            Complete more sessions to see your pain trend.
+            {hasEnoughData
+              ? 'No check-ins in this range yet.'
+              : 'Complete more sessions to see your pain trend.'}
           </Text>
         )}
       </View>
@@ -277,10 +286,13 @@ export default function ProgressScreen() {
         </View>
         <Text style={styles.totalSessionsBadge}>{totalSessions} sessions total</Text>
         {weeklyBarData.some((d) => d.value > 0) ? (
-          <ScrollView ref={activityScrollRef} horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+          <View style={{ marginTop: 8 }}>
+            {/* BarChart scrolls internally with a pinned y-axis; start at the most
+                recent weeks. An external ScrollView showed the OLDEST weeks first and
+                scrolled the y-axis off-screen. */}
             <BarChart
               data={weeklyBarData}
-              width={Math.max(CARD_INNER_W - PAIN_Y_AXIS_W - 24, weeklyBarData.length * 34)}
+              width={CARD_INNER_W - PAIN_Y_AXIS_W - 12}
               height={120}
               barWidth={20}
               spacing={14}
@@ -288,6 +300,9 @@ export default function ProgressScreen() {
               roundedTop
               noOfSections={3}
               frontColor={colors.primary}
+              scrollToEnd
+              scrollAnimation={false}
+              showScrollIndicator={false}
               yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
               xAxisLabelTextStyle={{ fontSize: 8, color: colors.textSecondary }}
               rulesColor={colors.border}
@@ -296,7 +311,7 @@ export default function ProgressScreen() {
               hideRules={false}
               yAxisLabelWidth={PAIN_Y_AXIS_W}
             />
-          </ScrollView>
+          </View>
         ) : (
           <Text style={styles.placeholder}>
             Complete sessions to see your activity history.
@@ -397,153 +412,6 @@ export default function ProgressScreen() {
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function computePainChart(
-  checkins: RawCheckin[],
-  range: '2w' | '1m' | '3m',
-  accountStart?: Date,
-): { bData: ChartPoint[]; aData: ChartPoint[] } {
-  const daysBack = range === '2w' ? 14 : range === '1m' ? 30 : 90;
-
-  const now = new Date();
-  const rawStart = new Date(now);
-  rawStart.setDate(now.getDate() - daysBack);
-
-  // Never show data before the account start date
-  const startDate = accountStart && accountStart > rawStart ? accountStart : rawStart;
-
-  const actualDays = Math.max(1, Math.ceil((now.getTime() - startDate.getTime()) / 86400000));
-
-  // Bucket granularity per range — keeps the chart to a sensible number of points
-  // 14D → 1 bucket/day → up to 14 pts; label every 3rd day
-  // 1M  → 5-day buckets → ~6 pts; label every bucket  
-  // 3M  → 14-day (bi-weekly) buckets → ~6-7 pts; label every bucket
-  const groupDays = range === '2w' ? 1 : range === '1m' ? 5 : 14;
-  const labelEvery = range === '2w' ? 3 : 1;
-
-  const relevant = checkins.filter((c) => new Date(c.recorded_at) >= startDate);
-  const numBuckets = Math.max(1, Math.ceil(actualDays / groupDays));
-
-  const bData: ChartPoint[] = [];
-  const aData: ChartPoint[] = [];
-
-  for (let i = 0; i < numBuckets; i++) {
-    const bucketStart = new Date(startDate);
-    bucketStart.setDate(startDate.getDate() + i * groupDays);
-    const bucketEnd = new Date(bucketStart);
-    bucketEnd.setDate(bucketStart.getDate() + groupDays);
-
-    const inBucket = relevant.filter((c) => {
-      const d = new Date(c.recorded_at);
-      return d >= bucketStart && d < bucketEnd;
-    });
-
-    const bScores = inBucket.filter((c) => c.type === 'before').map((c) => c.score);
-    const aScores = inBucket.filter((c) => c.type === 'after').map((c) => c.score);
-
-    const showLabel = i % labelEvery === 0;
-    const parts = bucketStart.toISOString().slice(0, 10).split('-');
-    // For 3M range use short month name for clarity, otherwise M/D
-    const label = showLabel
-      ? range === '3m'
-        ? `${bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-        : `${parseInt(parts[1])}/${parseInt(parts[2])}`
-      : '';
-
-    bData.push({ value: bScores.length > 0 ? avg(bScores) : 0, label });
-    aData.push({ value: aScores.length > 0 ? avg(aScores) : 0, label });
-  }
-
-  return { bData, aData };
-}
-
-function computeActivityChart(
-  completions: RawCompletion[],
-  range: '1m' | '3m' | '6m',
-): BarPoint[] {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const thisMonday = new Date(now);
-  thisMonday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  thisMonday.setHours(0, 0, 0, 0);
-
-  // 1m ≈ 4 weeks, 3m ≈ 13 weeks, 6m ≈ 26 weeks
-  const totalWeeks = range === '1m' ? 4 : range === '3m' ? 13 : 26;
-
-  const bars: BarPoint[] = [];
-  for (let i = totalWeeks - 1; i >= 0; i--) {
-    const weekStart = new Date(thisMonday);
-    weekStart.setDate(thisMonday.getDate() - i * 7);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-
-    const count = completions.filter((c) => {
-      const d = new Date(c.completed_at);
-      return d >= weekStart && d < weekEnd;
-    }).length;
-
-    // 1M (4 bars): label every bar; 3M (13 bars): every 2; 6M (26 bars): every 4
-    const labelEvery = range === '1m' ? 1 : range === '3m' ? 2 : 4;
-    const barIndex = totalWeeks - 1 - i;
-    const showLabel = barIndex % labelEvery === 0;
-    const parts = weekStart.toISOString().slice(0, 10).split('-');
-    const label = showLabel ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : '';
-
-    bars.push({ value: count, label, frontColor: colors.primary });
-  }
-
-  return bars;
-}
-
-function avg(arr: number[]): number {
-  return Math.round((arr.reduce((s, v) => s + v, 0) / arr.length) * 10) / 10;
-}
-
-function computeWeekDays(completions: RawCompletion[], offset: number): boolean[] {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const thisMonday = new Date(now);
-  thisMonday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  thisMonday.setHours(0, 0, 0, 0);
-
-  const targetMonday = new Date(thisMonday);
-  targetMonday.setDate(thisMonday.getDate() + offset * 7);
-
-  const completionDates = new Set(completions.map((c) => c.completed_at.slice(0, 10)));
-
-  const days: boolean[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(targetMonday);
-    d.setDate(targetMonday.getDate() + i);
-    days.push(completionDates.has(d.toISOString().slice(0, 10)));
-  }
-  return days;
-}
-
-function getWeekLabel(offset: number): string {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const thisMonday = new Date(now);
-  thisMonday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  thisMonday.setHours(0, 0, 0, 0);
-
-  const targetMonday = new Date(thisMonday);
-  targetMonday.setDate(thisMonday.getDate() + offset * 7);
-  const targetSunday = new Date(targetMonday);
-  targetSunday.setDate(targetMonday.getDate() + 6);
-
-  const fmt = (d: Date) =>
-    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `${fmt(targetMonday)} – ${fmt(targetSunday)}`;
-}
-
-function getEstimatedCompletion(currentWeek: number, durationWeeks: number): string {
-  const weeksLeft = durationWeeks - currentWeek;
-  if (weeksLeft <= 0) return 'Program complete';
-  const d = new Date();
-  d.setDate(d.getDate() + weeksLeft * 7);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 const styles = StyleSheet.create({
   container: {

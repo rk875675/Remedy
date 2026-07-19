@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
 import type { OnboardingAnswers } from '../../types/database';
@@ -20,6 +20,7 @@ export default function Q1Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers, setAnswer } = useOnboarding();
+  useTrackOnboardingStep('q1');
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>

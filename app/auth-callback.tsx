@@ -28,16 +28,27 @@ export default function AuthCallback() {
       router.replace('/(onboarding)');
       return;
     }
-    if (handledTokens.has(tokenHash)) return;
-    handledTokens.add(tokenHash);
+    if (handledTokens.has(tokenHash)) {
+      // Already consumed (stale getInitialURL on relaunch, remount, or back-nav).
+      // Don't re-verify — but don't strand the user on this blank screen either:
+      // hand off to the root navigator, which routes by current session state.
+      router.replace('/');
+      return;
+    }
     ran.current = true;
 
     (async () => {
       const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
       if (error) {
+        // Do NOT mark the token handled — a transient failure (network blip, race) must be
+        // retriable when the user reopens the link or the app relaunches with the same URL.
+        ran.current = false;
         router.replace('/(auth)/sign-in');
         return;
       }
+      // Consumed successfully — record it so a stale getInitialURL() or remount can't
+      // re-verify (and re-fail) an already-used one-time token.
+      handledTokens.add(tokenHash);
       // Recovery → let the user set a new password. Other types (signup/email_change)
       // just establish the session; hand back to the root navigator to route.
       router.replace(type === 'recovery' ? '/reset-password' : '/');

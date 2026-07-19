@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
@@ -13,8 +13,9 @@ import {
   SUPERWALL_AVAILABLE,
 } from '../../lib/superwall';
 import { supabase } from '../../lib/supabase';
-import { setPendingPurchase } from '../../lib/pendingPurchase';
+import { getPendingPurchase, setPendingPurchase } from '../../lib/pendingPurchase';
 import { getLatestRemedyTransaction, restoreRemedyTransaction } from '../../lib/iap';
+import { extractInvokeError } from '../../lib/functionsError';
 import { trackEvent } from '../../lib/analytics';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
@@ -26,6 +27,15 @@ import {
   type PlanPreview,
 } from '../../lib/schemas';
 import type { OnboardingAnswers } from '../../types/database';
+
+// Personalization (program name length, subtitle presence, variant, etc.) makes the
+// content block's natural height vary a lot. Rather than a fixed gap that looks huge
+// for short content and cramped for long content, we measure the available space,
+// the footer's height, and the content's natural height, then clamp the gap between
+// them to this range — any extra slack (short content) goes above the eyebrow instead
+// of ballooning the gap right before the CTA.
+const MIN_CONTENT_FOOTER_GAP = 24;
+const MAX_CONTENT_FOOTER_GAP = 88;
 
 type RequiredAnswers = OnboardingAnswersInput;
 type MainGoalValue = 'reduce_pain' | 'return_to_exercise' | 'sleep' | 'mobility';
@@ -42,17 +52,6 @@ const GOAL_TITLE: Record<MainGoalValue, string> = {
   sleep: 'Recovery',
   mobility: 'Mobility',
 };
-
-function equipmentBullet(equipment: RequiredAnswers['equipment']): string {
-  switch (equipment) {
-    case 'open_space':
-      return 'Bodyweight-only exercises — no equipment needed';
-    case 'bands_dumbbells':
-      return 'Built around your bands and light dumbbells';
-    case 'gym':
-      return 'Progresses into full gym equipment as you build strength';
-  }
-}
 
 function triggerBullet(trigger: PainTriggerValue): string {
   switch (trigger) {
@@ -71,10 +70,23 @@ function triggerBullet(trigger: PainTriggerValue): string {
   }
 }
 
+function equipmentNote(equipment: OnboardingAnswers['equipment']): string {
+  switch (equipment) {
+    case 'open_space':
+      return 'Uses just your bodyweight — no equipment needed';
+    case 'bands_dumbbells':
+      return 'Built around your bands and dumbbells';
+    case 'gym':
+      return 'Takes full advantage of your gym access';
+    default:
+      return '';
+  }
+}
+
 export default function MatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { answers, retaking, endRetake } = useOnboarding();
+  const { answers, retaking } = useOnboarding();
   const { user } = useAuth();
   const { refreshPremium } = usePremium();
   const { identify } = useUser();
@@ -82,13 +94,18 @@ export default function MatchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PlanPreview | null>(null);
 
+  // Layout measurements used to clamp the content-to-footer gap (see comment above).
+  const [bodyHeight, setBodyHeight] = useState(0);
+  const [footerHeight, setFooterHeight] = useState(0);
+  const [innerContentHeight, setInnerContentHeight] = useState(0);
+
   const complete = getComplete(answers);
 
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
-    trackEvent('paywall_viewed');
+    if (!retaking) trackEvent('paywall_viewed');
   }, []);
 
   // Server-consistent preview: the same edge function that assigns the real plan
@@ -126,14 +143,29 @@ export default function MatchScreen() {
     },
   });
 
-  // Stash the pending transaction then route to sign-up so the account is created
-  // before verification on building-plan (PRD §5–§6.1).
+  // Stash the pending transaction then hand off to whichever screen actually
+  // verifies it. Anonymous users go through sign-up (no account yet); an already
+  // authed user (e.g. a lapsed subscriber re-converting from this same screen) has
+  // no sign-up step to run — sending them to sign-in?mode=signup left them bounced
+  // back here by the root guard with the purchase never verified. building-plan
+  // reads the stashed transaction and calls verify-purchase directly.
   async function handlePurchased() {
     const iapTx = await getLatestRemedyTransaction();
     if (iapTx) {
       await setPendingPurchase(iapTx);
     } else if (lastTransaction.current) {
       await setPendingPurchase({ ...lastTransaction.current, jws: null });
+    } else {
+      showPurchaseConfirmationError();
+      return;
+    }
+    if (!(await getPendingPurchase())) {
+      showPurchaseConfirmationError();
+      return;
+    }
+    if (user) {
+      router.replace('/building-plan');
+      return;
     }
     // No dedicated sign-up screen exists; sign-in.tsx is the combined auth entry
     // (Apple / Google / email) that creates a new account for first-time users.
@@ -157,24 +189,84 @@ export default function MatchScreen() {
     }
   }, [user]);
 
-  async function handleShowPaywall() {
-    if (!SUPERWALL_AVAILABLE) {
-      // Dev / Expo Go: skip real purchase, go straight to sign-up.
-      router.replace('/(auth)/sign-in?mode=signup');
+  // Superwall calls `feature()` when it decides the paywall shouldn't be shown at
+  // all (recognized subscriber, holdout group, etc.) — no purchase UI ran, so
+  // nothing was stashed for building-plan to verify. Treat it the same as a
+  // restore: check StoreKit for a real transaction before granting access, same
+  // as handlePurchased/handleRestore. Never route into the app on Superwall's say
+  // alone — building-plan (or the root guard, if none is found) still requires a
+  // server-verified entitlement.
+  async function handleFeatureAccess() {
+    const tx = await getLatestRemedyTransaction();
+    if (!tx) {
+      showPurchaseConfirmationError();
       return;
     }
+    await setPendingPurchase(tx);
+    if (!(await getPendingPurchase())) {
+      showPurchaseConfirmationError();
+      return;
+    }
+    if (user) {
+      router.replace('/building-plan');
+      return;
+    }
+    router.replace('/(auth)/sign-in?mode=signup');
+  }
+
+  async function handleShowPaywall() {
+    if (!SUPERWALL_AVAILABLE) {
+      // Expo Go has no native StoreKit/Superwall modules. Keep this explicit and
+      // development-only so a production module failure cannot bypass the paywall.
+      if (__DEV__) {
+        router.replace('/(auth)/sign-in?mode=signup');
+      } else {
+        Alert.alert('Purchases unavailable', 'Purchases are unavailable right now. Please try again later.');
+      }
+      return;
+    }
+    // Superwall assigns the current vs personalized paywall variant by percentage
+    // within the single onboarding_paywall campaign. Both variants receive the same
+    // preview data, while every user sees this same native program screen beforehand.
     await registerPlacement({
       placement: 'onboarding_paywall',
+      params: {
+        program_name: programName,
+        subtitle: subtitle ?? '',
+        tagline,
+        duration_weeks: weeks,
+        sessions_per_week: perWeek,
+        minutes_per_session: minutes,
+        primary_focus: preview?.primary_focus ?? '',
+        trigger_note: complete ? triggerBullet(complete.pain_trigger[0]) : '',
+        equipment_note: complete ? equipmentNote(complete.equipment) : '',
+      },
       feature() {
-        router.replace('/(auth)/sign-in?mode=signup');
+        void handleFeatureAccess();
       },
     });
   }
 
   async function handleRestore() {
-    // Anonymous: send to sign-up first; restore is re-attempted on building-plan.
     if (!user) {
-      router.replace('/(auth)/sign-in?mode=signup');
+      setLoading(true);
+      try {
+        // Full restore sync (not just the cached transaction query): on a fresh
+        // install StoreKit has nothing cached until restorePurchases() runs.
+        const tx = await restoreRemedyTransaction();
+        if (!tx) {
+          Alert.alert('Restore Purchases', 'No purchases found to restore.');
+          return;
+        }
+        await setPendingPurchase(tx);
+        if (!(await getPendingPurchase())) {
+          Alert.alert('Restore Purchases', 'Could not save the restored purchase. Please try again.');
+          return;
+        }
+        router.replace('/(auth)/sign-in?mode=signup');
+      } finally {
+        if (mounted.current) setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -184,17 +276,32 @@ export default function MatchScreen() {
         Alert.alert('Restore', 'No active subscription found.');
         return;
       }
-      const { data } = await supabase.functions.invoke('restore-purchases', {
-        body: {
-          originalTransactionId: tx.originalTransactionId,
-          signedTransaction: tx.jws,
+      const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>(
+        'restore-purchases',
+        {
+          body: {
+            originalTransactionId: tx.originalTransactionId,
+            signedTransaction: tx.jws,
+          },
+          headers: { 'Idempotency-Key': `restore_${user.id}_${tx.originalTransactionId}` },
         },
-        headers: { 'Idempotency-Key': `restore_${user.id}_${tx.originalTransactionId}` },
-      });
+      );
       if (data?.success) {
         trackEvent('purchase_restored');
         await refreshPremium();
         router.replace('/building-plan');
+        return;
+      }
+      // Distinguish "belongs to another account" from "nothing to restore" — restoring
+      // onto a second account is refused (anti-fraud), and telling the user there's no
+      // subscription would be both wrong and confusing.
+      const reason = await extractInvokeError(data, error);
+      if (reason === 'transaction_already_linked') {
+        Alert.alert(
+          'Subscription already in use',
+          'This subscription is linked to a different Remedy account. Sign in with the account ' +
+            'that purchased it to restore access.',
+        );
       } else {
         Alert.alert('Restore', 'No active subscription found.');
       }
@@ -203,6 +310,17 @@ export default function MatchScreen() {
     } finally {
       if (mounted.current) setLoading(false);
     }
+  }
+
+  function showPurchaseConfirmationError() {
+    Alert.alert(
+      'Purchase not confirmed',
+      "We couldn't confirm your purchase. Please restore purchases and try again.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Restore Purchases', onPress: () => void handleRestore() },
+      ],
+    );
   }
 
   async function handleStart() {
@@ -232,7 +350,10 @@ export default function MatchScreen() {
         return;
       }
       trackEvent('onboarding_completed', { ...complete, retake: true });
-      endRetake();
+      // Keep `retaking` raised until building-plan finishes the re-assignment. Ending it
+      // here raced the root guard: with the flag down but segments still in (onboarding),
+      // the guard could bounce the user to the tabs before building-plan mounted — the
+      // answers were saved but the program was never rebuilt.
       router.replace('/building-plan?retake=1');
       return;
     }
@@ -254,13 +375,12 @@ export default function MatchScreen() {
   }
 
   // Display values: prefer the server preview, fall back to sensible defaults.
-  // Decision: 1 goal → "<area> <goalFocus> Program"; >1 goals → generic name.
+  // Always name off the primary (first-selected) goal — mirrors the server's
+  // buildNaming, and stays consistent with the tagline below (also primary-goal-based).
   const programName =
     preview?.program_name ??
     (complete
-      ? complete.main_goal.length === 1
-        ? `${AREA_TITLE[complete.pain_location]} ${GOAL_TITLE[complete.main_goal[0]]} Program`
-        : 'Personalized Recovery Program'
+      ? `${AREA_TITLE[complete.pain_location]} ${GOAL_TITLE[complete.main_goal[0]]} Program`
       : 'Your Program');
   const subtitle =
     preview?.subtitle ?? (complete?.equipment === 'open_space' ? 'Bodyweight' : null);
@@ -269,69 +389,128 @@ export default function MatchScreen() {
   const perWeek = preview?.sessions_per_week ?? complete?.sessions_per_week_preference ?? 3;
   const minutes = avgMinutes(preview) ?? 20;
 
+  // Space available for the scrollable content above the (always-visible) footer.
+  const availableForContent = bodyHeight && footerHeight ? bodyHeight - footerHeight : 0;
+  const measured = availableForContent > 0 && innerContentHeight > 0;
+  const gap = measured
+    ? Math.min(
+        MAX_CONTENT_FOOTER_GAP,
+        Math.max(MIN_CONTENT_FOOTER_GAP, availableForContent - innerContentHeight)
+      )
+    : MIN_CONTENT_FOOTER_GAP;
+  // Scroll box only grows to fit content + gap, capped at the space actually available —
+  // long content still scrolls, but the footer never gets pushed off-screen.
+  const scrollBoxHeight = measured
+    ? Math.min(availableForContent, innerContentHeight + gap)
+    : null;
+  // Leftover room (short content) becomes top slack instead of an oversized gap.
+  const topSlack = measured ? Math.max(0, availableForContent - scrollBoxHeight!) : 0;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
-      <View style={styles.content}>
-        <Text style={styles.eyebrow}>YOUR PROGRAM</Text>
+    <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 8 }]}>
+      <View
+        style={styles.body}
+        onLayout={(e) => setBodyHeight(e.nativeEvent.layout.height)}
+      >
+        {topSlack > 0 && <View style={{ height: topSlack }} />}
+        <ScrollView
+          style={[styles.scroll, scrollBoxHeight != null && { flex: 0, height: scrollBoxHeight }]}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View onLayout={(e) => setInnerContentHeight(e.nativeEvent.layout.height)}>
+            <Text style={styles.eyebrow}>{retaking ? 'YOUR UPDATED PROGRAM' : 'YOUR PROGRAM'}</Text>
 
-        <Text style={styles.programName}>{programName}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+            <Text style={styles.programName}>{programName}</Text>
+            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
-        <Text style={styles.tagline}>{tagline}</Text>
+            <Text style={styles.tagline}>{tagline}</Text>
 
-        <View style={styles.card}>
-          <View style={styles.statRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{weeks}</Text>
-              <Text style={styles.statLabel}>weeks</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{perWeek}x</Text>
-              <Text style={styles.statLabel}>per week</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{minutes}</Text>
-              <Text style={styles.statLabel}>min each</Text>
-            </View>
+            {(
+              <>
+                <View style={styles.card}>
+                  <View style={styles.statRow}>
+                    <View style={styles.stat}>
+                      <Text style={styles.statValue}>{weeks}</Text>
+                      <Text style={styles.statLabel}>weeks</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.stat}>
+                      <Text style={styles.statValue}>{perWeek}x</Text>
+                      <Text style={styles.statLabel}>per week</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.stat}>
+                      <Text style={styles.statValue}>{minutes}</Text>
+                      <Text style={styles.statLabel}>min each</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.featureList}>
+                  {complete && <FeatureItem text={equipmentNote(complete.equipment)} />}
+                  {complete && <FeatureItem text={triggerBullet(complete.pain_trigger[0])} />}
+                  <FeatureItem text="Adapts intensity each week based on your pain check-ins" />
+                </View>
+
+                {/* Retake: the user is already subscribed — no pricing pitch. */}
+                {!retaking && (
+                  <View style={styles.priceCard}>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceLabel}>Average PT program</Text>
+                      <Text style={styles.priceValue}>$1,500+</Text>
+                    </View>
+                    <View style={styles.priceDivider} />
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceLabel}>Remedy</Text>
+                      <View style={styles.priceCol}>
+                        <Text style={[styles.priceValue, styles.priceValueAccent]}>$6.66/mo</Text>
+                        <Text style={styles.priceSubValue}>billed $79.99/year</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+
+            {!SUPERWALL_AVAILABLE && !retaking && (
+              <View style={styles.devBanner}>
+                <Text style={styles.devText}>
+                  Expo Go: Superwall unavailable. Tap below to skip with a dev trial.
+                </Text>
+              </View>
+            )}
+
+            {error && <Text style={styles.error}>{error}</Text>}
           </View>
-        </View>
+        </ScrollView>
 
-        <View style={styles.featureList}>
-          {complete && <FeatureItem text={equipmentBullet(complete.equipment)} />}
-          {complete && <FeatureItem text={triggerBullet(complete.pain_trigger[0])} />}
-          <FeatureItem text="Adapts intensity each week based on your pain check-ins" />
-        </View>
-
-        {!SUPERWALL_AVAILABLE && (
-          <View style={styles.devBanner}>
-            <Text style={styles.devText}>
-              Expo Go: Superwall unavailable. Tap below to skip with a dev trial.
+        <View style={styles.footer} onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}>
+          <ContinueButton
+            label={
+              retaking
+                ? 'Update My Program'
+                : SUPERWALL_AVAILABLE
+                  ? 'Start My Free Trial'
+                  : 'Start Dev Trial'
+            }
+            onPress={handleStart}
+            disabled={loading}
+          />
+          {!retaking && (
+            <Text style={styles.restore} onPress={handleRestore}>
+              Restore Purchases
+            </Text>
+          )}
+          <View style={styles.legalRow}>
+            <Text style={styles.legal} onPress={() => router.push('/(legal)/terms' as never)}>
+              Terms of Use
+            </Text>
+            <Text style={styles.legalDivider}>·</Text>
+            <Text style={styles.legal} onPress={() => router.push('/(legal)/privacy' as never)}>
+              Privacy Policy
             </Text>
           </View>
-        )}
-
-        {error && <Text style={styles.error}>{error}</Text>}
-      </View>
-
-      <View style={styles.footer}>
-        <ContinueButton
-          label={SUPERWALL_AVAILABLE ? 'Start My Free Trial' : 'Start Dev Trial'}
-          onPress={handleStart}
-          disabled={loading}
-        />
-        <Text style={styles.restore} onPress={handleRestore}>
-          Restore Purchases
-        </Text>
-        <View style={styles.legalRow}>
-          <Text style={styles.legal} onPress={() => router.push('/(legal)/terms' as never)}>
-            Terms of Use
-          </Text>
-          <Text style={styles.legalDivider}>·</Text>
-          <Text style={styles.legal} onPress={() => router.push('/(legal)/privacy' as never)}>
-            Privacy Policy
-          </Text>
         </View>
       </View>
     </View>
@@ -376,9 +555,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-  content: {
+  body: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   eyebrow: {
     fontSize: 12,
@@ -443,7 +628,47 @@ const styles = StyleSheet.create({
   },
   featureList: {
     gap: 14,
-    marginBottom: 16,
+    marginBottom: 24,
+  },
+  priceCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: 20,
+    ...shadows.low,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  priceLabel: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  priceValue: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
+    textAlign: 'right',
+  },
+  priceValueAccent: {
+    color: colors.primary,
+  },
+  priceCol: {
+    alignItems: 'flex-end',
+  },
+  priceSubValue: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 2,
   },
   featureRow: {
     flexDirection: 'row',

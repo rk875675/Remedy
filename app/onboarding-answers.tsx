@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -87,41 +88,53 @@ const ANSWER_ROWS: Array<{
 export default function OnboardingAnswersScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { startRetake } = useOnboarding();
+  const { startRetake, retaking, endRetake } = useOnboarding();
   const router = useRouter();
 
   const [answers, setAnswers] = useState<OnboardingAnswers | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('onboarding_answers')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        setAnswers(data);
-        setLoading(false);
-      });
-  }, [user]);
+  // Read via a ref so the focus effect below doesn't re-fire the moment startRetake()
+  // raises the flag while this screen is still focused (which would instantly cancel it).
+  const retakingRef = useRef(retaking);
+  retakingRef.current = retaking;
+
+  // Refetch on every focus: the row changes after a completed retake. Focus is also the
+  // only way this screen reappears mid-retake (user backed out of the quiz), so a still-
+  // raised `retaking` flag on focus means the retake was abandoned — clear it, or the
+  // root guard would treat a later stray visit to (onboarding) as an in-progress retake.
+  useFocusEffect(
+    useCallback(() => {
+      if (retakingRef.current) endRetake();
+      if (!user) return;
+      supabase
+        .from('onboarding_answers')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          setAnswers(data);
+          setLoading(false);
+        });
+    }, [user]),
+  );
 
   function handleRetake() {
     hapticWarning();
     Alert.alert(
-      'Retake questionnaire',
-      'This will create a new program for your remaining weeks. Completed sessions stay in your history.',
+      'Update your program?',
+      'You\u2019ll re-answer the questionnaire and your remaining weeks will be rebuilt around your new answers. Completed sessions stay in your history.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Continue',
-          style: 'destructive',
           onPress: () => {
             trackEvent('onboarding_retake_confirmed');
             // Enter retake mode (keeps the user in the onboarding flow despite being
             // onboarded + premium), reset answers, and jump to the first question.
+            // Push (not replace) so backing out of the quiz returns here.
             startRetake();
-            router.replace('/(onboarding)/q6');
+            router.push('/(onboarding)/q6');
           },
         },
       ],
@@ -149,6 +162,11 @@ export default function OnboardingAnswersScreen() {
           <Text style={styles.empty}>No answers found.</Text>
         ) : (
           <>
+            <Text style={styles.explainer}>
+              Your program is built from these answers. If your pain, equipment, or goals
+              have changed, update them and we{'\u2019'}ll rebuild your remaining weeks.
+            </Text>
+
             <View style={styles.card}>
               {ANSWER_ROWS.map((row, idx) => (
                 <React.Fragment key={row.key}>
@@ -173,10 +191,13 @@ export default function OnboardingAnswersScreen() {
             <TouchableOpacity
               style={styles.retakeButton}
               onPress={handleRetake}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              <Text style={styles.retakeText}>Retake questionnaire</Text>
+              <Text style={styles.retakeText}>Update Answers & Rebuild Program</Text>
             </TouchableOpacity>
+            <Text style={styles.retakeHint}>
+              Completed sessions stay in your history.
+            </Text>
           </>
         )}
       </ScrollView>
@@ -253,13 +274,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderLight,
     marginHorizontal: 20,
   },
+  explainer: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+    marginBottom: 20,
+  },
   retakeButton: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 15,
+    borderRadius: radius.card,
+    backgroundColor: colors.primary,
+    ...shadows.low,
   },
   retakeText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.secondary,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  retakeHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: colors.textTertiary,
+    textAlign: 'center',
   },
 });

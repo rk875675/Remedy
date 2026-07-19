@@ -12,24 +12,23 @@
 //    dropped across the iOS custom-scheme handoff.
 //  - We do NOT call verifyOtp here, so email link prefetchers (which follow the link)
 //    can't burn the token. The token is consumed only when the app calls verifyOtp.
+//  - The redirect target is HARDCODED to the app scheme. We deliberately ignore any
+//    client-supplied `redirect_to` query param: reflecting it into the Location header
+//    was an open redirect that let an attacker steal the one-time recovery/confirm token
+//    (account takeover) by appending their own host to a legitimate link.
+
+const APP_CALLBACK = 'remedy://auth-callback';
 
 Deno.serve((req: Request) => {
   const url = new URL(req.url);
   const tokenHash = url.searchParams.get('token_hash');
   const type = url.searchParams.get('type');
-  const redirectTo = url.searchParams.get('redirect_to') || 'remedy://auth-callback';
 
   if (!tokenHash || !type) {
     return new Response(null, { status: 400 });
   }
 
-  let target: URL;
-  try {
-    target = new URL(redirectTo);
-  } catch {
-    return new Response(null, { status: 400 });
-  }
-
+  const target = new URL(APP_CALLBACK);
   target.searchParams.set('token_hash', tokenHash);
   target.searchParams.set('type', type);
 

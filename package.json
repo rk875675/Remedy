@@ -7,7 +7,8 @@
     "start:dev": "expo start --dev-client",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "sync:brand": "python scripts/sync_brand_assets.py"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -45,7 +46,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cursor/sdk": "^1.0.21",
     "@types/react": "~19.1.10",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2"
   },
   "private": true

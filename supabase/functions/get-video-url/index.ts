@@ -63,6 +63,43 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // --- Entitlement gate -----------------------------------------------------
+    // Signed Cloudflare HLS URLs are premium content. Derive a trusted identity from the
+    // verified token (not the unverified rate-limit decode) and require an active
+    // entitlement or a dev profile before minting a stream token.
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'invalid_auth' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const [{ data: ent }, { data: prof }] = await Promise.all([
+      supabase
+        .from('entitlements')
+        .select('is_premium, subscription_status, expires_at')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      supabase.from('profiles').select('is_dev').eq('id', user.id).maybeSingle(),
+    ]);
+
+    const notExpired = !ent?.expires_at || new Date(ent.expires_at).getTime() > Date.now();
+    const entitled =
+      !!ent &&
+      ent.is_premium === true &&
+      notExpired &&
+      ['active', 'trial', 'dev_trial'].includes(ent.subscription_status);
+    const isDev = prof?.is_dev === true;
+
+    if (!entitled && !isDev) {
+      return new Response(
+        JSON.stringify({ error: 'not_entitled' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const { data: exercise, error: dbError } = await supabase
       .from('exercises')
       .select('cloudflare_stream_id')
