@@ -1,21 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Animated } from 'react-native';
+import { View } from 'react-native';
+import { enableFreeze } from 'react-native-screens';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { PostHogProvider } from 'posthog-react-native';
+
+// Suspend inactive screens so looping JS/native animations on the page
+// underneath cannot hitch the incoming transition.
+enableFreeze(true);
+import SplashOverlay from '../components/SplashOverlay';
+import * as Linking from 'expo-linking';
+import { AnalyticsBridge, AnalyticsProvider } from '../lib/analytics';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import {
   OnboardingProvider,
   useOnboarding,
   getResumeStep,
-  ONBOARDING_FLOW,
-  ONBOARDING_STEP_PATHS,
+  hasMeaningfulIncompleteFunnel,
+  rebuildOnboardingStack,
+  shouldOpenMatch,
 } from '../context/OnboardingContext';
 import { PremiumProvider, usePremium } from '../context/PremiumContext';
 import { SuperwallWrapper } from '../lib/superwall';
-import { onboardingAnswersInputSchema } from '../lib/schemas';
 import { getPendingPurchase } from '../lib/pendingPurchase';
+import { getPendingPromo } from '../lib/pendingPromo';
 import { colors } from '../constants/colors';
 import { screenTransitionOptions } from '../constants/navigation';
+import { parseAuthParamsFromUrl } from '../lib/auth-redirects';
+import { setPendingConfirmUrl } from '../lib/confirm-link-store';
+import { setPendingRecoveryUrl } from '../lib/recovery-link-store';
+import { isAuthLinkAlreadyHandled } from '../lib/auth-link-dedupe';
+import { applyAvailableUpdate } from '../lib/applyOtaUpdate';
 
 function RootNavigator() {
   const { session, loading } = useAuth();
@@ -29,26 +42,94 @@ function RootNavigator() {
   // Whether a paywall purchase is stashed in AsyncStorage awaiting post-signup
   // verification (null until the async read resolves).
   const [hasPendingPurchase, setHasPendingPurchase] = useState<boolean | null>(null);
+  // Whether a validated promo code is stashed awaiting post-signup redemption —
+  // same handoff shape as a pending purchase (PromoCodeSheet → sign-up →
+  // building-plan redeems the stash).
+  const [hasPendingPromo, setHasPendingPromo] = useState<boolean | null>(null);
 
   useEffect(() => {
     getPendingPurchase().then((p) => setHasPendingPurchase(!!p));
+    getPendingPromo().then((p) => setHasPendingPromo(!!p));
   }, [session]);
+
+  // --- Global deep-link handler for auth flows ---
+  // In-memory nav-once guards so a single deep-link URL doesn't trigger two navigations
+  // (e.g. both cold-start getInitialURL and the 'url' event fire for the same URL).
+  // These are reset on unmount (component remount = full restart); the persistent
+  // deduplication that survives relaunches lives in auth-link-dedupe.ts (AsyncStorage).
+  const confirmNavRef = useRef(false);
+  const recoveryNavRef = useRef(false);
+
+  useEffect(() => {
+    function maybeOpenConfirm(url: string) {
+      if (confirmNavRef.current) return;
+      const isConfirm =
+        url.includes('auth-confirm') ||
+        /type=(signup|email|email_change|magiclink|invite)/.test(url);
+      if (!isConfirm) return;
+      const p = parseAuthParamsFromUrl(url);
+      const hasCredential = (p.access_token && p.refresh_token) || p.code || p.token_hash;
+      if (!hasCredential && !p.error) return;
+      setPendingConfirmUrl(url);
+      confirmNavRef.current = true;
+      router.replace('/(auth)/confirm');
+    }
+
+    function maybeOpenRecovery(url: string) {
+      if (recoveryNavRef.current) return;
+      if (!url.includes('password-recovery') && !url.includes('type=recovery')) return;
+      const p = parseAuthParamsFromUrl(url);
+      const hasCredential = (p.access_token && p.refresh_token) || p.code || p.token_hash;
+      if (!hasCredential && !p.error) return;
+      setPendingRecoveryUrl(url);
+      recoveryNavRef.current = true;
+      router.replace('/(auth)/password-recovery');
+    }
+
+    // Cold start: check the URL that launched the app.
+    void (async () => {
+      const u = await Linking.getInitialURL();
+      if (!u) return;
+      // Pitfall 4: skip if this credential was already consumed on a previous launch.
+      if (await isAuthLinkAlreadyHandled(u)) return;
+      maybeOpenRecovery(u);
+      maybeOpenConfirm(u);
+    })();
+
+    // Warm start: the app was already running when the link was tapped.
+    const sub = Linking.addEventListener('url', (e) => {
+      maybeOpenRecovery(e.url);
+      maybeOpenConfirm(e.url);
+    });
+
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // --- End global deep-link handler ---
+
   // Latches on the guard's FIRST full evaluation for an unauthenticated user. The
-  // funnel-resume stack rebuild may only happen on that first run (a true cold start):
-  // firing it later in the session yanked users out of screens they navigated to
-  // themselves (e.g. tapping "Sign in" bounced back to welcome mid-transition).
+  // empty-segments fallback may only treat "no route" as a cold start once —
+  // firing it later yanked users out of screens they navigated to themselves
+  // (e.g. tapping "Sign in" bounced back to welcome mid-transition).
   const unauthGuardRan = useRef(false);
+  // Stack rebuild to the last answered question. Once per JS lifetime so a
+  // progress write (checkbox, option tap) cannot re-push the whole funnel.
+  const funnelResumeRan = useRef(false);
   // True once a session has been seen this app lifetime. A sign-out lands in the
   // unauthenticated branch with context state that may not have been cleared yet —
   // never treat that as a cold-start resume.
   const hadSession = useRef(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [ready, setReady] = useState(false);
+  // Latches once a lapsed subscriber has been placed on Your Program, which is what
+  // makes Welcome a legitimate destination for them (swipe-back) rather than a
+  // cold-start landing the guard has to correct.
+  const lapsedGateShown = useRef(false);
   // Latches true once the initial load (auth + supplementary data) completes.
   // Prevents the blank-screen from re-appearing after a fresh sign-in while
   // onboardingDone/premium queries are still in-flight, which would unmount the
   // email form and clear the user's input.
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  // Controls splash overlay visibility after its exit animation finishes.
+  const [splashGone, setSplashGone] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -56,29 +137,59 @@ function RootNavigator() {
     // Email deep-link screens manage their own navigation (verifyOtp → set password →
     // route). They run while either unauthed or in a transient recovery session, so the
     // guard must not redirect them.
-    if (segments[0] === 'auth-callback' || segments[0] === 'reset-password') return;
+    // 'reset-password' and 'auth-callback' are the legacy root-level screens.
+    // 'password-recovery' is inside (auth) but the guard must also never redirect while
+    // that screen is active (the recovery client holds an in-memory-only session and the
+    // user hasn't set their new password yet — routing away would abort the flow).
+    const segs = segments as string[];
+    if (
+      segs[0] === 'auth-callback' ||
+      segs[0] === 'reset-password' ||
+      (segs[0] === '(auth)' && segs[1] === 'password-recovery')
+    ) return;
 
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === '(onboarding)';
     // Neutral post-paywall screen that runs program assignment. It manages its own
     // navigation into the app once premium is confirmed, so the guard leaves it alone.
     const inBuilding = segments[0] === 'building-plan';
+    // Terms/Privacy screens are reachable from the safety gate, auth screens, and the
+    // paywall — all pre-account/pre-premium states. The guard must never bounce a user
+    // off a legal document they explicitly opened.
+    const inLegal = segments[0] === '(legal)';
 
-    // Answers persisted to AsyncStorage (hydrated into context on launch) count the
-    // same as answers entered this session.
-    const hasPendingAnswers = onboardingAnswersInputSchema.safeParse(answers).success;
+    // Quiz finished in THIS funnel (safety accepted + every required answer + q8).
+    // Leftover answers from a previous run must not count — that dumped mid-quiz
+    // users onto match ("Your Program") after a reload.
+    const quizFinished = shouldOpenMatch(progress, answers);
+    const funnelInProgress = hasMeaningfulIncompleteFunnel(progress, answers);
+
+    const applyFunnelResume = (): boolean => {
+      if (funnelResumeRan.current || inAuth || inLegal || inBuilding) return false;
+      funnelResumeRan.current = true;
+      if (quizFinished) {
+        rebuildOnboardingStack(router, 'match', answers);
+        return true;
+      }
+      const resumeStep = getResumeStep(progress, answers);
+      if (resumeStep === 'welcome') return false;
+      rebuildOnboardingStack(router, resumeStep, answers);
+      return true;
+    };
 
     // No account yet. Sign-up happens AFTER the paywall (PRD §5–§6.1), so the
     // onboarding funnel (which now contains the paywall trigger on match.tsx) and the
     // auth screens are open to anonymous users. Everything else requires an account.
     if (!session) {
-      // Wait for the AsyncStorage reads (hydrated answers + progress + pending purchase)
-      // before routing, so a purchase or partial funnel saved just before a force-quit is
-      // resumed correctly rather than being routed back to a blank welcome screen.
-      if (!hydrated || hasPendingPurchase === null) return;
-      if (hasPendingPurchase && hasPendingAnswers) {
-        // Purchased on the paywall, then quit before finishing sign-up. Resume at the
-        // auth entry so building-plan can persist the answers and verify the purchase.
+      // Wait for the AsyncStorage reads (hydrated answers + progress + pending
+      // purchase/promo) before routing, so a purchase or partial funnel saved just
+      // before a force-quit is resumed correctly rather than being routed back to a
+      // blank welcome screen.
+      if (!hydrated || hasPendingPurchase === null || hasPendingPromo === null) return;
+      if ((hasPendingPurchase || hasPendingPromo) && quizFinished) {
+        // Purchased (or validated a promo code) on the paywall, then quit before
+        // finishing sign-up. Resume at the auth entry so building-plan can persist
+        // the answers and verify the purchase / redeem the code.
         if (!inAuth) {
           router.replace('/(auth)/sign-in?mode=signup');
         }
@@ -87,24 +198,11 @@ function RootNavigator() {
       const firstRun = !unauthGuardRan.current;
       unauthGuardRan.current = true;
 
-      // Cold-start resume of an in-progress first-run funnel: rebuild the back stack
-      // (welcome → … → resume step) so swipe-back reaches earlier questions. The target
-      // is the first step whose data is actually missing (getResumeStep) — never just
-      // the furthest-reached screen, which can outrun the answers and strand the user
-      // on match's "complete all questions" error. Strictly once, on the guard's first
-      // unauthenticated evaluation of a fresh launch: never after a sign-out
-      // (hadSession) and never mid-session, so it cannot hijack navigation the user
-      // initiated themselves. Retakes are authed so never reach this branch.
+      // Cold-start resume: last unanswered step, not match, not Home. Once per
+      // launch — never after a sign-out, never mid-session (checkbox taps write
+      // progress and would otherwise rebuild the stack).
       if (firstRun && !hadSession.current && !inAuth) {
-        const resumeStep = getResumeStep(progress, answers);
-        const targetIndex = ONBOARDING_FLOW.indexOf(resumeStep);
-        if (targetIndex > 0) {
-          router.replace(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[0]]);
-          for (let i = 1; i <= targetIndex; i++) {
-            router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
-          }
-          return;
-        }
+        if (applyFunnelResume()) return;
       }
 
       // Segments are transiently empty while a root-stack transition settles; routing
@@ -113,23 +211,29 @@ function RootNavigator() {
       // as "not in onboarding" (cold start genuinely needs the initial redirect).
       if ((segments as string[]).length === 0 && !firstRun) return;
 
-      if (!inOnboarding && !inAuth) {
+      if (!inOnboarding && !inAuth && !inLegal) {
         router.replace('/(onboarding)');
       }
       return;
     }
     hadSession.current = true;
 
-    // A purchase made before auth must be linked even when this account already has
-    // complete onboarding answers. Re-read storage before redirecting so the state
-    // cannot stay stale after building-plan verifies and clears the transaction.
-    if (hasPendingPurchase && !inBuilding) {
+    // A purchase (or validated promo code) made before auth must be linked even when
+    // this account already has complete onboarding answers. Wait for answer hydration
+    // first — routing here before AsyncStorage loads left building-plan with empty
+    // context, so it skipped the upsert and assign-program failed with
+    // incomplete_answers.
+    if (!hydrated) return;
+    if ((hasPendingPurchase || hasPendingPromo) && !inBuilding) {
       let active = true;
-      void getPendingPurchase().then((pending) => {
-        if (!active) return;
-        setHasPendingPurchase(!!pending);
-        if (pending) router.replace('/building-plan');
-      });
+      void Promise.all([getPendingPurchase(), getPendingPromo()]).then(
+        ([pending, pendingPromo]) => {
+          if (!active) return;
+          setHasPendingPurchase(!!pending);
+          setHasPendingPromo(!!pendingPromo);
+          if (pending || pendingPromo) router.replace('/building-plan');
+        },
+      );
       return () => {
         active = false;
       };
@@ -137,38 +241,64 @@ function RootNavigator() {
 
     // Authed: wait until the supplementary entitlement/onboarding data resolves.
     if (onboardingDone === null || premium === null || hasActivePlan === null) return;
+    if (!hydrated) return;
+
+    // Mid-funnel always wins over a leftover completed session — but only for
+    // accounts that have not finished onboarding. An already-onboarded user
+    // (including a lapsed subscriber) must never be sent back through the quiz
+    // because leftover AsyncStorage progress still exists.
+    if (funnelInProgress && !retaking && !onboardingDone) {
+      if (applyFunnelResume()) return;
+      if (!inOnboarding && !inBuilding && !inLegal && !inAuth) {
+        const resumeStep = getResumeStep(progress, answers);
+        if (resumeStep === 'welcome') {
+          router.replace('/(onboarding)');
+        } else {
+          rebuildOnboardingStack(router, resumeStep, answers);
+        }
+      }
+      return;
+    }
 
     if (!onboardingDone) {
       // Fresh account created right after the paywall: the answers are still only in
       // context and (for a real purchase) the transaction is unverified. Hand off to
       // building-plan, which persists the answers, verifies any pending purchase, and
-      // assigns the program. Fall back to the onboarding flow only when there are no
-      // pending answers to persist (e.g. a returning account missing its row).
-      // Wait for AsyncStorage hydration so answers persisted before a force-quit are
-      // not mistaken for an empty funnel.
-      if (!hydrated) return;
-      if (hasPendingAnswers) {
+      // assigns the program. Fall back to the last onboarding step when the quiz is
+      // not finished (e.g. a returning account missing its row).
+      if (quizFinished) {
         if (!inBuilding) {
           router.replace('/building-plan');
         }
-      } else if (!inOnboarding && !inBuilding) {
-        router.replace('/(onboarding)');
+      } else {
+        if (applyFunnelResume()) return;
+        if (!inOnboarding && !inBuilding && !inLegal) {
+          router.replace('/(onboarding)');
+        }
       }
       return;
     }
 
     if (!premium) {
-      // Paywall is now triggered inline from match.tsx (in the onboarding group).
-      if (!inOnboarding && !inBuilding) {
-        router.replace('/(onboarding)/match');
+      // Lapsed subscriber. Two screens only: Your Program (paywall) and Welcome
+      // (sign in / sign out) — never the tabs, never back through the quiz.
+      if (inBuilding || inLegal) return;
+      if (inOnboarding && segs[1] === 'match') {
+        lapsedGateShown.current = true;
+        return;
       }
+      // Welcome is `index` (or the group root). Allowed only after Your Program
+      // has been shown — otherwise a cold start would sit on Welcome.
+      const onWelcome = inOnboarding && (!segs[1] || segs[1] === 'index');
+      if (onWelcome && lapsedGateShown.current) return;
+      router.replace('/(onboarding)/match?lapsed=1', { withAnchor: true });
       return;
     }
 
     // No active plan yet. The paywall is now part of the onboarding group (match.tsx),
     // so don't yank the user off onboarding or building while they're converting.
     if (!hasActivePlan) {
-      if (!inBuilding && !inOnboarding) {
+      if (!inBuilding && !inOnboarding && !inLegal) {
         router.replace('/building-plan');
       }
       return;
@@ -180,7 +310,7 @@ function RootNavigator() {
       if (retaking && inOnboarding) return;
       router.replace('/(tabs)');
     }
-  }, [session, loading, onboardingDone, premium, hasActivePlan, retaking, answers, hydrated, hasPendingPurchase, progress, segments]);
+  }, [session, loading, onboardingDone, premium, hasActivePlan, retaking, answers, hydrated, hasPendingPurchase, hasPendingPromo, progress, segments]);
 
   const supplementaryReady = !loading && !(session && (onboardingDone === null || premium === null || hasActivePlan === null));
 
@@ -192,23 +322,11 @@ function RootNavigator() {
 
   const isReady = initialLoadComplete || supplementaryReady;
 
-  useEffect(() => {
-    if (isReady && !ready) {
-      setReady(true);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isReady]);
-
-  if (!isReady) {
-    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
-  }
-
+  // isReady latches — once the app is ready the splash exits and never comes back.
+  const isReadyRef = useRef(false);
+  if (isReady) isReadyRef.current = true;
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+    <View style={{ flex: 1 }}>
       {/* A real root Stack (previously a navigator-less <Slot />) so root-level pushes
           (onboarding-answers, session, legal, …) keep the screens below them mounted.
           With Slot, "back" remounted the previous route from scratch — the user was
@@ -226,29 +344,47 @@ function RootNavigator() {
         <Stack.Screen name="building-plan" options={{ gestureEnabled: false }} />
         <Stack.Screen name="session" options={{ gestureEnabled: false }} />
         <Stack.Screen name="weekly-ramp" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="orientation" />
         <Stack.Screen name="program-complete" options={{ gestureEnabled: false }} />
         <Stack.Screen name="auth-callback" options={{ gestureEnabled: false }} />
         <Stack.Screen name="reset-password" options={{ gestureEnabled: false }} />
       </Stack>
-    </Animated.View>
+
+      {/* Animated brand splash — overlays the Stack and fades out once the app is
+          ready. Rendering the Stack underneath ensures there is no blank-flash on
+          the transition: the first real screen is already mounted when the overlay
+          exits. */}
+      {!splashGone && (
+        <SplashOverlay
+          isReady={isReadyRef.current}
+          onDone={() => setSplashGone(true)}
+        />
+      )}
+    </View>
   );
 }
 
+export { AppErrorBoundary as ErrorBoundary } from '../components/AppErrorBoundary';
+
 export default function RootLayout() {
+  useEffect(() => {
+    void applyAvailableUpdate();
+  }, []);
+
   return (
-    <PostHogProvider
-      apiKey={process.env.EXPO_PUBLIC_POSTHOG_KEY!}
-      options={{ host: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com' }}
-    >
+    <AnalyticsProvider>
       <AuthProvider>
         <OnboardingProvider>
           <PremiumProvider>
             <SuperwallWrapper>
+              {/* Headless: identity sync + screen tracking. Needs auth, onboarding
+                  and premium context, so it cannot live at the root. */}
+              <AnalyticsBridge />
               <RootNavigator />
             </SuperwallWrapper>
           </PremiumProvider>
         </OnboardingProvider>
       </AuthProvider>
-    </PostHogProvider>
+    </AnalyticsProvider>
   );
 }

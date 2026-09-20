@@ -10,7 +10,7 @@ export type Profile = {
 export type EquipmentTier = 'gym' | 'bands_dumbbells' | 'open_space';
 export type ExercisePhase = 'mobility' | 'activation' | 'strength' | 'recovery';
 
-export type PainType = 'stiffness' | 'ache' | 'sharp';
+export type PainType = 'stiffness' | 'ache' | 'sharp' | 'nerve';
 export type PainTrigger = 'sitting' | 'bending' | 'standing' | 'morning' | 'exercise' | 'other';
 export type MainGoal = 'reduce_pain' | 'return_to_exercise' | 'sleep' | 'mobility';
 
@@ -92,6 +92,19 @@ export type UserProgram = {
   current_week: number;
   current_session: number;
   active_plan_id: string | null;
+  last_program_rebuild_at: string | null;
+  last_program_rebuild_grace_used: boolean;
+  applied_answers: {
+    pain_location: OnboardingAnswers['pain_location'];
+    pain_duration: OnboardingAnswers['pain_duration'];
+    pain_type: PainType[];
+    activity_level: OnboardingAnswers['activity_level'];
+    pain_trigger: PainTrigger[];
+    equipment: EquipmentTier;
+    main_goal: MainGoal[];
+    sessions_per_week_preference: number | null;
+  } | null;
+  pending_apply_week: number | null;
 };
 
 export type SessionCompletion = {
@@ -125,6 +138,9 @@ export type Entitlement = {
   // Informational: the granting Apple transaction came from the Sandbox environment.
   // Never used to gate access.
   is_sandbox: boolean;
+  // Which system granted the current access. Apple sync paths must never evict a
+  // still-live promo grant (source = 'promo', expires_at null = lifetime).
+  source: 'apple' | 'promo';
   updated_at: string;
 };
 
@@ -137,7 +153,8 @@ export type BillingEvent = {
     | 'subscription_renewed'
     | 'subscription_cancelled'
     | 'refund'
-    | 'restored';
+    | 'restored'
+    | 'promo_redeemed';
   product_id: string | null;
   transaction_id: string | null;
   idempotency_key: string;
@@ -242,6 +259,30 @@ export type UserWeeklyRampDecision = {
   decision: 'progress' | 'hold';
   pain_delta: number | null;
   created_at: string;
+};
+
+export type FeedbackCategory = 'bug' | 'idea' | 'question' | 'other';
+
+/** Insert-only. Written by the submit-feedback edge function, never the client. */
+export type Feedback = {
+  id: string;
+  user_id: string;
+  category: FeedbackCategory;
+  rating: number | null;
+  body: string;
+  app_version: string | null;
+  created_at: string;
+};
+
+/** Insert-only consent ledger row (migration 058). Never updated from the client. */
+export type LegalAcceptance = {
+  id: string;
+  user_id: string;
+  device_id: string | null;
+  document: 'terms' | 'privacy' | 'health_consent' | 'disclaimer' | 'age';
+  document_version: string;
+  accepted_at: string;
+  recorded_at: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -437,6 +478,10 @@ export type Database = {
           current_week?: number;
           current_session?: number;
           active_plan_id?: string | null;
+          last_program_rebuild_at?: string | null;
+          last_program_rebuild_grace_used?: boolean;
+          applied_answers?: UserProgram['applied_answers'];
+          pending_apply_week?: number | null;
         };
         Update: {
           program_id?: string;
@@ -444,6 +489,10 @@ export type Database = {
           current_week?: number;
           current_session?: number;
           active_plan_id?: string | null;
+          last_program_rebuild_at?: string | null;
+          last_program_rebuild_grace_used?: boolean;
+          applied_answers?: UserProgram['applied_answers'];
+          pending_apply_week?: number | null;
         };
         Relationships: [
           {
@@ -503,6 +552,7 @@ export type Database = {
           trial_started_at?: string | null;
           trial_ends_at?: string | null;
           expires_at?: string | null;
+          source?: Entitlement['source'];
           updated_at?: string;
         };
         Update: {
@@ -513,6 +563,7 @@ export type Database = {
           trial_started_at?: string | null;
           trial_ends_at?: string | null;
           expires_at?: string | null;
+          source?: Entitlement['source'];
           updated_at?: string;
         };
         Relationships: [];
@@ -714,9 +765,44 @@ export type Database = {
         };
         Relationships: [];
       };
+      legal_acceptances: {
+        Row: LegalAcceptance;
+        Insert: {
+          id?: string;
+          user_id: string;
+          device_id?: string | null;
+          document: LegalAcceptance['document'];
+          document_version: string;
+          accepted_at: string;
+          recorded_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      feedback: {
+        Row: Feedback;
+        Insert: {
+          id?: string;
+          user_id: string;
+          category: FeedbackCategory;
+          rating?: number | null;
+          body: string;
+          app_version?: string | null;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
+      get_home_state: {
+        Args: {
+          p_week_monday: string;
+          p_dev_day_offset?: number;
+        };
+        Returns: Record<string, unknown>;
+      };
       complete_session: {
         Args: {
           p_plan_session_id: string;

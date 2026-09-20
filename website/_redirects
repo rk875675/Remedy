@@ -1,0 +1,4 @@
+# Canonical host is the apex. www was serving a full 200 duplicate.
+https://www.remedyrecoveries.com/* https://remedyrecoveries.com/:splat 301
+http://www.remedyrecoveries.com/* https://remedyrecoveries.com/:splat 301
+http://remedyrecoveries.com/* https://remedyrecoveries.com/:splat 301

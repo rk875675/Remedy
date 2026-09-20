@@ -11,7 +11,27 @@ verify_jwt = false
 [functions.restore-purchases]
 verify_jwt = false
 
+# Apple App Store Server Notifications V2 — signed by Apple, no Supabase JWT.
+# Auth is cryptographic verification of signedPayload (Apple Root CA G3 pin).
+[functions.apple-assn]
+verify_jwt = false
+
+# Promo codes: /validate runs pre-auth (no session exists yet) and promo-admin uses a
+# custom x-admin-password header instead of a Supabase JWT, so the gateway check must be
+# off for both. promo-codes/redeem enforces auth itself via getUser; promo-admin enforces
+# a constant-time password compare against the PROMO_ADMIN_PASSWORD secret.
+[functions.promo-codes]
+verify_jwt = false
+
+[functions.promo-admin]
+verify_jwt = false
+
 # Public email deep-link bridge: hit by email clients/browsers (no JWT). It only issues a
 # 302 to the app scheme and never touches the token, so leaving it unauthenticated is safe.
 [functions.auth-bridge]
+verify_jwt = false
+
+# Second-generation auth redirect — routes confirm vs. recovery to separate app screens.
+# Same reasoning as auth-bridge: hit by email clients/browsers, no Supabase JWT.
+[functions.auth-redirect]
 verify_jwt = false

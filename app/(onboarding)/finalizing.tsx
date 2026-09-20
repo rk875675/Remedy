@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
+import { useOnboarding } from '../../context/OnboardingContext';
+import { prefetchPlanPreview } from '../../lib/planPreview';
 
 const steps = [
   'Analyzing your pain profile...',
@@ -14,13 +16,18 @@ const steps = [
 ];
 
 const SOCIAL_PROOF =
-  '80% of adults experience back pain at some point — most recover fully with the right movement plan.';
+  '4 in 5 adults experience back pain at some point. Staying active with structured, gradual movement is one of the best-supported ways to manage it.';
 
 export default function FinalizingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { answers } = useOnboarding();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    prefetchPlanPreview(answers);
+  }, [answers]);
 
   const fillAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -63,7 +70,7 @@ export default function FinalizingScreen() {
         }
         return next;
       });
-    }, 50);
+    }, 80);
 
     return () => clearInterval(interval);
   }, []);

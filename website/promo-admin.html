@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Remedy — Promo Admin</title>
+<style>
+  :root {
+    --green: #3E6B4E;
+    --green-dark: #2f5340;
+    --ink: #1d221f;
+    --muted: #6b7570;
+    --bg: #f6f5f1;
+    --card: #ffffff;
+    --line: #e3e1da;
+    --red: #a94433;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-family: Georgia, serif; font-size: 28px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 14px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 160px; min-width: 140px; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+  .check label { margin: 0; font-size: 14px; color: var(--ink); }
+  button {
+    margin-top: 14px;
+    padding: 10px 18px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--green-dark); }
+  button.small { margin: 0; padding: 5px 10px; font-size: 12px; }
+  button.danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+  button.ghost { background: transparent; color: var(--green); border: 1px solid var(--green); }
+  .msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+  .msg.err { color: var(--red); }
+  .msg.ok { color: var(--green); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.code { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.on { background: #e5efe8; color: var(--green); }
+  .pill.off { background: #f0e4e1; color: var(--red); }
+  .actions { display: flex; gap: 6px; }
+  #app { display: none; }
+  .signout { float: right; margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Remedy Promo Admin</h1>
+  <p class="sub">Creator promo codes — mint, track, deactivate.</p>
+
+  <!-- Login -->
+  <div class="card" id="loginCard">
+    <h2>Log in</h2>
+    <label for="pw">Admin password</label>
+    <input type="password" id="pw" autocomplete="current-password">
+    <button id="loginBtn">Log in</button>
+    <div class="msg err" id="loginMsg"></div>
+  </div>
+
+  <!-- App -->
+  <div id="app">
+    <div class="card">
+      <button class="small ghost signout" id="signoutBtn">Sign out</button>
+      <h2>Add creator</h2>
+      <div class="row">
+        <div>
+          <label for="creatorName">Name</label>
+          <input type="text" id="creatorName" placeholder="Creator name">
+        </div>
+      </div>
+      <button id="addCreatorBtn">Add creator</button>
+      <div class="msg" id="creatorMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Mint code</h2>
+      <div class="row">
+        <div>
+          <label for="mintCode">Code (exact text)</label>
+          <input type="text" id="mintCode" placeholder="CODE" maxlength="64">
+        </div>
+        <div>
+          <label for="mintCreator">Creator</label>
+          <select id="mintCreator"></select>
+        </div>
+        <div>
+          <label for="mintType">Type</label>
+          <select id="mintType">
+            <option value="months_free">Months free</option>
+            <option value="weeks_free">Weeks free</option>
+            <option value="minutes_free">Minutes free</option>
+            <option value="lifetime">Lifetime</option>
+          </select>
+        </div>
+        <div id="durationWrap">
+          <label for="mintDuration" id="durationLabel">Free months</label>
+          <input type="number" id="mintDuration" min="1" step="1" value="1">
+        </div>
+        <div>
+          <label for="mintMax">Max redemptions (blank = unlimited)</label>
+          <input type="number" id="mintMax" min="1" step="1" placeholder="∞">
+        </div>
+        <div>
+          <label for="mintExpiry">Expires (optional, end of UTC day)</label>
+          <input type="date" id="mintExpiry">
+        </div>
+      </div>
+      <div class="check">
+        <input type="checkbox" id="mintPersonal">
+        <label for="mintPersonal">Personal code (creator’s own)</label>
+      </div>
+      <button id="mintBtn">Mint code</button>
+      <div class="msg" id="mintMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>All codes</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th><th>Creator</th><th>Type</th><th>Redemptions</th>
+              <th>Expires</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="codesBody"></tbody>
+        </table>
+      </div>
+      <div class="msg" id="tableMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var API = 'https://vgqmvekjttywwadpftre.supabase.co/functions/v1/promo-admin';
+  var PW_KEY = 'remedy.promoAdminPassword';
+
+  var state = { creators: [], codes: [] };
+
+  function $(id) { return document.getElementById(id); }
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function password() { return sessionStorage.getItem(PW_KEY) || ''; }
+
+  function setMsg(id, text, kind) {
+    var el = $(id);
+    el.textContent = text || '';
+    el.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  async function call(route, body) {
+    var res = await fetch(API + '/' + route, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-password': password(),
+      },
+      body: JSON.stringify(body || {}),
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) { /* non-JSON error body */ }
+    return { ok: res.ok, status: res.status, data: data };
+  }
+
+  function errorText(r) {
+    if (!r.data) return 'Request failed (' + r.status + ').';
+    if (r.data.message) return r.data.message;
+    switch (r.data.error) {
+      case 'DUPLICATE_SLUG': return 'A creator with that slug already exists.';
+      case 'DUPLICATE_CODE': return 'That code already exists.';
+      case 'UNKNOWN_CREATOR': return 'Unknown creator.';
+      case 'HAS_REDEMPTIONS': return 'Cannot delete a code that has been redeemed. Deactivate it instead.';
+      case 'unauthorized': return 'Wrong password.';
+      case 'admin_disabled': return 'Admin is not configured.';
+      case 'rate_limited': return 'Too many requests — wait a moment.';
+      case 'invalid_body': return 'Check the form values.';
+      default: return 'Request failed (' + r.status + ').';
+    }
+  }
+
+  // ---- rendering ------------------------------------------------------------
+
+  function typeLabel(code) {
+    var label;
+    if (code.type === 'lifetime') label = 'Lifetime';
+    else if (code.type === 'weeks_free') label = code.weeks + ' wk free';
+    else if (code.type === 'minutes_free') label = code.minutes + ' min free';
+    else label = code.months + ' mo free';
+    if (code.is_personal) label += ' (personal)';
+    return label;
+  }
+
+  function durationMeta(type) {
+    if (type === 'weeks_free') return { key: 'weeks', label: 'Free weeks' };
+    if (type === 'minutes_free') return { key: 'minutes', label: 'Free minutes' };
+    if (type === 'months_free') return { key: 'months', label: 'Free months' };
+    return null;
+  }
+
+  function syncDurationField() {
+    var meta = durationMeta($('mintType').value);
+    $('durationWrap').style.display = meta ? '' : 'none';
+    if (meta) $('durationLabel').textContent = meta.label;
+  }
+
+  function renderCreators() {
+    var sel = $('mintCreator');
+    sel.innerHTML = state.creators
+      .map(function (c) {
+        return '<option value="' + esc(c.id) + '">' + esc(c.name) + ' (' + esc(c.slug) + ')</option>';
+      })
+      .join('');
+  }
+
+  function renderCodes() {
+    var body = $('codesBody');
+    if (state.codes.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" style="color:#6b7570">No codes yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = state.codes
+      .map(function (k) {
+        var creator = k.creators ? k.creators.name : '';
+        var redemptions = k.redemption_count + ' / ' + (k.max_redemptions == null ? '∞' : k.max_redemptions);
+        var expiry = k.expires_at ? new Date(k.expires_at).toISOString().slice(0, 10) : '—';
+        var pill = k.active
+          ? '<span class="pill on">Active</span>'
+          : '<span class="pill off">Off</span>';
+        var toggle =
+          '<button class="small ghost" data-act="toggle" data-id="' + esc(k.id) + '" data-active="' + (k.active ? '1' : '0') + '">' +
+          (k.active ? 'Deactivate' : 'Reactivate') + '</button>';
+        var del = k.redemption_count === 0
+          ? '<button class="small danger" data-act="delete" data-id="' + esc(k.id) + '" data-code="' + esc(k.code) + '">Delete</button>'
+          : '';
+        return '<tr>' +
+          '<td class="code">' + esc(k.code) + '</td>' +
+          '<td>' + esc(creator) + '</td>' +
+          '<td>' + esc(typeLabel(k)) + '</td>' +
+          '<td>' + esc(redemptions) + '</td>' +
+          '<td>' + esc(expiry) + '</td>' +
+          '<td>' + pill + '</td>' +
+          '<td><div class="actions">' + toggle + del + '</div></td>' +
+          '</tr>';
+      })
+      .join('');
+  }
+
+  async function loadOverview() {
+    var r = await call('overview');
+    if (!r.ok) { setMsg('tableMsg', errorText(r), 'err'); return; }
+    state.creators = r.data.creators || [];
+    state.codes = r.data.codes || [];
+    renderCreators();
+    renderCodes();
+    setMsg('tableMsg', '');
+  }
+
+  function showApp() {
+    $('loginCard').style.display = 'none';
+    $('app').style.display = 'block';
+    syncDurationField();
+  }
+
+  function showLogin() {
+    sessionStorage.removeItem(PW_KEY);
+    $('app').style.display = 'none';
+    $('loginCard').style.display = 'block';
+  }
+
+  // ---- events ---------------------------------------------------------------
+
+  $('loginBtn').addEventListener('click', async function () {
+    var pw = $('pw').value;
+    if (!pw) { setMsg('loginMsg', 'Enter the password.', 'err'); return; }
+    sessionStorage.setItem(PW_KEY, pw);
+    var r = await call('login');
+    if (!r.ok) { showLogin(); setMsg('loginMsg', errorText(r), 'err'); return; }
+    setMsg('loginMsg', '');
+    showApp();
+    loadOverview();
+  });
+
+  $('pw').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('loginBtn').click();
+  });
+
+  $('signoutBtn').addEventListener('click', function () {
+    showLogin();
+  });
+
+  $('addCreatorBtn').addEventListener('click', async function () {
+    var name = $('creatorName').value.trim();
+    if (!name) { setMsg('creatorMsg', 'Enter a name.', 'err'); return; }
+    var r = await call('creators', { name: name });
+    if (!r.ok) { setMsg('creatorMsg', errorText(r), 'err'); return; }
+    $('creatorName').value = '';
+    setMsg('creatorMsg', 'Added ' + r.data.creator.name + ' (' + r.data.creator.slug + ').', 'ok');
+    loadOverview();
+  });
+
+  $('mintType').addEventListener('change', syncDurationField);
+
+  $('mintBtn').addEventListener('click', async function () {
+    var code = $('mintCode').value.trim();
+    var type = $('mintType').value;
+    var creatorId = $('mintCreator').value;
+    if (!code) { setMsg('mintMsg', 'Enter the code text.', 'err'); return; }
+    if (!creatorId) { setMsg('mintMsg', 'Add a creator first.', 'err'); return; }
+
+    var body = { code: code, type: type, creator_id: creatorId };
+    var meta = durationMeta(type);
+    if (meta) {
+      var amount = parseInt($('mintDuration').value, 10);
+      if (!amount || amount < 1) { setMsg('mintMsg', 'Enter the free ' + meta.key + '.', 'err'); return; }
+      body[meta.key] = amount;
+    }
+    var max = $('mintMax').value.trim();
+    if (max !== '') {
+      var maxN = parseInt(max, 10);
+      if (!maxN || maxN < 1) { setMsg('mintMsg', 'Max redemptions must be a positive number.', 'err'); return; }
+      body.max_redemptions = maxN;
+    }
+    var expiry = $('mintExpiry').value;
+    if (expiry) {
+      // End of that UTC day.
+      body.expires_at = expiry + 'T23:59:59.999Z';
+    }
+    if ($('mintPersonal').checked) body.is_personal = true;
+
+    var r = await call('codes', body);
+    if (!r.ok) { setMsg('mintMsg', errorText(r), 'err'); return; }
+    $('mintCode').value = '';
+    setMsg('mintMsg', 'Minted ' + r.data.code.code + '.', 'ok');
+    loadOverview();
+  });
+
+  $('codesBody').addEventListener('click', async function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    var id = btn.getAttribute('data-id');
+
+    if (act === 'toggle') {
+      var isActive = btn.getAttribute('data-active') === '1';
+      if (isActive && !confirm('Deactivate this code? Users will no longer be able to redeem it.')) return;
+      var r = await call('codes/toggle', { id: id, active: !isActive });
+      if (!r.ok) { setMsg('tableMsg', errorText(r), 'err'); return; }
+      loadOverview();
+    }
+
+    if (act === 'delete') {
+      var codeText = btn.getAttribute('data-code');
+      if (!confirm('Delete "' + codeText + '"? This cannot be undone.')) return;
+      var r2 = await call('codes/delete', { id: id });
+      if (!r2.ok) { setMsg('tableMsg', errorText(r2), 'err'); return; }
+      loadOverview();
+    }
+  });
+
+  // Auto-login if this tab already has the password.
+  if (password()) {
+    call('login').then(function (r) {
+      if (r.ok) { showApp(); loadOverview(); } else { showLogin(); }
+    });
+  }
+})();
+</script>
+</body>
+</html>

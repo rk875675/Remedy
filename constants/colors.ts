@@ -8,7 +8,7 @@ export const colors = {
   /** Soft green wash — selected fills, tinted backgrounds */
   primaryMuted: '#E7EFE9',
 
-  /** Terracotta — warmth accent: streaks, celebration, highlights */
+  /** Terracotta — warmth accent: celebration, highlights */
   secondary: '#C4614A',
   /** Soft terracotta wash */
   secondaryMuted: '#F7E9E4',

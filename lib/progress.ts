@@ -6,7 +6,13 @@
 // experienced them, not the UTC date of the timestamp.
 
 export type ChartPoint = { value?: number; label?: string };
-export type BarPoint = { value: number; label: string; frontColor: string };
+export type BarPoint = {
+  value: number;
+  label: string;
+  frontColor: string;
+  isFuture?: boolean;
+  isCurrent?: boolean;
+};
 export type RawCheckin = { score: number; type: string; recorded_at: string };
 export type RawCompletion = { completed_at: string };
 export type PainRange = '2w' | '1m' | '3m';
@@ -29,6 +35,16 @@ function startOfLocalDay(d: Date): Date {
   const out = new Date(d);
   out.setHours(0, 0, 0, 0);
   return out;
+}
+
+/** Widest Progress chart is 6 months (~26 weeks). +slack covers TZ edges. */
+export const PROGRESS_HISTORY_DAYS = 190;
+
+/** Inclusive local-midnight start of an N-day lookback, as an ISO timestamp. */
+export function historyWindowStartISO(days: number, now: Date = new Date()): string {
+  const start = startOfLocalDay(now);
+  start.setDate(start.getDate() - (days - 1));
+  return start.toISOString();
 }
 
 function mondayOfWeek(now: Date): Date {
@@ -90,9 +106,9 @@ export function computePainChart(
     const parts = localDateKey(bucketStart).split('-');
     // For 3M range use short month name for clarity, otherwise M/D
     const label = showLabel
-      ? range === '3m'
-        ? `${bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-        : `${parseInt(parts[1])}/${parseInt(parts[2])}`
+      ? range === '2w'
+        ? `${parseInt(parts[1])}/${parseInt(parts[2])}`
+        : bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       : '';
 
     // Empty buckets carry NO value: pain scores are 1–10 by DB constraint, so a
@@ -105,10 +121,31 @@ export function computePainChart(
   return { bData, aData, rangeHasData: relevant.length > 0 };
 }
 
+/** Never invent more than a month of empty upcoming weeks. */
+const ACTIVITY_MAX_FUTURE_WEEKS = 4;
+
+function formatActivityWeekLabel(
+  weekStart: Date,
+  barCount: number,
+  prevLabeled: Date | null,
+): string {
+  if (barCount <= 8) {
+    return weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  if (barCount > 13) {
+    const newMonth = !prevLabeled || prevLabeled.getMonth() !== weekStart.getMonth();
+    return newMonth
+      ? weekStart.toLocaleDateString('en-US', { month: 'short' })
+      : `${weekStart.getMonth() + 1}/${weekStart.getDate()}`;
+  }
+  return `${weekStart.getMonth() + 1}/${weekStart.getDate()}`;
+}
+
 export function computeActivityChart(
   completions: RawCompletion[],
   range: ActivityRange,
   barColor: string,
+  accountStart?: Date,
   now: Date = new Date(),
 ): BarPoint[] {
   const thisMonday = mondayOfWeek(now);
@@ -116,10 +153,44 @@ export function computeActivityChart(
   // 1m ≈ 4 weeks, 3m ≈ 13 weeks, 6m ≈ 26 weeks
   const totalWeeks = range === '1m' ? 4 : range === '3m' ? 13 : 26;
 
+  const rangeStartMonday = new Date(thisMonday);
+  rangeStartMonday.setDate(thisMonday.getDate() - (totalWeeks - 1) * 7);
+
+  // Never start before the account existed — shift leftover range into the future.
+  // If a completion already sits earlier in the selected range (demo data, or a
+  // stale client created_at), keep that week so bars the user actually earned stay visible.
+  let firstMonday = rangeStartMonday;
+  if (accountStart) {
+    const accountMonday = mondayOfWeek(accountStart);
+    if (accountMonday > firstMonday) {
+      firstMonday = accountMonday;
+    }
+  }
+  for (const c of completions) {
+    const completed = new Date(c.completed_at);
+    if (completed < rangeStartMonday || completed >= thisMonday) continue;
+    const completedMonday = mondayOfWeek(completed);
+    if (completedMonday < firstMonday) firstMonday = completedMonday;
+  }
+
+  const pastWeeks = Math.max(
+    1,
+    Math.round((thisMonday.getTime() - firstMonday.getTime()) / 604800000) + 1,
+  );
+  const futureWeeks = Math.min(
+    ACTIVITY_MAX_FUTURE_WEEKS,
+    Math.max(0, totalWeeks - pastWeeks),
+  );
+  const barCount = pastWeeks + futureWeeks;
+
+  // Denser labels on short charts so every tick stays readable.
+  const labelEvery = barCount <= 5 ? 1 : barCount <= 13 ? 2 : 4;
+
   const bars: BarPoint[] = [];
-  for (let i = totalWeeks - 1; i >= 0; i--) {
-    const weekStart = new Date(thisMonday);
-    weekStart.setDate(thisMonday.getDate() - i * 7);
+  let lastLabeledStart: Date | null = null;
+  for (let i = 0; i < barCount; i++) {
+    const weekStart = new Date(firstMonday);
+    weekStart.setDate(firstMonday.getDate() + i * 7);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
@@ -128,14 +199,23 @@ export function computeActivityChart(
       return d >= weekStart && d < weekEnd;
     }).length;
 
-    // 1M (4 bars): label every bar; 3M (13 bars): every 2; 6M (26 bars): every 4
-    const labelEvery = range === '1m' ? 1 : range === '3m' ? 2 : 4;
-    const barIndex = totalWeeks - 1 - i;
-    const showLabel = barIndex % labelEvery === 0;
-    const parts = localDateKey(weekStart).split('-');
-    const label = showLabel ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : '';
+    const isCurrent = weekStart.getTime() === thisMonday.getTime();
+    const onCadence = i % labelEvery === 0;
+    const isLast = i === barCount - 1;
+    const lastCollides = isLast && (barCount - 1) % labelEvery === 1;
+    const showLabel = onCadence || isCurrent || (isLast && !lastCollides);
+    const label = showLabel
+      ? formatActivityWeekLabel(weekStart, barCount, lastLabeledStart)
+      : '';
+    if (label) lastLabeledStart = weekStart;
 
-    bars.push({ value: count, label, frontColor: barColor });
+    bars.push({
+      value: count,
+      label,
+      frontColor: barColor,
+      isFuture: weekStart.getTime() > thisMonday.getTime(),
+      isCurrent,
+    });
   }
 
   return bars;

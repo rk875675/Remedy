@@ -34,6 +34,7 @@ A React Native + Expo iOS app for back pain rehab. Back pain only for V1. See @P
    - **Other commands:** Installs, builds, deploys, lint, tests — run them yourself unless blocked.
    - **When blocked:** Say exactly what you tried, the error, and what is missing (e.g. Docker not running, no linked project). Only then ask the user to unblock — not as a default shortcut.
 10. Onboarding icons: use simple geometric Unicode symbols (▬ ○ △ ⊕ ◐ ♡ ☽ etc.) rendered inside dark circles (dark bg, white text). No emojis, no colored icons, no hyper-realistic icons. Monochrome, minimal, abstract. Same style as OptionCard's `icon` prop.
+11. Growth-engine last-slide CTA is locked. Do not edit CTA layouts, copy, atmospheres, or the four locked screenshots (`progress.png`, `img_0525.png`, `img_0539.png`, `img_0540.png`) unless the user explicitly asks. Generate may only pick among the existing 7 `CTA_REVIEW_OPTIONS`.
 
 ## Secret & Environment Key Safety
 - Never hardcode or log secret keys, API keys, tokens, or credentials anywhere in the codebase — not in source files, comments, logs, or test files.

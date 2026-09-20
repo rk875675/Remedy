@@ -1,22 +1,33 @@
 {
   "expo": {
-    "name": "remedy",
+    "name": "Remedy",
     "slug": "remedy",
     "scheme": "remedy",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f8162900-2cb8-48e3-a3bb-2d82f0ef184d",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#376c45"
+      "backgroundColor": "#33663f"
     },
     "ios": {
       "supportsTablet": true,
+      "requireFullScreen": true,
       "usesAppleSignIn": true,
-      "bundleIdentifier": "com.remedyapp.ios",
-      "buildNumber": "1",
+      "appleTeamId": "UB5Y6U28G5",
+      "bundleIdentifier": "com.remedyappco.ios",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -61,7 +72,8 @@
       "router": {},
       "eas": {
         "projectId": "f8162900-2cb8-48e3-a3bb-2d82f0ef184d"
-      }
+      },
+      "enableAppStoreReviewPrompt": true
     },
     "owner": "remedyappco"
   }

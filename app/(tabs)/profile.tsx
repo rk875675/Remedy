@@ -9,22 +9,29 @@ import {
   Switch,
   Alert,
   Linking,
+  Platform,
   ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { useUser } from '../../lib/superwall';
+import { usePremium } from '../../context/PremiumContext';
+import {
+  useUser,
+  usePlacement,
+  SUPERWALL_AVAILABLE,
+  setSuperwallSubscriptionInactive,
+} from '../../lib/superwall';
 import { restoreRemedyTransaction } from '../../lib/iap';
 import { supabase } from '../../lib/supabase';
 import {
   requestPermissions,
-  scheduleDailyReminder,
-  cancelReminders,
+  cancelWorkoutReminders,
   scheduleStretchReminders,
   cancelStretchReminders,
 } from '../../lib/notifications';
@@ -32,8 +39,29 @@ import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticWarning, hapticSelection } from '../../lib/haptics';
+import { accountDeletionFailed, signedOut } from '../../lib/analytics/events/auth';
+import {
+  restoreFailed,
+  restoreStarted,
+  restoreSucceeded,
+} from '../../lib/analytics/events/monetization';
+import {
+  dailyReminderDisabled,
+  displayNameUpdated,
+  progressReset,
+  stretchRemindersDisabled,
+  stretchRemindersEnabled,
+} from '../../lib/analytics/events/engagement';
+import { openContactPage, openLegalDocument, openSupportEmail } from '../../lib/legalLinks';
+import { toProductId, toRestoreReason } from '../../lib/analytics/purchaseErrors';
+import { openWriteReviewPage } from '../../lib/app-store-review';
+import { extractInvokeError } from '../../lib/functionsError';
+import { rememberDisplayName, resolveDisplayName } from '../../lib/greeting';
+import { invalidateTabRefresh } from '../../lib/tabRefresh';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
-import type { Entitlement, OnboardingAnswers, Profile, UserProgram } from '../../types/database';
+import { WorkoutDaysModal } from '../../components/progress/WorkoutDaysModal';
+import { PromoCodeSheet } from '../../components/PromoCodeSheet';
+import type { Entitlement, Profile, UserProgram } from '../../types/database';
 
 // ---------------------------------------------------------------------------
 // Storage keys
@@ -47,10 +75,10 @@ const STORAGE_STRETCH_START = 'remedy_stretch_start_hour';
 const STORAGE_STRETCH_END = 'remedy_stretch_end_hour';
 
 const STRETCH_INTERVAL_OPTIONS: { value: number; label: string; short: string }[] = [
-  { value: 30, label: '30 min', short: '30m' },
-  { value: 60, label: '60 min', short: '1h' },
+  { value: 60, label: '1 hour', short: '1h' },
   { value: 90, label: '90 min', short: '90m' },
-  { value: 120, label: '2 hrs', short: '2h' },
+  { value: 120, label: '2 hours', short: '2h' },
+  { value: 240, label: '4 hours', short: '4h' },
 ];
 
 function roundToQuarterHour(date: Date): { hour: number; minute: number } {
@@ -346,29 +374,6 @@ const hrStyles = StyleSheet.create({
 });
 
 // ---------------------------------------------------------------------------
-// Label maps for onboarding answers
-// ---------------------------------------------------------------------------
-const PAIN_LOCATION_LABELS: Record<OnboardingAnswers['pain_location'], string> = {
-  upper: 'Upper back',
-  lower: 'Lower back',
-  all: 'Full back',
-};
-
-const ACTIVITY_LEVEL_LABELS: Record<OnboardingAnswers['activity_level'], string> = {
-  sedentary: 'Sedentary',
-  light: 'Lightly active',
-  active: 'Active',
-  athlete: 'Athlete',
-};
-
-const MAIN_GOAL_LABELS: Record<'reduce_pain' | 'return_to_exercise' | 'sleep' | 'mobility', string> = {
-  reduce_pain: 'Reduce daily pain',
-  return_to_exercise: 'Return to exercise',
-  sleep: 'Sleep better',
-  mobility: 'Improve mobility',
-};
-
-// ---------------------------------------------------------------------------
 // Subscription plan helpers
 // ---------------------------------------------------------------------------
 type PlanInfo = {
@@ -384,17 +389,21 @@ function getPlanInfo(entitlement: Entitlement | null): PlanInfo {
 
   const { subscription_status, product_id } = entitlement;
 
-  if (subscription_status === 'trial' || subscription_status === 'dev_trial') {
-    return {
-      label: 'Free Trial',
-      isNegative: false,
-      tappable: false,
-    };
+  if (subscription_status === 'dev_trial') {
+    return { label: 'Dev Plan', isNegative: false, tappable: false };
+  }
+
+  // Reserved for a future free tier (and any leftover Apple trial status).
+  if (subscription_status === 'trial') {
+    return { label: 'Free Plan', isNegative: false, tappable: false };
   }
 
   if (subscription_status === 'active') {
     if (product_id?.startsWith('com.remedyapp.annual')) {
       return { label: 'Annual Plan', isNegative: false, tappable: false };
+    }
+    if (product_id?.startsWith('com.remedyapp.weekly')) {
+      return { label: 'Weekly Plan', isNegative: false, tappable: false };
     }
     if (product_id?.startsWith('com.remedyapp.monthly')) {
       return { label: 'Monthly Plan', isNegative: false, tappable: false };
@@ -403,27 +412,10 @@ function getPlanInfo(entitlement: Entitlement | null): PlanInfo {
   }
 
   if (subscription_status === 'cancelled') {
-    return { label: 'Cancelled', isNegative: true, tappable: false };
+    return { label: 'Cancelled', isNegative: true, tappable: true };
   }
 
   return { label: 'No active plan', isNegative: true, tappable: true };
-}
-
-function formatMemberSince(startedAt: string | null | undefined): string {
-  if (!startedAt) return '—';
-  const diffDays = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(startedAt).getTime()) / 86400000),
-  );
-  if (diffDays < 7) {
-    return diffDays === 1 ? '1 day' : `${diffDays} days`;
-  }
-  const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 8) {
-    return diffWeeks === 1 ? '1 wk' : `${diffWeeks} wks`;
-  }
-  const diffMonths = Math.floor(diffDays / 30);
-  return diffMonths === 1 ? '1 mo' : `${diffMonths} mo`;
 }
 
 // ---------------------------------------------------------------------------
@@ -442,7 +434,19 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut, deleteAccount } = useAuth();
   const { signOut: superwallSignOut } = useUser();
+  const { refreshPremium } = usePremium();
   const router = useRouter();
+  const { editName } = useLocalSearchParams<{ editName?: string }>();
+  const { registerPlacement } = usePlacement({
+    onDismiss: async (_info, result) => {
+      if (result.type === 'purchased' || result.type === 'restored') {
+        await refreshPremium();
+      }
+    },
+    onSkip: () => {
+      void refreshPremium();
+    },
+  });
   const nameInputRef = useRef<TextInput>(null);
 
   // Existing state
@@ -450,7 +454,8 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reminderHour, setReminderHour] = useState(() => roundToQuarterHour(new Date()).hour);
   const [reminderMinute, setReminderMinute] = useState(() => roundToQuarterHour(new Date()).minute);
-  const [dailyExpanded, setDailyExpanded] = useState(false);
+  const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [workoutSheetPreferNotif, setWorkoutSheetPreferNotif] = useState(false);
   const [dayOffset, setDayOffset] = useState(0);
 
   // Stretch reminders
@@ -462,10 +467,7 @@ export default function ProfileScreen() {
 
   // New state
   const [userProgramData, setUserProgramData] = useState<UserProgramWithProgram | null>(null);
-  const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers | null>(null);
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
-  const [sessionCount, setSessionCount] = useState(0);
-  const [painAvg, setPainAvg] = useState<number | null>(null);
 
   // Inline name editing
   const [editingName, setEditingName] = useState(false);
@@ -473,6 +475,10 @@ export default function ProfileScreen() {
 
   // Restore state
   const [restoring, setRestoring] = useState(false);
+  const [openingPaywall, setOpeningPaywall] = useState(false);
+
+  // "Have a code?" promo sheet (backend creator codes + Apple offer-code fallback).
+  const [promoVisible, setPromoVisible] = useState(false);
 
   // Delete account state
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -484,10 +490,6 @@ export default function ProfileScreen() {
     if (!user) return;
 
     (async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const sevenDaysAgoISO = sevenDaysAgo.toISOString();
-
       const [
         profileRes,
         notifPref,
@@ -495,10 +497,7 @@ export default function ProfileScreen() {
         offsetStr,
         stretchPrefs,
         userProgramRes,
-        answersRes,
         entitlementRes,
-        completionsRes,
-        painRes,
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         AsyncStorage.getItem(STORAGE_NOTIF),
@@ -516,24 +515,10 @@ export default function ProfileScreen() {
           .eq('user_id', user.id)
           .single(),
         supabase
-          .from('onboarding_answers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single(),
-        supabase
           .from('entitlements')
           .select('*')
           .eq('user_id', user.id)
           .single(),
-        supabase
-          .from('session_completions')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id),
-        supabase
-          .from('pain_checkins')
-          .select('score, type')
-          .eq('user_id', user.id)
-          .gte('recorded_at', sevenDaysAgoISO),
       ]);
 
       setProfile(profileRes.data);
@@ -547,34 +532,48 @@ export default function ProfileScreen() {
 
       const stretchMap = Object.fromEntries(stretchPrefs);
       setStretchEnabled(stretchMap[STORAGE_STRETCH] === 'true');
+      const startHour = stretchMap[STORAGE_STRETCH_START]
+        ? parseInt(stretchMap[STORAGE_STRETCH_START], 10)
+        : 9;
+      const endHour = stretchMap[STORAGE_STRETCH_END]
+        ? parseInt(stretchMap[STORAGE_STRETCH_END], 10)
+        : 18;
+      if (stretchMap[STORAGE_STRETCH_START]) setStretchStartHour(startHour);
+      if (stretchMap[STORAGE_STRETCH_END]) setStretchEndHour(endHour);
       if (stretchMap[STORAGE_STRETCH_INTERVAL]) {
-        setStretchInterval(parseInt(stretchMap[STORAGE_STRETCH_INTERVAL], 10));
-      }
-      if (stretchMap[STORAGE_STRETCH_START]) {
-        setStretchStartHour(parseInt(stretchMap[STORAGE_STRETCH_START], 10));
-      }
-      if (stretchMap[STORAGE_STRETCH_END]) {
-        setStretchEndHour(parseInt(stretchMap[STORAGE_STRETCH_END], 10));
+        const parsed = parseInt(stretchMap[STORAGE_STRETCH_INTERVAL], 10);
+        const allowed = STRETCH_INTERVAL_OPTIONS.some((opt) => opt.value === parsed);
+        const next = allowed ? parsed : 60;
+        setStretchInterval(next);
+        if (!allowed) {
+          await AsyncStorage.setItem(STORAGE_STRETCH_INTERVAL, '60');
+          if (stretchMap[STORAGE_STRETCH] === 'true') {
+            await scheduleStretchReminders(60, startHour, endHour);
+          }
+        }
       }
 
       setUserProgramData(userProgramRes.data as UserProgramWithProgram | null);
-      setOnboardingAnswers(answersRes.data);
       setEntitlement(entitlementRes.data);
-
-      setSessionCount(completionsRes.count ?? 0);
-
-      const beforeScores = (painRes.data ?? [])
-        .filter((p) => p.type === 'before')
-        .map((p) => p.score);
-      if (beforeScores.length > 0) {
-        setPainAvg(
-          Math.round((beforeScores.reduce((s, v) => s + v, 0) / beforeScores.length) * 10) / 10,
-        );
-      } else {
-        setPainAvg(null);
-      }
     })();
     }, [user]),
+  );
+
+  const startEditingName = useCallback((opts?: { focusDelayMs?: number }) => {
+    const name = resolveDisplayName(profile?.display_name, user) ?? 'User';
+    setNameInput(name);
+    setEditingName(true);
+    const delay = opts?.focusDelayMs ?? 50;
+    setTimeout(() => nameInputRef.current?.focus(), delay);
+  }, [profile?.display_name, user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const flag = Array.isArray(editName) ? editName[0] : editName;
+      if (flag !== '1') return;
+      startEditingName({ focusDelayMs: 400 });
+      router.setParams({ editName: '' });
+    }, [editName, startEditingName, router]),
   );
 
   if (!user) {
@@ -585,17 +584,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const resolvedName =
-    profile?.display_name ??
-    user.user_metadata?.full_name ??
-    user.user_metadata?.name ??
-    (user.email ? user.email.split('@')[0] : 'User');
-
-  function startEditingName() {
-    setNameInput(resolvedName);
-    setEditingName(true);
-    setTimeout(() => nameInputRef.current?.focus(), 50);
-  }
+  const resolvedName = resolveDisplayName(profile?.display_name, user) ?? 'User';
 
   async function commitNameEdit() {
     setEditingName(false);
@@ -603,25 +592,20 @@ export default function ProfileScreen() {
     if (!trimmed || trimmed === resolvedName) return;
 
     setProfile((prev) => (prev ? { ...prev, display_name: trimmed } : prev));
+    rememberDisplayName(user!.id, trimmed);
+    invalidateTabRefresh('home');
     await supabase
       .from('profiles')
       .update({ display_name: trimmed })
       .eq('id', user!.id);
+    // The name is user-entered text and never leaves the device — only the fact
+    // that one is now set.
+    displayNameUpdated({ has_name: true });
   }
 
   // Plan card — prefer the personalized snapshot name over the legacy program name.
   const programName =
     userProgramData?.user_program_plans?.program_name ?? userProgramData?.programs?.name ?? null;
-  const painLocationLabel = onboardingAnswers
-    ? PAIN_LOCATION_LABELS[onboardingAnswers.pain_location]
-    : null;
-  const activityLevelLabel = onboardingAnswers
-    ? ACTIVITY_LEVEL_LABELS[onboardingAnswers.activity_level]
-    : null;
-  const mainGoalLabel = onboardingAnswers?.main_goal?.length
-    ? onboardingAnswers.main_goal.map((g) => MAIN_GOAL_LABELS[g]).join(', ')
-    : null;
-  const memberSince = formatMemberSince(userProgramData?.started_at);
 
   // Subscription
   const planInfo = getPlanInfo(entitlement);
@@ -634,6 +618,12 @@ export default function ProfileScreen() {
     data: { success?: boolean; error?: string } | null,
   ): string {
     const code = data?.error;
+    if (code === 'transaction_already_linked') {
+      return (
+        'This subscription is linked to a different Remedy account. Sign in with the ' +
+        'account that purchased it to restore access.'
+      );
+    }
     if (code === 'invalid_transaction') {
       return 'No active subscription found for this Apple ID.';
     }
@@ -655,11 +645,13 @@ export default function ProfileScreen() {
   async function handleRestorePurchases() {
     if (!user || restoring) return;
     setRestoring(true);
+    restoreStarted({ source_screen: 'profile', is_authenticated: true });
     try {
       // Pull the real restored StoreKit transaction (original id + signed JWS) and
       // re-verify it server-side.
       const tx = await restoreRemedyTransaction();
       if (!tx) {
+        restoreFailed({ source_screen: 'profile', reason: 'no_transaction' });
         Alert.alert('Restore Purchases', 'No active subscription found for this Apple ID.');
         return;
       }
@@ -673,6 +665,10 @@ export default function ProfileScreen() {
       });
 
       if (error || !data?.success) {
+        restoreFailed({
+          source_screen: 'profile',
+          reason: toRestoreReason(await extractInvokeError(data, error)),
+        });
         Alert.alert('Restore Purchases', getRestoreErrorMessage(error, data));
         return;
       }
@@ -685,14 +681,36 @@ export default function ProfileScreen() {
       if (freshEnt) {
         setEntitlement(freshEnt);
       }
+      restoreSucceeded({ source_screen: 'profile', product_id: toProductId(tx.productId) });
       Alert.alert('Restore Purchases', 'Subscription restored successfully.');
     } catch {
+      restoreFailed({ source_screen: 'profile', reason: 'network' });
       Alert.alert(
         'Restore Purchases',
         'Something went wrong. Check your connection and try again.',
       );
     } finally {
       setRestoring(false);
+    }
+  }
+
+  async function handleResubscribe() {
+    hapticSelection();
+    if (!SUPERWALL_AVAILABLE) {
+      Alert.alert(
+        'Purchases unavailable',
+        'Purchases are unavailable right now. Please try again later.',
+      );
+      return;
+    }
+    setOpeningPaywall(true);
+    try {
+      await setSuperwallSubscriptionInactive();
+      await registerPlacement({ placement: 'onboarding_paywall' });
+    } catch {
+      Alert.alert('Could not open checkout', 'Please try again.');
+    } finally {
+      setOpeningPaywall(false);
     }
   }
 
@@ -733,12 +751,15 @@ export default function ProfileScreen() {
     hapticWarning();
 
     const hasApplePlan =
-      entitlement?.subscription_status === 'active' || entitlement?.subscription_status === 'trial';
+      entitlement?.source !== 'promo' &&
+      (entitlement?.subscription_status === 'active' ||
+        entitlement?.subscription_status === 'trial' ||
+        entitlement?.subscription_status === 'cancelled');
 
     Alert.alert(
       'Delete Account',
       hasApplePlan
-        ? 'This permanently erases your profile, program, and history. This cannot be undone.\n\nDeleting your account does NOT cancel your Apple subscription — cancel it separately in Settings → Apple ID → Subscriptions to avoid future charges.'
+        ? 'This permanently erases your profile, program, and history. This cannot be undone.\n\nDeleting your account does NOT cancel your Apple subscription. Cancel it separately in Settings → Apple ID → Subscriptions to avoid future charges.'
         : 'This permanently erases your profile, program, and history. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -772,6 +793,7 @@ export default function ProfileScreen() {
     try {
       const result = await deleteAccount();
       if (!result.success) {
+        accountDeletionFailed({ reason: result.error });
         Alert.alert('Delete Account', getDeleteAccountErrorMessage(result.error));
         return;
       }
@@ -781,6 +803,7 @@ export default function ProfileScreen() {
       // No further navigation needed — clearing the session (inside deleteAccount)
       // flips the root guard in app/_layout.tsx back to the signed-out flow.
     } catch {
+      accountDeletionFailed({ reason: 'request_failed' });
       Alert.alert('Delete Account', getDeleteAccountErrorMessage());
     } finally {
       setDeletingAccount(false);
@@ -790,36 +813,68 @@ export default function ProfileScreen() {
   // ---------------------------------------------------------------------------
   // Event handlers (all unchanged from original)
   // ---------------------------------------------------------------------------
-  async function handleNotificationToggle(value: boolean) {
-    setNotificationsEnabled(value);
-    await AsyncStorage.setItem(STORAGE_NOTIF, value ? 'true' : 'false');
-
-    if (value) {
-      await requestPermissions(user!.id);
-      await scheduleDailyReminder(reminderHour, reminderMinute);
-    } else {
-      setDailyExpanded(false);
-      await cancelReminders();
-    }
+  function openWorkoutDaysSheet(enableNotif: boolean) {
+    hapticSelection();
+    setWorkoutSheetPreferNotif(enableNotif);
+    setWorkoutSheetVisible(true);
   }
 
-  async function handleReminderTimeChange(hour24: number, minute: number) {
-    setReminderHour(hour24);
-    setReminderMinute(minute);
-    await AsyncStorage.setItem(STORAGE_NOTIF_TIME, JSON.stringify({ hour: hour24, minute }));
-    await scheduleDailyReminder(hour24, minute);
+  async function handleNotificationToggle(value: boolean) {
+    if (value) {
+      setNotificationsEnabled(true);
+      openWorkoutDaysSheet(true);
+      return;
+    }
+    setNotificationsEnabled(false);
+    await AsyncStorage.setItem(STORAGE_NOTIF, 'false');
+    await cancelWorkoutReminders();
+    dailyReminderDisabled();
+  }
+
+  async function closeWorkoutDaysSheet() {
+    setWorkoutSheetVisible(false);
+    const stored = await AsyncStorage.getItem(STORAGE_NOTIF);
+    setNotificationsEnabled(stored === 'true');
   }
 
   async function handleStretchToggle(value: boolean) {
     setStretchEnabled(value);
-    await AsyncStorage.setItem(STORAGE_STRETCH, value ? 'true' : 'false');
 
     if (value) {
-      await requestPermissions(user!.id);
-      await scheduleStretchReminders(stretchInterval, stretchStartHour, stretchEndHour);
+      // The permission result was previously ignored, so a denial (or a throw from push
+      // token registration) left this switch on with nothing scheduled. Only persist
+      // "on" once reminders are actually in place.
+      let granted = false;
+      try {
+        granted = await requestPermissions(user!.id, 'stretch_break');
+        if (granted) {
+          await scheduleStretchReminders(stretchInterval, stretchStartHour, stretchEndHour);
+        }
+      } catch {
+        granted = false;
+      }
+
+      if (!granted) {
+        setStretchEnabled(false);
+        await AsyncStorage.setItem(STORAGE_STRETCH, 'false');
+        Alert.alert(
+          'Reminders are off',
+          'Remedy needs notification permission for stretch breaks. Turn on Notifications for Remedy in iOS Settings, then try again.',
+        );
+        return;
+      }
+
+      await AsyncStorage.setItem(STORAGE_STRETCH, 'true');
+      stretchRemindersEnabled({
+        interval_minutes: stretchInterval,
+        start_hour: stretchStartHour,
+        end_hour: stretchEndHour,
+      });
     } else {
+      await AsyncStorage.setItem(STORAGE_STRETCH, 'false');
       setStretchExpanded(false);
       await cancelStretchReminders();
+      stretchRemindersDisabled();
     }
   }
 
@@ -895,6 +950,7 @@ export default function ProfileScreen() {
             }
 
             await AsyncStorage.setItem('remedy_reset_pending', '1');
+            progressReset();
             Alert.alert('Done', 'Progress has been reset.', [
               {
                 text: 'OK',
@@ -924,100 +980,90 @@ export default function ProfileScreen() {
       >
         <Text style={styles.title}>Profile</Text>
 
-        {/* ── Header card ── */}
+        {/* ── Identity ── */}
         <View style={styles.card}>
-          {/* Editable name */}
-          {editingName ? (
-            <TextInput
-              ref={nameInputRef}
-              style={styles.nameInput}
-              value={nameInput}
-              onChangeText={setNameInput}
-              onBlur={commitNameEdit}
-              onSubmitEditing={commitNameEdit}
-              returnKeyType="done"
-              autoCorrect={false}
-              autoCapitalize="words"
-              maxLength={50}
-            />
-          ) : (
-            <TouchableOpacity onPress={startEditingName} activeOpacity={0.7}>
-              <Text style={styles.name}>{resolvedName}</Text>
-            </TouchableOpacity>
-          )}
-          <Text style={styles.email}>{user.email ?? ''}</Text>
-
-          {/* Stats row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{sessionCount}</Text>
-              <Text style={styles.statLabel}>Sessions</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-                {painAvg !== null ? painAvg : '—'}
-              </Text>
-              <Text style={styles.statLabel}>Avg Pain</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{memberSince}</Text>
-              <Text style={styles.statLabel}>In Program</Text>
-            </View>
+          <View style={[styles.nameBox, editingName && styles.nameBoxEditing]}>
+            {editingName ? (
+              <TextInput
+                ref={nameInputRef}
+                style={styles.nameInput}
+                value={nameInput}
+                onChangeText={setNameInput}
+                onBlur={commitNameEdit}
+                onSubmitEditing={commitNameEdit}
+                returnKeyType="done"
+                autoCorrect={false}
+                autoCapitalize="words"
+                maxLength={50}
+              />
+            ) : (
+              <TouchableOpacity
+                onPress={() => startEditingName()}
+                activeOpacity={0.7}
+                style={styles.nameRow}
+                accessibilityRole="button"
+                accessibilityLabel="Edit name"
+              >
+                <Text style={styles.name} numberOfLines={1}>{resolvedName}</Text>
+                <Ionicons
+                  name="pencil-outline"
+                  size={18}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+            )}
           </View>
+          {user.email ? <Text style={styles.email}>{user.email}</Text> : null}
+          <TouchableOpacity
+            style={[styles.planChip, planInfo.isNegative && styles.planChipNegative]}
+            onPress={planInfo.tappable ? () => { void handleResubscribe(); } : undefined}
+            activeOpacity={planInfo.tappable ? 0.7 : 1}
+            disabled={!planInfo.tappable || openingPaywall}
+            accessibilityRole={planInfo.tappable ? 'button' : 'text'}
+            accessibilityLabel={planInfo.label}
+          >
+            {openingPaywall && planInfo.tappable ? (
+              <ActivityIndicator size="small" color={colors.secondary} />
+            ) : (
+              <Text
+                style={[
+                  styles.planChipText,
+                  planInfo.isNegative && styles.planChipTextNegative,
+                ]}
+              >
+                {planInfo.label}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {/* ── YOUR PLAN section ── */}
-        <Text style={styles.sectionLabel}>Your Plan</Text>
+        {/* ── Program ── */}
+        <Text style={styles.sectionLabel}>Program</Text>
         <View style={styles.settingsCard}>
-          {programName !== null && (
-            <>
-              <View style={styles.planNameRow}>
-                <Text style={styles.planName}>{programName}</Text>
-              </View>
-              <View style={styles.divider} />
-            </>
-          )}
-
-          {(painLocationLabel !== null || activityLevelLabel !== null) && (
-            <>
-              <View style={styles.settingsRow}>
-                <Text style={styles.settingsRowLabel}>Focus</Text>
-                <Text style={styles.settingsRowValue}>
-                  {[painLocationLabel, activityLevelLabel].filter(Boolean).join(' · ')}
-                </Text>
-              </View>
-              <View style={styles.divider} />
-            </>
-          )}
-
-          {mainGoalLabel !== null && (
-            <>
-              <View style={styles.settingsRow}>
-                <Text style={styles.settingsRowLabel}>Goal</Text>
-                <Text style={styles.settingsRowValue}>{mainGoalLabel}</Text>
-              </View>
-              <View style={styles.divider} />
-            </>
-          )}
-
           <TouchableOpacity
             style={styles.chevronRow}
             onPress={() => router.push('/onboarding-answers')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Edit your program"
           >
             <View style={styles.chevronRowTextCol}>
-              <Text style={styles.chevronRowLabel}>Your answers</Text>
-              <Text style={styles.chevronRowCaption}>View or update to rebuild your program</Text>
+              <Text style={styles.editProgramLabel}>
+                {programName ?? 'Edit your program'}
+              </Text>
+              <Text style={styles.chevronRowCaption}>
+                Pain, equipment, schedule, and goals
+              </Text>
             </View>
-            <Text style={styles.chevronIcon}>›</Text>
+            <Text style={styles.editProgramChevron}>›</Text>
           </TouchableOpacity>
+        </View>
 
-          <View style={styles.divider} />
-
+        {/* ── Reminders ── */}
+        <Text style={styles.sectionLabel}>Reminders</Text>
+        <View style={styles.settingsCard}>
           <View style={styles.settingsRow}>
-            <Text style={styles.settingsRowLabel}>Daily reminder</Text>
+            <Text style={styles.settingsRowLabel}>Workout reminder</Text>
             <Switch
               value={notificationsEnabled}
               onValueChange={handleNotificationToggle}
@@ -1030,28 +1076,19 @@ export default function ProfileScreen() {
               <View style={styles.divider} />
               <TouchableOpacity
                 style={styles.reminderSummaryRow}
-                onPress={() => setDailyExpanded((prev) => !prev)}
+                onPress={() => openWorkoutDaysSheet(false)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.reminderSummaryText}>
                   {formatTime12(reminderHour, reminderMinute)}
                 </Text>
-                <Text style={styles.chevronIcon}>{dailyExpanded ? '▴' : '▾'}</Text>
+                <Text style={styles.chevronIcon}>›</Text>
               </TouchableOpacity>
-              {dailyExpanded && (
-                <WheelTimePicker
-                  hour24={reminderHour}
-                  minute={reminderMinute}
-                  onChange={handleReminderTimeChange}
-                />
-              )}
             </>
           )}
-        </View>
 
-        {/* ── STRETCH REMINDERS section ── */}
-        <Text style={styles.sectionLabel}>Stretch Reminders</Text>
-        <View style={styles.settingsCard}>
+          <View style={styles.divider} />
+
           <View style={styles.settingsRow}>
             <Text style={styles.settingsRowLabel}>Stretch reminders</Text>
             <Switch
@@ -1117,29 +1154,9 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* ── ACCOUNT section ── */}
+        {/* ── Account ── */}
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.settingsCard}>
-          {/* Plan row */}
-          <TouchableOpacity
-            style={styles.settingsRow}
-            onPress={planInfo.tappable ? () => router.push('/(onboarding)/match') : undefined}
-            activeOpacity={planInfo.tappable ? 0.7 : 1}
-            disabled={!planInfo.tappable}
-          >
-            <Text style={styles.settingsRowLabel}>Plan</Text>
-            <Text
-              style={[
-                styles.settingsRowValue,
-                planInfo.isNegative && styles.settingsRowValueNegative,
-              ]}
-            >
-              {planInfo.label}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
           {/* Restore Purchases — always visible; Apple guideline requirement */}
           <TouchableOpacity
             style={styles.settingsRow}
@@ -1153,10 +1170,48 @@ export default function ProfileScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Manage Subscription — only when user has an active or trial subscription */}
-          {(entitlement?.subscription_status === 'active' ||
-            entitlement?.subscription_status === 'trial' ||
-            entitlement?.subscription_status === 'dev_trial') && (
+          <View style={styles.divider} />
+
+          {/* Have a code? — backend creator codes + Apple offer-code fallback */}
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => setPromoVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingsRowLabel}>Have a code?</Text>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
+
+          {/* Resubscribe — cancelled, expired, or no plan. Opens Superwall in place
+              (navigating to match would bounce a still-premium cancelled user home). */}
+          {entitlement?.subscription_status !== 'active' &&
+            entitlement?.subscription_status !== 'trial' &&
+            entitlement?.subscription_status !== 'dev_trial' && (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.settingsRow}
+                onPress={() => { void handleResubscribe(); }}
+                activeOpacity={0.7}
+                disabled={openingPaywall}
+              >
+                <Text style={styles.settingsRowLabel}>Resubscribe</Text>
+                {openingPaywall ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={styles.chevronIcon}>›</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Manage Subscription — Apple-backed plans only. Promo grants have
+              no App Store subscription to manage. */}
+          {entitlement?.source !== 'promo' &&
+            (entitlement?.subscription_status === 'active' ||
+              entitlement?.subscription_status === 'trial' ||
+              entitlement?.subscription_status === 'dev_trial' ||
+              entitlement?.subscription_status === 'cancelled') && (
             <>
               <View style={styles.divider} />
               <TouchableOpacity
@@ -1169,6 +1224,87 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </>
           )}
+        </View>
+
+        <Text style={styles.sectionLabel}>More</Text>
+        <View style={styles.settingsCard}>
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => {
+              hapticSelection();
+              router.push('/feedback');
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Send Feedback"
+          >
+            <Text style={styles.settingsRowLabel}>Send Feedback</Text>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => {
+              hapticSelection();
+              openContactPage();
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingsRowLabel}>Contact</Text>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => {
+              hapticSelection();
+              openSupportEmail();
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingsRowLabel}>Email Support</Text>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.settingsRow}
+                onPress={() => {
+                  hapticSelection();
+                  openWriteReviewPage();
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.settingsRowLabel}>Rate Remedy</Text>
+                <Text style={styles.chevronIcon}>›</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => {
+              hapticSelection();
+              openLegalDocument('terms', 'profile');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingsRowLabel}>Terms of Service</Text>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => {
+              hapticSelection();
+              openLegalDocument('privacy', 'profile');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingsRowLabel}>Privacy Policy</Text>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ── Developer section — only visible when is_dev = true ── */}
@@ -1227,35 +1363,76 @@ export default function ProfileScreen() {
           </>
         )}
 
-        {/* ── Sign Out ── */}
-        <TouchableOpacity
-          style={styles.signOutButton}
-          onPress={() => {
-            hapticWarning();
-            // Reset Superwall identity too, so paywall assignments don't leak to the
-            // next account signed in on this device.
-            void superwallSignOut();
-            signOut();
-          }}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        <View style={styles.accountActions}>
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={() => {
+              hapticWarning();
+              signedOut({ source_screen: 'profile' });
+              // Reset Superwall identity too, so paywall assignments don't leak to the
+              // next account signed in on this device.
+              void superwallSignOut();
+              signOut();
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
 
-        {/* ── Delete Account (Apple guideline 5.1.1(v) requirement) ── */}
-        <TouchableOpacity
-          style={styles.deleteAccountButton}
-          onPress={confirmDeleteAccount}
-          activeOpacity={0.6}
-          disabled={deletingAccount}
-        >
-          {deletingAccount ? (
-            <ActivityIndicator size="small" color={colors.textTertiary} />
-          ) : (
-            <Text style={styles.deleteAccountText}>Delete Account</Text>
-          )}
-        </TouchableOpacity>
+          {/* Delete Account (Apple guideline 5.1.1(v) requirement) */}
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={confirmDeleteAccount}
+            activeOpacity={0.7}
+            disabled={deletingAccount}
+            accessibilityRole="button"
+            accessibilityLabel="Delete Account"
+          >
+            {deletingAccount ? (
+              <ActivityIndicator size="small" color={colors.secondary} />
+            ) : (
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+      <WorkoutDaysModal
+        visible={workoutSheetVisible}
+        preferNotifOn={workoutSheetPreferNotif}
+        initialNotif={notificationsEnabled}
+        initialHour={reminderHour}
+        initialMinute={reminderMinute}
+        onClose={() => {
+          void closeWorkoutDaysSheet();
+        }}
+        onSaved={(result) => {
+          setNotificationsEnabled(result.notifEnabled);
+          setReminderHour(result.hour);
+          setReminderMinute(result.minute);
+          setWorkoutSheetVisible(false);
+        }}
+        onEditProgram={() => {
+          void closeWorkoutDaysSheet();
+          router.push('/onboarding-answers');
+        }}
+      />
+      <PromoCodeSheet
+        visible={promoVisible}
+        onClose={() => setPromoVisible(false)}
+        // Already inside the app — refreshPremium ran inside the sheet; re-read the
+        // entitlement row so the Plan card reflects the fresh grant immediately.
+        onAccessGranted={() => {
+          if (!user) return;
+          void supabase
+            .from('entitlements')
+            .select('*')
+            .eq('user_id', user.id)
+            .single()
+            .then(({ data }) => {
+              if (data) setEntitlement(data);
+            });
+        }}
+      />
     </TabFadeWrapper>
   );
 }
@@ -1285,55 +1462,61 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     ...shadows.low,
   },
-  name: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  nameBox: {
     marginBottom: 4,
   },
-  nameInput: {
-    fontSize: 20,
+  nameBoxEditing: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: -12,
+    borderRadius: radius.chip,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  name: {
+    flex: 1,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primary,
+    letterSpacing: -0.3,
+  },
+  nameInput: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
     paddingVertical: 0,
+    letterSpacing: -0.3,
   },
   email: {
     fontSize: 15,
     color: colors.textSecondary,
-    marginBottom: 16,
+    marginBottom: 4,
   },
-
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+  planChip: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.chip,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
+  planChipNegative: {
+    backgroundColor: colors.secondaryMuted,
   },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
+  planChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
   },
-  statLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
-    letterSpacing: 0.2,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: colors.borderLight,
+  planChipTextNegative: {
+    color: colors.secondary,
   },
 
   // ── Section label ──
@@ -1354,15 +1537,6 @@ const styles = StyleSheet.create({
     ...shadows.low,
     overflow: 'hidden',
   },
-  planNameRow: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  planName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
   settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1373,16 +1547,6 @@ const styles = StyleSheet.create({
   settingsRowLabel: {
     fontSize: 16,
     color: colors.textPrimary,
-  },
-  settingsRowValue: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    flexShrink: 1,
-    marginLeft: 12,
-    textAlign: 'right',
-  },
-  settingsRowValueNegative: {
-    color: colors.secondary,
   },
   chevronRow: {
     flexDirection: 'row',
@@ -1396,9 +1560,15 @@ const styles = StyleSheet.create({
     marginRight: 12,
     gap: 2,
   },
-  chevronRowLabel: {
-    fontSize: 15,
-    color: colors.textSecondary,
+  editProgramLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  editProgramChevron: {
+    fontSize: 20,
+    color: colors.primary,
+    lineHeight: 24,
   },
   chevronRowCaption: {
     fontSize: 12,
@@ -1512,27 +1682,34 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // ── Sign Out ──
+  // ── Sign Out / Delete Account ──
+  accountActions: {
+    marginTop: 4,
+    gap: 10,
+  },
   signOutButton: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 4,
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.button,
+    paddingVertical: 16,
+    ...shadows.low,
   },
   signOutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.secondary,
+    color: colors.textPrimary,
   },
-
-  // ── Delete Account ──
   deleteAccountButton: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 2,
+    justifyContent: 'center',
+    backgroundColor: colors.secondaryMuted,
+    borderRadius: radius.button,
+    paddingVertical: 16,
   },
   deleteAccountText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textTertiary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.secondary,
   },
 });

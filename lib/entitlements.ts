@@ -1,73 +1,85 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { z } from 'zod';
 import { supabase } from './supabase';
-import { restoreRemedyTransaction } from './iap';
 import type { Entitlement, Profile } from '../types/database';
 
+/**
+ * Throws when the entitlement could not be READ (offline, timeout, RLS error) and
+ * returns null only when the account genuinely has no entitlement row. Callers must
+ * keep those two cases apart: treating an unreachable backend as "not subscribed"
+ * bounces a paying subscriber onto the paywall.
+ */
 export async function getEntitlement(userId: string): Promise<Entitlement | null> {
-  const { data } = await supabase
+  // maybeSingle, not single: `single()` treats zero rows as an error, which would be
+  // indistinguishable from the network failures this function now surfaces.
+  const { data, error } = await supabase
     .from('entitlements')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
+  if (error) throw error;
   return data;
 }
 
 export async function isPremium(userId: string): Promise<boolean> {
   const entitlement = await getEntitlement(userId);
   if (!entitlement) return false;
-
   if (!entitlement.is_premium) return false;
-
-  if (
-    entitlement.expires_at &&
-    new Date(entitlement.expires_at) < new Date()
-  ) {
+  if (entitlement.expires_at && new Date(entitlement.expires_at).getTime() <= Date.now()) {
     return false;
   }
-
+  // `cancelled` keeps access until expires_at (auto-renew off, period still paid).
   return entitlement.subscription_status === 'active' ||
     entitlement.subscription_status === 'trial' ||
-    entitlement.subscription_status === 'dev_trial';
+    entitlement.subscription_status === 'dev_trial' ||
+    entitlement.subscription_status === 'cancelled';
 }
 
-// Apple auto-renewals never reach our backend (no App Store Server Notifications
-// handler yet), so a paying subscriber's expires_at goes stale after the first billing
-// period and isPremium() would treat them as lapsed. When the stored entitlement has an
-// Apple-backed subscription whose expires_at has passed, silently re-verify against
-// StoreKit via restore-purchases so an active renewal refreshes the row. No-op on
-// non-iOS / Expo Go / no transaction. At most one attempt per user per app session so a
-// genuinely expired subscription doesn't hammer the rate-limited endpoint.
-const reverifyAttempted = new Set<string>();
+// Last successfully-read gate state, per user. The root guard blocks on all three
+// values being non-null, so an unreachable backend has to resolve to *something* or the
+// splash never dismisses. Caching the last verified answer means a flaky network keeps a
+// subscriber in their program instead of throwing them onto the paywall. This can only
+// ever replay a `true` that the server previously confirmed, so it is not a bypass: an
+// account that was never premium has no cached `true` to fall back on.
+const gateStateSchema = z
+  .object({
+    premium: z.boolean(),
+    onboardingDone: z.boolean(),
+    hasActivePlan: z.boolean(),
+  })
+  .strict();
 
-export async function reverifyLapsedSubscription(userId: string): Promise<void> {
-  if (reverifyAttempted.has(userId)) return;
+export type GateState = z.infer<typeof gateStateSchema>;
 
-  const entitlement = await getEntitlement(userId);
-  if (!entitlement?.is_premium || !entitlement.expires_at) return;
-  // Only StoreKit-backed subscriptions can auto-renew; dev trials have no transaction.
-  if (
-    entitlement.subscription_status !== 'active' &&
-    entitlement.subscription_status !== 'trial'
-  ) {
-    return;
-  }
-  if (new Date(entitlement.expires_at) >= new Date()) return;
+function gateStateKey(userId: string): string {
+  return `remedy.gateState.${userId}`;
+}
 
-  reverifyAttempted.add(userId);
-  const tx = await restoreRemedyTransaction();
-  if (!tx) return;
+export async function readCachedGateState(userId: string): Promise<GateState | null> {
   try {
-    await supabase.functions.invoke('restore-purchases', {
-      body: {
-        originalTransactionId: tx.originalTransactionId,
-        signedTransaction: tx.jws,
-      },
-      // Stable key: billing_events dedupes the 'restored' event while the entitlement
-      // upsert (which refreshes expires_at) still runs on the server.
-      headers: { 'Idempotency-Key': `reverify_${userId}_${tx.originalTransactionId}` },
-    });
+    const raw = await AsyncStorage.getItem(gateStateKey(userId));
+    if (!raw) return null;
+    const parsed = gateStateSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
   } catch {
-    // Best-effort: the next launch (or manual Restore Purchases) retries.
+    return null;
+  }
+}
+
+export async function writeCachedGateState(userId: string, state: GateState): Promise<void> {
+  try {
+    await AsyncStorage.setItem(gateStateKey(userId), JSON.stringify(state));
+  } catch {
+    // Best-effort: losing the cache only costs us the offline fallback.
+  }
+}
+
+export async function clearCachedGateState(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(gateStateKey(userId));
+  } catch {
+    // Ignore.
   }
 }
 

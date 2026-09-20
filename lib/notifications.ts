@@ -1,7 +1,16 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import type { z } from 'zod';
 import { supabase } from './supabase';
+import {
+  notificationPermissionDenied,
+  notificationPermissionGranted,
+  notificationPermissionRequested,
+} from './analytics/events/engagement';
+import type { notificationPurpose } from './analytics/events/enums';
+
+type NotificationPurpose = z.infer<typeof notificationPurpose>;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -12,61 +21,135 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Fixed identifier for the daily session reminder. Using a stable ID means
-// re-scheduling always replaces the existing notification atomically — no race
-// condition even if the scheduler is called multiple times in quick succession.
-const DAILY_REMINDER_ID = 'remedy-daily-reminder';
+// Legacy identifier — kept only for one-time cancellation of pre-migration schedules.
+const LEGACY_DAILY_REMINDER_ID = 'remedy-daily-reminder';
+
+// Workout reminders: one WEEKLY notification per selected day-of-week.
+// IDs are stable per day so re-scheduling atomically replaces the existing one.
+const WORKOUT_REMINDER_PREFIX = 'remedy-workout-';
+const STORAGE_WORKOUT_IDS = 'remedy_workout_ids';
 
 // Identifier prefix + storage key for the stretch reminder system. Keeping the
-// stretch notifications namespaced lets the daily reminder and stretch reminder
-// systems be cancelled independently of one another.
+// stretch notifications namespaced lets workout reminders and stretch reminders
+// be cancelled independently of one another.
 const STRETCH_ID_PREFIX = 'remedy-stretch-';
 const STORAGE_STRETCH_IDS = 'remedy_stretch_ids';
 
-export async function requestPermissions(userId: string): Promise<string | null> {
+// Internal day index (0=Mon … 6=Sun) → expo-notifications weekday (1=Sun … 7=Sat)
+function toExpoWeekday(dayIndex: number): number {
+  return dayIndex === 6 ? 1 : dayIndex + 2;
+}
+
+/**
+ * `purpose` exists only so the permission outcome is attributable to the toggle
+ * that triggered it — iOS grants this once, so which feature spent the single
+ * prompt is worth knowing. Instrumented here rather than at the call sites
+ * because only this function can tell an actual prompt from an already-granted
+ * permission.
+ */
+export async function requestPermissions(
+  userId: string,
+  purpose: NotificationPurpose,
+): Promise<boolean> {
   const existing = await Notifications.getPermissionsAsync();
   let isGranted = (existing as { granted?: boolean }).granted === true;
 
   if (!isGranted) {
+    notificationPermissionRequested({ purpose });
     const requested = await Notifications.requestPermissionsAsync();
     isGranted = (requested as { granted?: boolean }).granted === true;
+    if (isGranted) notificationPermissionGranted({ purpose });
+    else notificationPermissionDenied({ purpose });
   }
 
-  if (!isGranted) return null;
+  if (!isGranted) return false;
 
-  const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId: Constants.expoConfig?.extra?.eas?.projectId,
-  });
-  const token = tokenData.data;
+  // Best-effort and deliberately not part of the result. Every reminder in this app is a
+  // LOCAL notification, which needs permission only — no push token and no APNs
+  // entitlement. This app ships without the expo-notifications config plugin, so
+  // getExpoPushTokenAsync() throws on device; when its result gated scheduling, the
+  // reminder toggles read "on" while nothing was ever scheduled.
+  void registerPushToken(userId);
 
-  await supabase
-    .from('profiles')
-    .update({ push_token: token })
-    .eq('id', userId);
-
-  return token;
+  return true;
 }
 
-export async function scheduleDailyReminder(hour: number, minute: number): Promise<void> {
-  // Scheduling with the same identifier replaces any existing notification with
-  // that ID, so this is safe to call multiple times without accumulating duplicates.
-  await Notifications.scheduleNotificationAsync({
-    identifier: DAILY_REMINDER_ID,
-    content: {
-      title: 'Time for your session',
-      body: 'Open Remedy and get today\'s exercises done.',
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
-  });
+async function registerPushToken(userId: string): Promise<void> {
+  try {
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId) return;
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    await supabase
+      .from('profiles')
+      .update({ push_token: tokenData.data })
+      .eq('id', userId);
+  } catch {
+    // Remote push is not wired up for V1. A missing token must never break local reminders.
+  }
 }
 
-// Cancels the daily reminder only, without touching stretch reminders.
+/**
+ * Schedule weekly workout reminders — one per selected day, firing at the
+ * given time. Cancels any previous workout reminders first (including the legacy
+ * daily reminder), so this is safe to call whenever selection or time changes.
+ *
+ * @param selectedDays  Array of day indices: 0 = Monday … 6 = Sunday.
+ * @param hour          24-hour clock hour (0–23).
+ * @param minute        Minutes (0–59).
+ */
+export async function scheduleWorkoutReminders(
+  selectedDays: number[],
+  hour: number,
+  minute: number,
+): Promise<void> {
+  await cancelWorkoutReminders();
+  if (selectedDays.length === 0) return;
+
+  const ids: string[] = [];
+  for (const dayIndex of selectedDays) {
+    const identifier = `${WORKOUT_REMINDER_PREFIX}${dayIndex}`;
+    await Notifications.scheduleNotificationAsync({
+      identifier,
+      content: {
+        title: 'Time for your workout',
+        body: "Today's exercises are ready. Open Remedy and get it done.",
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: toExpoWeekday(dayIndex),
+        hour,
+        minute,
+      },
+    });
+    ids.push(identifier);
+  }
+
+  await AsyncStorage.setItem(STORAGE_WORKOUT_IDS, JSON.stringify(ids));
+}
+
+/** Cancel all scheduled workout reminders (also clears any legacy daily reminder). */
+export async function cancelWorkoutReminders(): Promise<void> {
+  // One-time migration: cancel any pre-existing daily reminder.
+  await Notifications.cancelScheduledNotificationAsync(LEGACY_DAILY_REMINDER_ID).catch(() => {});
+
+  const raw = await AsyncStorage.getItem(STORAGE_WORKOUT_IDS);
+  if (raw) {
+    let ids: string[] = [];
+    try {
+      ids = JSON.parse(raw) as string[];
+    } catch {
+      ids = [];
+    }
+    await Promise.all(
+      ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})),
+    );
+  }
+  await AsyncStorage.removeItem(STORAGE_WORKOUT_IDS);
+}
+
+/** Alias kept for call sites that previously used `cancelReminders`. */
 export async function cancelReminders(): Promise<void> {
-  await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID);
+  await cancelWorkoutReminders();
 }
 
 // ---------------------------------------------------------------------------
@@ -74,7 +157,7 @@ export async function cancelReminders(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const STRETCH_TITLE = 'Stretch break';
-const STRETCH_BODY = 'Get up and move — take a short walk or do a quick stretch.';
+const STRETCH_BODY = 'Get up and move. Take a short walk or do a quick stretch.';
 
 // Builds the list of future slot times for today + tomorrow that fall within
 // the active hours window, spaced by the configured interval.

@@ -1,83 +1,85 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { EquipmentDisclaimerModal } from '../../components/onboarding/EquipmentDisclaimerModal';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
 import { type } from '../../constants/typography';
-import type { OnboardingAnswers, EquipmentTier } from '../../types/database';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
+import { EQUIPMENT_OPTIONS } from '../../constants/onboardingQuestions';
+import type { EquipmentTier } from '../../types/database';
 
-const options: {
-  label: string;
-  subtitle?: string;
-  value: NonNullable<OnboardingAnswers['equipment']>;
-}[] = [
-  {
-    label: 'Full gym access',
-    subtitle: 'Machines, free weights, cables',
-    value: 'gym',
-  },
-  {
-    label: 'Bands & light dumbbells',
-    subtitle: 'Resistance bands, 5–15 lb weights',
-    value: 'bands_dumbbells',
-  },
-  {
-    label: 'Open floor space',
-    subtitle: 'Room for mat work and stretching',
-    value: 'open_space',
-  },
-];
+const NUDGE: Partial<Record<EquipmentTier, string>> = {
+  bands_dumbbells: 'A gym would give us more ways to progress.',
+  open_space: 'Bands or a gym would give you more room to progress.',
+};
 
 export default function Q7Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { answers, setAnswer } = useOnboarding();
+  const { answers, setAnswer, clearAnswer } = useOnboarding();
   useTrackOnboardingStep('q7');
-  // Tracks which equipment values have already triggered the disclaimer during
-  // this visit to the screen — each value only pops up once, even if the user
-  // taps through all three in sequence. Resets on remount (e.g. leaving and
-  // returning to onboarding), which is intentional: no persistence needed.
-  const [seenValues, setSeenValues] = useState<Set<EquipmentTier>>(new Set());
-  const [disclaimerValue, setDisclaimerValue] = useState<EquipmentTier | null>(null);
+  const completeStep = useOnboardingStepCompletion();
 
   function handleSelect(value: EquipmentTier) {
-    setAnswer('equipment', value);
-    if (!seenValues.has(value)) {
-      setSeenValues((prev) => new Set(prev).add(value));
-      setDisclaimerValue(value);
+    const isDeselect = answers.equipment === value;
+    onboardingOptionSelected({
+      step_key: 'q7',
+      option_value: value,
+      is_multi_select: false,
+      is_deselect: isDeselect,
+    });
+    if (isDeselect) {
+      clearAnswer('equipment');
+    } else {
+      setAnswer('equipment', value);
+      if (value !== 'gym') {
+        onboardingHintShown({ step_key: 'q7', hint_key: 'equipment' });
+      }
     }
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
-      <PersonalizingLayout>
+      <PersonalizingLayout currentStep="q7" compact>
         <View style={styles.content}>
-          <Text style={styles.heading}>What equipment do you have access to?</Text>
+          <Text style={styles.heading}>What can you use?</Text>
+          <Text style={styles.subheading}>
+            Gym access gives us the most room to progress. Bands and light dumbbells are the next
+            best thing.
+          </Text>
           <View style={styles.options}>
-            {options.map((opt) => (
+            {EQUIPMENT_OPTIONS.map((opt) => (
               <OptionCard
                 key={opt.value}
                 label={opt.label}
                 subtitle={opt.subtitle}
+                badge={opt.badge}
                 selected={answers.equipment === opt.value}
                 onPress={() => handleSelect(opt.value)}
               />
             ))}
           </View>
+          {answers.equipment && NUDGE[answers.equipment] ? (
+            <View style={styles.nudge}>
+              <Text style={styles.nudgeText}>{NUDGE[answers.equipment]}</Text>
+            </View>
+          ) : null}
         </View>
       </PersonalizingLayout>
 
       <ContinueButton
-        onPress={() => router.push('/(onboarding)/q8')}
+        onPress={() => {
+          completeStep();
+          router.push('/(onboarding)/q8');
+        }}
         disabled={!answers.equipment}
       />
-
-      <EquipmentDisclaimerModal value={disclaimerValue} onConfirm={() => setDisclaimerValue(null)} />
     </View>
   );
 }
@@ -95,9 +97,28 @@ const styles = StyleSheet.create({
   heading: {
     ...type.question,
     color: colors.textPrimary,
-    marginBottom: 28,
+    marginBottom: 8,
+  },
+  subheading: {
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.textSecondary,
+    marginBottom: 20,
   },
   options: {
-    gap: 12,
+    gap: 10,
+  },
+  nudge: {
+    marginTop: 12,
+    borderRadius: radius.chip,
+    backgroundColor: colors.secondaryMuted,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  nudgeText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 });

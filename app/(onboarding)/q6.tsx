@@ -2,64 +2,72 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { PersonalizationBubble } from '../../components/onboarding/PersonalizationBubble';
+import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
+import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
+import { MAIN_GOAL_OPTIONS } from '../../constants/onboardingQuestions';
+import { GOAL_ILLUSTRATIONS } from '../../constants/onboardingImages';
 import type { MainGoal } from '../../types/database';
-
-const ICON_SIZE = 17;
-const ICON_COLOR = '#FFFFFF';
-
-const options: { label: string; icon: React.ReactNode; value: MainGoal }[] = [
-  { label: 'Reduce daily pain', icon: <Ionicons name="bandage-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'reduce_pain' },
-  { label: 'Get back to working out', icon: <Ionicons name="barbell-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'return_to_exercise' },
-  { label: 'Sleep better', icon: <Ionicons name="moon-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'sleep' },
-  { label: 'Improve mobility', icon: <Ionicons name="walk-outline" size={ICON_SIZE} color={ICON_COLOR} />, value: 'mobility' },
-];
 
 export default function Q6Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers, setAnswer } = useOnboarding();
   useTrackOnboardingStep('q6');
+  const completeStep = useOnboardingStepCompletion();
 
   const selected = answers.main_goal ?? [];
 
   function toggle(val: MainGoal) {
-    const next = selected.includes(val)
-      ? selected.filter((v) => v !== val)
-      : [...selected, val];
+    const isDeselect = selected.includes(val);
+    const next = isDeselect ? selected.filter((v) => v !== val) : [...selected, val];
     setAnswer('main_goal', next);
+    onboardingOptionSelected({
+      step_key: 'q6',
+      option_value: val,
+      is_multi_select: true,
+      is_deselect: isDeselect,
+      selection_count: next.length,
+    });
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
-      <PersonalizingLayout>
+      <PersonalizingLayout currentStep="q6" compact>
         <View style={styles.content}>
           <Text style={styles.heading}>What's your main goal?</Text>
           <Text style={styles.subheading}>Select all that apply</Text>
           <View style={styles.options}>
-            {options.map((opt) => (
+            {MAIN_GOAL_OPTIONS.map((opt) => (
               <OptionCard
                 key={opt.value}
                 label={opt.label}
-                icon={opt.icon}
+                illustration={GOAL_ILLUSTRATIONS[opt.value]}
+                photoSize={80}
                 selected={selected.includes(opt.value)}
                 onPress={() => toggle(opt.value)}
+                hint={
+                  selected[0] === opt.value ? (
+                    <PersonalizationHint field="main_goal" value={opt.value} />
+                  ) : null
+                }
               />
             ))}
           </View>
-          <PersonalizationBubble field="main_goal" value={selected[0]} />
         </View>
       </PersonalizingLayout>
 
       <ContinueButton
-        onPress={() => router.push('/(onboarding)/q1')}
+        onPress={() => {
+          completeStep(selected.length);
+          router.push('/(onboarding)/q1');
+        }}
         disabled={selected.length === 0}
       />
     </View>
@@ -84,9 +92,9 @@ const styles = StyleSheet.create({
   subheading: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   options: {
-    gap: 12,
+    gap: 10,
   },
 });

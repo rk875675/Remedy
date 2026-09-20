@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,15 @@ import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../../lib/haptics';
+import {
+  beginAuthAttempt,
+  classifyAuthError,
+  failAuthAttempt,
+  useHasPendingPurchase,
+} from '../../lib/analytics/authAttempt';
+import { openLegalDocument } from '../../lib/legalLinks';
+import { getPendingPromo, setPendingPromo } from '../../lib/pendingPromo';
+import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import { AppLogo } from '../../components/brand/AppLogo';
 
 let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null;
@@ -61,9 +70,30 @@ async function persistAppleDisplayName(userId: string, fullName: string) {
 export default function SignInScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const { mode, promo } = useLocalSearchParams<{ mode?: string; promo?: string }>();
   const isSignUp = mode === 'signup';
   const [loading, setLoading] = useState(false);
+  const hasPendingPurchase = useHasPendingPurchase();
+
+  // Nav-param fallback for the promo stash: if the AsyncStorage write from
+  // PromoCodeSheet was lost, re-save it from the route param so building-plan can
+  // still redeem after signup. Never overwrites an existing stash.
+  useEffect(() => {
+    if (!promo || typeof promo !== 'string') return;
+    void getPendingPromo().then((existing) => {
+      if (existing) return;
+      void setPendingPromo({
+        code: promo,
+        type: null,
+        months: null,
+        weeks: null,
+        minutes: null,
+        creatorName: null,
+        creatorSlug: null,
+        validatedAt: new Date().toISOString(),
+      });
+    });
+  }, [promo]);
 
   // Reached via push (from the onboarding "Sign in" links) — go back to the previous
   // screen. If there's no history (e.g. arrived here via replace), fall back to the
@@ -81,6 +111,12 @@ export default function SignInScreen() {
     // instead (mirrors the disabled={loading} on the Google/Email buttons).
     if (loading) return;
     hapticPrimaryAction();
+    beginAuthAttempt({
+      isSignUp,
+      method: 'apple',
+      sourceScreen: 'sign_in',
+      hasPendingPurchase,
+    });
     try {
       setLoading(true);
 
@@ -126,6 +162,9 @@ export default function SignInScreen() {
       }
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
+      // Cancels are silent in the UI but still recorded: a spike in cancels after
+      // the paywall is a conversion problem, not a non-event.
+      failAuthAttempt(classifyAuthError(e));
       // Backing out of the Apple sheet is a cancel, not an error — stay silent.
       // (expo-apple-authentication has used both codes across versions.)
       if (err.code !== 'ERR_REQUEST_CANCELED' && err.code !== 'ERR_CANCELED') {
@@ -139,7 +178,14 @@ export default function SignInScreen() {
 
   async function handleGoogleSignIn() {
     hapticPrimaryAction();
+    beginAuthAttempt({
+      isSignUp,
+      method: 'google',
+      sourceScreen: 'sign_in',
+      hasPendingPurchase,
+    });
     if (!GoogleSignin) {
+      failAuthAttempt('unavailable');
       Alert.alert(
         'Not Available',
         'Google Sign In requires a development build. Use email sign in for Expo Go testing.',
@@ -156,17 +202,27 @@ export default function SignInScreen() {
       // the sheet (it no longer throws). A dismissal — or any response without an ID
       // token — is a cancel, not an error: return silently, never alert.
       if (response.type !== 'success' || !response.data.idToken) {
+        failAuthAttempt('cancelled');
         return;
       }
 
-      const { error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.data.idToken,
       });
 
       if (error) throw error;
+
+      const googleName =
+        response.data.user.givenName?.trim() ||
+        response.data.user.name?.trim() ||
+        '';
+      if (googleName && data.user) {
+        await persistAppleDisplayName(data.user.id, googleName);
+      }
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
+      failAuthAttempt(classifyAuthError(e));
       if (err.code !== 'SIGN_IN_CANCELLED') {
         hapticError();
         Alert.alert(isSignUp ? 'Sign Up Error' : 'Sign In Error', err.message ?? 'Something went wrong');
@@ -191,7 +247,7 @@ export default function SignInScreen() {
         <AppLogo size="sm" style={styles.logo} />
         <Text style={styles.appName}>Remedy</Text>
         <Text style={styles.tagline}>
-          {isSignUp ? 'Create your account to save your plan.' : 'Your back pain, finally fixed.'}
+          {isSignUp ? 'Create your account to save your plan.' : 'A stronger back starts here.'}
         </Text>
       </View>
 
@@ -239,15 +295,24 @@ export default function SignInScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.legalRow}>
+      <View style={styles.legalBlock}>
+        <MedicalDisclaimer style={styles.disclaimer} />
+        <View style={styles.legalRow}>
         <Text style={styles.legal}>By continuing, you agree to our </Text>
-        <TouchableOpacity onPress={() => router.push('/(legal)/terms' as any)} activeOpacity={0.6}>
+        <TouchableOpacity
+          onPress={() => openLegalDocument('terms', 'sign_in')}
+          activeOpacity={0.6}
+        >
           <Text style={[styles.legal, styles.legalLink]}>Terms of Service</Text>
         </TouchableOpacity>
         <Text style={styles.legal}> and </Text>
-        <TouchableOpacity onPress={() => router.push('/(legal)/privacy' as any)} activeOpacity={0.6}>
+        <TouchableOpacity
+          onPress={() => openLegalDocument('privacy', 'sign_in')}
+          activeOpacity={0.6}
+        >
           <Text style={[styles.legal, styles.legalLink]}>Privacy Policy</Text>
         </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -342,12 +407,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.2,
   },
+  legalBlock: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  disclaimer: {
+    paddingHorizontal: 8,
+  },
   legalRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
   },
   legal: {
     fontSize: 12,

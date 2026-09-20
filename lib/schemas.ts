@@ -15,7 +15,7 @@ import { z } from 'zod';
 export const painLocationSchema = z.enum(['upper', 'lower', 'all']);
 export const painDurationSchema = z.enum(['acute', 'subacute', 'chronic']);
 // Multi-select: >=1 pain types. 'multiple' removed — multi-select replaces it.
-export const painTypeSchema = z.array(z.enum(['stiffness', 'ache', 'sharp'])).min(1);
+export const painTypeSchema = z.array(z.enum(['stiffness', 'ache', 'sharp', 'nerve'])).min(1);
 export const activityLevelSchema = z.enum(['sedentary', 'light', 'active', 'athlete']);
 // Multi-select: >=1 pain triggers.
 export const painTriggerSchema = z.array(
@@ -26,7 +26,7 @@ export const equipmentSchema = z.enum(['open_space', 'bands_dumbbells', 'gym']);
 export const mainGoalSchema = z.array(
   z.enum(['reduce_pain', 'return_to_exercise', 'sleep', 'mobility']),
 ).min(1);
-export const sessionsPerWeekSchema = z.number().int().min(3).max(5);
+export const sessionsPerWeekSchema = z.number().int().min(3).max(7);
 
 // Complete onboarding answers required to save + assign a program. Strict: extra keys
 // are rejected so a stale field can never silently slip into the row.
@@ -97,3 +97,36 @@ export const assignResultSchema = z.object({
   week_one: z.array(planSessionSchema),
 });
 export type AssignResult = z.infer<typeof assignResultSchema>;
+
+export const assignPendingSkipSchema = z.object({
+  skipped: z.literal(true),
+}).strict();
+
+export const applyProgramAnswersResultSchema = z
+  .object({
+    saved: z.literal(true),
+    patched: z.array(z.enum(['equipment', 'sessions_per_week_preference'])),
+    pending_apply_week: z.number().int().nullable(),
+    apply_now: z.boolean(),
+    action: z.enum(['noop', 'patched', 'scheduled', 'apply_now', 'saved_only']),
+  })
+  .strict();
+export type ApplyProgramAnswersResult = z.infer<typeof applyProgramAnswersResultSchema>;
+
+// ---------------------------------------------------------------------------
+// In-app feedback (Profile → Send Feedback)
+// ---------------------------------------------------------------------------
+
+export const feedbackCategorySchema = z.enum(['bug', 'idea', 'question', 'other']);
+export const feedbackRatingSchema = z.number().int().min(1).max(5);
+export const feedbackBodySchema = z.string().trim().min(10).max(2000);
+
+export const submitFeedbackInputSchema = z
+  .object({
+    category: feedbackCategorySchema,
+    rating: feedbackRatingSchema.nullable(),
+    body: feedbackBodySchema,
+    app_version: z.string().max(32).optional(),
+  })
+  .strict();
+export type SubmitFeedbackInput = z.infer<typeof submitFeedbackInputSchema>;

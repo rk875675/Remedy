@@ -86,3 +86,34 @@ export function useSuperwallEvents(
   }
   useSuperwallEventsHook(...args);
 }
+
+/**
+ * Dismisses any currently presented Superwall paywall. Needed before opening an
+ * RN Modal from a paywall custom action (e.g. `redeem_promo_code`): Superwall's
+ * native view controller renders above the RN hierarchy, so the modal would
+ * otherwise appear behind it.
+ */
+export async function dismissSuperwall(): Promise<void> {
+  if (!hasSuperwallNative) return;
+  try {
+    const { useSuperwallStore } = require('expo-superwall') as typeof import('expo-superwall');
+    await useSuperwallStore.getState().dismiss();
+  } catch {
+    // Best-effort: worst case the modal opens behind the paywall.
+  }
+}
+
+/**
+ * Superwall skips `onboarding_paywall` when it still thinks the user is entitled
+ * (leftover sandbox receipt, cancelled-but-cached status). Continue is an
+ * explicit checkout CTA — force inactive so the next register can present.
+ */
+export async function setSuperwallSubscriptionInactive(): Promise<void> {
+  if (!hasSuperwallNative) return;
+  try {
+    const { useSuperwallStore } = require('expo-superwall') as typeof import('expo-superwall');
+    await useSuperwallStore.getState().setSubscriptionStatus({ status: 'INACTIVE' });
+  } catch {
+    // Best-effort: registerPlacement still runs.
+  }
+}

@@ -7,15 +7,36 @@ import {
   Dimensions,
   Alert,
   Animated,
+  AppState,
   Easing,
+  InteractionManager,
 } from 'react-native';
+import { useEvent, useEventListener } from 'expo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
+import { VideoView } from 'expo-video';
+import { useSilentVideoPlayer } from '../../lib/videoPlayer';
+import { getCachedVideoUri, getVideoUri, prefetchVideo } from '../../lib/videoCache';
+import { invalidateTabRefresh } from '../../lib/tabRefresh';
+import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { trackEvent } from '../../lib/analytics';
+import { setPersonProperties } from '../../lib/analytics';
+import {
+  exerciseCompleted,
+  exerciseSetCompleted,
+  exerciseSkipped,
+  exerciseStarted,
+  exerciseVideoFailed,
+  painCheckinSubmitted,
+  restSkipped,
+  sessionAbandoned,
+  sessionCompleted,
+  sessionCompletionFailed,
+  sessionLoadFailed,
+  sessionPreviewed,
+  sessionStarted,
+} from '../../lib/analytics/events/coreLoop';
 import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
@@ -26,16 +47,39 @@ import {
   hapticSelection,
 } from '../../lib/haptics';
 import { Skeleton } from '../../components/ui/Skeleton';
+import {
+  incrementSessionsCompleted,
+  maybeRequestReviewAfterSession,
+} from '../../lib/app-store-review';
 import { orderedEquipmentForExercises } from '../../lib/equipment';
-import type { Exercise, UserPlanSession } from '../../types/database';
+import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
+import type { movementPattern } from '../../lib/analytics/events/enums';
+import type { Exercise, ExercisePhase, UserPlanSession } from '../../types/database';
+
+/** `exercises.movement_pattern` is a `text` column; the closed set lives in analytics. */
+type MovementPattern = import('zod').z.infer<typeof movementPattern>;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/**
+ * Postgres error messages are free text and can echo row data back, so the
+ * message is inspected only to bucket it — it is never sent.
+ */
+function classifyCompletionError(message: string): 'network' | 'rpc_error' {
+  const text = message.toLowerCase();
+  const isNetwork =
+    text.includes('network') || text.includes('fetch') || text.includes('timeout');
+  return isNetwork ? 'network' : 'rpc_error';
+}
 
 // --- Rest timer depleting ring ---
 const REST_RING_SIZE = 220;
 const REST_RING_STROKE = 10;
 const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
 const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
+
+/** Auto-play this many times at the start of each set, then pause. */
+const VIDEO_INTRO_LOOPS = 2;
 
 function RestRing({ seconds, total }: { seconds: number; total: number }) {
   const progress = useRef(new Animated.Value(Math.min(seconds / total, 1))).current;
@@ -95,7 +139,7 @@ const WARM_COPY = [
   'Consistency is what changes things.',
   'You showed up. That\u2019s what matters.',
   'Your body thanks you.',
-  'One session closer to feeling better.',
+  'One session at a time. Keep it going.',
 ];
 
 // Friendly label for a session's dominant phase — surfaced as "Main Focus" on
@@ -106,8 +150,6 @@ const PHASE_LABEL: Record<string, string> = {
   strength: 'Strength',
   recovery: 'Recovery',
 };
-
-const BREATHING_CYCLE_MS = 4000;
 
 // One-line dose summary, e.g. "3 sets × 5 × 10s holds", "3 sets × 12 reps",
 // "2 sets × 40s". withSets=false drops the set prefix (used for set-rest,
@@ -162,31 +204,152 @@ export default function SessionPlayerScreen() {
   const [setIndex, setSetIndex] = useState(1);
   const [restKind, setRestKind] = useState<'set' | 'exercise'>('exercise');
   const [skippedExercises, setSkippedExercises] = useState<Set<number>>(new Set());
-  const [breatheIn, setBreatheIn] = useState(true);
   const [nextSession, setNextSession] = useState<UserPlanSession | null>(null);
   const [isProgramCompleted, setIsProgramCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const player = useVideoPlayer(null, (p) => {
-    p.loop = true;
-    p.muted = true;
+  const player = useSilentVideoPlayer(null, (p) => {
+    p.loop = false;
   });
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+  const videoPlaysCompleted = useRef(0);
+  const videoLoopUnlocked = useRef(false);
+  const lastVideoExerciseIndex = useRef(exerciseIndex);
+  const videoUrlRef = useRef(videoUrl);
+  videoUrlRef.current = videoUrl;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
-  // Sync video source → player whenever the URL resolves for a new exercise
+  const resetVideoLoopForSet = useCallback(() => {
+    videoPlaysCompleted.current = 0;
+    videoLoopUnlocked.current = false;
+    player.loop = false;
+  }, [player]);
+
+  // play() is a no-op if VideoView is not attached yet (preview/rest unmount it)
+  // or replaceAsync has not reached readyToPlay. Stay armed until playingChange.
+  const autoplayArmedRef = useRef(false);
+
+  const armSetAutoplay = useCallback(() => {
+    resetVideoLoopForSet();
+    autoplayArmedRef.current = true;
+  }, [resetVideoLoopForSet]);
+
+  const startArmedAutoplay = useCallback(() => {
+    if (!autoplayArmedRef.current) return;
+    if (phaseRef.current !== 'exercise') return;
+    if (!videoUrlRef.current) return;
+    player.replay();
+    player.play();
+  }, [player]);
+
+  // Cache of pre-fetched signed URLs keyed by exercise id.
+  // Populated during rest so the next exercise's video is ready to go instantly.
+  const prefetchedUrls = useRef<Map<string, string>>(new Map());
+
+  // Sync video source → player whenever the URL resolves for a new exercise.
+  // replaceAsync avoids loading asset metadata on the iOS main thread.
   useEffect(() => {
+    armSetAutoplay();
     if (videoUrl) {
-      player.replace({ uri: videoUrl });
-      player.play();
+      const failedExerciseId = exercises[exerciseIndex]?.id ?? null;
+      void player
+        .replaceAsync({ uri: videoUrl })
+        .then(() => {
+          startArmedAutoplay();
+        })
+        .catch(() => {
+          if (failedExerciseId !== null) {
+            exerciseVideoFailed({ exercise_id: failedExerciseId, reason: 'playback_error' });
+          }
+        });
     } else {
       player.pause();
     }
-  }, [videoUrl, player]);
+  }, [videoUrl, player, armSetAutoplay, startArmedAutoplay, exercises, exerciseIndex]);
+
+  // Every new set / first enter of an exercise arms the 2-loop intro. Pause off
+  // the exercise screen. Exercise changes wait for the URL effect to swap clips.
+  useEffect(() => {
+    if (phase !== 'exercise') {
+      autoplayArmedRef.current = false;
+      player.pause();
+      return;
+    }
+
+    armSetAutoplay();
+
+    if (lastVideoExerciseIndex.current !== exerciseIndex) {
+      lastVideoExerciseIndex.current = exerciseIndex;
+      return;
+    }
+
+    startArmedAutoplay();
+  }, [phase, setIndex, exerciseIndex, player, armSetAutoplay, startArmedAutoplay]);
+
+  useEventListener(player, 'statusChange', ({ status }) => {
+    if (status === 'readyToPlay') startArmedAutoplay();
+  });
+
+  useEventListener(player, 'playingChange', ({ isPlaying: nowPlaying }) => {
+    if (nowPlaying) autoplayArmedRef.current = false;
+  });
+
+  useEventListener(player, 'playToEnd', () => {
+    if (phaseRef.current !== 'exercise') return;
+    if (autoplayArmedRef.current) return;
+    const duration = player.duration;
+    if (!Number.isFinite(duration) || duration < 0.4) return;
+    if (videoLoopUnlocked.current) {
+      if (!player.loop) {
+        player.replay();
+        player.play();
+      }
+      return;
+    }
+    videoPlaysCompleted.current += 1;
+    if (videoPlaysCompleted.current >= VIDEO_INTRO_LOOPS) {
+      player.pause();
+      return;
+    }
+    player.replay();
+    player.play();
+  });
+
+  const toggleVideoPlayback = useCallback(() => {
+    hapticSelection();
+    if (player.playing) {
+      player.pause();
+      return;
+    }
+    // Loop forever only after the intro auto-paused. Pausing mid-intro
+    // resumes the remaining plays, then pauses again.
+    if (videoPlaysCompleted.current >= VIDEO_INTRO_LOOPS) {
+      videoLoopUnlocked.current = true;
+      player.loop = true;
+    }
+    const duration = player.duration;
+    if (Number.isFinite(duration) && duration > 0 && player.currentTime >= duration - 0.25) {
+      player.replay();
+    }
+    player.play();
+  }, [player]);
 
   const sessionStartTime = useRef(Date.now());
+  // Activation depends on knowing whether this is the user's very first session,
+  // which the player otherwise has no way to tell. Resolved once, off the
+  // critical path, from the authoritative completion count.
+  const isFirstSession = useRef(false);
+  const exerciseStartedAt = useRef(Date.now());
+  const setStartedAt = useRef(Date.now());
+  /** Last exercise index reported as started, so sets don't re-fire it. */
+  const reportedExerciseIndex = useRef<number | null>(null);
+  /** One abandon per session — exit and background must not both report. */
+  const abandonReported = useRef(false);
+  const previewReported = useRef(false);
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdRepRef = useRef(1);
-  const breatheRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const completionScale = useRef(new Animated.Value(0)).current;
   const completeStatAnims = useRef([
     new Animated.Value(0),
@@ -246,16 +409,40 @@ export default function SessionPlayerScreen() {
           .filter((e): e is Exercise => e !== null);
         setExercises(exs);
         setExerciseCount(exs.length);
+        // One batched call resolves every clip for the session. Playback URLs come from
+        // get-video-url rather than exercises.video_url so the server decides what the
+        // client may fetch (signed R2 URL when configured, public URL otherwise) —
+        // reading the column directly bypassed the entitlement gate entirely.
+        InteractionManager.runAfterInteractions(() => {
+          void supabase.functions
+            .invoke('get-video-url', { body: { exerciseIds: exs.map((e) => e.id) } })
+            .then(({ data, error }) => {
+              if (error || !data?.urls) return;
+              const urls = data.urls as Record<string, string>;
+              for (const [exerciseId, url] of Object.entries(urls)) {
+                prefetchedUrls.current.set(exerciseId, url);
+                void prefetchVideo(url);
+              }
+            })
+            .catch(() => {});
+        });
       }
       // A failed query must surface a retry — swallowing it lets the player run with
       // zero exercises, which used to fall through to the completion UI without ever
       // recording a completion.
       if (metaRes.error || exercisesRes.error) {
         setLoadError(true);
+        sessionLoadFailed({
+          reason: metaRes.error ? 'not_found' : 'unknown',
+          plan_session_id: id,
+        });
+      } else if (!exercisesRes.data?.length) {
+        sessionLoadFailed({ reason: 'no_exercises', plan_session_id: id });
       }
       setLoaded(true);
     }).catch(() => {
       setLoadError(true);
+      sessionLoadFailed({ reason: 'network', plan_session_id: id });
       setLoaded(true);
     });
   }, [id]);
@@ -264,37 +451,110 @@ export default function SessionPlayerScreen() {
     loadSession();
   }, [loadSession]);
 
+  // Analytics only. A head-count is cheap and runs while the user reads the
+  // preview, so it never delays anything they are waiting on.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void supabase
+      .from('session_completions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .then(({ count, error }) => {
+        if (!cancelled && !error) isFirstSession.current = (count ?? 0) === 0;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (previewReported.current) return;
+    if (!loaded || loadError || !sessionMeta || exercises.length === 0) return;
+    previewReported.current = true;
+    sessionPreviewed({
+      plan_session_id: id,
+      week_number: sessionMeta.week_number,
+      session_number: sessionMeta.session_number,
+      exercise_count: exercises.length,
+      estimated_minutes: sessionMeta.duration_minutes,
+      phase: sessionMeta.phase as ExercisePhase,
+    });
+  }, [loaded, loadError, sessionMeta, exercises.length, id]);
+
   useEffect(() => {
     return () => {
       if (restTimerRef.current) clearInterval(restTimerRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
-      if (breatheRef.current) clearInterval(breatheRef.current);
     };
   }, []);
 
   // Video loads once per exercise (NOT per set — set changes must not refetch).
+  // Checks the prefetch cache first; falls back to a fresh edge function call.
   useEffect(() => {
     const ex = exercises[exerciseIndex];
     if (!ex) return;
 
-    setVideoUrl(null);
     setVideoError(false);
 
-    if (ex.cloudflare_stream_id) {
-      supabase.functions
-        .invoke('get-video-url', { body: { exerciseId: ex.id } })
-        .then(({ data, error }) => {
-          if (error || !data?.url) {
-            setVideoError(true);
-          } else {
-            setVideoUrl(data.url);
-          }
-        })
-        .catch(() => setVideoError(true));
-    } else if (ex.video_url) {
-      setVideoUrl(ex.video_url);
+    const remote = prefetchedUrls.current.get(ex.id) ?? null;
+    if (remote) {
+      // Cached file if we already have it; otherwise stream now and warm the
+      // cache in the background for the next session. Do not swap mid-play.
+      setVideoUrl(getCachedVideoUri(remote) ?? remote);
+      void prefetchVideo(remote);
+      return;
     }
+
+    setVideoUrl(null);
+
+    // The batch resolve on session load usually populates prefetchedUrls first; this is
+    // the fallback for a clip it missed (slow/failed batch, or a mid-session refresh).
+    supabase.functions
+      .invoke('get-video-url', { body: { exerciseId: ex.id } })
+      .then(({ data, error }) => {
+        if (error || !data?.url) {
+          setVideoError(true);
+          // The signed URL itself is never sent — only which exercise failed.
+          exerciseVideoFailed({ exercise_id: ex.id, reason: 'url_fetch_failed' });
+        } else {
+          const url = data.url as string;
+          prefetchedUrls.current.set(ex.id, url);
+          setVideoUrl(getCachedVideoUri(url) ?? url);
+          void prefetchVideo(url);
+        }
+      })
+      .catch(() => {
+        setVideoError(true);
+        exerciseVideoFailed({ exercise_id: ex.id, reason: 'url_fetch_failed' });
+      });
   }, [exerciseIndex, exercises]);
+
+  // One `exercise_started` per exercise, not per set: the countdown effect below
+  // re-arms on every set, so it cannot be the trigger.
+  useEffect(() => {
+    if (phase !== 'exercise') return;
+    const ex = exercises[exerciseIndex];
+    if (!ex) return;
+
+    setStartedAt.current = Date.now();
+    if (reportedExerciseIndex.current === exerciseIndex) return;
+    reportedExerciseIndex.current = exerciseIndex;
+    exerciseStartedAt.current = Date.now();
+
+    exerciseStarted({
+      exercise_id: ex.id,
+      exercise_index: exerciseIndex,
+      exercise_count: exercises.length,
+      plan_session_id: id,
+      movement_pattern: ex.movement_pattern as MovementPattern,
+      phase: ex.phase,
+      intensity_tier: ex.intensity_tier,
+      ...(ex.sets === null ? {} : { sets: ex.sets }),
+      ...(ex.reps === null ? {} : { reps: ex.reps }),
+      ...(ex.duration_seconds === null ? {} : { duration_seconds: ex.duration_seconds }),
+    });
+  }, [phase, exerciseIndex, setIndex, exercises, id]);
 
   // Countdown runs per set: re-armed on every set of every exercise.
   useEffect(() => {
@@ -331,20 +591,6 @@ export default function SessionPlayerScreen() {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, [exerciseIndex, setIndex, phase, exercises]);
-
-  useEffect(() => {
-    if (phase === 'rest') {
-      breatheRef.current = setInterval(() => {
-        setBreatheIn((prev) => !prev);
-      }, BREATHING_CYCLE_MS);
-    } else {
-      if (breatheRef.current) clearInterval(breatheRef.current);
-      setBreatheIn(true);
-    }
-    return () => {
-      if (breatheRef.current) clearInterval(breatheRef.current);
-    };
-  }, [phase]);
 
   useEffect(() => {
     if (phase === 'complete') {
@@ -387,10 +633,12 @@ export default function SessionPlayerScreen() {
       .from('user_program_plans')
       .select('sessions_per_week, duration_weeks')
       .eq('id', up.active_plan_id)
+      .eq('status', 'active')
       .single();
+    if (!plan) return;
 
-    const sessionsPerWeek = plan?.sessions_per_week ?? 4;
-    const durationWeeks = plan?.duration_weeks ?? 5;
+    const sessionsPerWeek = plan.sessions_per_week;
+    const durationWeeks = plan.duration_weeks;
 
     let nextSess = up.current_session + 1;
     let nextWeek = up.current_week;
@@ -410,11 +658,35 @@ export default function SessionPlayerScreen() {
     if (data) setNextSession(data);
   }, [user, id]);
 
+  // Fire-and-forget: fetches and caches the signed URL for an exercise so it's
+  // ready when the rest timer ends. Silently skips if already cached.
+  function prefetchVideoUrl(ex: Exercise) {
+    if (prefetchedUrls.current.has(ex.id)) return;
+    supabase.functions
+      .invoke('get-video-url', { body: { exerciseId: ex.id } })
+      .then(({ data, error }) => {
+        if (!error && data?.url) {
+          const url = data.url as string;
+          prefetchedUrls.current.set(ex.id, url);
+          void prefetchVideo(url);
+        }
+      })
+      .catch(() => {});
+  }
+
   function startRest(seconds: number, kind: 'set' | 'exercise') {
     setRestKind(kind);
     setRestSeconds(seconds);
     setRestTotal(Math.max(seconds, 1));
     setPhase('rest');
+
+    // Prefetch next exercise's video URL while the user rests — by the time
+    // the timer ends the URL is cached and loads instantly.
+    if (kind === 'exercise') {
+      const nextEx = exercises[exerciseIndex + 1];
+      if (nextEx) prefetchVideoUrl(nextEx);
+    }
+
     restTimerRef.current = setInterval(() => {
       setRestSeconds((prev) => {
         if (prev <= 1) {
@@ -440,6 +712,7 @@ export default function SessionPlayerScreen() {
     // Navigation advance — stronger than a selection tick.
     hapticPrimaryAction();
     if (restTimerRef.current) clearInterval(restTimerRef.current);
+    restSkipped({ rest_kind: restKind, remaining_seconds: restSeconds });
     advanceAfterRest(restKind);
   }
 
@@ -461,10 +734,26 @@ export default function SessionPlayerScreen() {
     if (countdownRef.current) clearInterval(countdownRef.current);
     const currentEx = exercises[exerciseIndex];
     const totalSets = currentEx.sets && currentEx.sets > 0 ? currentEx.sets : 1;
+
+    exerciseSetCompleted({
+      exercise_id: currentEx.id,
+      set_index: setIndex,
+      set_count: totalSets,
+      time_on_set_ms: Math.max(0, Date.now() - setStartedAt.current),
+    });
+
     if (setIndex < totalSets) {
       startRest(currentEx.rest_seconds, 'set');
       return;
     }
+
+    exerciseCompleted({
+      exercise_id: currentEx.id,
+      exercise_index: exerciseIndex,
+      duration_ms: Math.max(0, Date.now() - exerciseStartedAt.current),
+      sets_completed: totalSets,
+    });
+
     // All sets done — move on to the next exercise (or finish the session).
     if (exerciseIndex < exercises.length - 1) {
       startRest(currentEx.rest_seconds, 'exercise');
@@ -476,9 +765,54 @@ export default function SessionPlayerScreen() {
   function handleSkipExercise() {
     hapticSelection();
     if (countdownRef.current) clearInterval(countdownRef.current);
+    const currentEx = exercises[exerciseIndex];
+    if (currentEx) {
+      exerciseSkipped({
+        exercise_id: currentEx.id,
+        exercise_name: currentEx.name,
+        exercise_index: exerciseIndex,
+        set_index: setIndex,
+        time_on_exercise_ms: Math.max(0, Date.now() - exerciseStartedAt.current),
+      });
+    }
     setSkippedExercises((prev) => new Set(prev).add(exerciseIndex));
     advanceExercise();
   }
+
+  /**
+   * Mid-session churn. Fires at most once per session: a user who backgrounds
+   * the app and then confirms Exit is one abandonment, not two.
+   *
+   * The preview and complete phases are not abandonment — nothing was started in
+   * the first, and everything was finished in the second.
+   */
+  function reportAbandon(exitType: 'user_exit' | 'backgrounded') {
+    if (abandonReported.current) return;
+    if (phase === 'preview' || phase === 'complete') return;
+    abandonReported.current = true;
+    sessionAbandoned({
+      plan_session_id: id,
+      phase_key: phase,
+      exercise_index: exerciseIndex,
+      elapsed_ms: Math.max(0, Date.now() - sessionStartTime.current),
+      exit_type: exitType,
+      ...(sessionMeta === null ? {} : { week_number: sessionMeta.week_number }),
+    });
+  }
+
+  // Read through a ref so the listener can be registered once while still seeing
+  // the current phase and exercise.
+  const reportAbandonRef = useRef(reportAbandon);
+  reportAbandonRef.current = reportAbandon;
+
+  useEffect(() => {
+    // 'background' only. On iOS 'inactive' also fires for the app switcher and
+    // notification shade, which is a glance, not an abandonment.
+    const subscription = AppState.addEventListener('change', (status) => {
+      if (status === 'background') reportAbandonRef.current('backgrounded');
+    });
+    return () => subscription.remove();
+  }, []);
 
   function handleExit() {
     hapticWarning();
@@ -496,7 +830,10 @@ export default function SessionPlayerScreen() {
           style: 'destructive',
           // Pop back to the existing tabs entry (dismissTo) rather than stacking a
           // duplicate — Home refreshes via its focus effect.
-          onPress: () => router.dismissTo('/(tabs)'),
+          onPress: () => {
+            reportAbandon('user_exit');
+            router.dismissTo('/(tabs)');
+          },
         },
       ],
     );
@@ -510,11 +847,22 @@ export default function SessionPlayerScreen() {
       score: painBefore,
       type: 'before' as const,
     });
-    trackEvent('session_started', {
-      sessionId: id,
-      weekNumber: sessionMeta?.week_number,
-      sessionNumber: sessionMeta?.session_number,
-    });
+    if (sessionMeta) {
+      painCheckinSubmitted({
+        checkin_type: 'before',
+        score: painBefore,
+        plan_session_id: id,
+        week_number: sessionMeta.week_number,
+      });
+      sessionStarted({
+        plan_session_id: id,
+        week_number: sessionMeta.week_number,
+        session_number: sessionMeta.session_number,
+        exercise_count: exercises.length,
+        pain_before: painBefore,
+        is_first_session: isFirstSession.current,
+      });
+    }
     setPhase('exercise');
   }
 
@@ -540,10 +888,41 @@ export default function SessionPlayerScreen() {
 
     if (error || !data) {
       setIsSubmitting(false);
-      // Most likely the session isn't the user's current one (deep-link / replay / already
-      // completed). Don't corrupt UI state — send them back to Home where the real next
-      // session is surfaced.
+      const reason = error ? classifyCompletionError(error.message) : 'not_current_session';
+      sessionCompletionFailed({ reason, plan_session_id: id });
       hapticWarning();
+
+      // A dropped connection must not throw away a finished workout. Stay on this screen
+      // so Try again re-sends the same completion; the server's pointer guard makes a
+      // duplicate impossible, so retrying is safe.
+      if (reason === 'network') {
+        Alert.alert(
+          'Could not save this session',
+          "The connection dropped. Your session is still here — try again.",
+          [
+            { text: 'Try again', onPress: () => void handleComplete() },
+            { text: 'Not now', style: 'cancel' },
+          ],
+        );
+        return;
+      }
+
+      // Migration 057 gates week N on a ramp decision for week N-1. Saying "this isn't
+      // your current session" here told the user nothing actionable. Home redirects to
+      // /weekly-ramp whenever pending_ramp_week is set, so routing there unblocks them
+      // without this screen having to work out the week number.
+      if (error && error.message.toLowerCase().includes('weekly_ramp_required')) {
+        Alert.alert(
+          'One step first',
+          'Check in on how last week went, then come back and finish this session.',
+          [{ text: 'Continue', onPress: () => router.dismissTo('/(tabs)') }],
+        );
+        return;
+      }
+
+      // Otherwise the session genuinely isn't the user's current one (deep-link / replay
+      // / already completed). Don't corrupt UI state — send them back to Home where the
+      // real next session is surfaced.
       Alert.alert(
         'Could not save this session',
         'This session is no longer your current one. Returning you to your plan.',
@@ -556,26 +935,90 @@ export default function SessionPlayerScreen() {
       ended_week: boolean;
       completed_week: number | null;
       program_done: boolean;
+      ramp_ready?: boolean;
     };
+
+    invalidateTabRefresh('home');
+    invalidateTabRefresh('progress');
 
     if (result.program_done) {
       setIsProgramCompleted(true);
     }
 
-    trackEvent('session_completed', {
-      sessionId: id,
-      weekNumber: sessionMeta?.week_number,
-      sessionNumber: sessionMeta?.session_number,
-    });
+    if (sessionMeta) {
+      painCheckinSubmitted({
+        checkin_type: 'after',
+        score: painAfter,
+        plan_session_id: id,
+        week_number: sessionMeta.week_number,
+      });
+      sessionCompleted({
+        plan_session_id: id,
+        week_number: sessionMeta.week_number,
+        session_number: sessionMeta.session_number,
+        duration_seconds: durationSeconds,
+        exercise_count: exercises.length,
+        skipped_exercise_count: skippedExercises.size,
+        pain_before: painBefore,
+        pain_after: painAfter,
+        pain_delta: painAfter - painBefore,
+        ended_week: result.ended_week,
+        program_done: result.program_done,
+        is_first_session: isFirstSession.current,
+      });
 
-    // End-of-week (and not the final week): route to the weekly hybrid ramp.
-    if (result.ended_week && result.completed_week !== null && !result.program_done) {
+      // Activation timestamp is set-once: a later completion must not overwrite
+      // it, or the activation cohort silently slides forward in time.
+      setPersonProperties(
+        { program_week: sessionMeta.week_number },
+        { first_session_completed_at: new Date().toISOString() },
+      );
+      isFirstSession.current = false;
+    }
+
+    // Advances review eligibility for every completion, including the end-of-week
+    // ones that route away below without ever rendering the summary.
+    void incrementSessionsCompleted();
+
+    // End-of-week (and not the final week): route to the weekly hybrid ramp
+    // only when every plan session that week is actually completed. A lone
+    // session_number overflow used to land on a ramp that could not save.
+    if (
+      result.ended_week &&
+      result.completed_week !== null &&
+      !result.program_done &&
+      result.ramp_ready !== false
+    ) {
       router.replace(`/weekly-ramp?week=${result.completed_week}`);
       return;
     }
 
     setPhase('complete');
   }
+
+  // Native App Store review sheet. Deliberately not fired from handleComplete:
+  // requesting it mid-navigation loses the sheet silently. Waiting for the
+  // summary's entrance animations to finish means it slides in over the user's
+  // result, which is the moment it has earned.
+  //
+  // Pain is 1–10 with 10 the worst, so a lower "after" is an improvement.
+  useEffect(() => {
+    if (phase !== 'complete') return;
+    const task = InteractionManager.runAfterInteractions(() => {
+      void maybeRequestReviewAfterSession({
+        triggerKey: id,
+        painImproved: painAfter < painBefore,
+        sourceScreen: 'session',
+        planSessionId: id,
+        ...(sessionMeta ? { weekNumber: sessionMeta.week_number } : {}),
+      });
+    });
+    return () => task.cancel();
+    // Intentionally keyed to the phase transition only: the pain values are
+    // frozen by the time this screen renders, and re-running on them would
+    // re-arm the task on every unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, id]);
 
   if (!loaded) {
     return (
@@ -642,6 +1085,7 @@ export default function SessionPlayerScreen() {
         buttonLabel="Begin Session"
         onSubmit={handleBeginSession}
         insets={insets}
+        safetyNote
       />
     );
   }
@@ -667,7 +1111,7 @@ export default function SessionPlayerScreen() {
             <View style={styles.nextExCard}>
               <Text style={styles.nextExLabel}>
                 {isSetRest
-                  ? `Up next — Set ${nextSetNumber} of ${nextEx.sets ?? 1}`
+                  ? `Up next: Set ${nextSetNumber} of ${nextEx.sets ?? 1}`
                   : 'Up next'}
               </Text>
               <Text style={styles.nextExName}>{nextEx.name}</Text>
@@ -676,10 +1120,6 @@ export default function SessionPlayerScreen() {
               </Text>
             </View>
           )}
-
-          <Text style={styles.breatheCue}>
-            {breatheIn ? 'Breathe in\u2026' : 'Breathe out\u2026'}
-          </Text>
 
           <TouchableOpacity style={styles.skipButton} onPress={skipRest}>
             <Text style={styles.skipButtonText}>Skip Rest</Text>
@@ -720,12 +1160,30 @@ export default function SessionPlayerScreen() {
 
         <View style={styles.videoContainer}>
           {videoUrl ? (
-            <VideoView
-              player={player}
-              style={styles.videoFullScreen}
-              contentFit="cover"
-              nativeControls={false}
-            />
+            <>
+              <VideoView
+                player={player}
+                style={styles.videoFullScreen}
+                contentFit="cover"
+                nativeControls={false}
+                pointerEvents="none"
+              />
+              <TouchableOpacity
+                style={styles.videoHitArea}
+                onPress={toggleVideoPlayback}
+                activeOpacity={1}
+                accessibilityRole="button"
+                accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
+              >
+                <View style={[styles.videoControl, !isPlaying && styles.videoControlPaused]}>
+                  <Text
+                    style={[styles.videoControlGlyph, !isPlaying && styles.videoControlPlayGlyph]}
+                  >
+                    {isPlaying ? '❚❚' : '▶'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </>
           ) : videoError ? (
             <View style={styles.videoPlaceholder}>
               <Text style={styles.videoPlaceholderText}>Video unavailable</Text>
@@ -734,15 +1192,22 @@ export default function SessionPlayerScreen() {
                 onPress={() => {
                   setVideoError(false);
                   const ex = exercises[exerciseIndex];
-                  if (ex?.cloudflare_stream_id) {
-                    supabase.functions
-                      .invoke('get-video-url', { body: { exerciseId: ex.id } })
-                      .then(({ data, error }) => {
-                        if (error || !data?.url) setVideoError(true);
-                        else setVideoUrl(data.url);
-                      })
-                      .catch(() => setVideoError(true));
-                  }
+                  if (!ex) return;
+                  // Always re-resolve through the edge function: a stale signed URL is a
+                  // likely reason playback failed, so reusing the old one would just fail
+                  // again.
+                  supabase.functions
+                    .invoke('get-video-url', { body: { exerciseId: ex.id } })
+                    .then(({ data, error }) => {
+                      if (error || !data?.url) {
+                        setVideoError(true);
+                        return;
+                      }
+                      const url = data.url as string;
+                      prefetchedUrls.current.set(ex.id, url);
+                      void getVideoUri(url).then(setVideoUrl);
+                    })
+                    .catch(() => setVideoError(true));
                 }}
               >
                 <Text style={styles.retryText}>Retry</Text>
@@ -767,7 +1232,7 @@ export default function SessionPlayerScreen() {
           {currentExercise.duration_seconds ? (
             <Text style={styles.countdownText}>
               {currentExercise.reps
-                ? `Hold ${holdRep} of ${currentExercise.reps} — ${countdown}s`
+                ? `Hold ${holdRep} of ${currentExercise.reps} · ${countdown}s`
                 : `${countdown}s remaining`}
             </Text>
           ) : currentExercise.reps ? (
@@ -948,24 +1413,16 @@ function SessionPreviewScreen({
   onBack: () => void;
   insets: { top: number; bottom: number };
 }) {
-  const entryOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(entryOpacity, {
-      toValue: 1,
-      duration: 400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [entryOpacity]);
+  // Visible during the native push — fading the whole preview from 0 made
+  // the incoming session screen look blank, then pop in after the slide.
 
   const focusLabel = sessionMeta ? PHASE_LABEL[sessionMeta.phase] ?? sessionMeta.phase : '';
 
   return (
-    <Animated.View
+    <View
       style={[
         previewStyles.container,
-        { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 32), opacity: entryOpacity },
+        { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 32) },
       ]}
     >
       <View style={[previewStyles.topBar, { marginTop: 8 }]}>
@@ -987,7 +1444,7 @@ function SessionPreviewScreen({
 
         <View style={previewStyles.grid}>
           <View style={previewStyles.gridTile}>
-            <Text style={previewStyles.gridValue}>{sessionMeta?.duration_minutes ?? '—'}</Text>
+            <Text style={previewStyles.gridValue}>{sessionMeta?.duration_minutes ?? '-'}</Text>
             <Text style={previewStyles.gridLabel}>Minutes</Text>
           </View>
           <View style={previewStyles.gridTile}>
@@ -995,7 +1452,7 @@ function SessionPreviewScreen({
             <Text style={previewStyles.gridLabel}>Exercises</Text>
           </View>
           <View style={[previewStyles.gridTile, previewStyles.gridTileWide]}>
-            <Text style={previewStyles.gridValueSmall}>{focusLabel || '—'}</Text>
+            <Text style={previewStyles.gridValueSmall}>{focusLabel || '-'}</Text>
             <Text style={previewStyles.gridLabel}>Main Focus</Text>
           </View>
           <View style={[previewStyles.gridTile, previewStyles.gridTileWide]}>
@@ -1011,10 +1468,11 @@ function SessionPreviewScreen({
         </View>
       </View>
 
+      <MedicalDisclaimer style={previewStyles.disclaimer} />
       <TouchableOpacity style={previewStyles.beginButton} onPress={() => { hapticPrimaryAction(); onBegin(); }} activeOpacity={0.85}>
         <Text style={previewStyles.beginButtonText}>Let's go</Text>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -1120,6 +1578,10 @@ const previewStyles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  disclaimer: {
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
   beginButton: {
     height: 56,
     borderRadius: radius.button,
@@ -1140,6 +1602,8 @@ const previewStyles = StyleSheet.create({
 });
 
 // --- Pain Check-In Slider Component ---
+const SLIDER_THUMB = 24;
+
 function PainCheckinView({
   title,
   value,
@@ -1148,6 +1612,7 @@ function PainCheckinView({
   onSubmit,
   submitting = false,
   insets,
+  safetyNote = false,
 }: {
   title: string;
   value: number;
@@ -1156,6 +1621,8 @@ function PainCheckinView({
   onSubmit: () => void;
   submitting?: boolean;
   insets: { top: number; bottom: number };
+  /** Shows the pre-exercise safety reminder (before check-in only). */
+  safetyNote?: boolean;
 }) {
   const sliderRef = useRef<View>(null);
   const [sliderLayoutWidth, setSliderLayoutWidth] = useState(0);
@@ -1173,13 +1640,15 @@ function PainCheckinView({
   }
 
   const thumbPosition = sliderLayoutWidth > 0
-    ? ((value - 1) / 9) * (sliderLayoutWidth - 28)
+    ? ((value - 1) / 9) * (sliderLayoutWidth - SLIDER_THUMB)
     : null;
+  const fillWidth = thumbPosition !== null ? thumbPosition + SLIDER_THUMB / 2 : 0;
 
   return (
     <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
       <Text style={styles.checkinTitle}>{title}</Text>
       <Text style={styles.painScore}>{value}</Text>
+      <Text style={styles.painScoreSub}>out of 10</Text>
 
       <View
         ref={sliderRef}
@@ -1190,37 +1659,21 @@ function PainCheckinView({
         onResponderGrant={(e) => handleSliderTouch(e.nativeEvent.pageX)}
         onResponderMove={(e) => handleSliderTouch(e.nativeEvent.pageX)}
       >
+        <View style={styles.sliderRail} pointerEvents="none" />
         {sliderLayoutWidth > 0 && (
-          <View style={styles.sliderFill} pointerEvents="none">
-            <Svg width={sliderLayoutWidth} height={8}>
-              <Defs>
-                <SvgLinearGradient id="painScale" x1="0" y1="0.5" x2="1" y2="0.5">
-                  <Stop offset="0" stopColor={colors.primary} />
-                  <Stop offset="0.5" stopColor={colors.warning} />
-                  <Stop offset="1" stopColor={colors.secondary} />
-                </SvgLinearGradient>
-              </Defs>
-              <Rect x="0" y="0" width={sliderLayoutWidth} height={8} rx={4} fill="url(#painScale)" />
-            </Svg>
-          </View>
+          <View style={[styles.sliderFill, { width: fillWidth }]} pointerEvents="none" />
         )}
-        <View style={styles.sliderTicks}>
-          {Array.from({ length: 10 }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.sliderTick,
-                i + 1 <= value && styles.sliderTickActive,
-              ]}
-            />
-          ))}
-        </View>
         {thumbPosition !== null && (
-          <View style={[styles.sliderThumb, { left: thumbPosition }]} />
+          <View style={[styles.sliderThumb, { left: thumbPosition }]} pointerEvents="none">
+            <View style={styles.sliderThumbDot} />
+          </View>
         )}
       </View>
 
-      <Text style={styles.sliderHint}>1 = No pain · 10 = Severe pain</Text>
+      <View style={styles.sliderEnds}>
+        <Text style={styles.sliderEndLabel}>None</Text>
+        <Text style={styles.sliderEndLabel}>Severe</Text>
+      </View>
 
       <TouchableOpacity
         style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
@@ -1229,6 +1682,13 @@ function PainCheckinView({
       >
         <Text style={styles.primaryButtonText}>{submitting ? 'Saving\u2026' : buttonLabel}</Text>
       </TouchableOpacity>
+
+      {safetyNote && (
+        <Text style={styles.safetyNote}>
+          Stop if pain is severe, spreading, or with numbness or weakness. See a
+          clinician. Remedy is not medical care.
+        </Text>
+      )}
     </View>
   );
 }
@@ -1244,74 +1704,87 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   checkinTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 20,
+    marginBottom: 28,
     textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  safetyNote: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: 16,
   },
   painScore: {
-    fontSize: 56,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 32,
+    fontSize: 64,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    letterSpacing: -1.5,
+    lineHeight: 72,
     fontVariant: ['tabular-nums'],
+  },
+  painScoreSub: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textTertiary,
+    marginBottom: 40,
+    letterSpacing: 0.3,
   },
 
   // Slider
   sliderTrack: {
     width: '100%',
-    height: 48,
+    height: 44,
     justifyContent: 'center',
-    marginBottom: 8,
+  },
+  sliderRail: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 20,
+    height: 4,
+    borderRadius: radius.circle,
+    backgroundColor: colors.border,
   },
   sliderFill: {
     position: 'absolute',
     left: 0,
-    right: 0,
     top: 20,
-    height: 8,
+    height: 4,
     borderRadius: radius.circle,
-    opacity: 0.85,
+    backgroundColor: colors.primary,
   },
   sliderThumb: {
     position: 'absolute',
     top: 10,
-    width: 28,
-    height: 28,
+    width: SLIDER_THUMB,
+    height: SLIDER_THUMB,
     borderRadius: radius.circle,
     backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...shadows.medium,
-    shadowOpacity: 0.18,
   },
-  sliderTicks: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 20,
+  sliderThumbDot: {
+    width: 8,
     height: 8,
+    borderRadius: radius.circle,
+    backgroundColor: colors.primary,
+  },
+  sliderEnds: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
+    marginTop: 10,
+    marginBottom: 36,
   },
-  sliderTick: {
-    width: 4,
-    height: 4,
-    borderRadius: radius.circle,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-  },
-  sliderTickActive: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-  },
-  sliderHint: {
+  sliderEndLabel: {
     fontSize: 13,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    marginBottom: 32,
-    textAlign: 'center',
+    lineHeight: 18,
+    color: colors.textTertiary,
     letterSpacing: 0.2,
   },
 
@@ -1387,7 +1860,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
     ...shadows.low,
   },
   nextExLabel: {
@@ -1407,12 +1880,6 @@ const styles = StyleSheet.create({
   nextExDuration: {
     fontSize: 14,
     color: colors.textSecondary,
-  },
-  breatheCue: {
-    fontSize: 16,
-    color: colors.secondary,
-    fontStyle: 'italic',
-    marginBottom: 24,
   },
   skipButton: {
     paddingVertical: 12,
@@ -1497,6 +1964,31 @@ const styles = StyleSheet.create({
   videoFullScreen: {
     width: '100%',
     height: '100%',
+  },
+  videoHitArea: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    padding: 12,
+  },
+  videoControl: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.circle,
+    backgroundColor: 'rgba(28, 28, 30, 0.48)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoControlPaused: {
+    backgroundColor: 'rgba(28, 28, 30, 0.72)',
+  },
+  videoControlGlyph: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  videoControlPlayGlyph: {
+    paddingLeft: 3,
   },
   videoPlaceholder: {
     width: '100%',

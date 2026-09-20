@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: config.name ?? 'remedy',
+    name: config.name ?? 'Remedy',
     slug: config.slug ?? 'remedy',
     plugins,
   };

@@ -20,18 +20,73 @@ const env = Object.fromEntries(
         return [] as string[];
       }
     })
-    .filter((l) => l.includes('='))
+    .filter((l) => l.includes('=') && !l.trimStart().startsWith('#'))
     .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]),
 );
+
+// Real environment wins, so credentials can be passed for a single run without being
+// written into .env.local.
+for (const [k, v] of Object.entries(process.env)) {
+  if (v) env[k] = v;
+}
 const URL_ = env.EXPO_PUBLIC_SUPABASE_URL!;
 const ANON = env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-const signup = await fetch(`${URL_}/auth/v1/signup`, {
-  method: 'POST',
-  headers: { apikey: ANON, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: `verify+${Date.now()}@example.com`, password: 'Verify-12345!' }),
-});
-const { access_token: token } = await signup.json();
+// The catalog tables below are `SELECT` for role `authenticated`, so this needs a real
+// session. Two ways to get one, in order:
+//
+//   1. VERIFY_EMAIL / VERIFY_PASSWORD for an existing CONFIRMED account (.env.local).
+//   2. An ad-hoc signup — only works while email confirmation is disabled.
+//
+// This used to do (2) unconditionally and read access_token off the signup response.
+// Once email confirmation was switched on, signup stopped returning a session, so the
+// script sent `Bearer undefined` and every read failed with a bare
+// `401 Expected 3 parts in JWT; got 1`. It also used @example.com, which Supabase
+// rejects with a 500.
+async function getToken(): Promise<string> {
+  const authHeaders = { apikey: ANON, 'Content-Type': 'application/json' };
+
+  const password = async (email: string, pass: string): Promise<string | null> => {
+    const res = await fetch(`${URL_}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ email, password: pass }),
+    });
+    const body = (await res.json()) as { access_token?: string };
+    return body.access_token ?? null;
+  };
+
+  if (env.VERIFY_EMAIL && env.VERIFY_PASSWORD) {
+    const token = await password(env.VERIFY_EMAIL, env.VERIFY_PASSWORD);
+    if (token) return token;
+    throw new Error(
+      'VERIFY_EMAIL / VERIFY_PASSWORD were set but sign-in failed. Check the credentials ' +
+        'and that the account is confirmed.',
+    );
+  }
+
+  const email = `verify+${Date.now()}@gmail.com`;
+  const pass = `Verify-${Date.now()}!`;
+  const res = await fetch(`${URL_}/auth/v1/signup`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ email, password: pass }),
+  });
+  if (!res.ok) throw new Error(`signup -> ${res.status}: ${await res.text()}`);
+  const body = (await res.json()) as { access_token?: string };
+  if (body.access_token) return body.access_token;
+
+  const token = await password(email, pass);
+  if (token) return token;
+
+  throw new Error(
+    'Could not obtain a session: email confirmation is enabled, so a fresh signup cannot ' +
+      'sign in. Add VERIFY_EMAIL and VERIFY_PASSWORD for an existing confirmed account to ' +
+      '.env.local and re-run.',
+  );
+}
+
+const token = await getToken();
 
 async function q<T>(path: string): Promise<T> {
   const res = await fetch(`${URL_}/rest/v1/${path}`, {

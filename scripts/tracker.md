@@ -1,4 +1,4 @@
-# Exercise Video Tracker
+﻿# Exercise Video Tracker
 
 Status: ✅ done | 🔄 in progress | ⬜ todo  
 Method: **Luma** (primary) | **YT** (YouTube → rembg pipeline, legacy)
@@ -27,7 +27,9 @@ Cut (do NOT film): Pelvic Tilt, Knee-to-Chest, Supine Trunk Rotation, Standing B
 
 ---
 
-## Progress: 7 / 30 done
+## Progress: 10 / 30 done
+
+Wire to DB + Storage only after the batch is complete (do not drip-wire).
 
 | Done | Exercise | File Name | Method | Notes |
 |---|---|---|---|---|
@@ -38,6 +40,9 @@ Cut (do NOT film): Pelvic Tilt, Knee-to-Chest, Supine Trunk Rotation, Standing B
 | ✅ | Glute Bridge | `glute_bridge` | Luma | Gold-standard prompt template |
 | ✅ | Child's Pose Hold | `childs_pose` | Luma | |
 | ✅ | Single-Leg Glute Bridge | `single_leg_glute_bridge` | Luma (skill) | Done via skill test run; file needs moving into `scripts/output/` |
+| ✅ | Bodyweight Hip Hinge | `hip_hinge` | Kling | In PT videos folder; wire later with batch |
+| ✅ | Bodyweight Squat | `bodyweight_squat` | Kling | Wire later with batch |
+| ✅ | Thoracic Extension (Chair-Assisted) | `thoracic_extension_chair` | Kling | Wire later with batch — Kling win |
 
 ---
 
@@ -52,16 +57,16 @@ Cut (do NOT film): Pelvic Tilt, Knee-to-Chest, Supine Trunk Rotation, Standing B
 | 2 | Dead Bug | `dead_bug` | Luma | ✅ |
 | 3 | Glute Bridge | `glute_bridge` | Luma | ✅ |
 | 4 | Single-Leg Glute Bridge | `single_leg_glute_bridge` | Luma | ✅ |
-| 5 | Supine Figure-4 Stretch | `figure_4_stretch` | Luma | ⬜ |
-| 6 | Supine Hamstring Stretch | `hamstring_stretch` | Luma | ⬜ |
+| 5 | Supine Figure-4 Stretch | `figure_4_stretch` | — | ⛔ AI failed (too complex); revisit later |
+| 6 | Supine Hamstring Stretch | `hamstring_stretch` | Kling | ✅ (wire later) |
 
 ## Tier 1 — Floor (Side-Lying)
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 7 | Clamshell | `clamshell` | Pexels / hire later | ⛔ AI dead (I2V + Motion Control failed); placeholder or film |
-| 8 | Open-Book Rotation | `open_book_rotation` | Luma | ⬜ |
-| 9 | Side Plank (Knees) | `side_plank_knees` | Luma | ⬜ |
-| 10 | Side Plank (Full) | `side_plank_full` | Luma | ⬜ |
+| 7 | Clamshell | `clamshell` | Kling | 🔄 v3 prompt ready — retry with clothing spec (see luma_notes) |
+| 8 | Open-Book Rotation | `open_book_rotation` | — | ⛔ AI failed (too complex); revisit later |
+| 9 | Side Plank (Knees) | `side_plank_knees` | Kling | 🔄 v2 prompt ready — clothing coverage added (see luma_notes) |
+| 10 | Side Plank (Full) | `side_plank_full` | Kling | 🔄 v2 prompt ready — clothing coverage added (see luma_notes) |
 
 ## Tier 1 — All Fours
 | # | Exercise | File Name | Method | Status |
@@ -73,35 +78,35 @@ Cut (do NOT film): Pelvic Tilt, Knee-to-Chest, Supine Trunk Rotation, Standing B
 ## Tier 1 — Standing
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 14 | Hip Flexor Stretch (Half-Kneeling) | `hip_flexor_stretch` | Luma | ⬜ |
-| 15 | Bodyweight Hip Hinge | `hip_hinge` | Luma | ⬜ |
-| 16 | Bodyweight Squat | `bodyweight_squat` | Kling | 🔄 v2 regen (see luma_notes) |
-| 17 | Single-Leg RDL (Bodyweight) | `single_leg_rdl` | Luma | ⬜ |
-| 18 | Split Squat | `split_squat` | Luma | ⬜ |
+| 14 | Hip Flexor Stretch (Half-Kneeling) | `hip_flexor_stretch` | Kling | 🔄 generating |
+| 15 | Bodyweight Hip Hinge | `hip_hinge` | Kling | ✅ (wire later) |
+| 16 | Bodyweight Squat | `bodyweight_squat` | Kling | ✅ (wire later) |
+| 17 | Single-Leg RDL (Bodyweight) | `single_leg_rdl` | Kling | 🔄 generating |
+| 18 | Split Squat | `split_squat` | Kling | 🔄 generating |
 
 ## Tier 1 — Seated
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 19 | Thoracic Extension (Chair) | `thoracic_extension_chair` | Luma | ⬜ |
+| 19 | Thoracic Extension (Chair) | `thoracic_extension_chair` | Kling | ✅ (wire later) |
 
 ## Tier 2 — Bands / Dumbbells
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 20 | Banded Clamshell | `banded_clamshell` | Luma | ⬜ |
-| 21 | Banded Row | `banded_row` | Luma | ⬜ |
-| 22 | Banded Romanian Deadlift | `banded_rdl` | Luma | ⬜ |
-| 23 | Dumbbell Romanian Deadlift | `dumbbell_rdl` | Luma | ⬜ |
-| 24 | Goblet Squat | `goblet_squat` | Luma | ⬜ |
-| 25 | Suitcase Carry | `suitcase_carry` | Luma | ⬜ |
+| 20 | Banded Clamshell | `banded_clamshell` | Kling | 🔄 v1 prompt ready — clothing coverage added (see luma_notes) |
+| 21 | Banded Row | `banded_row` | Kling | 🔄 generating |
+| 22 | Banded Romanian Deadlift | `banded_rdl` | Kling | 🔄 v2 prompt ready — soft-knee + ROM fix + clothing (see luma_notes) |
+| 23 | Dumbbell Romanian Deadlift | `dumbbell_rdl` | Kling | 🔄 generating |
+| 24 | Goblet Squat | `goblet_squat` | Kling | 🔄 generating |
+| 25 | Suitcase Carry | `suitcase_carry` | — | ⛔ AI failed / unclear; revisit later |
 
 ## Tier 3 — Gym
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 26 | Barbell Hip Thrust | `barbell_hip_thrust` | Luma | ⬜ |
-| 27 | Seated Cable Row | `seated_cable_row` | Luma | ⬜ |
-| 28 | Leg Press | `leg_press` | Luma | ⬜ |
-| 29 | Kettlebell Deadlift | `kettlebell_deadlift` | Luma | ⬜ |
-| 30 | Back Extension (45°) | `back_extension_45` | Luma | ⬜ |
+| 26 | Barbell Hip Thrust | `barbell_hip_thrust` | Kling | ⚠ weird — keep / revisit later |
+| 27 | Seated Cable Row | `seated_cable_row` | Kling | 🔄 generating |
+| 28 | Leg Press | `leg_press` | Kling | ✅ v2 live on R2 (`leg_press_v2.mp4`) |
+| 29 | Kettlebell Deadlift | `kettlebell_deadlift` | Kling | ✅ v7 live on R2 (`kettlebell_deadlift_v7.mp4`) |
+| 30 | Back Extension (45°) | `back_extension_45` | Kling | ✅ v3 live on R2 (`back_extension_45_v3.mp4`) |
 
 ---
 

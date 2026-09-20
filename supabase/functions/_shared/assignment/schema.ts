@@ -8,7 +8,7 @@ import { z } from 'https://esm.sh/zod@3.23.8';
 export const painLocationSchema = z.enum(['upper', 'lower', 'all']);
 export const painDurationSchema = z.enum(['acute', 'subacute', 'chronic']);
 // Multi-select: >=1 pain types. 'multiple' removed — multi-select replaces it.
-export const painTypeSchema = z.array(z.enum(['stiffness', 'ache', 'sharp'])).min(1);
+export const painTypeSchema = z.array(z.enum(['stiffness', 'ache', 'sharp', 'nerve'])).min(1);
 export const activityLevelSchema = z.enum(['sedentary', 'light', 'active', 'athlete']);
 // Multi-select: >=1 pain triggers.
 export const painTriggerSchema = z.array(
@@ -29,7 +29,7 @@ export const answersSchema = z
     pain_trigger: painTriggerSchema,
     equipment: equipmentSchema,
     main_goal: mainGoalSchema,
-    sessions_per_week_preference: z.number().int().min(3).max(5).nullable(),
+    sessions_per_week_preference: z.number().int().min(3).max(7).nullable(),
   })
   .strict();
 
@@ -42,6 +42,23 @@ export const requestSchema = z
     start_week: z.number().int().min(1).max(52).optional(),
     preview_only: z.boolean().optional(),
     answers: answersSchema.optional(),
+    apply_pending: z.boolean().optional(),
+  })
+  .strict();
+
+export const applyProgramAnswersRequestSchema = z
+  .object({
+    answers: answersSchema,
+  })
+  .strict();
+
+export const applyProgramAnswersResultSchema = z
+  .object({
+    saved: z.literal(true),
+    patched: z.array(z.enum(['equipment', 'sessions_per_week_preference'])),
+    pending_apply_week: z.number().int().nullable(),
+    apply_now: z.boolean(),
+    action: z.enum(['noop', 'patched', 'scheduled', 'apply_now', 'saved_only']),
   })
   .strict();
 

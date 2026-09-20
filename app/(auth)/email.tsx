@@ -11,10 +11,24 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { getEmailConfirmRedirectUrl, getPasswordRecoveryRedirectUrl } from '../../lib/auth-redirects';
+import {
+  friendlyAuthError,
+  passwordMeetsComplexity,
+  passwordRequirementHint,
+} from '../../lib/passwordValidation';
 import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError, hapticSelection } from '../../lib/haptics';
+import {
+  abandonAuthAttempt,
+  beginAuthAttempt,
+  classifyAuthError,
+  failAuthAttempt,
+  useHasPendingPurchase,
+} from '../../lib/analytics/authAttempt';
+import { passwordResetRequested } from '../../lib/analytics/events/auth';
 
 export default function EmailAuthScreen() {
   const router = useRouter();
@@ -22,14 +36,20 @@ export default function EmailAuthScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
   const [isSignUp, setIsSignUp] = useState(mode === 'signup');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const hasPendingPurchase = useHasPendingPurchase();
 
-  async function handleSubmit() {
+  function clearFeedback() {
     setError(null);
     setSuccess(null);
+  }
+
+  async function handleSubmit() {
+    clearFeedback();
 
     if (!email.trim() || !password.trim()) {
       hapticError();
@@ -37,18 +57,41 @@ export default function EmailAuthScreen() {
       return;
     }
 
+    if (isSignUp) {
+      if (password.length < 8) {
+        hapticError();
+        setError('Password must be at least 8 characters.');
+        return;
+      }
+      if (!passwordMeetsComplexity(password)) {
+        hapticError();
+        setError('Password must include uppercase, lowercase, and a number.');
+        return;
+      }
+      if (password !== confirmPw) {
+        hapticError();
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
     hapticPrimaryAction();
+    beginAuthAttempt({ isSignUp, method: 'email', sourceScreen: 'email', hasPendingPurchase });
     setLoading(true);
     try {
       if (isSignUp) {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: { emailRedirectTo: getEmailConfirmRedirectUrl() },
         });
         if (signUpError) throw signUpError;
 
         if (data.user && !data.session) {
-          setSuccess('Check your email for a confirmation link, then sign in.');
+          // No session means identify() never fires, so the attempt would sit
+          // pending and wrongly attach to whichever auth completes next.
+          abandonAuthAttempt();
+          setSuccess('Check your email to confirm your account, then sign in.');
           return;
         }
       } else {
@@ -59,17 +102,21 @@ export default function EmailAuthScreen() {
         if (signInError) throw signInError;
       }
     } catch (e: unknown) {
-      const err = e as { message?: string };
+      failAuthAttempt(classifyAuthError(e));
       hapticError();
-      setError(err.message ?? 'Something went wrong');
+      setError(
+        friendlyAuthError(
+          e,
+          isSignUp ? 'Could not create your account. Please try again.' : 'Could not sign in. Please try again.',
+        ),
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function handleForgotPassword() {
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
     if (!email.trim()) {
       hapticError();
       setError('Enter your email first, then tap reset.');
@@ -78,17 +125,15 @@ export default function EmailAuthScreen() {
     hapticPrimaryAction();
     setLoading(true);
     try {
-      // redirectTo becomes {{ .RedirectTo }} in the recovery email template, which links
-      // through the auth-bridge function and lands on remedy://auth-callback.
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: 'remedy://auth-callback',
+        redirectTo: getPasswordRecoveryRedirectUrl(),
       });
       if (resetError) throw resetError;
+      passwordResetRequested({ source_screen: 'email' });
       setSuccess('Check your email for a password reset link.');
     } catch (e: unknown) {
-      const err = e as { message?: string };
       hapticError();
-      setError(err.message ?? 'Could not send reset email');
+      setError(friendlyAuthError(e, 'Could not send a reset email. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -131,7 +176,10 @@ export default function EmailAuthScreen() {
           placeholder="Email"
           placeholderTextColor={colors.textSecondary}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            clearFeedback();
+          }}
           autoCapitalize="none"
           keyboardType="email-address"
           textContentType="emailAddress"
@@ -143,11 +191,33 @@ export default function EmailAuthScreen() {
           placeholder="Password"
           placeholderTextColor={colors.textSecondary}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => {
+            setPassword(value);
+            clearFeedback();
+          }}
           secureTextEntry
           textContentType={isSignUp ? 'newPassword' : 'password'}
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
         />
+
+        {isSignUp && (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm password"
+              placeholderTextColor={colors.textSecondary}
+              value={confirmPw}
+              onChangeText={(value) => {
+                setConfirmPw(value);
+                clearFeedback();
+              }}
+              secureTextEntry
+              textContentType="newPassword"
+              autoComplete="new-password"
+            />
+            <Text style={styles.hint}>{passwordRequirementHint()}</Text>
+          </>
+        )}
 
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
@@ -164,23 +234,6 @@ export default function EmailAuthScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => {
-            hapticSelection();
-            setIsSignUp(!isSignUp);
-            setError(null);
-            setSuccess(null);
-          }}
-          style={styles.toggleButton}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.toggleText}>
-            {isSignUp
-              ? 'Already have an account? Sign In'
-              : "Don't have an account? Create Account"}
-          </Text>
-        </TouchableOpacity>
-
         {!isSignUp && (
           <TouchableOpacity
             onPress={handleForgotPassword}
@@ -192,6 +245,28 @@ export default function EmailAuthScreen() {
           </TouchableOpacity>
         )}
         </View>
+      </View>
+
+      {/* Legal assent already collected: explicit checkbox on the onboarding safety
+          gate, plus the browsewrap line on sign-in.tsx which every user passes
+          through to reach this form — a third copy here was redundant. */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          onPress={() => {
+            hapticSelection();
+            setIsSignUp(!isSignUp);
+            setConfirmPw('');
+            clearFeedback();
+          }}
+          style={styles.toggleButton}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.toggleText}>
+            {isSignUp
+              ? 'Already have an account? Sign In'
+              : "Don't have an account? Create Account"}
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -297,6 +372,18 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  hint: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 4,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 4,
   },
   backButton: {
     position: 'absolute',

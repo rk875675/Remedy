@@ -2,22 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
-import { trackEvent } from '../../lib/analytics';
+import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 
 type PriorAttemptAnswer = 'yes' | 'no';
 
-const ICON_SIZE = 17;
-const ICON_COLOR = '#FFFFFF';
-
-const options: { label: string; icon: React.ReactNode; value: PriorAttemptAnswer }[] = [
-  { label: 'Yes', icon: <Feather name="thumbs-up" size={ICON_SIZE} color={ICON_COLOR} />, value: 'yes' },
-  { label: 'No', icon: <Feather name="thumbs-down" size={ICON_SIZE} color={ICON_COLOR} />, value: 'no' },
+const options: { label: string; value: PriorAttemptAnswer }[] = [
+  { label: 'Yes', value: 'yes' },
+  { label: 'No', value: 'no' },
 ];
 
 export default function Q9Screen() {
@@ -25,6 +22,7 @@ export default function Q9Screen() {
   const insets = useSafeAreaInsets();
   const { progress, setLocalAnswer } = useOnboarding();
   useTrackOnboardingStep('q9');
+  const completeStep = useOnboardingStepCompletion();
   // Analytics/intent signal only (not in the strict answers schema). Persisted via
   // progress so it restores on resume/back-navigation.
   const [answer, setAnswer] = useState<PriorAttemptAnswer | null>(
@@ -32,14 +30,26 @@ export default function Q9Screen() {
   );
 
   function handleSelect(value: PriorAttemptAnswer) {
-    setAnswer(value);
-    setLocalAnswer('tried_before', value);
+    const isDeselect = answer === value;
+    onboardingOptionSelected({
+      step_key: 'q9',
+      option_value: value,
+      is_multi_select: false,
+      is_deselect: isDeselect,
+    });
+    if (isDeselect) {
+      setAnswer(null);
+      setLocalAnswer('tried_before', null);
+    } else {
+      setAnswer(value);
+      setLocalAnswer('tried_before', value);
+    }
   }
 
   function handleContinue() {
     if (!answer) return;
-    trackEvent('onboarding_prior_attempts', { tried_before: answer === 'yes' });
-    router.push('/(onboarding)/q6');
+    completeStep();
+    router.push('/(onboarding)/recognize');
   }
 
   return (
@@ -51,7 +61,6 @@ export default function Q9Screen() {
             <OptionCard
               key={opt.value}
               label={opt.label}
-              icon={opt.icon}
               selected={answer === opt.value}
               onPress={() => handleSelect(opt.value)}
             />

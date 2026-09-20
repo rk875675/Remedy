@@ -1,16 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { checkRateLimit } from '../_shared/ratelimit.ts';
+import { checkRateLimitFixedWindow } from '../_shared/ratelimit.ts';
 import { requestSchema, resolvedPlanSchema } from '../_shared/assignment/schema.ts';
-import {
-  buildPlan,
-  type AssignmentRulesConfig,
-  type Answers,
-  type CatalogExercise,
-  type ReplacementEntry,
-  type TemplateInput,
-  type TemplateSession,
-} from '../_shared/assignment/engine.ts';
+import { buildPlan, type Answers } from '../_shared/assignment/engine.ts';
+import { getRebuildEligibility, nextRebuildStamp } from '../_shared/rebuildCooldown.ts';
+import { loadAssignmentContext } from '../_shared/assignment/loadContext.ts';
+import { isPendingApplyDue } from '../_shared/assignment/programAnswers.ts';
 
 // assign-program
 // Materializes a frozen per-user plan snapshot from onboarding answers + the active
@@ -18,9 +13,10 @@ import {
 // can write the RLS-protected snapshot tables.
 //
 // Input (zod strict — see ../_shared/assignment/schema.ts):
-//   { user_id?, start_week?, preview_only?, answers? }
+//   { user_id?, start_week?, preview_only?, answers?, apply_pending? }
 //   - preview_only=true: compute + return the plan WITHOUT writing (match screen).
 //   - answers provided: used directly (preview before onboarding row is saved).
+//   - apply_pending=true: week-boundary flush of saved answers; skips rebuild cooldown.
 //   - otherwise: onboarding_answers row for user_id is loaded.
 
 function json(body: unknown, status = 200): Response {
@@ -58,9 +54,7 @@ Deno.serve(async (req: Request) => {
       const redisUrl = Deno.env.get('UPSTASH_REDIS_REST_URL');
       const redisToken = Deno.env.get('UPSTASH_REDIS_REST_TOKEN');
       if (redisUrl && redisToken) {
-        const rl = await checkRateLimit(
-          redisUrl,
-          redisToken,
+        const rl = await checkRateLimitFixedWindow(
           `ratelimit:assign-program:${authedUserId}`,
           20,
           60,
@@ -92,6 +86,7 @@ Deno.serve(async (req: Request) => {
     // pre-purchase match screen) stays open; the persistence path requires an active
     // entitlement or a dev profile, so a free-tier user can't invoke this directly to
     // generate + store a program without converting.
+    let isDev = false;
     if (!body.preview_only) {
       const [{ data: ent }, { data: prof }] = await Promise.all([
         supabase
@@ -107,8 +102,8 @@ Deno.serve(async (req: Request) => {
         !!ent &&
         ent.is_premium === true &&
         notExpired &&
-        ['active', 'trial', 'dev_trial'].includes(ent.subscription_status);
-      const isDev = prof?.is_dev === true;
+        ['active', 'trial', 'dev_trial', 'cancelled'].includes(ent.subscription_status);
+      isDev = prof?.is_dev === true;
 
       if (!entitled && !isDev) {
         return json({ error: 'not_entitled' }, 403);
@@ -132,68 +127,43 @@ Deno.serve(async (req: Request) => {
       answers = oa as Answers;
     }
 
-    // --- Load rules / catalog / template -------------------------------------
-    const [rulesRes, exercisesRes, templateRes, replacementsRes] = await Promise.all([
-      supabase.from('assignment_rules').select('version, rules').eq('is_active', true).single(),
-      supabase.from('exercises').select('*').eq('is_assignable', true),
-      supabase
-        .from('program_templates')
-        .select('id, week_phase_plan')
-        .eq('is_active', true)
-        .limit(1)
-        .single(),
-      supabase.from('exercise_replacement_groups').select('movement_pattern, exercise_id, priority'),
-    ]);
-
-    if (rulesRes.error || !rulesRes.data) return json({ error: 'no_active_rules' }, 500);
-    if (templateRes.error || !templateRes.data) return json({ error: 'no_active_template' }, 500);
-    if (exercisesRes.error || !exercisesRes.data) return json({ error: 'no_exercises' }, 500);
-
-    const rules = rulesRes.data.rules as AssignmentRulesConfig;
-    const rulesVersion = rulesRes.data.version as number;
-    const templateId = templateRes.data.id as string;
-
-    // Load template sessions + their slots.
-    const { data: tSessions, error: tsErr } = await supabase
-      .from('program_template_sessions')
-      .select('id, session_index, title_template, phase')
-      .eq('template_id', templateId)
-      .order('session_index', { ascending: true });
-    if (tsErr || !tSessions) return json({ error: 'no_template_sessions' }, 500);
-
-    const { data: tSlots, error: slotErr } = await supabase
-      .from('program_template_slots')
-      .select('template_session_id, slot_order, selection_criteria')
-      .in(
-        'template_session_id',
-        tSessions.map((s) => s.id),
-      );
-    if (slotErr) return json({ error: 'no_template_slots' }, 500);
-
-    const slotsBySession = new Map<string, { slot_order: number; selection_criteria: Record<string, unknown> }[]>();
-    for (const slot of tSlots ?? []) {
-      const list = slotsBySession.get(slot.template_session_id) ?? [];
-      list.push({ slot_order: slot.slot_order, selection_criteria: slot.selection_criteria });
-      slotsBySession.set(slot.template_session_id, list);
+    let startWeek = body.start_week ?? 1;
+    let preservePointer = false;
+    if (body.apply_pending && !body.preview_only) {
+      const { data: pendingRow } = await supabase
+        .from('user_programs')
+        .select('current_week, pending_apply_week, active_plan_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      const { data: pendingPlan } = pendingRow?.active_plan_id
+        ? await supabase
+            .from('user_program_plans')
+            .select('duration_weeks')
+            .eq('id', pendingRow.active_plan_id)
+            .maybeSingle()
+        : { data: null };
+      const durationWeeks = pendingPlan?.duration_weeks ?? 5;
+      const currentWeek = pendingRow?.current_week ?? 1;
+      if (currentWeek > durationWeeks) {
+        await supabase
+          .from('user_programs')
+          .update({
+            applied_answers: answers,
+            pending_apply_week: null,
+          })
+          .eq('user_id', userId);
+        return json({ skipped: true });
+      }
+      if (!isPendingApplyDue(pendingRow?.pending_apply_week ?? null, currentWeek)) {
+        return json({ skipped: true });
+      }
+      startWeek = currentWeek;
+      preservePointer = true;
     }
 
-    const templateSessions: TemplateSession[] = tSessions.map((s) => ({
-      session_index: s.session_index,
-      title_template: s.title_template,
-      phase: s.phase,
-      slots: (slotsBySession.get(s.id) ?? []).map((sl) => ({
-        slot_order: sl.slot_order,
-        selection_criteria: sl.selection_criteria,
-      })),
-    }));
-
-    const template: TemplateInput = {
-      week_phase_plan: templateRes.data.week_phase_plan as Record<string, Record<string, number>>,
-      sessions: templateSessions,
-    };
-
-    const exercises = exercisesRes.data as unknown as CatalogExercise[];
-    const replacements = (replacementsRes.data ?? []) as ReplacementEntry[];
+    const ctx = await loadAssignmentContext(supabase);
+    if ('error' in ctx) return json({ error: ctx.error }, 500);
+    const { rules, rulesVersion, templateId, template, exercises, replacements } = ctx;
 
     // --- Build the plan -------------------------------------------------------
     const built = buildPlan({
@@ -203,7 +173,7 @@ Deno.serve(async (req: Request) => {
       exercises,
       template,
       replacements,
-      startWeek: body.start_week ?? 1,
+      startWeek,
     });
 
     // Output guard: never persist/return a malformed plan.
@@ -226,6 +196,42 @@ Deno.serve(async (req: Request) => {
           })),
         }));
 
+    // Rebuild cooldown: only when replacing an existing active plan. First-time
+    // assignment is never blocked. Dev accounts skip so local testing is not locked.
+    let rebuildMeta: {
+      last_program_rebuild_at: string | null;
+      last_program_rebuild_grace_used: boolean;
+    } | null = null;
+    if (!body.preview_only) {
+      const { data: upRow } = await supabase
+        .from('user_programs')
+        .select('active_plan_id, last_program_rebuild_at, last_program_rebuild_grace_used')
+        .eq('user_id', userId)
+        .maybeSingle();
+      const isRebuild = !!upRow?.active_plan_id && !body.apply_pending;
+      if (isRebuild) {
+        if (!isDev) {
+          const eligibility = getRebuildEligibility(
+            upRow.last_program_rebuild_at ?? null,
+            upRow.last_program_rebuild_grace_used === true,
+          );
+          if (!eligibility.allowed) {
+            return json(
+              {
+                error: 'rebuild_cooldown',
+                next_eligible_at: eligibility.nextEligibleAt?.toISOString() ?? null,
+              },
+              429,
+            );
+          }
+        }
+        rebuildMeta = {
+          last_program_rebuild_at: upRow.last_program_rebuild_at ?? null,
+          last_program_rebuild_grace_used: upRow.last_program_rebuild_grace_used === true,
+        };
+      }
+    }
+
     if (body.preview_only) {
       return json({
         preview: true,
@@ -243,144 +249,35 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- Persist snapshot -----------------------------------------------------
-    // Ordering matters for crash-safety. We build the ENTIRE new snapshot first (plan →
-    // sessions → exercises) while leaving the user's current active plan untouched. Only
-    // once the full snapshot is committed do we supersede the old plan(s) and repoint
-    // user_programs. If any insert fails partway, we delete the partial new plan (children
-    // cascade via FK) and return an error — the user keeps their existing active plan
-    // instead of being stranded with zero active plans / a broken pointer.
-    const newPlanIso = new Date().toISOString();
+    // The RPC holds a transaction-scoped per-user advisory lock, supersedes the old
+    // snapshot, inserts every child row, and updates the user_programs pointer in one
+    // transaction. A failure at any point restores the previous active plan + pointer.
+    const { data: persistedPlanId, error: persistError } = await supabase.rpc(
+      'assign_user_program_snapshot',
+      {
+        p_user_id: userId,
+        p_template_id: templateId,
+        p_plan: plan,
+        p_preserve_pointer: preservePointer,
+      },
+    );
+    if (persistError || typeof persistedPlanId !== 'string') {
+      return json({ error: 'snapshot_persist_failed' }, 500);
+    }
+    const planId = persistedPlanId;
 
-    const { data: planRow, error: planErr } = await supabase
-      .from('user_program_plans')
-      .insert({
-        user_id: userId,
-        template_id: templateId,
-        rules_version: plan.rules_version,
-        program_name: plan.program_name,
-        subtitle: plan.subtitle,
-        tagline: plan.tagline,
-        duration_weeks: plan.duration_weeks,
-        sessions_per_week: plan.sessions_per_week,
-        start_week: plan.start_week,
-        status: 'active',
-        primary_focus: plan.primary_focus,
-        secondary_focus: plan.secondary_focus,
-      })
-      .select('id')
-      .single();
-    if (planErr || !planRow) return json({ error: 'plan_insert_failed' }, 500);
-    const planId = planRow.id as string;
-
-    // Best-effort cleanup of the half-written new plan so a failure can't leave a second
-    // dangling "active" plan behind. Children (sessions/exercises) cascade on delete.
-    const rollbackNewPlan = async () => {
-      await supabase.from('user_program_plans').delete().eq('id', planId);
+    const appliedUpdate: Record<string, unknown> = {
+      applied_answers: answers,
+      pending_apply_week: null,
     };
-
-    const { data: sessionRows, error: sessErr } = await supabase
-      .from('user_plan_sessions')
-      .insert(
-        plan.sessions.map((s) => ({
-          plan_id: planId,
-          week_number: s.week_number,
-          session_number: s.session_number,
-          title: s.title,
-          phase: s.phase,
-          estimated_minutes: s.estimated_minutes,
-          intensity_tier: s.intensity_tier,
-        })),
-      )
-      .select('id, week_number, session_number');
-    if (sessErr || !sessionRows) {
-      await rollbackNewPlan();
-      return json({ error: 'sessions_insert_failed' }, 500);
+    if (rebuildMeta) {
+      const stamp = nextRebuildStamp(
+        rebuildMeta.last_program_rebuild_at,
+        rebuildMeta.last_program_rebuild_grace_used,
+      );
+      Object.assign(appliedUpdate, stamp);
     }
-
-    const sessionIdByKey = new Map<string, string>();
-    for (const row of sessionRows) {
-      sessionIdByKey.set(`${row.week_number}:${row.session_number}`, row.id);
-    }
-
-    const exerciseRows = plan.sessions.flatMap((s) => {
-      const sid = sessionIdByKey.get(`${s.week_number}:${s.session_number}`);
-      if (!sid) return [];
-      return s.exercises.map((e) => ({
-        plan_session_id: sid,
-        exercise_id: e.exercise_id,
-        order_index: e.order_index,
-        sets: e.sets,
-        reps: e.reps,
-        duration_seconds: e.duration_seconds,
-        rest_seconds: e.rest_seconds,
-        load_tier: e.load_tier,
-      }));
-    });
-
-    if (exerciseRows.length > 0) {
-      const { error: exErr } = await supabase
-        .from('user_plan_session_exercises')
-        .insert(exerciseRows);
-      if (exErr) {
-        await rollbackNewPlan();
-        return json({ error: 'exercises_insert_failed' }, 500);
-      }
-    }
-
-    // Snapshot fully materialized — now it is safe to supersede any previously-active
-    // plan(s) for this user (excluding the one we just created).
-    await supabase
-      .from('user_program_plans')
-      .update({ status: 'superseded', superseded_at: newPlanIso })
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .neq('id', planId);
-
-    // Point user_programs at the new plan (create if missing). On a retake the start
-    // week is the next incomplete week.
-    const { data: existingUp } = await supabase
-      .from('user_programs')
-      .select('id, program_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    // The plan snapshot is already committed and the old plan already superseded at
-    // this point — this write's only job is to point user_programs at it. If it fails
-    // (transient DB error, missing programs row on insert, etc.) we must NOT return a
-    // 200 with plan_id: the caller would think assignment succeeded while the pointer
-    // still references the old (now-superseded) plan or nothing at all, silently
-    // stranding the user. Surface the failure so the client's existing retry/recheck
-    // path (building-plan.tsx) runs instead.
-    let pointerError: { message: string } | null = null;
-    if (existingUp) {
-      // started_at is intentionally preserved: a retake mid-program continues the same
-      // journey (Profile's "In Program" stat), it doesn't restart the clock. The dev
-      // Reset Progress flow resets it explicitly via restart_program(p_reset_started_at).
-      const { error } = await supabase
-        .from('user_programs')
-        .update({
-          active_plan_id: planId,
-          current_week: plan.start_week,
-          current_session: 1,
-        })
-        .eq('user_id', userId);
-      pointerError = error;
-    } else {
-      // program_id is legacy-required; point at any seeded program for FK satisfaction.
-      const { data: anyProgram } = await supabase.from('programs').select('id').limit(1).single();
-      const { error } = await supabase.from('user_programs').insert({
-        user_id: userId,
-        program_id: anyProgram?.id,
-        active_plan_id: planId,
-        current_week: plan.start_week,
-        current_session: 1,
-      });
-      pointerError = error;
-    }
-
-    if (pointerError) {
-      return json({ error: 'pointer_update_failed' }, 500);
-    }
+    await supabase.from('user_programs').update(appliedUpdate).eq('user_id', userId);
 
     return json({
       plan_id: planId,

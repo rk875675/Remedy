@@ -30,8 +30,7 @@ const EXERCISE_EQUIPMENT: Record<string, readonly string[]> = {
   'cccc0001-0000-0000-0000-000000000031': ['Exercise mat'], // Side Plank (Full)
   'cccc0001-0000-0000-0000-000000000025': ['Exercise mat'], // Prone Hip Extension
   'cccc0001-0000-0000-0000-000000000026': ['Exercise mat'], // Single-Leg Glute Bridge
-  'cccc0001-0000-0000-0000-000000000027': ['Exercise mat'], // Clamshell
-  'cccc0001-0000-0000-0000-000000000010': ['Exercise mat', 'Resistance band'], // Banded Clamshell
+
   'cccc0001-0000-0000-0000-000000000034': ['Dumbbell'], // Suitcase Carry
   // Strength — open space
   'cccc0001-0000-0000-0000-000000000011': [], // Bodyweight Hip Hinge

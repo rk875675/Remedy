@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { clearPendingPurchase } from '../lib/pendingPurchase';
+import { onboardingAnswersInputSchema } from '../lib/schemas';
+import { parseRecognizeSelected, type RecognizeKey } from '../constants/mindset';
 import type { OnboardingAnswers } from '../types/database';
 
 type AnswerFields = Omit<OnboardingAnswers, 'id' | 'user_id' | 'completed_at' | 'created_at'>;
@@ -23,7 +25,10 @@ export const ONBOARDING_FLOW = [
   'founder',
   'education',
   'q0',
+  'safety',
   'q9',
+  'recognize',
+  'seen',
   'q6',
   'q1',
   'q2',
@@ -41,8 +46,11 @@ export const ONBOARDING_STEP_PATHS: Record<OnboardingStep, string> = {
   welcome: '/(onboarding)',
   founder: '/(onboarding)/founder',
   education: '/(onboarding)/education',
+  safety: '/(onboarding)/safety',
   q0: '/(onboarding)/q0',
   q9: '/(onboarding)/q9',
+  recognize: '/(onboarding)/recognize',
+  seen: '/(onboarding)/seen',
   q6: '/(onboarding)/q6',
   q1: '/(onboarding)/q1',
   q2: '/(onboarding)/q2',
@@ -59,6 +67,18 @@ type LocalSelections = {
   hear_about: string | null;
   tried_before: string | null;
   minutes: number | null;
+  // Set when the safety/consent gate was accepted (ISO timestamp). The gate is a
+  // hard requirement: resume clamps back to it until acceptance exists.
+  safety_accepted_at: string | null;
+  // Safety gate selections, persisted as they are made so back-navigation and
+  // funnel resume restore them (the acceptance timestamp above only exists after
+  // Continue is tapped).
+  has_red_flag: boolean | null;
+  agreed_legal: boolean;
+  // Recognition multi-select (analytics / copy only). Completed even when empty
+  // so resume can leave the screen.
+  recognize_selected: RecognizeKey[];
+  recognize_completed: boolean;
 };
 
 export type OnboardingProgress = { step: OnboardingStep } & LocalSelections;
@@ -69,8 +89,10 @@ export type OnboardingProgress = { step: OnboardingStep } & LocalSelections;
 const STEP_REQUIREMENT: Partial<
   Record<OnboardingStep, (progress: OnboardingProgress, answers: Partial<AnswerFields>) => boolean>
 > = {
+  safety: (p) => p.safety_accepted_at !== null,
   q0: (p) => p.hear_about !== null,
   q9: (p) => p.tried_before !== null,
+  recognize: (p) => p.recognize_completed,
   q6: (_p, a) => Array.isArray(a.main_goal) && a.main_goal.length > 0,
   q1: (_p, a) => !!a.pain_location,
   q2: (_p, a) => !!a.pain_duration,
@@ -100,11 +122,79 @@ export function getResumeStep(
   return progress.step;
 }
 
+/** True only when THIS funnel finished the quiz (safety + every required answer + q8). */
+export function shouldOpenMatch(
+  progress: OnboardingProgress | null,
+  answers: Partial<AnswerFields>,
+): boolean {
+  if (!onboardingAnswersInputSchema.safeParse(answers).success) return false;
+  // Stale complete answers without a live safety acceptance are leftover from a
+  // previous run — do not jump to "Your Program".
+  if (!progress || progress.safety_accepted_at === null) return false;
+  if (getResumeStep(progress, answers) !== 'q8') return false;
+  const requirement = STEP_REQUIREMENT.q8;
+  return !requirement || requirement(progress, answers);
+}
+
+/**
+ * A real in-progress first-run (past welcome, or a safety/q0 selection exists).
+ * A welcome-only flash while a leftover session restores is NOT this — those
+ * users belong on Home.
+ */
+export function hasMeaningfulIncompleteFunnel(
+  progress: OnboardingProgress | null,
+  answers: Partial<AnswerFields>,
+): boolean {
+  if (shouldOpenMatch(progress, answers)) return false;
+  if (!progress) return false;
+  if (ONBOARDING_FLOW.indexOf(progress.step) > 0) return true;
+  return (
+    progress.hear_about !== null ||
+    progress.tried_before !== null ||
+    progress.safety_accepted_at !== null ||
+    progress.agreed_legal ||
+    progress.has_red_flag !== null ||
+    progress.minutes !== null ||
+    progress.recognize_completed ||
+    progress.recognize_selected.length > 0
+  );
+}
+
+type StackRouter = {
+  replace: (href: string) => void;
+  push: (href: string) => void;
+};
+
+/** Rebuild welcome → … → target so swipe-back still works after a resume. */
+export function rebuildOnboardingStack(
+  router: StackRouter,
+  target: OnboardingStep | 'match',
+  _answers: Partial<AnswerFields> = {},
+): void {
+  router.replace(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[0]]);
+  if (target === 'match') {
+    for (let i = 1; i < ONBOARDING_FLOW.length; i++) {
+      router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
+    }
+    router.push('/(onboarding)/match');
+    return;
+  }
+  const targetIndex = ONBOARDING_FLOW.indexOf(target);
+  for (let i = 1; i <= targetIndex; i++) {
+    router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
+  }
+}
+
 const DEFAULT_PROGRESS: OnboardingProgress = {
   step: 'welcome',
   hear_about: null,
   tried_before: null,
   minutes: null,
+  safety_accepted_at: null,
+  has_red_flag: null,
+  agreed_legal: false,
+  recognize_selected: [],
+  recognize_completed: false,
 };
 
 export async function clearStoredAnswers(): Promise<void> {
@@ -126,6 +216,8 @@ export async function clearStoredProgress(): Promise<void> {
 type OnboardingContextType = {
   answers: Partial<AnswerFields>;
   setAnswer: <K extends keyof AnswerFields>(field: K, value: AnswerFields[K]) => void;
+  /** Removes a field from the answers object so bars and the continue guard treat it as unanswered. */
+  clearAnswer: <K extends keyof AnswerFields>(field: K) => void;
   resetAnswers: () => void;
   // Furthest-reached step + restorable local-only selections for funnel resume.
   progress: OnboardingProgress | null;
@@ -198,16 +290,26 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           try {
             const parsed: unknown = JSON.parse(progressRaw);
             if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-              const p = parsed as Partial<OnboardingProgress>;
-              if (
-                typeof p.step === 'string' &&
-                (ONBOARDING_FLOW as readonly string[]).includes(p.step)
-              ) {
+              const p = parsed as Record<string, unknown>;
+              const rawStep = typeof p.step === 'string' ? p.step : null;
+              const step: OnboardingStep | null =
+                rawStep === 'alarm' || rawStep === 'why'
+                  ? 'seen'
+                  : rawStep && (ONBOARDING_FLOW as readonly string[]).includes(rawStep)
+                    ? (rawStep as OnboardingStep)
+                    : null;
+              if (step) {
                 setProgress({
-                  step: p.step as OnboardingStep,
+                  step,
                   hear_about: typeof p.hear_about === 'string' ? p.hear_about : null,
                   tried_before: typeof p.tried_before === 'string' ? p.tried_before : null,
                   minutes: typeof p.minutes === 'number' ? p.minutes : null,
+                  safety_accepted_at:
+                    typeof p.safety_accepted_at === 'string' ? p.safety_accepted_at : null,
+                  has_red_flag: typeof p.has_red_flag === 'boolean' ? p.has_red_flag : null,
+                  agreed_legal: p.agreed_legal === true,
+                  recognize_selected: parseRecognizeSelected(p.recognize_selected),
+                  recognize_completed: p.recognize_completed === true,
                 });
               }
             }
@@ -231,6 +333,16 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     touched.current = true;
     setAnswers((prev) => {
       const next = { ...prev, [field]: value };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }
+
+  function clearAnswer<K extends keyof AnswerFields>(field: K) {
+    touched.current = true;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[field];
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
@@ -287,6 +399,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       value={{
         answers,
         setAnswer,
+        clearAnswer,
         resetAnswers,
         progress,
         setProgressStep,

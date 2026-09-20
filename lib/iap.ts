@@ -11,8 +11,10 @@ import { requireOptionalNativeModule } from 'expo';
 // `.no.trial` variants. A transaction whose product isn't listed here is invisible to
 // purchase capture/restore, which strands the user after a successful Apple charge.
 const REMEDY_PRODUCT_IDS = [
+  'com.remedyapp.weekly',
   'com.remedyapp.monthly',
   'com.remedyapp.annual',
+  'com.remedyapp.weekly.no.trial',
   'com.remedyapp.monthly.no.trial',
   'com.remedyapp.annual.no.trial',
 ];
@@ -81,6 +83,20 @@ export async function getLatestRemedyTransaction(): Promise<IosTransaction | nul
     return remedy.length > 0 ? remedy[remedy.length - 1] : null;
   } catch {
     return null;
+  }
+}
+
+// Opens Apple's native offer-code redemption sheet (Settings-style modal). Apple's
+// sheet cannot be pre-filled — the caller shows the code first so the user can copy
+// it. Returns false (safe no-op) on non-iOS / Expo Go / any native failure; the
+// caller must not claim success just because the sheet opened.
+export async function presentAppleOfferCodeSheet(): Promise<boolean> {
+  if (Platform.OS !== 'ios' || !iap) return false;
+  if (!(await ensureConnection())) return false;
+  try {
+    return (await iap.presentCodeRedemptionSheetIOS()) === true;
+  } catch {
+    return false;
   }
 }
 

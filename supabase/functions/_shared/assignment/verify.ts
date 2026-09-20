@@ -50,7 +50,7 @@ const rules = {
     all_week_bias: { first_half: 'upper', second_half: 'lower' },
     contraindications: [
       {
-        when: { pain_location: ['lower'], pain_type: ['sharp'], pain_duration: ['acute'] },
+        when: { pain_location: ['lower'], pain_type: ['sharp', 'nerve'], pain_duration: ['acute'] },
         exclude_aggravates: ['flexion_loaded'],
         apply_until_week_fraction: 0.5,
       },
@@ -58,10 +58,11 @@ const rules = {
     title_focus: { upper: 'Upper Back', middle: 'Mid Back', lower: 'Lower Back', all: 'Full Back' },
   },
   pain_type: {
-    require_pain_types_safe: { sharp: true, stiffness: false, ache: false },
+    require_pain_types_safe: { sharp: true, nerve: true, stiffness: false, ache: false },
     sharp_bodyweight_only_early: true,
     exclude_aggravates_early: {
       sharp: ['flexion_loaded'],
+      nerve: ['flexion_loaded'],
     },
   },
   pain_trigger: {
@@ -128,7 +129,7 @@ const exercises: CatalogExercise[] = [
   ex({ id: 'C07', name: 'Dead Bug', equipment_tier: 'open_space', pain_areas: ['lower', 'general'], intensity_tier: 2, movement_pattern: 'core_activation', pain_types_safe: ['all'], triggers_addressed: ['bending'], goals_weight: { reduce_pain: 0.8, return_to_exercise: 0.6 }, effectiveness: 5, fatigue_cost: 2, usefulness: 5, aggravates: [], phase: 'activation', duration_seconds: 45, reps: null, duration_minutes_est: 4 }),
   ex({ id: 'C08', name: 'Glute Bridge', equipment_tier: 'open_space', pain_areas: ['lower', 'general'], intensity_tier: 2, movement_pattern: 'glute_activation', pain_types_safe: ['all'], triggers_addressed: ['sitting', 'standing'], goals_weight: { reduce_pain: 0.7, return_to_exercise: 0.6 }, effectiveness: 4, fatigue_cost: 2, usefulness: 5, aggravates: [], phase: 'activation', reps: 12, duration_minutes_est: 4 }),
   ex({ id: 'C09', name: 'Side Plank', equipment_tier: 'open_space', pain_areas: ['lower', 'general'], intensity_tier: 3, movement_pattern: 'spinal_stability', pain_types_safe: ['ache', 'stiffness', 'all'], triggers_addressed: ['standing'], goals_weight: { reduce_pain: 0.7, return_to_exercise: 0.7 }, effectiveness: 4, fatigue_cost: 3, usefulness: 4, aggravates: [], phase: 'activation', duration_seconds: 30, reps: null, duration_minutes_est: 3 }),
-  ex({ id: 'C10', name: 'Banded Clamshell', equipment_tier: 'bands_dumbbells', pain_areas: ['lower', 'general'], intensity_tier: 2, movement_pattern: 'glute_activation', pain_types_safe: ['all'], triggers_addressed: ['sitting', 'standing'], goals_weight: { reduce_pain: 0.6, return_to_exercise: 0.6 }, effectiveness: 3, fatigue_cost: 2, usefulness: 4, aggravates: [], phase: 'activation', reps: 15, duration_minutes_est: 4 }),
+
   ex({ id: 'C11', name: 'Bodyweight Hip Hinge', equipment_tier: 'open_space', pain_areas: ['lower'], intensity_tier: 2, movement_pattern: 'hip_hinge', pain_types_safe: ['all'], triggers_addressed: ['bending'], goals_weight: { reduce_pain: 0.7, return_to_exercise: 0.7 }, effectiveness: 4, fatigue_cost: 2, usefulness: 5, aggravates: [], phase: 'strength', reps: 12, duration_minutes_est: 4 }),
   ex({ id: 'C12', name: 'Banded RDL', equipment_tier: 'bands_dumbbells', pain_areas: ['lower', 'general'], intensity_tier: 3, movement_pattern: 'hip_hinge', pain_types_safe: ['ache', 'stiffness', 'all'], triggers_addressed: ['bending', 'exercise'], goals_weight: { return_to_exercise: 0.8, reduce_pain: 0.5 }, effectiveness: 4, fatigue_cost: 3, usefulness: 4, aggravates: [], phase: 'strength', reps: 12, duration_minutes_est: 5 }),
   ex({ id: 'C13', name: 'Dumbbell RDL', equipment_tier: 'bands_dumbbells', pain_areas: ['lower', 'general'], intensity_tier: 4, movement_pattern: 'posterior_chain_strength', pain_types_safe: ['ache', 'all'], triggers_addressed: ['bending', 'exercise'], goals_weight: { return_to_exercise: 0.9 }, effectiveness: 4, fatigue_cost: 4, usefulness: 4, aggravates: [], phase: 'strength', reps: 10, duration_minutes_est: 5 }),
@@ -214,8 +215,7 @@ const replacements: ReplacementEntry[] = [
   { movement_pattern: 'core_activation', exercise_id: 'C07', priority: 10 },
   { movement_pattern: 'core_activation', exercise_id: 'C20', priority: 30 },
   { movement_pattern: 'glute_activation', exercise_id: 'C08', priority: 10 },
-  { movement_pattern: 'glute_activation', exercise_id: 'C10', priority: 20 },
-  { movement_pattern: 'glute_activation', exercise_id: 'C15', priority: 30 },
+  { movement_pattern: 'glute_activation', exercise_id: 'C15', priority: 20 },
   { movement_pattern: 'spinal_stability', exercise_id: 'C06', priority: 10 },
   { movement_pattern: 'spinal_stability', exercise_id: 'C09', priority: 20 },
   { movement_pattern: 'hip_hinge', exercise_id: 'C11', priority: 10 },

@@ -10,12 +10,14 @@ import { X509Certificate, cryptoProvider } from 'https://esm.sh/@peculiar/x509@1
 // @peculiar/x509 needs a WebCrypto engine; Deno's global crypto implements SubtleCrypto.
 cryptoProvider.set(crypto as unknown as Crypto);
 
-const BUNDLE_ID = 'com.remedyapp.ios';
+const BUNDLE_ID = 'com.remedyappco.ios';
 // Must cover every product the Superwall paywall can sell — the live paywall uses the
 // `.no.trial` variants; rejecting them here fails verification after a real purchase.
 const ALLOWED_PRODUCT_IDS = new Set([
+  'com.remedyapp.weekly',
   'com.remedyapp.monthly',
   'com.remedyapp.annual',
+  'com.remedyapp.weekly.no.trial',
   'com.remedyapp.monthly.no.trial',
   'com.remedyapp.annual.no.trial',
 ]);
@@ -41,6 +43,11 @@ export interface AppleVerifyResult {
   // Informational only (from the transaction's `environment` claim). Recorded on the
   // entitlement row for visibility; NEVER a reason to reject a grant.
   isSandbox?: boolean;
+  // Apple's verified price in **milliunits** of `currency` (12.99 USD → 12990), plus the
+  // ISO 4217 code. Analytics-only: preferred over a hardcoded price table so a change in
+  // App Store Connect can't silently rot our revenue numbers. Absent on older transactions.
+  priceMilliunits?: number;
+  currency?: string;
 }
 
 async function buildAppleAuthJwt(
@@ -49,13 +56,13 @@ async function buildAppleAuthJwt(
   privateKeyPem: string,
 ): Promise<string> {
   const privateKey = await importPKCS8(privateKeyPem, 'ES256');
-  return new SignJWT({})
+  // Custom claims belong in the SignJWT constructor payload (jose has no .claim()).
+  return new SignJWT({ bid: BUNDLE_ID })
     .setProtectedHeader({ alg: 'ES256', kid: keyId, typ: 'JWT' })
     .setIssuer(issuerId)
     .setIssuedAt()
     .setExpirationTime('1h')
     .setAudience(APPLE_AUD)
-    .claim('bid', BUNDLE_ID)
     .sign(privateKey);
 }
 
@@ -100,16 +107,31 @@ function validateTransactionClaims(tx: Record<string, unknown>): AppleVerifyResu
   const originalTransactionId = tx['originalTransactionId'] as string | undefined;
   const isSandbox = tx['environment'] === 'Sandbox';
 
-  return { valid: true, productId, expiresDate, inTrialPeriod, originalTransactionId, isSandbox };
+  const priceMilliunits = typeof tx['price'] === 'number' ? (tx['price'] as number) : undefined;
+  const currency = typeof tx['currency'] === 'string' ? (tx['currency'] as string) : undefined;
+
+  return {
+    valid: true,
+    productId,
+    expiresDate,
+    inTrialPeriod,
+    originalTransactionId,
+    isSandbox,
+    priceMilliunits,
+    currency,
+  };
 }
 
-// Full verification of an Apple-signed JWS (used for both the App Store Server API
-// response and the client-supplied fallback token):
-//   1. Pin x5c[2] to Apple Root CA G3 by SHA-256.
-//   2. Verify the cert chain (leaf <- intermediate <- root) incl. validity dates.
-//   3. Verify the JWS ES256 signature with the (now-trusted) leaf key.
-//   4. Validate the transaction claims (bundle, product, revocation, expiry).
-async function verifyAppleSignedJws(jws: string): Promise<AppleVerifyResult> {
+export interface AppleJwsDecodeResult {
+  valid: boolean;
+  error?: string;
+  payload?: Record<string, unknown>;
+}
+
+// Cryptographic verification only (no transaction claim checks). Used by the grant path
+// (which then runs validateTransactionClaims) and by ASSN (which must accept revoked /
+// expired transactions so refunds and expiries can be applied).
+export async function decodeAppleSignedJws(jws: string): Promise<AppleJwsDecodeResult> {
   let x5c: string[] | undefined;
   try {
     x5c = decodeProtectedHeader(jws).x5c as string[] | undefined;
@@ -154,14 +176,143 @@ async function verifyAppleSignedJws(jws: string): Promise<AppleVerifyResult> {
     return { valid: false, error: 'jws_signature_invalid' };
   }
 
-  // 4. Validate the claims.
-  let tx: Record<string, unknown>;
   try {
-    tx = JSON.parse(new TextDecoder().decode(payload)) as Record<string, unknown>;
+    const parsed = JSON.parse(new TextDecoder().decode(payload)) as Record<string, unknown>;
+    return { valid: true, payload: parsed };
   } catch {
     return { valid: false, error: 'jws_payload_invalid' };
   }
-  return validateTransactionClaims(tx);
+}
+
+// Full verification of an Apple-signed transaction JWS (App Store Server API response
+// and client-supplied fallback token): crypto verify, then grant-time claim checks.
+async function verifyAppleSignedJws(jws: string): Promise<AppleVerifyResult> {
+  const decoded = await decodeAppleSignedJws(jws);
+  if (!decoded.valid || !decoded.payload) {
+    return { valid: false, error: decoded.error ?? 'jws_payload_invalid' };
+  }
+  return validateTransactionClaims(decoded.payload);
+}
+
+export interface AssnParseResult {
+  valid: boolean;
+  error?: string;
+  notificationType?: string;
+  subtype?: string | null;
+  notificationUUID?: string;
+  environment?: 'Sandbox' | 'Production';
+  signedDate?: number;
+  transaction?: {
+    originalTransactionId: string;
+    transactionId?: string;
+    productId?: string;
+    expiresDate?: number;
+    revocationDate?: number;
+    priceMilliunits?: number;
+    currency?: string;
+    inTrialPeriod?: boolean;
+  };
+  autoRenewStatus?: number;
+}
+
+/**
+ * Verify and decode an App Store Server Notifications V2 `signedPayload`.
+ * Outer notification JWS + nested `signedTransactionInfo` (and optional renewal info)
+ * are all chain-pinned to Apple Root CA G3. Does NOT reject revoked/expired
+ * transactions — those are the signals the webhook exists to apply.
+ */
+export async function parseAssnSignedPayload(signedPayload: string): Promise<AssnParseResult> {
+  const outer = await decodeAppleSignedJws(signedPayload);
+  if (!outer.valid || !outer.payload) {
+    return { valid: false, error: outer.error ?? 'assn_payload_invalid' };
+  }
+
+  const notificationType = outer.payload['notificationType'];
+  const notificationUUID = outer.payload['notificationUUID'];
+  if (typeof notificationType !== 'string' || typeof notificationUUID !== 'string') {
+    return { valid: false, error: 'assn_missing_type_or_uuid' };
+  }
+
+  const subtypeRaw = outer.payload['subtype'];
+  const subtype = typeof subtypeRaw === 'string' ? subtypeRaw : null;
+  const signedDate =
+    typeof outer.payload['signedDate'] === 'number' ? outer.payload['signedDate'] : undefined;
+
+  const data = outer.payload['data'] as Record<string, unknown> | undefined;
+  if (!data || typeof data !== 'object') {
+    // TEST notifications (and a few others) may omit transaction data.
+    return {
+      valid: true,
+      notificationType,
+      subtype,
+      notificationUUID,
+      signedDate,
+    };
+  }
+
+  const bundleId = data['bundleId'];
+  if (bundleId !== undefined && bundleId !== BUNDLE_ID) {
+    return { valid: false, error: 'bundle_id_mismatch' };
+  }
+
+  const environment =
+    data['environment'] === 'Sandbox'
+      ? 'Sandbox'
+      : data['environment'] === 'Production'
+        ? 'Production'
+        : undefined;
+
+  let transaction: AssnParseResult['transaction'];
+  const signedTx = data['signedTransactionInfo'];
+  if (typeof signedTx === 'string' && signedTx.length > 0) {
+    const txDecoded = await decodeAppleSignedJws(signedTx);
+    if (!txDecoded.valid || !txDecoded.payload) {
+      return { valid: false, error: txDecoded.error ?? 'assn_tx_invalid' };
+    }
+    const tx = txDecoded.payload;
+    if (tx['bundleId'] !== undefined && tx['bundleId'] !== BUNDLE_ID) {
+      return { valid: false, error: 'bundle_id_mismatch' };
+    }
+    const originalTransactionId = tx['originalTransactionId'];
+    if (typeof originalTransactionId !== 'string' || !originalTransactionId) {
+      return { valid: false, error: 'missing_original_transaction_id' };
+    }
+    const productId = typeof tx['productId'] === 'string' ? tx['productId'] : undefined;
+    if (productId && !ALLOWED_PRODUCT_IDS.has(productId)) {
+      return { valid: false, error: 'product_id_mismatch' };
+    }
+    transaction = {
+      originalTransactionId,
+      transactionId: typeof tx['transactionId'] === 'string' ? tx['transactionId'] : undefined,
+      productId,
+      expiresDate: typeof tx['expiresDate'] === 'number' ? tx['expiresDate'] : undefined,
+      revocationDate: typeof tx['revocationDate'] === 'number' ? tx['revocationDate'] : undefined,
+      priceMilliunits: typeof tx['price'] === 'number' ? tx['price'] : undefined,
+      currency: typeof tx['currency'] === 'string' ? tx['currency'] : undefined,
+      inTrialPeriod: tx['offerType'] === 1 && tx['offerDiscountType'] === 'FREE_TRIAL',
+    };
+  }
+
+  let autoRenewStatus: number | undefined;
+  const signedRenewal = data['signedRenewalInfo'];
+  if (typeof signedRenewal === 'string' && signedRenewal.length > 0) {
+    const renewalDecoded = await decodeAppleSignedJws(signedRenewal);
+    if (renewalDecoded.valid && renewalDecoded.payload) {
+      const status = renewalDecoded.payload['autoRenewStatus'];
+      if (typeof status === 'number') autoRenewStatus = status;
+    }
+  }
+
+  return {
+    valid: true,
+    notificationType,
+    subtype,
+    notificationUUID,
+    environment,
+    signedDate,
+    transaction,
+    autoRenewStatus,
+  };
 }
 
 function sleep(ms: number): Promise<void> {

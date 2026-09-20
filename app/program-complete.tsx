@@ -16,6 +16,8 @@ import { colors, serifFont } from '../constants/colors';
 import { radius } from '../constants/spacing';
 import { shadows } from '../constants/shadows';
 import { hapticPrimaryAction, hapticCelebration } from '../lib/haptics';
+import { useAfterTransition } from '../lib/useAfterTransition';
+import { programCompleted, programRestarted } from '../lib/analytics/events/program';
 
 export default function ProgramCompleteScreen() {
   const router = useRouter();
@@ -32,8 +34,10 @@ export default function ProgramCompleteScreen() {
     new Animated.Value(0),
     new Animated.Value(0),
   ]).current;
+  const ready = useAfterTransition();
 
   useEffect(() => {
+    if (!ready) return;
     // Three-beat celebration: light → medium → success.
     hapticCelebration();
     Animated.spring(iconScale, {
@@ -42,10 +46,10 @@ export default function ProgramCompleteScreen() {
       tension: 60,
       useNativeDriver: true,
     }).start();
-  }, [iconScale]);
+  }, [iconScale, ready]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !ready) return;
     Animated.sequence([
       Animated.delay(200),
       Animated.stagger(
@@ -60,7 +64,7 @@ export default function ProgramCompleteScreen() {
         ),
       ),
     ]).start();
-  }, [loaded]);
+  }, [loaded, ready]);
 
   useEffect(() => {
     if (!user) return;
@@ -69,18 +73,26 @@ export default function ProgramCompleteScreen() {
       .select('completed_at')
       .eq('user_id', user.id)
       .then(({ data }) => {
+        let uniqueDays = 0;
         if (data) {
           setTotalSessions(data.length);
-          const uniqueDays = new Set(data.map((c) => c.completed_at.slice(0, 10))).size;
+          uniqueDays = new Set(data.map((c) => c.completed_at.slice(0, 10))).size;
           setDaysActive(uniqueDays);
         }
         setLoaded(true);
+        // Reaching this screen is finishing the program — the single strongest
+        // retention outcome the app has.
+        programCompleted({
+          sessions_completed_count: data?.length ?? 0,
+          days_active_count: uniqueDays,
+        });
       });
   }, [user]);
 
   async function handleRestart() {
     hapticPrimaryAction();
     if (!user) return;
+    programRestarted({ source_screen: 'program_complete' });
     // Server-side reset: direct client UPDATE on user_programs was revoked
     // (migration 029) so the pointer can never be set to arbitrary values.
     await supabase.rpc('restart_program');
@@ -138,7 +150,7 @@ export default function ProgramCompleteScreen() {
       )}
 
       <Animated.Text style={[styles.congrats, revealStyle(1)]}>
-        That&apos;s real work. Consistent movement is what changes things — and you showed up.
+        That&apos;s real work. Consistent movement is what changes things. You showed up.
       </Animated.Text>
 
       <Animated.View style={[styles.buttonGroup, revealStyle(2)]}>

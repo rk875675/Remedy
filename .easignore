@@ -1,0 +1,9 @@
+# Local EAS inspect output — never upload (was doubling archive to ~1GB).
+.eas-archive/
+.eas-prebuild-test/
+
+# Not needed for iOS app builds
+growth-engine/
+ugc-refs/
+scripts/output/
+.cursor/

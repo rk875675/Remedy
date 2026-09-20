@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Remedy — App Store Frames v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #8a8784;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0 140px;
+    gap: 56px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .guide {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 18px 28px;
+    max-width: 860px;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+  }
+  .guide strong { color: #222; }
+
+  .frame-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .frame-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .frame-id {
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 13px;
+    color: #bbb;
+  }
+  .dl-btn {
+    background: #3E6B4E;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .dl-btn:hover { opacity: .85; }
+  .dl-btn:disabled { opacity: .5; cursor: wait; }
+
+  /* ================================================================
+     FRAME — 1290 × 2796 px
+     ================================================================ */
+  .frame {
+    width: 1284px;
+    height: 2778px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .frame--cream { background: #FAF7F4; }
+  .frame--green { background: #33663f; }
+
+  /* ---- App icon ---- */
+  .app-icon {
+    width: 110px;
+    height: 110px;
+    border-radius: 25px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .app-icon--glow {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+    border: 1.5px solid rgba(255,255,255,0.10);
+  }
+  .app-icon img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+  /* ---- Typography ---- */
+  .headline {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: normal;
+    letter-spacing: -0.5px;
+  }
+  .headline--xl { font-size: 102px; line-height: 1.10; }
+  .headline--lg { font-size: 88px;  line-height: 1.12; }
+
+  .subhead {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    font-size: 33px;
+    line-height: 1.45;
+  }
+
+  .t-warm   { color: #F5F0EB; }
+  .t-wsub   { color: rgba(255,255,255,0.55); }
+  .t-dark   { color: #2C2C2E; }
+  .t-green  { color: #3E6B4E; }
+  .t-muted  { color: #888; }
+  .t-center { text-align: center; }
+  .t-left   { text-align: left; }
+
+  /* ================================================================
+     DEVICE (iPhone mockup)
+     Outer = dark housing · Inner = screen clipped to radius
+     ================================================================ */
+  .device {
+    position: absolute;
+  }
+  .device__body {
+    width: 100%;
+    height: 100%;
+    background: #1d1d1f;
+    border-radius: 62px;
+    padding: 10px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.07),
+      0 2px 6px rgba(0,0,0,0.08),
+      0 10px 28px rgba(0,0,0,0.12),
+      0 28px 56px rgba(0,0,0,0.16);
+    position: relative;
+  }
+  .device__body::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 62px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.05) 0%, transparent 40%);
+    pointer-events: none;
+  }
+  .device__screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 52px;
+    overflow: hidden;
+    background: #000;
+  }
+  .device__screen img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  /* Device sizes (outer dims, screen = outer - 20px each axis) */
+  .device--std { width: 900px;  height: 1930px; }
+  .device--sm  { width: 834px;  height: 1788px; }
+  .device--lg  { width: 1080px; height: 2320px; }
+
+  /* ================================================================
+     LAYOUT 1 — HERO  (3D perspective, green bg)
+     ================================================================ */
+  .layout-hero::after {
+    content: '';
+    position: absolute;
+    bottom: 500px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 900px;
+    background: radial-gradient(circle, rgba(255,255,255,0.045) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .layout-hero .text-block {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 100px;
+  }
+  .layout-hero .app-icon  { margin-bottom: 40px; }
+  .layout-hero .headline  { margin-bottom: 20px; max-width: 1060px; }
+  .layout-hero .subhead   { max-width: 800px; }
+
+  .layout-hero .device {
+    left: 50%;
+    bottom: -50px;
+    transform: translateX(-50%) rotate(5deg);
+    z-index: 1;
+  }
+  .layout-hero .device__body {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.07),
+      0 6px 16px rgba(0,0,0,0.14),
+      0 24px 52px rgba(0,0,0,0.22),
+      0 56px 110px rgba(0,0,0,0.28);
+  }
+
+  /* ================================================================
+     LAYOUT 2 — CENTERED STRAIGHT (cream bg)
+     ================================================================ */
+  .layout-straight .text-block {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 90px;
+  }
+  .layout-straight .app-icon { margin-bottom: 36px; }
+  .layout-straight .headline { margin-bottom: 18px; max-width: 1050px; }
+  .layout-straight .subhead  { max-width: 800px; }
+
+  .layout-straight .device {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -40px;
+  }
+
+  /* ================================================================
+     LAYOUT 3 — ZOOMED LARGE (cream bg, phone dominates)
+     ================================================================ */
+  .layout-zoomed .text-block {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 80px;
+  }
+  .layout-zoomed .headline { margin-bottom: 18px; max-width: 1050px; }
+  .layout-zoomed .subhead  { max-width: 800px; }
+
+  .layout-zoomed .device {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -380px;
+  }
+
+  /* ================================================================
+     LAYOUT 4 — TILTED LEFT (green bg)
+     ================================================================ */
+  .layout-tilt .text-block {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 90px;
+  }
+  .layout-tilt .headline { margin-bottom: 18px; max-width: 1050px; }
+  .layout-tilt .subhead  { max-width: 800px; }
+
+  .layout-tilt .device {
+    left: 50%;
+    transform: translateX(-50%) rotate(-5deg);
+    bottom: -50px;
+  }
+
+  /* ================================================================
+     LAYOUT 5 — ASYMMETRIC (text left, phone right, cream bg)
+     ================================================================ */
+  .layout-asym .text-block {
+    position: relative;
+    z-index: 2;
+    padding: 160px 0 0 110px;
+    text-align: left;
+    max-width: 640px;
+  }
+  .layout-asym .headline { margin-bottom: 20px; }
+  .layout-asym .subhead  { max-width: 500px; }
+
+  .layout-asym .device {
+    right: 50px;
+    bottom: -40px;
+  }
+
+  /* ================================================================
+     LAYOUT 6 — SLIGHT TILT RIGHT (cream bg)
+     ================================================================ */
+  .layout-tilt-r .text-block {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 90px;
+  }
+  .layout-tilt-r .headline { margin-bottom: 18px; max-width: 1050px; }
+  .layout-tilt-r .subhead  { max-width: 800px; }
+
+  .layout-tilt-r .device {
+    left: 50%;
+    transform: translateX(-50%) rotate(4deg);
+    bottom: -40px;
+  }
+
+  /* ================================================================
+     LAYOUT 8 — PHONE LEFT (text right, phone left)
+     ================================================================ */
+  .layout-phone-left .text-block {
+    position: relative;
+    z-index: 2;
+    padding: 160px 110px 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .layout-phone-left .headline { margin-bottom: 20px; max-width: 640px; }
+  .layout-phone-left .subhead  { max-width: 500px; }
+
+  .layout-phone-left .device {
+    left: 50px;
+    bottom: -40px;
+  }
+</style>
+</head>
+<body>
+
+<div class="guide">
+  <strong>Remedy v3</strong> — 1284 &times; 2778 px.
+  Click <strong>Download PNG</strong> to save each frame, or DevTools &rarr; select <code>.frame</code> &rarr; <em>Capture node screenshot</em>.
+  <br><br>
+  <button id="dl-all-btn" class="dl-btn" style="font-size:15px; padding:10px 32px;" onclick="downloadAll()">Download All (8 frames)</button>
+</div>
+
+
+<!-- ================================================================
+     FRAME 1 — HERO (Green, 3D perspective phone, Progress screen)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">1 — Hero</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-1','remedy-01-hero.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--green layout-hero" id="frame-1">
+    <div class="text-block">
+      <div class="app-icon app-icon--glow">
+        <img src="img/icon.png" alt="Remedy">
+      </div>
+      <h1 class="headline headline--xl t-warm">
+        A stronger back<br>starts here.
+      </h1>
+      <p class="subhead t-wsub">
+        Track your progress week by week.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/progress.png" alt="Progress screen">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 2 — TAILORED (Cream, centered straight, Home screen)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">2 — Tailored</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-2','remedy-02-tailored.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--cream layout-straight" id="frame-2">
+    <div class="text-block">
+      <div class="app-icon">
+        <img src="img/icon.png" alt="Remedy">
+      </div>
+      <h1 class="headline headline--lg t-dark">
+        Tailored to<br>your back.
+      </h1>
+      <p class="subhead t-muted">
+        Built from your answers. Built for your life.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/home.png" alt="Home screen">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 3 — IN-SESSION (Cream, zoomed large, Video screen)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">3 — In-Session</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-3','remedy-03-session.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--cream layout-zoomed" id="frame-3">
+    <div class="text-block">
+      <h1 class="headline headline--lg t-dark">
+        Video-guided.<br>Every exercise.
+      </h1>
+      <p class="subhead t-muted">
+        Follow along with clear demonstration videos.
+      </p>
+    </div>
+    <div class="device device--lg">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/session.png" alt="In-session screen">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 4 — SCHEDULE (Green, tilted left, Workout Days screen)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">4 — Schedule</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-4','remedy-04-schedule.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--green layout-tilt" id="frame-4">
+    <div class="text-block">
+      <h1 class="headline headline--lg t-warm">
+        Built around<br>your schedule.
+      </h1>
+      <p class="subhead t-wsub">
+        Pick your days. We handle the rest.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/workout_days.png" alt="Workout days">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 5 — PERSONAL (Cream, asymmetric — text left, phone right)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">5 — Personal</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-5','remedy-05-personal.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--cream layout-asym" id="frame-5">
+    <div class="text-block">
+      <h1 class="headline headline--xl t-dark t-left">
+        Starts with<br>your pain level.
+      </h1>
+      <p class="subhead t-muted t-left">
+        Check in before and after every session.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/pain_check.png" alt="Pain check-in">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 6 — SHOW UP (Cream, slight tilt right, Session Preview)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">6 — Show Up</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-6','remedy-06-showup.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--cream layout-tilt-r" id="frame-6">
+    <div class="text-block">
+      <h1 class="headline headline--lg t-dark">
+        Your pace.<br>Your program.
+      </h1>
+      <p class="subhead t-muted">
+        Short sessions that fit your life.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/session_preview.png" alt="Session preview">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 7 — FORM (Cream, tilted left, Cat-Cow in-session)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">7 — Form</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-7','remedy-07-form.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--cream layout-tilt" id="frame-7">
+    <div class="text-block">
+      <h1 class="headline headline--lg t-dark">
+        Clear instructions.<br>Proper form.
+      </h1>
+      <p class="subhead t-muted">
+        Every exercise explained step by step.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/cat_cow.png" alt="Cat-Cow exercise">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FRAME 8 — JOURNEY (Cream, phone left + text right, Profile)
+     ================================================================ -->
+<div class="frame-wrap">
+  <div class="frame-header">
+    <span class="frame-id">8 — Journey</span>
+    <button class="dl-btn" onclick="downloadFrame('frame-8','remedy-08-journey.png')">Download PNG</button>
+  </div>
+  <div class="frame frame--cream layout-phone-left" id="frame-8">
+    <div class="text-block">
+      <h1 class="headline headline--lg t-dark">
+        Your journey,<br>tracked.
+      </h1>
+      <p class="subhead t-muted">
+        Sessions, pain levels, and milestones.
+      </p>
+    </div>
+    <div class="device device--std">
+      <div class="device__body">
+        <div class="device__screen">
+          <img src="img/profile.png" alt="Profile screen">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  async function downloadFrame(id, filename) {
+    const btn = event.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = 'Rendering\u2026';
+    btn.disabled = true;
+    try {
+      const el = document.getElementById(id);
+      const canvas = await html2canvas(el, {
+        width: 1290, height: 2796, scale: 1,
+        useCORS: true, allowTaint: true,
+        backgroundColor: null, logging: false
+      });
+      const a = document.createElement('a');
+      a.download = filename;
+      a.href = canvas.toDataURL('image/png');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      btn.textContent = 'Saved!';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    } catch (e) {
+      console.error(e);
+      btn.textContent = 'Error \u2014 use DevTools';
+      setTimeout(() => { btn.textContent = orig; }, 2500);
+    } finally { btn.disabled = false; }
+  }
+
+  async function downloadAll() {
+    const btn = document.getElementById('dl-all-btn');
+    const orig = btn.textContent;
+    const frames = [
+      ['frame-1','remedy-01-hero.png'],
+      ['frame-2','remedy-02-tailored.png'],
+      ['frame-3','remedy-03-session.png'],
+      ['frame-4','remedy-04-schedule.png'],
+      ['frame-5','remedy-05-personal.png'],
+      ['frame-6','remedy-06-showup.png'],
+      ['frame-7','remedy-07-form.png'],
+      ['frame-8','remedy-08-journey.png'],
+    ];
+    btn.textContent = `Rendering 0/${frames.length}\u2026`;
+    btn.disabled = true;
+    for (let i = 0; i < frames.length; i++) {
+      const [id, filename] = frames[i];
+      btn.textContent = `Rendering ${i+1}/${frames.length}\u2026`;
+      try {
+        const el = document.getElementById(id);
+        const canvas = await html2canvas(el, {
+          width: 1290, height: 2796, scale: 1,
+          useCORS: true, allowTaint: true,
+          backgroundColor: null, logging: false
+        });
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = canvas.toDataURL('image/png');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (e) { console.error(`Failed: ${filename}`, e); }
+      await new Promise(r => setTimeout(r, 400));
+    }
+    btn.textContent = 'All saved!';
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }
+</script>
+
+</body>
+</html>

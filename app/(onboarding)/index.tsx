@@ -11,8 +11,12 @@ import {
   ONBOARDING_STEP_PATHS,
 } from '../../context/OnboardingContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePremium } from '../../context/PremiumContext';
 import { useUser } from '../../lib/superwall';
 import { hapticWarning } from '../../lib/haptics';
+import { signedOut } from '../../lib/analytics/events/auth';
+import { onboardingStarted } from '../../lib/analytics/events/onboarding';
+import { markOnboardingFunnelStart, ONBOARDING_STEP_KEYS } from '../../lib/analytics/onboardingSteps';
 import { colors, serifFont } from '../../constants/colors';
 
 export default function WelcomeScreen() {
@@ -25,9 +29,16 @@ export default function WelcomeScreen() {
   // explanation. Surface it and offer a real way out instead.
   const { user, signOut } = useAuth();
   const { signOut: superwallSignOut } = useUser();
+  // Onboarded account whose subscription ended: they reached Welcome by swiping back
+  // off Your Program. The CTA returns them to the paywall — never through the quiz.
+  const { premium, onboardingDone } = usePremium();
+  const isLapsed = !!user && onboardingDone === true && premium === false;
 
   async function handleSignOut() {
     hapticWarning();
+    // Before signOut: the identity reset fires off the resulting session change,
+    // and this event has to land on the person who signed out.
+    signedOut({ source_screen: 'onboarding' });
     void superwallSignOut();
     await signOut();
   }
@@ -41,6 +52,20 @@ export default function WelcomeScreen() {
   const canResume = resumeStep !== 'welcome';
 
   function handleStart() {
+    if (isLapsed) {
+      router.push('/(onboarding)/match?lapsed=1');
+      return;
+    }
+    markOnboardingFunnelStart();
+    onboardingStarted({
+      is_resume: canResume,
+      ...(canResume
+        ? {
+            resume_step_key: resumeStep,
+            resume_step_index: ONBOARDING_STEP_KEYS.indexOf(resumeStep),
+          }
+        : {}),
+    });
     if (canResume) {
       // Push every step up to the resume target so swipe-back works through the quiz
       // instead of dead-ending on a single orphaned screen.
@@ -109,10 +134,10 @@ export default function WelcomeScreen() {
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <View style={styles.content}>
         <Animated.View
-          style={[{ marginBottom: 24 }, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
+          style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
         >
           <AppLogo size="md" />
         </Animated.View>
@@ -127,12 +152,12 @@ export default function WelcomeScreen() {
             { opacity: subtitleOpacity, transform: [{ translateY: subtitleTranslate }] },
           ]}
         >
-          Your back pain, finally fixed.
+          A plan for your back.
         </Animated.Text>
       </View>
 
       <Animated.View style={[styles.footer, { opacity: footerOpacity }]}>
-        <ContinueButton label={canResume ? 'Continue' : 'Get Started'} onPress={handleStart} />
+        <ContinueButton label={canResume || isLapsed ? 'Continue' : 'Get Started'} onPress={handleStart} />
         {user ? (
           <TouchableOpacity style={styles.signInLink} onPress={handleSignOut} activeOpacity={0.6}>
             <Text style={styles.signInText}>
@@ -167,6 +192,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  logoWrap: {
+    marginBottom: 24,
+  },
   appName: {
     fontSize: 42,
     fontFamily: serifFont,
@@ -174,15 +202,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 10,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 18,
-    lineHeight: 27,
+    lineHeight: 26,
     color: colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   footer: {
     paddingBottom: 8,
     gap: 16,
+    alignItems: 'center',
+    width: '100%',
   },
   signInLink: {
     alignItems: 'center',
@@ -192,6 +225,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   signInBold: {
     color: colors.primary,

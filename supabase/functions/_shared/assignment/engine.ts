@@ -18,7 +18,7 @@ export type EquipmentTier = 'open_space' | 'bands_dumbbells' | 'gym';
 export type PainLocation = 'upper' | 'lower' | 'all';
 export type PainDuration = 'acute' | 'subacute' | 'chronic';
 // 'multiple' removed — multi-select replaces it.
-export type PainType = 'stiffness' | 'ache' | 'sharp';
+export type PainType = 'stiffness' | 'ache' | 'sharp' | 'nerve';
 export type ActivityLevel = 'sedentary' | 'light' | 'active' | 'athlete';
 export type PainTrigger = 'sitting' | 'bending' | 'standing' | 'morning' | 'exercise' | 'other';
 export type MainGoal = 'reduce_pain' | 'return_to_exercise' | 'sleep' | 'mobility';
@@ -217,6 +217,11 @@ const TITLE_AREA: Record<PainLocation, string> = {
   all: 'Full Back',
 };
 
+/** Sharp and nerve share the conservative start (bodyweight-only early). */
+function needsCalmStart(answers: Answers): boolean {
+  return answers.pain_type.includes('sharp') || answers.pain_type.includes('nerve');
+}
+
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
@@ -324,7 +329,7 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
     const targetTier = targetTierForWeek(week);
     const isEarly = week <= earlyWeeks;
     const isBodyweightOnly =
-      answers.pain_type.includes('sharp') &&
+      needsCalmStart(answers) &&
       rules.pain_type.sharp_bodyweight_only_early &&
       week <= bodyweightEarlyWeeks;
 
@@ -557,7 +562,7 @@ function scoreExercise(ex: CatalogExercise, args: SelectArgs): number {
   const patternMatch = crit.movement_pattern && ex.movement_pattern === crit.movement_pattern ? 2 : 0;
   const morningBonus = morningFirstMobility && ex.phase === 'mobility' ? 0.75 : 0;
   // Intensity proximity: prefer exercises whose tier sits at the weekly target so
-  // selection climbs the ladder (Clamshell -> Bridge -> SL Bridge -> Hip Thrust)
+  // selection climbs the ladder (Bridge -> SL Bridge -> Hip Thrust)
   // instead of re-picking the week-1 winner forever. Weight is deliberately high
   // enough to override static effectiveness/goal deltas between ladder rungs.
   // Mobility/recovery pools are ~all tier 1, so this mostly shapes activation/strength.
@@ -748,10 +753,10 @@ function buildNaming(
     chronic: 'long-standing',
   };
   const goalPhrase: Record<MainGoal, string> = {
-    reduce_pain: 'calming your pain',
+    reduce_pain: 'building more comfortable daily movement',
     return_to_exercise: 'getting you back to training',
     sleep: 'easing tension for better rest',
-    mobility: 'restoring your range of motion',
+    mobility: 'improving your mobility',
   };
   const areaPhrase = answers.pain_location === 'all' ? 'back' : `${primary.toLowerCase()} pain`;
   // Tagline always uses primary goal for focus phrase.

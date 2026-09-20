@@ -98,7 +98,7 @@ Onboarding alternates between questions and interstitial insight screens. The go
 9. **Q5: What makes it worse?** — Sitting too long / Bending / Standing / Morning stiffness / Exercise
 10. **Q6: What's your main goal?** — Reduce daily pain / Get back to working out / Sleep better / Improve mobility
 11. **Program match screen** — Personalized program summary based on all answers, with brief description of approach
-12. **Paywall** — 7-day free trial, then $12.99/month or $79.99/year
+12. **Paywall** — trial then $4.99/week (7-day trial), $12.99/month (14-day trial), or $79.99/year (14-day trial)
 13. **Sign up** — Apple / Google / Email (after paywall, so user is committed before creating account)
 14. **Home / dashboard**
 
@@ -166,9 +166,9 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Program progress
 
 ### 6.8 Paywall + Subscription
-- 7-day free trial (full access)
-- $12.99/month
-- $79.99/year (~$6.67/month, save 49%)
+- $4.99/week (7-day free trial)
+- $12.99/month (14-day free trial)
+- $79.99/year (14-day free trial, ~$6.67/month, save 49%)
 - Paywall UI + A/B experiments managed via **Superwall**
 - Subscriptions processed via **Apple IAP / StoreKit** (iOS-first)
 - No Stripe, no web checkout, no external purchase links for in-app premium unlocks
@@ -240,7 +240,8 @@ Onboarding alternates between questions and interstitial insight screens. The go
 
 | Plan | Price | Notes |
 |------|-------|-------|
-| Monthly | $12.99/month | After 7-day free trial |
+| Weekly | $4.99/week | After 7-day free trial |
+| Monthly | $12.99/month | After 14-day free trial |
 | Annual | $79.99/year | ~$6.67/month, save 49% |
 
 - Paywall UI and experiments: **Superwall** (on-device paywall/entitlement UX layer)
@@ -285,8 +286,8 @@ Onboarding alternates between questions and interstitial insight screens. The go
 | Video hosting (prod) | Cloudflare Stream (HLS, adaptive bitrate, auto-transcode) |
 
 ### App Identifiers
-- **Bundle ID:** `com.remedyapp.ios`
-- **IAP Product IDs:** `com.remedyapp.monthly`, `com.remedyapp.annual`
+- **Bundle ID:** `com.remedyappco.ios`
+- **IAP Product IDs:** `com.remedyapp.weekly`, `com.remedyapp.monthly`, `com.remedyapp.annual` (plus `.no.trial` variants)
 
 ---
 
@@ -322,7 +323,7 @@ These govern every backend and client decision. When in doubt, default to these.
 - [x] Paywall placement — end of onboarding, after program match screen ✓
 - [ ] What happens when a user completes the full program? (Loop it? Unlock next level?)
 - [x] Video hosting — Cloudflare Stream for production, Supabase Storage for dev placeholders ✓
-- [x] Bundle ID — confirmed as `com.remedyapp.ios`
+- [x] Bundle ID — confirmed as `com.remedyappco.ios`
 
 ---
 

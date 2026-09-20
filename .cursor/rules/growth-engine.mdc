@@ -1,0 +1,61 @@
+---
+description: Deploy and conventions for slide.remedyrecoveries.com (growth-engine)
+globs: growth-engine/**
+alwaysApply: false
+---
+
+# Growth engine (slide.relentless)
+
+Workdir: `growth-engine/`. Live dashboard: https://slide.remedyrecoveries.com
+Cloudflare Pages project: `remedy-growth`. Production branch: `main`.
+
+## Deploy (always `npm run deploy` — never raw wrangler)
+
+```powershell
+cd growth-engine
+npm run deploy
+```
+
+That script builds the dashboard and deploys with `--branch=main`. Do not stop at a local preview. Do **not** run `npx wrangler pages deploy` yourself.
+
+### Why edits sometimes "don't go through"
+
+`wrangler pages deploy` **without** `--branch=main` defaults to git branch `master` → Cloudflare **Preview**. The custom domain `slide.remedyrecoveries.com` only serves the **Production** environment (branch `main`). Preview deploys succeed and print a `*.pages.dev` URL, but the live site does not change.
+
+If a deploy just ran and the live site looks stale:
+
+1. Confirm the command was `npm run deploy` (or wrangler with `--branch=main`). If it was raw wrangler without that flag, the update is on Preview only — redeploy with `npm run deploy`.
+2. Hard-refresh https://slide.remedyrecoveries.com (cache can hide a real production deploy).
+
+## Nav
+
+Review · Images · SVGs · Library · Studio · Engine · Settings
+
+- **Images** — screenshots; Crop tab; Upload from Photos → local + R2 `growth/screenshots/`
+- **SVGs** — carousel illustrations
+
+## Screenshots — library crops only (no shortcuts)
+
+User-made `crop_*.png` files (and anything with `cropped: true` in `meta.json`) are **protected**.
+
+- **Do not delete them.** Not in a cleanup, reset, “system crop”, or “ones I made” pass.
+- Do not add them to `library-overrides.json` `deletedScreenshots`.
+- Do not call `DELETE /api/assets/screenshots/:file` on a `crop_*` file unless the user names **that exact filename** in the same message.
+- After the 2026-08-24 wipe, the user re-saved these crops. Keep them: `crop_cat_cow`, `crop_home`, `crop_home_2`, `crop_img_0461`, `crop_img_0462`, `crop_img_0462_2`, `crop_img_0462_4`, `crop_img_0465`, `crop_img_0469`, `crop_img_0470`, `crop_img_0472`, `crop_img_0473`, `crop_pain_check`, `crop_profile`, `crop_progress`, `crop_progress_2`, `crop_progress_3`, `crop_session`, `crop_session_preview`.
+
+**Never invent a crop.** Do not `sharp.extract`, write a new `crop_*.png`, or invent `skipTopPct` / `cropHPct` to “fix” a slide. The only way a new crop enters the library is the Images **Crop** tab / `POST /api/assets/crop-requests/:id/fulfill` (Rahul uploads the crop). If no library crop fits, say so and stop — do not assign a raw `img_*.png` / full screenshot (those get a generic 45% top slice and look cut off). Generate may only attach files from `listAssignableScreenshots()` (crops only).
+
+## Last-slide CTA — locked
+
+Do **not** edit CTA layouts, copy, atmospheres, or the four locked screenshots unless the user **explicitly** asks in that message.
+
+- Source of truth: `CTA_REVIEW_OPTIONS` (7 options) and `CTA_COPY_POOL` in `apps/server/src/generation/hooks.ts`.
+- Locked shots only: `progress.png`, `img_0525.png`, `img_0539.png`, `img_0540.png` (`CTA_SHOT_LOCKED` in `screenshots.ts`).
+- Generate may **pick** among those 7. Do not add options, rewrite lines, swap in `crop_*` / other library shots, or restyle `ctaAtmosphereSvg`.
+- Do not run `cta-review` unless the user names that command or asks to remake CTA teasers.
+
+## Slides
+
+Templates A–L: slides 1–3 are illustrations; screenshots start after.
+`SLIDE_REV` lives in `apps/server/src/generation/composer.ts` — bump it when slide render output changes.
+Rerender existing text-only slides 1–3 as illustrations (`npm run rerender`).

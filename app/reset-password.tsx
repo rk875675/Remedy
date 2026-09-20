@@ -14,6 +14,11 @@ import { colors } from '../constants/colors';
 import { radius } from '../constants/spacing';
 import { shadows } from '../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../lib/haptics';
+import { passwordResetCompleted } from '../lib/analytics/events/auth';
+import {
+  friendlyAuthError,
+  passwordMeetsComplexity,
+} from '../lib/passwordValidation';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -29,6 +34,11 @@ export default function ResetPasswordScreen() {
       setError('Password must be at least 8 characters.');
       return;
     }
+    if (!passwordMeetsComplexity(password)) {
+      hapticError();
+      setError('Password must include uppercase, lowercase, and a number.');
+      return;
+    }
     if (password !== confirm) {
       hapticError();
       setError('Passwords do not match.');
@@ -41,12 +51,12 @@ export default function ResetPasswordScreen() {
       // The recovery session established by verifyOtp authorizes this update.
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
+      passwordResetCompleted();
       // Session is valid; let the root navigator route to the right place.
       router.replace('/');
     } catch (e: unknown) {
-      const err = e as { message?: string };
       hapticError();
-      setError(err.message ?? 'Could not reset your password. Try again.');
+      setError(friendlyAuthError(e, 'Could not reset your password. Please try again.'));
     } finally {
       setLoading(false);
     }

@@ -10,8 +10,13 @@ type ProgressBarProps = {
 export function ProgressBar({ current, total }: ProgressBarProps) {
   const progress = Math.min(current / total, 1);
   const animated = useRef(new Animated.Value(progress)).current;
+  const skipFirst = useRef(true);
 
   useEffect(() => {
+    if (skipFirst.current) {
+      skipFirst.current = false;
+      return;
+    }
     Animated.timing(animated, {
       toValue: progress,
       duration: 350,
@@ -19,7 +24,7 @@ export function ProgressBar({ current, total }: ProgressBarProps) {
       // Width interpolation cannot use the native driver.
       useNativeDriver: false,
     }).start();
-  }, [progress]);
+  }, [progress, animated]);
 
   const width = animated.interpolate({
     inputRange: [0, 1],

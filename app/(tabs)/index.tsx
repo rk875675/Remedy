@@ -1,20 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Easing,
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  LayoutAnimation,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
@@ -25,43 +24,57 @@ import {
   getNextStretchTime,
 } from '../../lib/notifications';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
+import { useAfterTransition } from '../../lib/useAfterTransition';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { MiniRing } from '../../components/ui/MiniRing';
+import { InsightPager } from '../../components/home/InsightPager';
+import {
+  ThisWeekCard,
+  STORAGE_WEEK_PLAN_COLLAPSED,
+} from '../../components/home/ThisWeekCard';
+import {
+  WorkoutDaysModal,
+  STORAGE_WORKOUT_DAYS,
+  STORAGE_WORKOUT_DAYS_SINCE,
+  STORAGE_NOTIF,
+  STORAGE_NOTIF_TIME,
+  type WeekSession,
+} from '../../components/progress/WorkoutDaysModal';
+import { computeWeekDays, localDateKey, type RawCompletion } from '../../lib/progress';
+import {
+  computeDefaultWorkoutDays,
+  activeWorkoutDaysThisWeek,
+  isTodayWorkoutDay,
+  getNextWorkoutDay,
+  todayDayIndex,
+  DAY_NAMES_FULL,
+} from '../../lib/workoutDays';
+import {
+  homeEmptyStateShown,
+  homeNudgeShown,
+  homeNudgeTapped,
+} from '../../lib/analytics/events/engagement';
+import { sessionStartTapped } from '../../lib/analytics/events/coreLoop';
+import type { homeEmptyStateReason } from '../../lib/analytics/events/enums';
+import { resolveDisplayName, useHomeGreetingParts } from '../../lib/greeting';
+import { prefetchSessionVideos } from '../../lib/prefetchSessionVideos';
+import { hasCompletedOrientation } from '../../lib/orientation';
+import {
+  asPlanSession,
+  asUserProgram,
+  fetchHomeState,
+} from '../../lib/homeState';
+import {
+  shouldSkipTabRefresh,
+  beginTabRefresh,
+  finishTabRefresh,
+  invalidateTabRefresh,
+} from '../../lib/tabRefresh';
+import { isPendingApplyDue } from '../../lib/programAnswers';
+import { flushPendingProgramApply } from '../../lib/applyProgramAnswers';
 import type { UserPlanSession, UserProgram } from '../../types/database';
 
 type SessionWithExerciseCount = UserPlanSession & { exercise_count: number };
-
-function InsightDot({ active }: { active: boolean }) {
-  const anim = useRef(new Animated.Value(active ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: active ? 1 : 0,
-      duration: 250,
-      easing: Easing.inOut(Easing.cubic),
-      // Width + color interpolation cannot use the native driver.
-      useNativeDriver: false,
-    }).start();
-  }, [active]);
-
-  const width = anim.interpolate({ inputRange: [0, 1], outputRange: [5, 16] });
-  const backgroundColor = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [colors.border, colors.secondary],
-  });
-
-  return <Animated.View style={[styles.insightDot, { width, backgroundColor }]} />;
-}
-
-const INSIGHTS: readonly string[] = [
-  'Studies show that consistent structured exercise reduces back pain by up to 60% within 4 weeks.',
-  '80% of adults experience back pain at some point — most recover fully with the right movement plan.',
-  'Recovery isn\'t linear. Every session you show up for is building a stronger, more resilient spine.',
-  'Movement is medicine. Your spine craves gentle, consistent motion to reduce stiffness and inflammation.',
-  'People who follow structured rehab programs report 30% better quality of life within 6 weeks.',
-  'Rest alone rarely fixes back pain. Targeted exercise retrains the muscles that protect your spine.',
-  'Most chronic back pain improves significantly within 4–6 weeks of consistent, focused movement.',
-];
+type HomeEmptyStateReason = import('zod').z.infer<typeof homeEmptyStateReason>;
 
 const STRETCH_KEYS = {
   enabled: 'remedy_stretch_enabled',
@@ -71,6 +84,9 @@ const STRETCH_KEYS = {
   paused: 'remedy_stretch_paused',
 } as const;
 
+/** Survives Home remounts. One shown per nudge_key per JS session. */
+const nudgeShownKeys = new Set<string>();
+
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(totalSeconds / 3600);
@@ -79,47 +95,19 @@ function formatCountdown(ms: number): string {
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// Nudge card shown when the user has no reminder of any kind set up.
-// Tapping "Set up" navigates to the Profile tab.
-function NotifNudgeCard() {
-  const router = useRouter();
-  const [visible, setVisible] = useState(false);
-
-  const checkVisibility = useCallback(async () => {
-    const [daily, stretch] = await AsyncStorage.multiGet([
-      'remedy_notifications_enabled',
-      'remedy_stretch_enabled',
-    ]);
-    setVisible(daily[1] !== 'true' && stretch[1] !== 'true');
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      checkVisibility();
-    }, [checkVisibility]),
-  );
-
-  if (!visible) return null;
-
-  return (
-    <TouchableOpacity
-      style={styles.nudgeCard}
-      onPress={() => {
-        hapticPrimaryAction();
-        router.push('/(tabs)/profile');
-      }}
-      activeOpacity={0.85}
-    >
-      <View style={styles.nudgeIcon}>
-        <Ionicons name="notifications-outline" size={18} color={colors.primary} />
-      </View>
-      <View style={styles.nudgeText}>
-        <Text style={styles.nudgeTitle}>Set up your reminders</Text>
-        <Text style={styles.nudgeBody}>Daily sessions and stretch breaks keep recovery on track.</Text>
-      </View>
-      <Text style={styles.nudgeChevron}>›</Text>
-    </TouchableOpacity>
-  );
+function sessionPurposeLine(phase: string, weekNumber: number): string {
+  switch (phase) {
+    case 'mobility':
+      return `Week ${weekNumber} · Loosen up so daily movement feels easier`;
+    case 'activation':
+      return `Week ${weekNumber} · Wake up the muscles that support your spine`;
+    case 'strength':
+      return `Week ${weekNumber} · Build capacity so your back can handle more`;
+    case 'recovery':
+      return `Week ${weekNumber} · Easy movement so your body can adapt`;
+    default:
+      return `Week ${weekNumber} · Today's planned work for your back`;
+  }
 }
 
 // Live countdown to the next stretch reminder. Reads its settings from
@@ -192,7 +180,8 @@ function StretchReminderCard() {
     await scheduleStretchReminders(intervalMin, startHour, endHour);
     await AsyncStorage.setItem(STRETCH_KEYS.paused, 'false');
     setPaused(false);
-    setNextTime(await getNextStretchTime());
+    const next = await getNextStretchTime();
+    setNextTime(next);
   }, [intervalMin, startHour, endHour]);
 
   if (!enabled) return null;
@@ -222,6 +211,44 @@ function StretchReminderCard() {
   );
 }
 
+// Bouncing badge displayed on rest days to show when the next workout is scheduled.
+function NextWorkoutBadge({ dayIndex }: { dayIndex: number }) {
+  const float = useRef(new Animated.Value(0)).current;
+  const ready = useAfterTransition();
+
+  useEffect(() => {
+    if (!ready) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, {
+          toValue: -4,
+          duration: 1400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(float, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [float, ready]);
+
+  return (
+    <Animated.View
+      style={[styles.nextWorkoutBadge, { transform: [{ translateY: float }] }]}
+    >
+      <Text style={styles.nextWorkoutBadgeText}>
+        Next workout: {DAY_NAMES_FULL[dayIndex]}
+      </Text>
+    </Animated.View>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -230,241 +257,246 @@ export default function HomeScreen() {
   const [userProgram, setUserProgram] = useState<UserProgram | null>(null);
   const [todaySession, setTodaySession] = useState<SessionWithExerciseCount | null>(null);
   const [nextSessionId, setNextSessionId] = useState<string | null>(null);
+  const nextSessionPosition = useRef<{ week: number; session: number } | null>(null);
   const [isRestDay, setIsRestDay] = useState(false);
+  const [isDoneToday, setIsDoneToday] = useState(false);
   const [sessionsThisWeek, setSessionsThisWeek] = useState(0);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [durationWeeks, setDurationWeeks] = useState(5);
-  const [painAvg, setPainAvg] = useState<number | null>(null);
-  const [painReduction, setPainReduction] = useState<number | null>(null);
-  const [totalSessions, setTotalSessions] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
-  // Rotating insight card
-  const [insightIndex, setInsightIndex] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [workoutDays, setWorkoutDays] = useState<number[]>([]);
+  const [daysSince, setDaysSince] = useState<string | null>(null);
+  const [nextWorkoutDay, setNextWorkoutDay] = useState<number | null>(null);
+  const [workoutNotifEnabled, setWorkoutNotifEnabled] = useState(false);
+  const [reminderHour, setReminderHour] = useState(9);
+  const [reminderMinute, setReminderMinute] = useState(0);
+  const [weekSessions, setWeekSessions] = useState<WeekSession[]>([]);
+  const [userEquipment, setUserEquipment] = useState<string | null>(null);
+  const [weekPlanCollapsed, setWeekPlanCollapsed] = useState(true);
+  const [displayWeekDays, setDisplayWeekDays] = useState<boolean[]>(
+    () => Array.from({ length: 7 }, () => false),
+  );
+  const [modalVisible, setModalVisible] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
-      }).start(() => {
-        setInsightIndex((i) => (i + 1) % INSIGHTS.length);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      });
-    }, 8000);
-
-    return () => clearInterval(interval);
-  }, [fadeAnim]);
-
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
 
     const resetPending = await AsyncStorage.getItem('remedy_reset_pending');
     if (resetPending) {
       await AsyncStorage.removeItem('remedy_reset_pending');
+      invalidateTabRefresh('home');
       setUserProgram(null);
       setTodaySession(null);
       setNextSessionId(null);
+      setIsDoneToday(false);
       setSessionsThisWeek(0);
-      setPainAvg(null);
+      setWeekSessions([]);
+      setDisplayWeekDays(Array.from({ length: 7 }, () => false));
       setLoaded(false);
+    } else if (!opts?.force && shouldSkipTabRefresh('home')) {
+      setDisplayName((prev) => resolveDisplayName(prev, user) ?? prev);
+      return;
     }
 
-    const [upRes, profileRes] = await Promise.all([
-      supabase
-        .from('user_programs')
-        .select('*')
-        .eq('user_id', user.id)
-        .single(),
-      supabase
-        .from('profiles')
-        .select('is_dev')
-        .eq('id', user.id)
-        .single(),
-    ]);
+    beginTabRefresh('home');
+    try {
+    const [
+      offsetStr,
+      storedDays,
+      storedDaysSince,
+      storedNotif,
+      storedTime,
+      storedCollapsed,
+    ] = await AsyncStorage.multiGet([
+      'dev_day_offset',
+      STORAGE_WORKOUT_DAYS,
+      STORAGE_WORKOUT_DAYS_SINCE,
+      STORAGE_NOTIF,
+      STORAGE_NOTIF_TIME,
+      STORAGE_WEEK_PLAN_COLLAPSED,
+    ]).then((pairs) => pairs.map(([, value]) => value));
 
-    const up = upRes.data;
+    const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+    const state = await fetchHomeState(Number.isFinite(offset) ? offset : 0);
+    if (!state) {
+      setDisplayName(resolveDisplayName(null, user));
+      setLoaded(true);
+      return;
+    }
+
+    setDisplayName(resolveDisplayName(state.display_name, user));
+
+    const up = asUserProgram(state.user_program);
     if (!up) {
+      setUserProgram(null);
+      setWeekSessions([]);
       setLoaded(true);
       return;
     }
     setUserProgram(up);
 
-    // The app reads ONLY the resolved plan snapshot for playback. Without an active
-    // plan (e.g. before paywall assignment) there is nothing to show yet.
-    const planId = up.active_plan_id;
-    if (!planId) {
+    if (!state?.plan) {
+      setWeekSessions([]);
       setLoaded(true);
       return;
     }
 
-    // Plan meta (duration / cadence) comes from the snapshot header, not the legacy
-    // programs table.
-    const { data: planMeta } = await supabase
-      .from('user_program_plans')
-      .select('duration_weeks, sessions_per_week, start_week')
-      .eq('id', planId)
-      .single();
-
-    const planSessionsPerWeek = planMeta?.sessions_per_week ?? 4;
-    const planDurationWeeks = planMeta?.duration_weeks ?? 5;
-
-    // Recovery: complete_session (migration 021) advances the pointer to the next week
-    // BEFORE the weekly ramp decision is recorded, and weekly-ramp is a one-shot
-    // navigation with no other entry point. If the app was force-quit (or the screen
-    // dismissed) before confirming, the decision is lost forever with no intensity bump
-    // ever applied — send the user back there until it's actually recorded.
-    // Gated on start_week: a retake's snapshot only contains sessions from its own
-    // start_week onward, so a "completed week" before that belongs to a prior
-    // (superseded) plan and was never meant to be ramped on this one.
-    const planStartWeek = planMeta?.start_week ?? 1;
-    if (up.current_week > planStartWeek && up.current_week <= planDurationWeeks) {
-      const completedWeek = up.current_week - 1;
-      const { data: rampDecision } = await supabase
-        .from('user_weekly_ramp_decisions')
-        .select('id')
-        .eq('plan_id', planId)
-        .eq('week_number', completedWeek)
-        .maybeSingle();
-      if (!rampDecision) {
-        router.replace(`/weekly-ramp?week=${completedWeek}`);
-        return;
-      }
+    if (state.pending_ramp_week != null) {
+      router.replace(`/weekly-ramp?week=${state.pending_ramp_week}`);
+      return;
     }
 
-    // -----------------------------------------------------------------------
-    // Determine which week/session to display.
-    // Non-dev: always use DB values. Dev with offset: derive from simulated date.
-    // -----------------------------------------------------------------------
-    let displayWeek = up.current_week;
-    let displaySession = up.current_session;
-
-    const isDev = profileRes.data?.is_dev === true;
-    if (isDev && up.started_at) {
-      const offsetStr = await AsyncStorage.getItem('dev_day_offset');
-      const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
-
-      if (offset !== 0) {
-        const startMs = new Date(up.started_at).getTime();
-        const rawDays = Math.floor((Date.now() - startMs) / 86400000) + offset;
-        const daysSinceStart = Math.max(0, rawDays);
-        displayWeek = Math.min(Math.floor(daysSinceStart / 7) + 1, planDurationWeeks);
-        const dayInWeek = daysSinceStart % 7;
-        displaySession = dayInWeek < planSessionsPerWeek
-          ? dayInWeek + 1
-          : planSessionsPerWeek + 1;
-      }
-    }
-
-    // -----------------------------------------------------------------------
-    // Parallel fetch: today's resolved session + this week completions
-    // + pain (last 7 days).
-    // -----------------------------------------------------------------------
-    const weekMondayISO = thisWeekMondayISO();
-    const sevenDaysAgoISO = nDaysAgoISO(7);
-
-    const [sessionRes, weekCompRes, painRes, totalCompRes] = await Promise.all([
-      supabase
-        .from('user_plan_sessions')
-        .select('*')
-        .eq('plan_id', planId)
-        .eq('week_number', displayWeek)
-        .eq('session_number', displaySession)
-        .single(),
-      supabase
-        .from('session_completions')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('completed_at', weekMondayISO),
-      supabase
-        .from('pain_checkins')
-        .select('score, type')
-        .eq('user_id', user.id)
-        .gte('recorded_at', sevenDaysAgoISO)
-        .order('recorded_at', { ascending: false }),
-      supabase
-        .from('session_completions')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id),
-    ]);
-
-    setSessionsPerWeek(planSessionsPerWeek);
-    setDurationWeeks(planDurationWeeks);
-
-    setSessionsThisWeek(weekCompRes.count ?? 0);
-    setTotalSessions(totalCompRes.count ?? 0);
-
-    const sessionData = sessionRes.data;
-    if (sessionData) {
-      const { count } = await supabase
-        .from('user_plan_session_exercises')
-        .select('*', { count: 'exact', head: true })
-        .eq('plan_session_id', sessionData.id);
-
-      setTodaySession({ ...sessionData, exercise_count: count ?? 0 });
-      setNextSessionId(null);
-      setIsRestDay(false);
-    } else {
-      // A missing session is a genuine rest day only when we've run past the week's
-      // scheduled sessions. Any other miss means the session just isn't loaded — don't
-      // mislabel it as "Recovery Day".
-      const restDay = displaySession > planSessionsPerWeek;
-      setTodaySession(null);
-      setIsRestDay(restDay);
-      setNextSessionId(null);
-
-      // Only peek at next week's session on a legitimate rest day (the "up next"
-      // preview). When it's NOT a rest day, the row for the pointer's own
-      // week/session is simply missing — a plan data gap, not a rest day — and
-      // offering a future week's session as "Start" would let the user complete it
-      // while the server pointer (complete_session's guard) still sits on the
-      // missing current session, permanently skipping it with no recovery path.
-      // Surface nothing rather than a broken shortcut; the gap needs repair.
-      if (restDay) {
-        const { data: nextSess } = await supabase
-          .from('user_plan_sessions')
-          .select('id')
-          .eq('plan_id', planId)
-          .gt('week_number', displayWeek)
-          .order('week_number', { ascending: true })
-          .order('session_number', { ascending: true })
-          .limit(1);
-
-        if (nextSess && nextSess.length > 0) {
-          setNextSessionId(nextSess[0].id);
+    let home = state;
+    let program = up;
+    if (isPendingApplyDue(program.pending_apply_week ?? null, program.current_week)) {
+      const flushed = await flushPendingProgramApply();
+      if (flushed === 'applied') {
+        const refreshed = await fetchHomeState(Number.isFinite(offset) ? offset : 0);
+        if (refreshed?.user_program && refreshed.plan) {
+          home = refreshed;
+          const nextUp = asUserProgram(refreshed.user_program);
+          if (nextUp) {
+            program = nextUp;
+            setUserProgram(nextUp);
+          }
         }
       }
     }
 
-    const painData = painRes.data ?? [];
-    const beforeScores = painData.filter((p) => p.type === 'before').map((p) => p.score);
-    const afterScores = painData.filter((p) => p.type === 'after').map((p) => p.score);
-
-    if (beforeScores.length > 0) {
-      setPainAvg(Math.round((beforeScores.reduce((s, v) => s + v, 0) / beforeScores.length) * 10) / 10);
-    } else {
-      setPainAvg(null);
+    if (!home.plan) {
+      setWeekSessions([]);
+      setLoaded(true);
+      return;
     }
 
-    if (beforeScores.length > 0 && afterScores.length > 0) {
-      const ab = beforeScores.reduce((s, v) => s + v, 0) / beforeScores.length;
-      const aa = afterScores.reduce((s, v) => s + v, 0) / afterScores.length;
-      const red = ab - aa;
-      setPainReduction(red > 0 ? Math.round(red * 10) / 10 : null);
+    const planSessionsPerWeek = home.plan.sessions_per_week;
+    const planDurationWeeks = home.plan.duration_weeks;
+    const displaySession = home.display_session ?? program.current_session;
+
+    setDurationWeeks(planDurationWeeks);
+
+    const weekCompletions = home.week_completions as RawCompletion[];
+    setSessionsThisWeek(weekCompletions.length);
+    const weekDays = computeWeekDays(weekCompletions, 0);
+    setDisplayWeekDays(weekDays);
+    const doneToday = weekDays[todayDayIndex()];
+
+    const thisWeekSessions = home.week_sessions;
+    setWeekSessions(thisWeekSessions);
+    setSessionsPerWeek(
+      thisWeekSessions.length > 0 ? thisWeekSessions.length : planSessionsPerWeek,
+    );
+
+    setUserEquipment(home.equipment);
+
+    let days: number[] = [];
+    try { if (storedDays) days = JSON.parse(storedDays) as number[]; } catch { /* ignore */ }
+    let since = storedDaysSince;
+    if (days.length !== planSessionsPerWeek) {
+      days = computeDefaultWorkoutDays(planSessionsPerWeek);
+      since = localDateKey(new Date());
+      await AsyncStorage.multiSet([
+        [STORAGE_WORKOUT_DAYS, JSON.stringify(days)],
+        [STORAGE_WORKOUT_DAYS_SINCE, since],
+      ]);
+    }
+    setWorkoutDays(days);
+    setDaysSince(since);
+    setWorkoutNotifEnabled(storedNotif === 'true');
+    setWeekPlanCollapsed(storedCollapsed !== 'false');
+
+    let hour = 9;
+    let minute = 0;
+    if (storedTime) {
+      try {
+        const t = JSON.parse(storedTime) as { hour: number; minute: number };
+        hour = t.hour;
+        minute = t.minute;
+      } catch { /* ignore */ }
+    }
+    setReminderHour(hour);
+    setReminderMinute(minute);
+
+    const todayIsWorkout = isTodayWorkoutDay(days);
+    setNextWorkoutDay(getNextWorkoutDay(days));
+
+    const sessionData = asPlanSession(home.display_plan_session);
+    if (sessionData && todayIsWorkout && !doneToday) {
+      setTodaySession({ ...sessionData, exercise_count: home.display_exercise_count });
+      prefetchSessionVideos(sessionData.id);
+      setNextSessionId(null);
+      nextSessionPosition.current = null;
+      setIsRestDay(false);
+      setIsDoneToday(false);
     } else {
-      setPainReduction(null);
+      const weekDone = program.current_session > planSessionsPerWeek;
+      const restDay = !todayIsWorkout || weekDone;
+      const pointerSession = asPlanSession(home.pointer_plan_session);
+
+      if (
+        !doneToday &&
+        todayIsWorkout &&
+        !weekDone &&
+        !sessionData &&
+        displaySession !== program.current_session &&
+        pointerSession
+      ) {
+        setTodaySession({ ...pointerSession, exercise_count: home.pointer_exercise_count });
+        prefetchSessionVideos(pointerSession.id);
+        setIsRestDay(false);
+        setIsDoneToday(false);
+        setNextSessionId(null);
+        nextSessionPosition.current = null;
+        setLoaded(true);
+        return;
+      }
+
+      setTodaySession(null);
+      setIsRestDay(restDay);
+      setIsDoneToday(doneToday);
+      setNextSessionId(null);
+      nextSessionPosition.current = null;
+
+      // On a rest day the pointer session is still the user's next one. For a normal
+      // account display == pointer, so pointer_plan_session is null and the pointer
+      // arrives as display_plan_session; the dev day-offset path is the only case that
+      // splits them.
+      const restDayNextUp = pointerSession ?? sessionData;
+
+      if (doneToday && sessionData) {
+        setNextSessionId(sessionData.id);
+        prefetchSessionVideos(sessionData.id);
+        nextSessionPosition.current = {
+          week: sessionData.week_number,
+          session: sessionData.session_number,
+        };
+      } else if (restDay && !weekDone && restDayNextUp) {
+        // Mid-week rest day. next_week_peek is deliberately `week_number >
+        // display_week`, so linking it here opened NEXT WEEK's first session while the
+        // pointer was still mid-week: the user could play a whole session and only find
+        // out at save time, when complete_session rejects it as session_not_current.
+        setNextSessionId(restDayNextUp.id);
+        prefetchSessionVideos(restDayNextUp.id);
+        nextSessionPosition.current = {
+          week: restDayNextUp.week_number,
+          session: restDayNextUp.session_number,
+        };
+      } else if (restDay && home.next_week_peek) {
+        setNextSessionId(home.next_week_peek.id);
+        nextSessionPosition.current = {
+          week: home.next_week_peek.week_number,
+          session: home.next_week_peek.session_number,
+        };
+      }
     }
 
     setLoaded(true);
-  }, [user]);
+    } finally {
+      finishTabRefresh('home');
+    }
+  }, [user, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -472,10 +504,69 @@ export default function HomeScreen() {
     }, [fetchData]),
   );
 
-  const greeting = getGreeting();
-  const firstName = user?.user_metadata?.full_name?.split(' ')[0]
-    ?? user?.user_metadata?.name?.split(' ')[0]
-    ?? null;
+  // Home with nothing to start is a dead end — the user opened the app to train
+  // and got a wall. Reported on change so a re-focus doesn't re-count the same
+  // state, and only for the reason actually being rendered.
+  const lastEmptyReason = useRef<HomeEmptyStateReason | null>(null);
+  useEffect(() => {
+    if (!loaded) return;
+
+    let reason: HomeEmptyStateReason | null = null;
+    if (userProgram && userProgram.current_week > durationWeeks) reason = 'program_complete';
+    else if (userProgram && !userProgram.active_plan_id) reason = 'no_active_plan';
+    else if (!todaySession) {
+      reason = isDoneToday
+        ? 'session_done_today'
+        : isRestDay
+          ? 'rest_day'
+          : 'no_session_available';
+    }
+
+    if (reason === lastEmptyReason.current) return;
+    lastEmptyReason.current = reason;
+    if (reason !== null) homeEmptyStateShown({ reason });
+  }, [loaded, userProgram, durationWeeks, todaySession, isRestDay, isDoneToday]);
+
+  async function goToSession(sessionId: string) {
+    if (user?.id && !(await hasCompletedOrientation(user.id))) {
+      router.push(`/orientation?session=${sessionId}`);
+      return;
+    }
+    router.push(`/session/${sessionId}`);
+  }
+
+  async function toggleWeekPlanCollapsed() {
+    hapticSelection();
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        240,
+        LayoutAnimation.Types.easeInEaseOut,
+        LayoutAnimation.Properties.opacity,
+      ),
+    );
+    const next = !weekPlanCollapsed;
+    setWeekPlanCollapsed(next);
+    await AsyncStorage.setItem(STORAGE_WEEK_PLAN_COLLAPSED, next ? 'true' : 'false');
+  }
+
+  const weekSchedule = activeWorkoutDaysThisWeek(workoutDays, daysSince);
+  const showReminderNudge = !workoutNotifEnabled;
+  const reminderNudgeOnCard = Boolean(userProgram?.active_plan_id) && showReminderNudge;
+  useEffect(() => {
+    if (!reminderNudgeOnCard) return;
+    if (nudgeShownKeys.has('notification_setup')) return;
+    nudgeShownKeys.add('notification_setup');
+    homeNudgeShown({ nudge_key: 'notification_setup' });
+  }, [reminderNudgeOnCard]);
+
+  const { greeting, firstName } = useHomeGreetingParts(
+    resolveDisplayName(displayName, user),
+  );
+
+  function openProfileNameEdit() {
+    hapticSelection();
+    router.navigate('/(tabs)/profile?editName=1');
+  }
 
   if (!loaded) {
     return (
@@ -496,12 +587,23 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-      <Text style={styles.greeting}>
-        {greeting}{firstName ? `, ${firstName}` : ''}
-      </Text>
-
-      <NotifNudgeCard />
-      <StretchReminderCard />
+      <View style={styles.greetingRow}>
+        <Text style={styles.greeting}>
+          {greeting}
+          {firstName ? ', ' : ''}
+        </Text>
+        {firstName ? (
+          <TouchableOpacity
+            onPress={openProfileNameEdit}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Edit name"
+          >
+            <Text style={styles.greeting}>{firstName}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       {/* Today's session, rest day, or program completion */}
       {userProgram && userProgram.current_week > durationWeeks ? (
@@ -552,23 +654,9 @@ export default function HomeScreen() {
           </View>
 
           <Text style={styles.sessionTitle}>{todaySession.title}</Text>
-
-          <View style={styles.sessionWeekProgressBlock}>
-            <View style={styles.sessionWeekDotsRow}>
-              {Array.from({ length: sessionsPerWeek }, (_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.sessionWeekDot,
-                    i < sessionsThisWeek && styles.sessionWeekDotFilled,
-                  ]}
-                />
-              ))}
-            </View>
-            <Text style={styles.sessionWeekDotsLabel}>
-              {sessionsThisWeek} of {sessionsPerWeek} sessions this week
-            </Text>
-          </View>
+          <Text style={styles.sessionPurpose}>
+            {sessionPurposeLine(todaySession.phase, todaySession.week_number)}
+          </Text>
 
           <Text style={styles.sessionMetaLine}>
             {todaySession.estimated_minutes} min · {todaySession.exercise_count} exercise{todaySession.exercise_count !== 1 ? 's' : ''}
@@ -578,15 +666,53 @@ export default function HomeScreen() {
             style={styles.startButton}
             onPress={() => {
               hapticPrimaryAction();
-              router.push(`/session/${todaySession.id}`);
+              sessionStartTapped({
+                source_screen: 'home',
+                week_number: todaySession.week_number,
+                session_number: todaySession.session_number,
+              });
+              void goToSession(todaySession.id);
             }}
             activeOpacity={0.85}
           >
             <Text style={styles.startButtonText}>Start Session</Text>
           </TouchableOpacity>
         </View>
+      ) : isDoneToday ? (
+        <View style={styles.sessionCard}>
+          {nextWorkoutDay !== null && (
+            <NextWorkoutBadge dayIndex={nextWorkoutDay} />
+          )}
+          <Text style={styles.sessionLabel}>All set</Text>
+          <Text style={styles.sessionTitle}>You're good for today</Text>
+          <Text style={styles.restTip}>
+            Your session is done. Recovery is part of the program. Try a short walk or gentle stretching today.
+          </Text>
+          {nextSessionId && (
+            <TouchableOpacity
+              onPress={() => {
+                const position = nextSessionPosition.current;
+                if (position) {
+                  sessionStartTapped({
+                    source_screen: 'home',
+                    week_number: position.week,
+                    session_number: position.session,
+                  });
+                }
+                void goToSession(nextSessionId);
+              }}
+              activeOpacity={0.7}
+              style={styles.nextSessionButton}
+            >
+              <Text style={styles.nextSessionLink}>Do another session →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       ) : (
         <View style={styles.sessionCard}>
+          {isRestDay && nextWorkoutDay !== null && (
+            <NextWorkoutBadge dayIndex={nextWorkoutDay} />
+          )}
           <Text style={styles.sessionLabel}>{isRestDay ? 'Rest Day' : 'Up Next'}</Text>
           <Text style={styles.sessionTitle}>{isRestDay ? 'Recovery Day' : 'Your next session'}</Text>
           <Text style={styles.restTip}>
@@ -596,7 +722,17 @@ export default function HomeScreen() {
           </Text>
           {nextSessionId && (
             <TouchableOpacity
-              onPress={() => router.push(`/session/${nextSessionId}`)}
+              onPress={() => {
+                const position = nextSessionPosition.current;
+                if (position) {
+                  sessionStartTapped({
+                    source_screen: 'home',
+                    week_number: position.week,
+                    session_number: position.session,
+                  });
+                }
+                void goToSession(nextSessionId);
+              }}
               activeOpacity={0.7}
               style={styles.nextSessionButton}
             >
@@ -608,90 +744,67 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Rotating insight card */}
-      <Animated.View style={[styles.insightCard, { opacity: fadeAnim }]}>
-        <Text style={styles.insightTag}>Did you know</Text>
-        <Text style={styles.insightText}>{INSIGHTS[insightIndex]}</Text>
-        <View style={styles.insightDots}>
-          {INSIGHTS.map((_, i) => (
-            <InsightDot key={i} active={i === insightIndex} />
-          ))}
-        </View>
-      </Animated.View>
+      {userProgram?.active_plan_id ? (
+        <ThisWeekCard
+          workoutDays={weekSchedule}
+          displayWeekDays={displayWeekDays}
+          weekSessions={weekSessions}
+          sessionsPerWeek={weekSchedule.length > 0 ? weekSchedule.length : sessionsPerWeek}
+          sessionsThisWeek={sessionsThisWeek}
+          userEquipment={userEquipment}
+          weekPlanCollapsed={weekPlanCollapsed}
+          weekNumber={
+            userProgram.current_week <= durationWeeks
+              ? userProgram.current_week
+              : undefined
+          }
+          onToggleCollapsed={() => { void toggleWeekPlanCollapsed(); }}
+          onEditDays={() => {
+            hapticSelection();
+            setModalVisible(true);
+          }}
+          showReminderNudge={showReminderNudge}
+          onReminderNudgePress={() => {
+            hapticPrimaryAction();
+            homeNudgeTapped({ nudge_key: 'notification_setup' });
+            setModalVisible(true);
+          }}
+        />
+      ) : null}
 
-      {/* Stacked stat cards */}
-      {userProgram && (
-        <>
-          <View style={[styles.statCard, styles.programProgressCard]}>
-            <Text style={[styles.statLabel, styles.programProgressLabel]}>Program Progress</Text>
-            <View style={styles.programProgressWeekRow}>
-              <Text style={[styles.statValue, styles.programProgressWeek]}>
-                Week {userProgram.current_week}
-                <Text style={styles.statValueDim}> of {durationWeeks}</Text>
-              </Text>
-              <MiniRing value={userProgram.current_week} total={durationWeeks} size={80} />
-            </View>
-            <Text style={[styles.statHint, styles.programProgressHint]}>
-              {durationWeeks - userProgram.current_week > 0
-                ? `${durationWeeks - userProgram.current_week} week${durationWeeks - userProgram.current_week !== 1 ? 's' : ''} to go`
-                : 'Program complete!'}
-            </Text>
-          </View>
+      <StretchReminderCard />
+      <InsightPager />
 
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Avg Pain (Last 7 Days)</Text>
-            {painAvg !== null ? (
-              <>
-                <Text style={styles.statValue}>
-                  {painAvg}
-                  <Text style={styles.statValueDim}>/10</Text>
-                </Text>
-                {painReduction !== null && (
-                  <Text style={styles.statReduction}>↓ {painReduction} pts avg per session</Text>
-                )}
-                <Text style={styles.statHint}>
-                  {painAvg <= 3
-                    ? 'Pain is low — keep it up'
-                    : painAvg <= 6
-                    ? 'Consistent movement will help'
-                    : 'Keep showing up — it gets better'}
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statHint}>No data yet</Text>
-              </>
-            )}
-          </View>
-        </>
-      )}
     </ScrollView>
+
+      <WorkoutDaysModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        weekSessions={weekSessions}
+        sessionsPerWeek={sessionsPerWeek}
+        userEquipment={userEquipment}
+        initialDays={workoutDays}
+        initialNotif={workoutNotifEnabled}
+        initialHour={reminderHour}
+        initialMinute={reminderMinute}
+        onSaved={(result) => {
+          setWorkoutDays(result.days);
+          setWorkoutNotifEnabled(result.notifEnabled);
+          setReminderHour(result.hour);
+          setReminderMinute(result.minute);
+          setModalVisible(false);
+          // Re-evaluate rest/workout day immediately with the new schedule.
+          void fetchData({ force: true });
+        }}
+        onEditProgram={() => {
+          setModalVisible(false);
+          router.push('/onboarding-answers');
+        }}
+      />
     </TabFadeWrapper>
   );
 }
 
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function thisWeekMondayISO(): string {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString();
-}
-
-function nDaysAgoISO(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString();
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -702,52 +815,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 48,
   },
+  greetingRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    marginBottom: 24,
+  },
   greeting: {
     fontSize: 28,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 24,
     letterSpacing: -0.3,
-  },
-
-  // Reminders nudge card — shown when no reminders are configured
-  nudgeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 16,
-    ...shadows.low,
-  },
-  nudgeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  nudgeText: {
-    flex: 1,
-  },
-  nudgeTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  nudgeBody: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  nudgeChevron: {
-    fontSize: 22,
-    color: colors.textTertiary,
-    marginLeft: 8,
   },
 
   // Stretch break countdown card
@@ -831,34 +909,15 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 8,
     lineHeight: 30,
   },
-  sessionWeekProgressBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  sessionPurpose: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    lineHeight: 22,
     marginBottom: 12,
-  },
-  sessionWeekDotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sessionWeekDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.border,
-  },
-  sessionWeekDotFilled: {
-    backgroundColor: colors.primary,
-  },
-  sessionWeekDotsLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    fontVariant: ['tabular-nums'],
   },
   sessionMetaLine: {
     fontSize: 14,
@@ -897,97 +956,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.textSecondary,
   },
-
-  // Rotating insight card — supporting tier, low elevation
-  insightCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 20,
-    marginBottom: 16,
-    ...shadows.low,
+  nextWorkoutBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    zIndex: 1,
   },
-  insightTag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 10,
-  },
-  insightText: {
-    fontSize: 15,
-    color: colors.textPrimary,
-    lineHeight: 23,
-    marginBottom: 14,
-  },
-  insightDots: {
-    flexDirection: 'row',
-    gap: 5,
-  },
-  insightDot: {
-    height: 5,
-    borderRadius: radius.circle,
-  },
-
-  // Stacked full-width stat cards — supporting tier, low elevation
-  statCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 20,
-    marginBottom: 12,
-    ...shadows.low,
-  },
-  programProgressCard: {
-    paddingBottom: 32,
-  },
-  programProgressWeekRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-    marginTop: -2,
-  },
-  programProgressLabel: {
-    marginBottom: 0,
-  },
-  programProgressWeek: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  programProgressHint: {
-    marginTop: -22,
-  },
-  statLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 6,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-    fontVariant: ['tabular-nums'],
-  },
-  statValueDim: {
-    fontSize: 20,
-    fontWeight: '400',
-    color: colors.textSecondary,
-  },
-  statHint: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.primary,
-  },
-  statReduction: {
-    fontSize: 14,
-    lineHeight: 21,
+  nextWorkoutBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
-    marginBottom: 4,
+    letterSpacing: 0.2,
   },
 
   // Skeletons
@@ -997,4 +982,5 @@ const styles = StyleSheet.create({
   skeletonCard: {
     marginBottom: 16,
   },
+
 });

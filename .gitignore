@@ -30,8 +30,10 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Env files — keep only .env.example tracked (placeholders, no real values).
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -39,7 +41,19 @@ yarn-error.*
 # generated native folders
 /ios
 /android
-.env
 
 # Supabase CLI local link/cache (project ref, pooler host — not secrets, but machine-local)
 supabase/.temp/
+
+# Local script scratch: EAS build logs here echo the EXPO_PUBLIC_* values back. Those keys
+# are public by design, but build logs and generated media don't belong in the repo.
+scripts/output/
+
+# Miniflare/Wrangler local state — a throwaway cache that includes copies of R2 video
+# blobs. Regenerated on demand; committing it would put media in git history for good.
+.wrangler/
+growth-engine/.wrangler/
+
+# Generated marketing renders (slides, thumbs, snapshots). Reproducible from the
+# growth-engine CLI, and ~76 MB per full run.
+growth-engine/output/

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { captureServerEvent } from '../_shared/analytics.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -67,15 +68,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    await supabaseAdmin.from('billing_events').upsert(
-      {
-        user_id: user.id,
-        event_type: 'trial_started',
-        idempotency_key: idempotencyKey,
-        metadata: { type: 'dev_trial', granted_at: now.toISOString() },
-      },
-      { onConflict: 'idempotency_key', ignoreDuplicates: true },
-    );
+    // See verify-purchase: the unique violation on idempotency_key is the dedupe signal,
+    // because service_role cannot read this table back (migration 017 grants INSERT only).
+    const { error: billingInsertError } = await supabaseAdmin.from('billing_events').insert({
+      user_id: user.id,
+      event_type: 'trial_started',
+      idempotency_key: idempotencyKey,
+      metadata: { type: 'dev_trial', granted_at: now.toISOString() },
+    });
+    if (billingInsertError && billingInsertError.code !== '23505') {
+      console.error('[grant-dev-trial] billing_events insert failed:', billingInsertError);
+    }
+
+    // Emitted under its own name rather than reusing `trial_started`, even though it writes
+    // that row to billing_events. A dev grant is free premium for a teammate; folding it
+    // into the real trial funnel would corrupt trial-to-paid conversion. It is always
+    // internal, so production analysis excludes it either way.
+    if (!billingInsertError) {
+      await captureServerEvent({
+        distinctId: user.id,
+        event: 'dev_trial_granted',
+        environment: 'production',
+        isInternal: true,
+        properties: { expires_at: expiresAt.toISOString() },
+        personProperties: {
+          is_premium: true,
+          subscription_status: 'dev_trial',
+          subscription_expires_at: expiresAt.toISOString(),
+          is_internal: true,
+        },
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

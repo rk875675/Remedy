@@ -12,6 +12,8 @@ import {
   computeWeekDays,
   getWeekLabel,
   getEstimatedCompletion,
+  historyWindowStartISO,
+  PROGRESS_HISTORY_DAYS,
   type RawCheckin,
   type RawCompletion,
 } from '../lib/progress';
@@ -112,12 +114,82 @@ console.log('computeActivityChart');
     { completed_at: iso(2026, 6, 3) },  // this week (Fri)
     { completed_at: iso(2026, 6, 4, 8) }, // this week (Sat morning)
   ];
-  const bars = computeActivityChart(completions, '1m', '#C4614A', NOW);
+  const bars = computeActivityChart(completions, '1m', '#C4614A', undefined, NOW);
   check('1M → 4 weekly bars', bars.length === 4);
   check('this week counts 3', bars[3].value === 3, `got ${bars[3].value}`);
   check('previous week counts 2', bars[2].value === 2, `got ${bars[2].value}`);
-  check('last bar labeled with this Monday 6/29', bars[3].label === '6/29', `got '${bars[3].label}'`);
-  check('6M → 26 bars', computeActivityChart([], '6m', '#C4614A', NOW).length === 26);
+  check('last bar labeled with this Monday Jun 29', bars[3].label === 'Jun 29', `got '${bars[3].label}'`);
+  check('this week marked current', bars[3].isCurrent === true);
+  check('no future bars when history fills the range', bars.every((b) => !b.isFuture));
+  check('6M → 26 bars', computeActivityChart([], '6m', '#C4614A', undefined, NOW).length === 26);
+
+  const bars3m = computeActivityChart(completions, '3m', '#C4614A', undefined, NOW);
+  check('3M → 13 weekly bars', bars3m.length === 13, `got ${bars3m.length}`);
+  check('3M last bar is current week', bars3m[12].isCurrent === true);
+  check('3M current week stays labeled', bars3m[12].label !== '');
+  check('3M this week still counts 3', bars3m[12].value === 3, `got ${bars3m[12].value}`);
+
+  const bars6m = computeActivityChart(completions, '6m', '#C4614A', undefined, NOW);
+  check('6M last bar is current week', bars6m[25].isCurrent === true);
+  check('6M current week stays labeled', bars6m[25].label !== '');
+  check('6M this week still counts 3', bars6m[25].value === 3, `got ${bars6m[25].value}`);
+}
+
+console.log('computeActivityChart — account start clamps past weeks and pads future');
+{
+  const completions: RawCompletion[] = [
+    { completed_at: iso(2026, 6, 1) }, // Wed of this week
+    { completed_at: iso(2026, 6, 3) },
+  ];
+  // Joined this week (Wed Jul 1) — do not invent June bars.
+  const joinedThisWeek = computeActivityChart(
+    completions,
+    '1m',
+    '#C4614A',
+    new Date(2026, 6, 1, 14, 0),
+    NOW,
+  );
+  check('new account 1M still has 4 bars', joinedThisWeek.length === 4, `got ${joinedThisWeek.length}`);
+  check('first bar is this Monday (Jun 29)', joinedThisWeek[0].label === 'Jun 29', `got '${joinedThisWeek[0].label}'`);
+  check('this week is current and has 2 sessions', joinedThisWeek[0].isCurrent === true && joinedThisWeek[0].value === 2);
+  check('remaining 1M bars are future', joinedThisWeek.slice(1).every((b) => b.isFuture && b.value === 0));
+  check('future week labeled Jul 6', joinedThisWeek[1].label === 'Jul 6', `got '${joinedThisWeek[1].label}'`);
+
+  // Joined two weeks ago (Mon Jun 15). 1M = 2 past + current + 1 future.
+  const joinedTwoWeeksAgo = computeActivityChart(
+    [{ completed_at: iso(2026, 5, 17) }, { completed_at: iso(2026, 6, 4, 8) }],
+    '1m',
+    '#C4614A',
+    new Date(2026, 5, 17, 10, 0),
+    NOW,
+  );
+  check('two-week-old account 1M → 4 bars', joinedTwoWeeksAgo.length === 4);
+  check('starts at Jun 15 week', joinedTwoWeeksAgo[0].label === 'Jun 15', `got '${joinedTwoWeeksAgo[0].label}'`);
+  check('third bar is current week', joinedTwoWeeksAgo[2].isCurrent === true);
+  check('one future week padded', joinedTwoWeeksAgo.filter((b) => b.isFuture).length === 1);
+
+  // 3M for a brand-new account: at most 4 future weeks, not 12 empty ones.
+  const newOn3m = computeActivityChart([], '3m', '#C4614A', new Date(2026, 6, 2), NOW);
+  check('new account 3M does not invent a full quarter', newOn3m.length === 5, `got ${newOn3m.length}`);
+  check('3M pads 4 future weeks', newOn3m.filter((b) => b.isFuture).length === 4);
+
+  // Account older than the range: unchanged 4-week lookback, no future.
+  const oldAccount = computeActivityChart(completions, '1m', '#C4614A', new Date(2025, 0, 1), NOW);
+  check('long-lived account 1M stays a 4-week lookback', oldAccount.length === 4 && oldAccount.every((b) => !b.isFuture));
+
+  // Completions inside the range but before accountStart still keep their week.
+  const withEarlierSession = computeActivityChart(
+    [{ completed_at: iso(2026, 5, 17) }, { completed_at: iso(2026, 6, 1) }],
+    '1m',
+    '#C4614A',
+    new Date(2026, 6, 1, 14, 0),
+    NOW,
+  );
+  check(
+    'in-range completion before account start still shows that week',
+    withEarlierSession[0].label === 'Jun 15',
+    `got '${withEarlierSession[0].label}'`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +240,18 @@ console.log('getEstimatedCompletion');
 // ---------------------------------------------------------------------------
 console.log('localDateKey');
 check('formats local date', localDateKey(new Date(2026, 0, 5)) === '2026-01-05');
+
+console.log('historyWindowStartISO');
+const windowStart = new Date(historyWindowStartISO(PROGRESS_HISTORY_DAYS, NOW));
+const expectedStart = new Date(2026, 6, 4);
+expectedStart.setHours(0, 0, 0, 0);
+expectedStart.setDate(expectedStart.getDate() - (PROGRESS_HISTORY_DAYS - 1));
+check(
+  '190-day lookback lands on local midnight 189 days before NOW',
+  windowStart.getTime() === expectedStart.getTime(),
+  `got ${windowStart.toISOString()} expected ${expectedStart.toISOString()}`,
+);
+check('covers the 6-month activity chart (26 weeks)', PROGRESS_HISTORY_DAYS >= 182);
 
 console.log('');
 if (failures > 0) {

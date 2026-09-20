@@ -1,0 +1,17 @@
+---
+description: Legal entity — Kumar Holdings LLC d/b/a Remedy
+alwaysApply: true
+---
+
+# Legal entity
+
+The operating company is **Kumar Holdings LLC**, d/b/a Remedy. Canonical field: `LEGAL_ENTITY` in `constants/legalTerms.ts`. If the entity name changes again, replace **Kumar Holdings LLC** everywhere in the same pass — do not leave mixed names.
+
+Also update:
+
+- `constants/legalPrivacy.ts` and in-app Terms/Privacy copy
+- `website/terms.html`, `privacy.html`, `contact.html`, `unsubscribe.html`, footers
+- `supabase/email-templates/layout.mjs` (`BRAND.entity`) and any live auth email templates
+- App Store / legal checklist copy that names the company
+
+Do not invent a new entity name. The product name stays **Remedy**.

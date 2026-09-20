@@ -1,5 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,24 +19,73 @@ import { shadows } from '../../constants/shadows';
 import { hapticSelection } from '../../lib/haptics';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { MiniRing } from '../../components/ui/MiniRing';
+import { progressRangeChanged } from '../../lib/analytics/events/engagement';
 import type { UserProgram } from '../../types/database';
 import {
   computePainChart,
   computeActivityChart,
-  computeWeekDays,
-  getWeekLabel,
   getEstimatedCompletion,
+  computeWeekDays,
+  historyWindowStartISO,
+  PROGRESS_HISTORY_DAYS,
+  localDateKey,
   type RawCheckin,
   type RawCompletion,
   type PainRange,
   type ActivityRange,
 } from '../../lib/progress';
+import { countMissedThisWeek, showingUpCopy } from '../../lib/streak';
+import { shouldSkipTabRefresh, beginTabRefresh, finishTabRefresh, invalidateTabRefresh } from '../../lib/tabRefresh';
+import { computeDefaultWorkoutDays, activeWorkoutDaysThisWeek, todayDayIndex } from '../../lib/workoutDays';
+import { STORAGE_WORKOUT_DAYS, STORAGE_WORKOUT_DAYS_SINCE, DAY_LABELS } from '../../components/progress/WorkoutDaysModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-// card uses padding:20, container uses paddingHorizontal:24 → 88px total eaten horizontally
 const CARD_INNER_W = SCREEN_WIDTH - 88;
 const PAIN_Y_AXIS_W = 36;
 const PAIN_CHART_DATA_W = CARD_INNER_W - PAIN_Y_AXIS_W;
+const ACTIVITY_CHART_W = CARD_INNER_W - PAIN_Y_AXIS_W - 12;
+
+function activityBarLayout(barCount: number, chartWidth: number): {
+  barWidth: number;
+  spacing: number;
+  initialSpacing: number;
+  fitsWithoutScroll: boolean;
+} {
+  const initialSpacing = 8;
+  const minBar = 12;
+  const minGap = 10;
+  const maxBar = barCount <= 5 ? 36 : 28;
+  const maxGap = barCount <= 5 ? 28 : 22;
+  const minWidth = initialSpacing + barCount * minBar + Math.max(0, barCount - 1) * minGap;
+  if (minWidth > chartWidth) {
+    return { barWidth: 14, spacing: 10, initialSpacing, fitsWithoutScroll: false };
+  }
+  const extra = chartWidth - minWidth;
+  const barRoom = (maxBar - minBar) * barCount;
+  const gaps = Math.max(0, barCount - 1);
+  if (extra <= barRoom) {
+    return {
+      barWidth: minBar + Math.floor(extra / barCount),
+      spacing: minGap,
+      initialSpacing,
+      fitsWithoutScroll: true,
+    };
+  }
+  return {
+    barWidth: maxBar,
+    spacing: gaps === 0 ? minGap : Math.min(maxGap, minGap + Math.floor((extra - barRoom) / gaps)),
+    initialSpacing,
+    fitsWithoutScroll: true,
+  };
+}
+
+const RANGE_DAYS: Record<PainRange | ActivityRange, number> = {
+  '2w': 14,
+  '1m': 30,
+  '3m': 90,
+  '6m': 180,
+};
 
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
@@ -41,14 +97,12 @@ export default function ProgressScreen() {
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [loaded, setLoaded] = useState(false);
 
-  // Raw data for range filtering
   const [allPainCheckins, setAllPainCheckins] = useState<RawCheckin[]>([]);
   const [allActivityCompletions, setAllActivityCompletions] = useState<RawCompletion[]>([]);
   const [painRange, setPainRange] = useState<PainRange>('2w');
   const [activityRange, setActivityRange] = useState<ActivityRange>('1m');
-
-  // This Week navigation: 0 = current week, -1 = last week, etc.
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [workoutDays, setWorkoutDays] = useState<number[]>([]);
+  const [daysSince, setDaysSince] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,17 +111,56 @@ export default function ProgressScreen() {
     }, [user]),
   );
 
-  // Charts are derived from raw data — no chart state to fall out of sync
   const { beforeData, afterData, painRangeHasData } = useMemo(() => {
-    const accountStart = userProgram?.started_at ? new Date(userProgram.started_at) : undefined;
-    const { bData, aData, rangeHasData } = computePainChart(allPainCheckins, painRange, accountStart);
+    const painStart = userProgram?.started_at ? new Date(userProgram.started_at) : undefined;
+    const { bData, aData, rangeHasData } = computePainChart(allPainCheckins, painRange, painStart);
     return { beforeData: bData, afterData: aData, painRangeHasData: rangeHasData };
   }, [allPainCheckins, painRange, userProgram]);
 
+  const activityAccountStart = useMemo(() => {
+    const created = user?.created_at ? new Date(user.created_at) : undefined;
+    const started = userProgram?.started_at ? new Date(userProgram.started_at) : undefined;
+    if (created && started) return created < started ? created : started;
+    return created ?? started;
+  }, [user?.created_at, userProgram?.started_at]);
+
   const weeklyBarData = useMemo(
-    () => computeActivityChart(allActivityCompletions, activityRange, colors.primary),
-    [allActivityCompletions, activityRange],
+    () =>
+      computeActivityChart(
+        allActivityCompletions,
+        activityRange,
+        colors.primary,
+        activityAccountStart,
+      ),
+    [allActivityCompletions, activityRange, activityAccountStart],
   );
+
+  const activityLayout = useMemo(
+    () => activityBarLayout(weeklyBarData.length, ACTIVITY_CHART_W),
+    [weeklyBarData.length],
+  );
+
+  const activityChartData = useMemo(
+    () =>
+      weeklyBarData.map((bar) => ({
+        value: bar.value,
+        label: bar.label,
+        frontColor: bar.isFuture ? colors.primaryMuted : colors.primary,
+        labelWidth: bar.label
+          ? Math.max(activityLayout.barWidth, 36)
+          : activityLayout.barWidth,
+        labelTextStyle: {
+          fontSize: 10,
+          fontWeight: bar.isCurrent ? ('700' as const) : ('500' as const),
+          color: bar.isCurrent ? colors.textPrimary : colors.textSecondary,
+        },
+      })),
+    [weeklyBarData, activityLayout.barWidth],
+  );
+
+  const activityMaxValue = Math.max(4, ...weeklyBarData.map((d) => d.value));
+  const activityCurrentIndex = weeklyBarData.findIndex((d) => d.isCurrent);
+  const activityHasFuture = weeklyBarData.some((d) => d.isFuture);
 
   async function fetchAll() {
     if (!user) return;
@@ -75,19 +168,33 @@ export default function ProgressScreen() {
     const resetPending = await AsyncStorage.getItem('remedy_reset_pending');
     if (resetPending) {
       await AsyncStorage.removeItem('remedy_reset_pending');
+      invalidateTabRefresh('progress');
       setTotalSessions(0);
       setAllPainCheckins([]);
       setAllActivityCompletions([]);
       setUserProgram(null);
       setLoaded(false);
+    } else if (shouldSkipTabRefresh('progress')) {
+      return;
     }
 
-    // Fetch this week's session_completions, pain checkins, user program, and activity history in parallel
-    const [painRes, upRes, totalRes, activityRes] = await Promise.all([
+    beginTabRefresh('progress');
+    const since = historyWindowStartISO(PROGRESS_HISTORY_DAYS);
+    try {
+
+    const [
+      painRes,
+      upRes,
+      totalRes,
+      activityRes,
+      storedDays,
+      storedDaysSince,
+    ] = await Promise.all([
       supabase
         .from('pain_checkins')
         .select('score, type, recorded_at')
         .eq('user_id', user.id)
+        .gte('recorded_at', since)
         .order('recorded_at', { ascending: true }),
       supabase
         .from('user_programs')
@@ -102,28 +209,29 @@ export default function ProgressScreen() {
         .from('session_completions')
         .select('completed_at')
         .eq('user_id', user.id)
+        .gte('completed_at', since)
         .order('completed_at', { ascending: true }),
+      AsyncStorage.getItem(STORAGE_WORKOUT_DAYS),
+      AsyncStorage.getItem(STORAGE_WORKOUT_DAYS_SINCE),
     ]);
 
-    // Only overwrite state from responses that succeeded — a failed focus-refetch
-    // (e.g. offline) must not wipe previously loaded charts. PGRST116 ("no rows")
-    // from .single() is a legitimate no-program state, not a failure.
+    let planSessionsPerWeek = sessionsPerWeek;
     if (!upRes.error || upRes.error.code === 'PGRST116') {
       const up = upRes.data;
       setUserProgram(up);
 
-      // Read duration/cadence from the active plan snapshot — matches Home and
-      // session player.
       if (up?.active_plan_id) {
-        const { data: plan } = await supabase
+        const { data: planRes } = await supabase
           .from('user_program_plans')
           .select('duration_weeks, sessions_per_week')
           .eq('id', up.active_plan_id)
+          .eq('status', 'active')
           .single();
 
-        if (plan) {
-          setDurationWeeks(plan.duration_weeks);
-          setSessionsPerWeek(plan.sessions_per_week);
+        if (planRes) {
+          setDurationWeeks(planRes.duration_weeks);
+          setSessionsPerWeek(planRes.sessions_per_week);
+          planSessionsPerWeek = planRes.sessions_per_week;
         }
       }
     }
@@ -132,31 +240,36 @@ export default function ProgressScreen() {
     if (!activityRes.error) setAllActivityCompletions(activityRes.data ?? []);
     if (!totalRes.error) setTotalSessions(totalRes.count ?? 0);
 
-    setLoaded(true);
+    let days: number[] = [];
+    try { if (storedDays) days = JSON.parse(storedDays) as number[]; } catch { /* ignore */ }
+    let nextSince = storedDaysSince;
+    if (days.length !== planSessionsPerWeek) {
+      days = computeDefaultWorkoutDays(planSessionsPerWeek);
+      nextSince = localDateKey(new Date());
+      await AsyncStorage.multiSet([
+        [STORAGE_WORKOUT_DAYS, JSON.stringify(days)],
+        [STORAGE_WORKOUT_DAYS_SINCE, nextSince],
+      ]);
+    }
+    setWorkoutDays(days);
+    setDaysSince(nextSince);
+
+    } finally {
+      finishTabRefresh('progress');
+      setLoaded(true);
+    }
   }
 
-  const hasEnoughData =
-    allPainCheckins.filter((c) => c.type === 'before').length >= 3;
-  // The chart itself is range-filtered — with enough all-time data but nothing in the
-  // selected range, show a range-specific empty state instead of an empty chart.
+  const hasEnoughData = allPainCheckins.filter((c) => c.type === 'before').length >= 3;
   const showPainChart = hasEnoughData && painRangeHasData;
 
-  // Derive week day completions for the selected week offset from raw data
-  const displayWeekDays = useMemo(
-    () => computeWeekDays(allActivityCompletions, weekOffset),
-    [allActivityCompletions, weekOffset],
-  );
-
-  // Allow navigating up to 52 weeks back regardless of program start date
-  const minWeekOffset = -52;
-
-  // Program progress follows DB current_week (advances on session completion), same as Home.
   const programWeek = userProgram
     ? Math.min(userProgram.current_week, durationWeeks)
     : 1;
   const isProgramComplete = userProgram
     ? userProgram.current_week > durationWeeks
     : false;
+  const weeksRemaining = durationWeeks - programWeek;
 
   const estimatedEnd = userProgram && !isProgramComplete
     ? getEstimatedCompletion(
@@ -166,6 +279,26 @@ export default function ProgressScreen() {
         sessionsPerWeek,
       )
     : null;
+
+  const effectiveDays =
+    workoutDays.length === sessionsPerWeek
+      ? workoutDays
+      : computeDefaultWorkoutDays(sessionsPerWeek);
+  const weekSchedule = activeWorkoutDaysThisWeek(effectiveDays, daysSince);
+  const weekTarget = weekSchedule.length > 0 ? weekSchedule.length : sessionsPerWeek;
+  const weekDoneFlags = computeWeekDays(allActivityCompletions, 0);
+  const sessionsThisWeek = weekDoneFlags.filter(Boolean).length;
+  const missedThisWeek =
+    workoutDays.length === sessionsPerWeek
+      ? countMissedThisWeek(allActivityCompletions, weekSchedule)
+      : 0;
+  const showingUpBody = showingUpCopy({
+    sessionsThisWeek,
+    sessionsPerWeek: weekTarget,
+    missedThisWeek,
+    hasAnyCompletion: totalSessions > 0,
+  });
+  const todayIdx = todayDayIndex();
 
   if (!loaded) {
     return (
@@ -186,232 +319,249 @@ export default function ProgressScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-      <Text style={styles.title}>Progress</Text>
+        <Text style={styles.title}>Progress</Text>
 
-      {/* Pain Trend */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Pain Trend</Text>
-          <View style={styles.rangeRow}>
-            {(['2w', '1m', '3m'] as const).map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.rangePill, painRange === r && styles.rangePillActive]}
-                onPress={() => {
-                  hapticSelection();
-                  setPainRange(r);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.rangePillText, painRange === r && styles.rangePillTextActive]}>
-                  {r === '2w' ? '14D' : r === '1m' ? '1M' : '3M'}
+        {userProgram && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Program Progress</Text>
+            <View style={styles.programProgressWeekRow}>
+              <View style={styles.programProgressCopy}>
+                <Text style={styles.progressWeek}>
+                  {isProgramComplete ? 'Complete' : `Week ${programWeek}`}
+                  {!isProgramComplete && (
+                    <Text style={styles.progressWeekDim}> of {durationWeeks}</Text>
+                  )}
                 </Text>
-              </TouchableOpacity>
-            ))}
+                {estimatedEnd ? (
+                  <Text style={styles.estimatedEnd}>
+                    Estimated completion: {estimatedEnd}
+                  </Text>
+                ) : null}
+                {isProgramComplete ? (
+                  <Text style={styles.weeksToGo}>You finished your program!</Text>
+                ) : weeksRemaining > 0 ? (
+                  <Text style={styles.weeksToGo}>
+                    {weeksRemaining} week{weeksRemaining !== 1 ? 's' : ''} to go
+                  </Text>
+                ) : (
+                  <Text style={styles.weeksToGo}>Final week</Text>
+                )}
+              </View>
+              <MiniRing value={programWeek} total={durationWeeks} size={80} />
+            </View>
           </View>
-        </View>
-        {showPainChart ? (
-          <View style={{ marginTop: 12 }}>
-            <LineChart
-              data={beforeData}
-              data2={afterData}
-              height={150}
-              width={PAIN_CHART_DATA_W}
-              spacing={
-                beforeData.length > 1
-                  ? Math.max(16, Math.floor((PAIN_CHART_DATA_W - 8) / (beforeData.length - 1)))
-                  : PAIN_CHART_DATA_W - 8
-              }
-              color1={colors.textSecondary}
-              color2={colors.primary}
-              thickness={2}
-              hideDataPoints={false}
-              dataPointsColor1={colors.textSecondary}
-              dataPointsColor2={colors.primary}
-              dataPointsRadius={3}
-              // Empty buckets have no value: interpolate between real points (dots
-              // hidden there) and never extrapolate a line beyond the real data.
-              extrapolateMissingValues={false}
-              yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
-              xAxisLabelTextStyle={{ fontSize: 9, color: colors.textSecondary }}
-              maxValue={10}
-              noOfSections={5}
-              rulesColor={colors.border}
-              yAxisColor="transparent"
-              xAxisColor={colors.border}
-              hideRules={false}
-              yAxisLabelWidth={PAIN_Y_AXIS_W}
-            />
+        )}
+
+        {userProgram && !isProgramComplete && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>This Week</Text>
+            <View style={styles.programProgressWeekRow}>
+              <View style={styles.programProgressCopy}>
+                <Text
+                  style={styles.progressWeek}
+                  accessibilityLabel={`${sessionsThisWeek} of ${weekTarget} sessions this week`}
+                >
+                  {sessionsThisWeek}
+                  <Text style={styles.progressWeekDim}> of {weekTarget} sessions</Text>
+                </Text>
+                <Text style={styles.showingUpBody}>{showingUpBody}</Text>
+              </View>
+              <MiniRing value={sessionsThisWeek} total={weekTarget} size={80} />
+            </View>
+            <View style={styles.showingUpDays}>
+              {DAY_LABELS.map((label, i) => {
+                const done = weekDoneFlags[i];
+                const scheduled = weekSchedule.includes(i);
+                const skipped = scheduled && !done && i < todayIdx;
+                const planned = scheduled && !done && i >= todayIdx;
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.showingUpDay,
+                      planned && styles.showingUpDayPlanned,
+                      skipped && styles.showingUpDaySkipped,
+                      done && styles.showingUpDayDone,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.showingUpDayLabel,
+                        planned && styles.showingUpDayLabelPlanned,
+                        skipped && styles.showingUpDayLabelSkipped,
+                        done && styles.showingUpDayLabelDone,
+                      ]}
+                    >
+                      {label.charAt(0)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.textSecondary }]} />
-                <Text style={styles.legendText}>Before</Text>
+                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                <Text style={styles.legendText}>Done</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-                <Text style={styles.legendText}>After</Text>
+                <View style={[styles.legendDot, styles.legendDotPlanned]} />
+                <Text style={styles.legendText}>Planned</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, styles.legendDotMissed]} />
+                <Text style={styles.legendText}>Missed</Text>
               </View>
             </View>
           </View>
-        ) : (
-          <Text style={styles.placeholder}>
-            {hasEnoughData
-              ? 'No check-ins in this range yet.'
-              : 'Complete more sessions to see your pain trend.'}
-          </Text>
         )}
-      </View>
 
-      {/* Activity — weekly sessions bar chart */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Activity</Text>
-          <View style={styles.rangeRow}>
-            {(['1m', '3m', '6m'] as const).map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.rangePill, activityRange === r && styles.rangePillActive]}
-                onPress={() => {
-                  hapticSelection();
-                  setActivityRange(r);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.rangePillText, activityRange === r && styles.rangePillTextActive]}>
-                  {r === '1m' ? '1M' : r === '3m' ? '3M' : '6M'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <Text style={styles.totalSessionsBadge}>{totalSessions} sessions total</Text>
-        {weeklyBarData.some((d) => d.value > 0) ? (
-          <View style={{ marginTop: 8 }}>
-            {/* BarChart scrolls internally with a pinned y-axis; start at the most
-                recent weeks. An external ScrollView showed the OLDEST weeks first and
-                scrolled the y-axis off-screen. */}
-            <BarChart
-              data={weeklyBarData}
-              width={CARD_INNER_W - PAIN_Y_AXIS_W - 12}
-              height={120}
-              barWidth={20}
-              spacing={14}
-              initialSpacing={4}
-              roundedTop
-              noOfSections={3}
-              frontColor={colors.primary}
-              scrollToEnd
-              scrollAnimation={false}
-              showScrollIndicator={false}
-              yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
-              xAxisLabelTextStyle={{ fontSize: 8, color: colors.textSecondary }}
-              rulesColor={colors.border}
-              yAxisColor="transparent"
-              xAxisColor={colors.border}
-              hideRules={false}
-              yAxisLabelWidth={PAIN_Y_AXIS_W}
-            />
-          </View>
-        ) : (
-          <Text style={styles.placeholder}>
-            Complete sessions to see your activity history.
-          </Text>
-        )}
-      </View>
-
-      {/* This Week */}
-      <View style={styles.card}>
-        <View style={styles.weekNavRow}>
-          <TouchableOpacity
-            style={styles.weekNavArrow}
-            onPress={() => setWeekOffset((o) => Math.max(minWeekOffset, o - 1))}
-            disabled={weekOffset <= minWeekOffset}
-          >
-            <Text
-              style={[
-                styles.weekNavArrowText,
-                weekOffset <= minWeekOffset && styles.weekNavArrowDisabled,
-              ]}
-            >
-              ‹
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.weekNavCenter}>
-            <Text style={styles.cardTitle}>
-              {weekOffset === 0 ? 'This Week' : 'Week of'}
-            </Text>
-            <Text style={styles.weekNavLabel}>{getWeekLabel(weekOffset)}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.weekNavArrow}
-            onPress={() => setWeekOffset((o) => Math.min(0, o + 1))}
-            disabled={weekOffset >= 0}
-          >
-            <Text
-              style={[
-                styles.weekNavArrowText,
-                weekOffset >= 0 && styles.weekNavArrowDisabled,
-              ]}
-            >
-              ›
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.weekRow}>
-          {DAY_LABELS.map((label, i) => (
-            <View
-              key={i}
-              style={[styles.dayCircle, displayWeekDays[i] && styles.dayCircleFilled]}
-            >
-              <Text
-                style={[
-                  styles.dayInsideLabel,
-                  displayWeekDays[i] && styles.dayInsideLabelFilled,
-                ]}
-              >
-                {label.charAt(0)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Program Progress */}
-      {userProgram && (
+        {/* Pain Trend */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Program Progress</Text>
-          <Text style={styles.progressLabel}>
-            {isProgramComplete
-              ? 'Program complete'
-              : `Week ${programWeek} of ${durationWeeks}`}
-          </Text>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${Math.min((programWeek / durationWeeks) * 100, 100)}%` },
-              ]}
-            />
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Pain Trend</Text>
+            <View style={styles.rangeRow}>
+              {(['2w', '1m', '3m'] as const).map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.rangePill, painRange === r && styles.rangePillActive]}
+                  onPress={() => {
+                    hapticSelection();
+                    setPainRange(r);
+                    progressRangeChanged({ chart: 'pain', range_days: RANGE_DAYS[r] });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.rangePillText, painRange === r && styles.rangePillTextActive]}>
+                    {r === '2w' ? '14D' : r === '1m' ? '1M' : '3M'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-          {estimatedEnd && (
-            <Text style={styles.estimatedEnd}>
-              Estimated completion: {estimatedEnd}
+          {showPainChart ? (
+            <View style={{ marginTop: 12 }}>
+              <LineChart
+                key={painRange}
+                data={beforeData}
+                data2={afterData}
+                height={150}
+                width={PAIN_CHART_DATA_W}
+                spacing={
+                  beforeData.length > 1
+                    ? Math.max(16, Math.floor((PAIN_CHART_DATA_W - 8) / (beforeData.length - 1)))
+                    : PAIN_CHART_DATA_W - 8
+                }
+                color1={colors.textSecondary}
+                color2={colors.primary}
+                thickness={2}
+                hideDataPoints={false}
+                dataPointsColor1={colors.textSecondary}
+                dataPointsColor2={colors.primary}
+                dataPointsRadius={3}
+                extrapolateMissingValues={false}
+                yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
+                xAxisLabelTextStyle={{ fontSize: 10, color: colors.textSecondary }}
+                xAxisLabelsHeight={22}
+                labelsExtraHeight={4}
+                maxValue={10}
+                noOfSections={5}
+                rulesColor={colors.border}
+                yAxisColor="transparent"
+                xAxisColor={colors.border}
+                hideRules={false}
+                yAxisLabelWidth={PAIN_Y_AXIS_W}
+              />
+              <View style={styles.legendRow}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.textSecondary }]} />
+                  <Text style={styles.legendText}>Before</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={styles.legendText}>After</Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.placeholder}>
+              {hasEnoughData
+                ? 'No check-ins in this range yet.'
+                : 'Complete more sessions to see your pain trend.'}
             </Text>
           )}
-          {isProgramComplete && (
-            <Text style={styles.estimatedEnd}>You finished your program!</Text>
+        </View>
+
+        {/* Activity */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Activity</Text>
+            <View style={styles.rangeRow}>
+              {(['1m', '3m', '6m'] as const).map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.rangePill, activityRange === r && styles.rangePillActive]}
+                  onPress={() => {
+                    hapticSelection();
+                    setActivityRange(r);
+                    progressRangeChanged({ chart: 'activity', range_days: RANGE_DAYS[r] });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.rangePillText, activityRange === r && styles.rangePillTextActive]}>
+                    {r === '1m' ? '1M' : r === '3m' ? '3M' : '6M'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <Text style={styles.totalSessionsBadge}>{totalSessions} sessions total</Text>
+          {weeklyBarData.some((d) => d.value > 0) ? (
+            <View style={{ marginTop: 8 }}>
+              <BarChart
+                key={activityRange}
+                data={activityChartData}
+                width={ACTIVITY_CHART_W}
+                height={128}
+                barWidth={activityLayout.barWidth}
+                spacing={activityLayout.spacing}
+                initialSpacing={activityLayout.initialSpacing}
+                endSpacing={8}
+                roundedTop
+                noOfSections={activityMaxValue <= 4 ? activityMaxValue : 4}
+                maxValue={activityMaxValue}
+                frontColor={colors.primary}
+                disableScroll={activityLayout.fitsWithoutScroll}
+                scrollToEnd={!activityLayout.fitsWithoutScroll && !activityHasFuture}
+                scrollToIndex={
+                  !activityLayout.fitsWithoutScroll && activityHasFuture && activityCurrentIndex >= 0
+                    ? activityCurrentIndex
+                    : undefined
+                }
+                scrollAnimation={false}
+                showScrollIndicator={false}
+                formatYLabel={(label) => String(Math.round(Number(label)))}
+                yAxisTextStyle={{ fontSize: 10, color: colors.textSecondary }}
+                xAxisLabelTextStyle={{ fontSize: 10, color: colors.textSecondary }}
+                xAxisLabelsHeight={22}
+                labelsExtraHeight={4}
+                xAxisTextNumberOfLines={1}
+                rulesColor={colors.border}
+                yAxisColor="transparent"
+                xAxisColor={colors.border}
+                hideRules={false}
+                yAxisLabelWidth={PAIN_Y_AXIS_W}
+              />
+            </View>
+          ) : (
+            <Text style={styles.placeholder}>
+              Complete sessions to see your activity history.
+            </Text>
           )}
         </View>
-      )}
-    </ScrollView>
+      </ScrollView>
     </TabFadeWrapper>
   );
 }
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const styles = StyleSheet.create({
   container: {
@@ -448,7 +598,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 12,
   },
   rangeRow: {
     flexDirection: 'row',
@@ -503,45 +653,67 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
+  legendDotPlanned: {
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  legendDotMissed: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   legendText: {
     fontSize: 13,
     color: colors.textSecondary,
   },
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  weekNavRow: {
+  programProgressWeekRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    gap: 16,
   },
-  weekNavArrow: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  weekNavArrowText: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    lineHeight: 28,
-  },
-  weekNavArrowDisabled: {
-    color: colors.textTertiary,
-  },
-  weekNavCenter: {
+  programProgressCopy: {
     flex: 1,
-    alignItems: 'center',
   },
-  weekNavLabel: {
-    fontSize: 12,
+  progressWeek: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4,
+    fontVariant: ['tabular-nums'],
+  },
+  progressWeekDim: {
+    fontSize: 20,
+    fontWeight: '400',
     color: colors.textSecondary,
+  },
+  estimatedEnd: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  weeksToGo: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.primary,
+  },
+  showingUpBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.primary,
     marginTop: 2,
   },
-  dayCircle: {
+  showingUpDays: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  showingUpDay: {
     width: 34,
     height: 34,
     borderRadius: radius.circle,
@@ -551,40 +723,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayCircleFilled: {
+  showingUpDayPlanned: {
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
+  },
+  showingUpDaySkipped: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+  },
+  showingUpDayDone: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  dayInsideLabel: {
+  showingUpDayLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  dayInsideLabelFilled: {
+  showingUpDayLabelPlanned: {
+    color: colors.primary,
+  },
+  showingUpDayLabelSkipped: {
+    color: colors.textTertiary,
+  },
+  showingUpDayLabelDone: {
     color: '#FFFFFF',
-  },
-  progressLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  progressTrack: {
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
-  },
-  estimatedEnd: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.textSecondary,
   },
   skeletonBlock: {
     marginBottom: 16,

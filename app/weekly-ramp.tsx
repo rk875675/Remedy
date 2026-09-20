@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { trackEvent } from '../lib/analytics';
+import { weeklyRampDecided, weeklyRampSuggested } from '../lib/analytics/events/program';
+import { maybeRequestReviewAfterSession } from '../lib/app-store-review';
 import { hapticPrimaryAction, hapticSelection } from '../lib/haptics';
 import { colors, serifFont } from '../constants/colors';
 import { radius } from '../constants/spacing';
@@ -30,28 +31,56 @@ export default function WeeklyRampScreen() {
   const week = z.coerce.number().int().min(1).max(52).catch(1).parse(params.week);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [planId, setPlanId] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<Suggestion>('progress');
   const [painDelta, setPainDelta] = useState<number | null>(null);
   const tracked = useRef(false);
+  // Increment to re-trigger the load effect on manual retry.
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
 
+    setLoading(true);
+    setLoadError(false);
+
     (async () => {
-      const { data: up } = await supabase
+      const { data: up, error: upError } = await supabase
         .from('user_programs')
         .select('active_plan_id, current_week')
         .eq('user_id', user.id)
         .single();
+
+      // Distinguish a real network/server error from "row not found" (PGRST116).
+      // On a hard error don't bounce — show a retry prompt instead.
+      if (upError && upError.code !== 'PGRST116') {
+        if (!cancelled) { setLoadError(true); setLoading(false); }
+        return;
+      }
+
       const pid = up?.active_plan_id ?? null;
       if (!up || !pid) {
-        if (!cancelled) {
-          setPlanId(null);
-          setLoading(false);
-        }
+        if (!cancelled) { setPlanId(null); setLoading(false); }
+        return;
+      }
+
+      const { data: activePlan, error: planError } = await supabase
+        .from('user_program_plans')
+        .select('id')
+        .eq('id', pid)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (planError) {
+        if (!cancelled) { setLoadError(true); setLoading(false); }
+        return;
+      }
+
+      if (!activePlan) {
+        if (!cancelled) { setPlanId(null); setLoading(false); }
         return;
       }
 
@@ -62,10 +91,7 @@ export default function WeeklyRampScreen() {
       // wrong week's snapshot (the DB trigger blocks incomplete weeks, but an older
       // completed week without a decision would still be accepted).
       if (week !== up.current_week - 1) {
-        if (!cancelled) {
-          setPlanId(null);
-          setLoading(false);
-        }
+        if (!cancelled) { setPlanId(null); setLoading(false); }
         return;
       }
 
@@ -77,29 +103,44 @@ export default function WeeklyRampScreen() {
         .eq('week_number', week);
       const sessionIds = (weekSessions ?? []).map((s) => s.id);
 
+      if (sessionIds.length === 0) {
+        if (!cancelled) { setPlanId(null); setLoading(false); }
+        return;
+      }
+
       let before: number[] = [];
       let after: number[] = [];
-      if (sessionIds.length > 0) {
-        const { data: comps } = await supabase
-          .from('session_completions')
-          .select('id')
-          .eq('user_id', user.id)
-          .in('plan_session_id', sessionIds);
-        const compIds = (comps ?? []).map((c) => c.id);
+      const { data: comps } = await supabase
+        .from('session_completions')
+        .select('id, plan_session_id')
+        .eq('user_id', user.id)
+        .in('plan_session_id', sessionIds);
+      const completedIds = new Set(
+        (comps ?? [])
+          .map((c) => c.plan_session_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      );
+      // Same predicate as apply_weekly_ramp / week_is_fully_completed. If the
+      // week is not actually done, a decision insert would fail with P0005 —
+      // dismiss instead of showing a choice that cannot save.
+      if (!sessionIds.every((id) => completedIds.has(id))) {
+        if (!cancelled) { setPlanId(null); setLoading(false); }
+        return;
+      }
+      const compIds = (comps ?? []).map((c) => c.id);
 
-        if (compIds.length > 0) {
-          // before/after are both paired to their session via session_completion_id
-          // (complete_session links the before check-in at completion time, migration 027).
-          // Querying by completion id excludes orphaned `before` rows from abandoned starts.
-          const { data: checkinRows } = await supabase
-            .from('pain_checkins')
-            .select('score, type')
-            .eq('user_id', user.id)
-            .in('type', ['before', 'after'])
-            .in('session_completion_id', compIds);
-          after = (checkinRows ?? []).filter((r) => r.type === 'after').map((r) => r.score);
-          before = (checkinRows ?? []).filter((r) => r.type === 'before').map((r) => r.score);
-        }
+      if (compIds.length > 0) {
+        // before/after are both paired to their session via session_completion_id
+        // (complete_session links the before check-in at completion time, migration 027).
+        // Querying by completion id excludes orphaned `before` rows from abandoned starts.
+        const { data: checkinRows } = await supabase
+          .from('pain_checkins')
+          .select('score, type')
+          .eq('user_id', user.id)
+          .in('type', ['before', 'after'])
+          .in('session_completion_id', compIds);
+        after = (checkinRows ?? []).filter((r) => r.type === 'after').map((r) => r.score);
+        before = (checkinRows ?? []).filter((r) => r.type === 'before').map((r) => r.score);
       }
 
       const avgBefore = avg(before);
@@ -119,7 +160,7 @@ export default function WeeklyRampScreen() {
         setLoading(false);
         if (!tracked.current) {
           tracked.current = true;
-          trackEvent('weekly_ramp_suggested', { week, suggestion: suggested, pain_delta: delta });
+          weeklyRampSuggested({ week_number: week, suggestion: suggested, pain_delta: delta });
         }
       }
     })();
@@ -127,14 +168,14 @@ export default function WeeklyRampScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user, week]);
+  }, [user, week, retryCount]);
 
   async function confirm(decision: Suggestion) {
     if (!user || !planId || submitting) return;
     hapticPrimaryAction();
     setSubmitting(true);
 
-    await supabase.from('user_weekly_ramp_decisions').insert({
+    const { error: insertError } = await supabase.from('user_weekly_ramp_decisions').insert({
       plan_id: planId,
       user_id: user.id,
       week_number: week,
@@ -143,7 +184,52 @@ export default function WeeklyRampScreen() {
       pain_delta: painDelta,
     });
 
-    trackEvent('weekly_ramp_confirmed', { week, suggestion, decision, pain_delta: painDelta });
+    // A prior attempt may have committed even if its response never reached the
+    // device. The plan/week uniqueness constraint proves the decision already exists,
+    // so treat that retry as complete instead of trapping the user on this screen.
+    if (insertError?.code === '23505') {
+      router.dismissTo('/(tabs)');
+      return;
+    }
+
+    const weekIncomplete =
+      insertError?.code === 'P0005' ||
+      (insertError?.message ?? '').toLowerCase().includes('week_not_completed');
+    if (weekIncomplete) {
+      router.dismissTo('/(tabs)');
+      return;
+    }
+
+    if (insertError) {
+      setSubmitting(false);
+      Alert.alert(
+        'Could not save your choice',
+        'Check your connection and try again.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    weeklyRampDecided({
+      week_number: week,
+      suggestion,
+      decision,
+      followed_suggestion: decision === suggestion,
+      pain_delta: painDelta,
+    });
+
+    // The last session of every week routes here instead of the session summary,
+    // so without this roughly one completion in three could never earn a review
+    // prompt. painDelta is already computed above as avg(before) - avg(after),
+    // so positive means pain came down across the week. Not awaited: it resolves
+    // independently of whether iOS shows anything.
+    void maybeRequestReviewAfterSession({
+      triggerKey: `week:${planId}:${week}`,
+      painImproved: painDelta !== null && painDelta > 0,
+      sourceScreen: 'weekly_ramp',
+      weekNumber: week,
+    });
+
     router.dismissTo('/(tabs)');
   }
 
@@ -151,13 +237,37 @@ export default function WeeklyRampScreen() {
   // to an effect: calling a navigation side effect directly in the render body ran on
   // every render (not just the transition into this state), violating React's
   // no-side-effects-during-render rule and risking duplicate/racy navigation.
+  // Only auto-dismiss when the data definitively says there's nothing valid to show
+  // (no plan, wrong week) — not when there was a network error, which has its own UI.
   useEffect(() => {
-    if (!loading && !planId) {
+    if (!loading && !loadError && !planId) {
       router.dismissTo('/(tabs)');
     }
-  }, [loading, planId]);
+  }, [loading, loadError, planId]);
 
-  if (loading || !planId) {
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <Text style={styles.errorText}>Could not load your week summary.</Text>
+        <Pressable
+          style={[styles.button, styles.buttonPrimary, { marginTop: 16, width: '100%' }]}
+          onPress={() => setRetryCount((n) => n + 1)}
+        >
+          <Text style={styles.buttonPrimaryText}>Try Again</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!planId) {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator color={colors.primary} />
@@ -189,7 +299,7 @@ export default function WeeklyRampScreen() {
           </Text>
           <Text style={styles.recHint}>
             {progressRecommended
-              ? 'You are responding well — a small bump in reps and load will keep you progressing.'
+              ? 'You are responding well. A small bump in reps and load will keep you progressing.'
               : 'We will keep next week at the same intensity so your body can keep adapting.'}
           </Text>
         </View>
@@ -311,5 +421,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  errorText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });
