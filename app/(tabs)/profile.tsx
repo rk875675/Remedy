@@ -52,9 +52,9 @@ import {
   stretchRemindersDisabled,
   stretchRemindersEnabled,
 } from '../../lib/analytics/events/engagement';
-import { openContactPage, openLegalDocument, openSupportEmail } from '../../lib/legalLinks';
+import { openContactPage, openLegalDocument } from '../../lib/legalLinks';
 import { toProductId, toRestoreReason } from '../../lib/analytics/purchaseErrors';
-import { openWriteReviewPage } from '../../lib/app-store-review';
+import { isManualWriteReviewAvailable, openWriteReviewPage } from '../../lib/app-store-review';
 import { extractInvokeError } from '../../lib/functionsError';
 import { rememberDisplayName, resolveDisplayName } from '../../lib/greeting';
 import { invalidateTabRefresh } from '../../lib/tabRefresh';
@@ -483,6 +483,9 @@ export default function ProfileScreen() {
   // Delete account state
   const [deletingAccount, setDeletingAccount] = useState(false);
 
+  // Hidden until the App Store listing is live — the write-review URL 404s before that.
+  const [showRateRemedy, setShowRateRemedy] = useState(false);
+
   // Reload on every focus (not just mount) so the plan card reflects a retake-rebuilt
   // program or fresh completions as soon as the user returns to this tab.
   useFocusEffect(
@@ -574,6 +577,19 @@ export default function ProfileScreen() {
       startEditingName({ focusDelayMs: 400 });
       router.setParams({ editName: '' });
     }, [editName, startEditingName, router]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'ios') return;
+      let cancelled = false;
+      void isManualWriteReviewAvailable().then((live) => {
+        if (!cancelled) setShowRateRemedy(live);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
   );
 
   if (!user) {
@@ -1059,6 +1075,23 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {showRateRemedy && (
+          <TouchableOpacity
+            style={styles.rateCard}
+            onPress={() => {
+              hapticSelection();
+              openWriteReviewPage();
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Rate Remedy"
+          >
+            <Ionicons name="star-outline" size={20} color={colors.primary} />
+            <Text style={styles.rateCardTitle}>Rate Remedy</Text>
+            <Text style={styles.rateCardChevron}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Reminders ── */}
         <Text style={styles.sectionLabel}>Reminders</Text>
         <View style={styles.settingsCard}>
@@ -1253,34 +1286,6 @@ export default function ProfileScreen() {
             <Text style={styles.settingsRowLabel}>Contact</Text>
             <Text style={styles.chevronIcon}>›</Text>
           </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity
-            style={styles.settingsRow}
-            onPress={() => {
-              hapticSelection();
-              openSupportEmail();
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingsRowLabel}>Email Support</Text>
-            <Text style={styles.chevronIcon}>›</Text>
-          </TouchableOpacity>
-          {Platform.OS === 'ios' && (
-            <>
-              <View style={styles.divider} />
-              <TouchableOpacity
-                style={styles.settingsRow}
-                onPress={() => {
-                  hapticSelection();
-                  openWriteReviewPage();
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.settingsRowLabel}>Rate Remedy</Text>
-                <Text style={styles.chevronIcon}>›</Text>
-              </TouchableOpacity>
-            </>
-          )}
           <View style={styles.divider} />
           <TouchableOpacity
             style={styles.settingsRow}
@@ -1577,6 +1582,27 @@ const styles = StyleSheet.create({
   chevronIcon: {
     fontSize: 20,
     color: colors.textTertiary,
+    lineHeight: 24,
+  },
+  rateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.card,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 28,
+    gap: 12,
+  },
+  rateCardTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primaryDeep,
+  },
+  rateCardChevron: {
+    fontSize: 20,
+    color: colors.primary,
     lineHeight: 24,
   },
   divider: {

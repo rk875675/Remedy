@@ -51,6 +51,7 @@ const KEYS = {
   LIFETIME_SESSIONS: 'remedy.appReview.lifetimeSessions',
   LAST_REQUEST_AT: 'remedy.appReview.lastRequestAt',
   LAST_REQUEST_TRIGGER: 'remedy.appReview.lastRequestTrigger',
+  LISTING_LIVE: 'remedy.appReview.listingLive',
 } as const;
 
 /** Remote kill switch. Defaults off when PostHog is unreachable — see isFeatureEnabled. */
@@ -60,6 +61,68 @@ const FLAG_KEY = 'app_store_review_prompt';
 const APP_STORE_ID = '6813745106';
 
 const APP_STORE_REVIEW_URL = `https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review`;
+const ITUNES_LOOKUP_URL = `https://itunes.apple.com/lookup?id=${APP_STORE_ID}&country=us`;
+
+/** Once the US listing exists, stay live for the process. */
+let listingLiveMemory = false;
+let listingMissAt = 0;
+const LISTING_MISS_TTL_MS = 10 * 60 * 1000;
+
+function itunesResultCount(value: unknown): number {
+  if (typeof value !== 'object' || value === null || !('resultCount' in value)) {
+    return 0;
+  }
+  const count = (value as { resultCount: unknown }).resultCount;
+  return typeof count === 'number' && Number.isFinite(count) ? count : 0;
+}
+
+/**
+ * The write-review URL 404s until Apple publishes the listing. Hide every
+ * manual "Rate Remedy" / "Leave a review" entry point until lookup says the
+ * US store page exists, then cache that forever. Fails closed: a reviewer
+ * never taps a dead App Store link.
+ */
+export async function isManualWriteReviewAvailable(): Promise<boolean> {
+  if (Platform.OS !== 'ios') return false;
+  if (listingLiveMemory) return true;
+
+  try {
+    const cached = await AsyncStorage.getItem(KEYS.LISTING_LIVE);
+    if (cached === '1') {
+      listingLiveMemory = true;
+      return true;
+    }
+  } catch {
+    // Fall through to the network check.
+  }
+
+  if (listingMissAt > 0 && Date.now() - listingMissAt < LISTING_MISS_TTL_MS) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(ITUNES_LOOKUP_URL);
+    if (!response.ok) {
+      listingMissAt = Date.now();
+      return false;
+    }
+    const live = itunesResultCount(await response.json()) > 0;
+    if (!live) {
+      listingMissAt = Date.now();
+      return false;
+    }
+    listingLiveMemory = true;
+    try {
+      await AsyncStorage.setItem(KEYS.LISTING_LIVE, '1');
+    } catch {
+      // Memory cache still holds for this session.
+    }
+    return true;
+  } catch {
+    listingMissAt = Date.now();
+    return false;
+  }
+}
 
 /** Don't ask someone who has completed nothing. 1 = eligible from the first session. */
 const MIN_SESSIONS = 1;
@@ -229,6 +292,9 @@ export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Pr
  * button and which is invisibly throttled anyway.
  */
 export function openWriteReviewPage(source_screen: 'profile' | 'feedback' = 'profile'): void {
-  reviewManualTapped({ source_screen });
-  void Linking.openURL(APP_STORE_REVIEW_URL).catch(() => {});
+  void (async () => {
+    if (!(await isManualWriteReviewAvailable())) return;
+    reviewManualTapped({ source_screen });
+    void Linking.openURL(APP_STORE_REVIEW_URL).catch(() => {});
+  })();
 }

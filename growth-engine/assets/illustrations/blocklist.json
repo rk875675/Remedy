@@ -1,0 +1,36 @@
+{
+  "rejectedIds": [
+    "113-workstation",
+    "loving",
+    "107-healthy",
+    "103-gym-time",
+    "102-gym-cycle",
+    "101-gym-guy",
+    "day25-sport-bicycle",
+    "day79-coffee",
+    "day31-sweet-home",
+    "day56-tv-room",
+    "day55-living-room-interior",
+    "day30-cafe",
+    "day41-desktop",
+    "day95-app-development",
+    "day93-programing"
+  ],
+  "neverRestoreIds": [
+    "bridge",
+    "stretching",
+    "cat_cow",
+    "knee_to_chest"
+  ],
+  "neverAddStyles": [
+    "gym equipment or gym-check-in scenes",
+    "homemade exercise-form poses (bridge, cat-cow, forward fold, knee-to-chest)",
+    "object-only still lifes (a lone coffee cup, a bike with no person story)",
+    "empty interior rooms (living room / TV room / cafe / sweet home with no person+pain story)",
+    "busy duplicate coding desks when we already have a desk-worker cover",
+    "red exclamation marks or red bang pain badges",
+    "idle standing portraits with no action (just standing there)",
+    "complicated multi-prop scenes (video-call grids, late-night desk still lifes)",
+    "uncanny or bathroom/shower/intimacy poses — funny-wonky everyday struggle only"
+  ]
+}

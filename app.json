@@ -27,7 +27,7 @@
       "usesAppleSignIn": true,
       "appleTeamId": "UB5Y6U28G5",
       "bundleIdentifier": "com.remedyappco.ios",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

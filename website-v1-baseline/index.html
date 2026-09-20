@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remedy — Structured back pain recovery, guided by real PT expertise</title>
+  <meta name="description" content="Remedy is an iOS app that helps you relieve and recover from back pain through short, video-guided sessions — a structured program personalized to your body, built on real physical therapy expertise." />
+  <meta property="og:title" content="Remedy — Back pain recovery that actually has a plan" />
+  <meta property="og:description" content="Short, video-guided daily sessions personalized to your back pain. Built on real PT expertise." />
+  <meta property="og:url" content="https://remedyrecoveries.com" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://remedyrecoveries.com/assets/logo.png" />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-brand">
+        <img src="/assets/logo.png" alt="Remedy logo" />
+        Remedy
+      </a>
+      <div class="nav-links">
+        <a href="#how" class="nav-plain">How it works</a>
+        <a href="#why" class="nav-plain">Why Remedy</a>
+        <a href="#get" class="nav-cta">Get the app</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-brand rise rise-1">Remedy</h1>
+        <p class="hero-tagline rise rise-2">Back pain recovery that actually has a plan.</p>
+        <p class="hero-sub rise rise-3">Short, video-guided daily sessions personalized to your body and your pain — the structured program a physical therapist would actually prescribe, in your pocket.</p>
+        <div class="hero-cta-row rise rise-4">
+          <a class="btn-primary" href="#get">Get Remedy for iPhone</a>
+          <span class="hero-cta-note">Coming soon to the App Store</span>
+        </div>
+      </div>
+      <div class="hero-figure rise rise-3">
+        <img src="/assets/logo.png" alt="Remedy spine mark" />
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="how">
+      <div class="container">
+        <p class="section-kicker reveal">How it works</p>
+        <h2 class="section-title reveal">Three steps between you and feeling better</h2>
+        <div class="steps">
+          <div class="step reveal">
+            <div class="step-number">1</div>
+            <h3>Tell us about your back</h3>
+            <p>A short onboarding maps your pain, history, and activity level — whether you sit at a desk all day or deadlift three times a week.</p>
+          </div>
+          <div class="step reveal">
+            <div class="step-number">2</div>
+            <h3>Get your personalized program</h3>
+            <p>Remedy builds a multi-week recovery plan around your answers, drawing on real physical therapy expertise — not generic stretching lists.</p>
+          </div>
+          <div class="step reveal">
+            <div class="step-number">3</div>
+            <h3>Show up for short daily sessions</h3>
+            <p>Follow clear, video-guided exercises a few minutes a day. Check in on your pain before and after, and watch the trend move.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="why" class="why">
+      <div class="container">
+        <p class="section-kicker reveal">Why Remedy</p>
+        <h2 class="section-title reveal">Between a YouTube video and a $200 PT visit</h2>
+        <p class="section-sub reveal">Most people with back pain either wing it with random internet advice or pay for in-person care they can't sustain. Remedy is the structured middle path.</p>
+        <div class="why-list">
+          <div class="why-item reveal">
+            <div class="why-glyph">▬</div>
+            <div>
+              <h3>A real program, not a playlist</h3>
+              <p>Structured multi-week progression the way a PT would build it — each week ramps deliberately from where you are.</p>
+            </div>
+          </div>
+          <div class="why-item reveal">
+            <div class="why-glyph">○</div>
+            <div>
+              <h3>Video-guided, every rep</h3>
+              <p>Every exercise comes with a clear demonstration video, so you're never guessing about form.</p>
+            </div>
+          </div>
+          <div class="why-item reveal">
+            <div class="why-glyph">◐</div>
+            <div>
+              <h3>Pain tracking built in</h3>
+              <p>Quick before-and-after check-ins turn your recovery into a trend you can actually see.</p>
+            </div>
+          </div>
+          <div class="why-item reveal">
+            <div class="why-glyph">△</div>
+            <div>
+              <h3>Built for backs, specifically</h3>
+              <p>Remedy does one thing deeply: back pain. From chronic desk-job stiffness to training tweaks.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="get" class="closing">
+      <div class="container">
+        <p class="section-kicker reveal">Get started</p>
+        <h2 class="section-title reveal">Your back isn't going to fix itself.</h2>
+        <a class="btn-primary reveal" href="#get">Coming soon to the App Store</a>
+        <p class="disclaimer reveal">Remedy provides general exercise guidance and is not a substitute for professional medical advice, diagnosis, or treatment. If you are experiencing severe or acute pain, numbness, or other concerning symptoms, consult a qualified healthcare provider.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="/assets/logo.png" alt="Remedy logo" />
+        Remedy
+      </div>
+      <div class="footer-links">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/contact">Contact</a>
+      </div>
+      <p class="footer-copy">© 2026 Remedy. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.15 }
+    );
+    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+  </script>
+</body>
+</html>

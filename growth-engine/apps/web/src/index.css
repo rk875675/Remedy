@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+body {
+  @apply text-stone-900 antialiased;
+  background: #f7f2e9;
+}

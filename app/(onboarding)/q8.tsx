@@ -16,7 +16,7 @@ import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLa
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import { useAfterTransition } from '../../lib/useAfterTransition';
 import { sessionLength } from '../../lib/analytics/events/enums';
@@ -349,6 +349,7 @@ export default function Q8Screen() {
     hintTranslate.setValue(-8);
     hintTimer.current = setTimeout(() => {
       hintVisible.current = true;
+      onboardingHintShown({ step_key: 'q8', hint_key: 'q8_days' });
       Animated.parallel([
         Animated.timing(hintOpacity, {
           toValue: 1,
@@ -387,6 +388,7 @@ export default function Q8Screen() {
       option_value: opt.analyticsValue,
       is_multi_select: false,
       is_deselect: isDeselect,
+      is_recommended: opt.value === RECOMMENDED_MINUTES,
     });
     showHint();
   }
@@ -408,6 +410,7 @@ export default function Q8Screen() {
       option_value: (`days_${day}` as const),
       is_multi_select: false,
       is_deselect: isDeselect,
+      is_recommended: day === suggested,
     });
     if (isDeselect) {
       daysDeselected.current = true;

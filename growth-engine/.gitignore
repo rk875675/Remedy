@@ -1,0 +1,10 @@
+node_modules/
+output/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+apps/web/dist/
+assets/screenshots/library-overrides.json
+assets/illustrations/flat/_preview/
+assets/audio/src/

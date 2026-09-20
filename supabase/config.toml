@@ -1,5 +1,12 @@
 project_id = "vgqmvekjttywwadpftre"
 
+# Native Sign in with Apple tokens have aud = iOS bundle ID (com.remedyappco.ios).
+# Keep the existing Services / legacy App ID first so web OAuth still uses it;
+# GoTrue accepts any ID in this list as a native token audience.
+[auth.external.apple]
+enabled = true
+client_id = "com.remedyapp.ios,com.remedyappco.ios"
+
 # Rule 13: the newer asymmetric JWT signing-key format can be incompatible with the
 # Edge gateway's built-in verify_jwt. verify-purchase and restore-purchases enforce auth
 # themselves — they call supabase.auth.getUser(token) and reject missing/invalid tokens —

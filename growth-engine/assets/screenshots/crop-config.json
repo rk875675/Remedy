@@ -1,0 +1,126 @@
+{
+  "home.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45
+  },
+  "session_preview.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45
+  },
+  "session.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45,
+    "exercisePhotoTopPct": 0.065,
+    "exercisePhotoBotPct": 0.44
+  },
+  "pain_check.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45
+  },
+  "progress.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45
+  },
+  "workout_days.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45
+  },
+  "cat_cow.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45,
+    "exercisePhotoTopPct": 0.065,
+    "exercisePhotoBotPct": 0.44
+  },
+  "profile.png": {
+    "skipTopPct": 0.09,
+    "cropHPct": 0.45
+  },
+  "crop_cat_cow.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_home.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0461.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_home_2.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0462.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0462_2.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0465.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0469.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0470.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0472.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0473.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_pain_check.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_profile.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_progress.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_progress_2.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_progress_3.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0462_3.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0462_4.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0462_5.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_session.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_session_preview.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_img_0540.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  }
+}

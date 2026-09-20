@@ -15,6 +15,8 @@ import {
   painLocation,
   previewSource,
   primaryGoal,
+  priorAttempts,
+  sessionLength,
   sessionsPerWeek,
   sourceScreen,
   stepExitType,
@@ -79,6 +81,8 @@ export const onboardingOptionSelected = defineEvent(
       is_multi_select: z.boolean(),
       is_deselect: z.boolean(),
       selection_count: z.number().int().nonnegative().optional(),
+      /** q8 days: true when the tapped value is the recommended center slot. */
+      is_recommended: z.boolean().optional(),
     })
     .strict(),
 );
@@ -131,8 +135,17 @@ export const onboardingCompleted = defineEvent(
       sessions_per_week_preference: sessionsPerWeek,
       is_retake: z.boolean(),
       time_in_funnel_ms: durationMs.optional(),
+      has_red_flag: z.boolean().optional(),
+      prior_attempts: priorAttempts.optional(),
+      session_length: sessionLength.optional(),
     })
     .strict(),
+);
+
+/** Safety screen: user tapped "I'll check with a clinician first" instead of continuing. */
+export const onboardingClinicianExitConfirmed = defineEvent(
+  'onboarding_clinician_exit_confirmed',
+  z.object({ step_key: onboardingStepKey, time_on_step_ms: durationMs }).strict(),
 );
 
 export const onboardingValidationFailed = defineEvent(

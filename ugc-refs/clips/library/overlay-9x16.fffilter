@@ -1,0 +1,5 @@
+[0:v]scale=-2:1280,crop=720:1280:if(gte(t\,10.05)\,1100\,850):0[base];
+[1:v]scale=720:1280:force_original_aspect_ratio=decrease[ssfull];
+[1:v]scale=300:-1[sspip];
+[base][ssfull]overlay=x=(W-w)/2:y=(H-h)/2:enable='between(t,8.25,10.05)'[v1];
+[v1][sspip]overlay=x=24:y=48:enable='gte(t,10.05)'[v]

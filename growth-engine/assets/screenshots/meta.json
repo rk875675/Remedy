@@ -1,0 +1,225 @@
+{
+  "home.png": {
+    "description": "Home: today's session + week days. Use for start-today / weekly plan."
+  },
+  "session.png": {
+    "description": "Session: glute-bridge video + 14 reps. Use for in-app exercise proof."
+  },
+  "cat_cow.png": {
+    "description": "Session: cat-cow stretch video. Use for guided stretch proof."
+  },
+  "progress.png": {
+    "description": "Progress: week 4/5 + pain trend. Use for recovery tracking."
+  },
+  "pain_check.png": {
+    "description": "Pain check: 1–10 slider. Use for check-in / before-session."
+  },
+  "workout_days.png": {
+    "description": "Workout days + reminder. Use for schedule / habit slides."
+  },
+  "session_preview.png": {
+    "description": "Preview: 19 min, 5 exercises. Use for session length / plan."
+  },
+  "profile.png": {
+    "description": "Profile: stats + plan. Use for personal progress / identity."
+  },
+  "profile_original.png": {
+    "description": "Profile original, full screen. Use if you need the uncropped profile."
+  },
+  "img_0460.png": {
+    "description": "Splash: Remedy + back pain relief. Use for brand / first-impression."
+  },
+  "img_0461.png": {
+    "description": "Workout days picker + session list. Use for schedule / 3-day plan."
+  },
+  "img_0462.png": {
+    "description": "Progress: pain trend + activity bars. Use for recovery proof."
+  },
+  "img_0464.jpeg": {
+    "description": "Stretch reminders on, every 30 min. Use for reminder / habit."
+  },
+  "img_0465.png": {
+    "description": "Session: single-leg glute bridge. Use for exercise video proof."
+  },
+  "img_0466.png": {
+    "description": "Session: goblet squat + dumbbell. Use for gym exercise proof."
+  },
+  "img_0467.png": {
+    "description": "Session: child's pose hold timer. Use for stretch / cool-down."
+  },
+  "img_0469.png": {
+    "description": "Session: thoracic extension on chair. Use for desk / mobility."
+  },
+  "img_0470.png": {
+    "description": "Session: bird dog hold. Use for core / stability proof."
+  },
+  "img_0471.png": {
+    "description": "Session: dead bug, 10 reps. Use for core exercise proof."
+  },
+  "img_0472.png": {
+    "description": "Session: barbell hip thrust. Use for gym strength proof."
+  },
+  "img_0473.png": {
+    "description": "Session: bodyweight squat. Use for no-equipment exercise."
+  },
+  "img_0475.png": {
+    "description": "Session: kettlebell deadlift. Use for gym hinge / lift."
+  },
+  "img_0476.png": {
+    "description": "Session: kettlebell deadlift (alt). Use for gym hinge / lift."
+  },
+  "img_0477.png": {
+    "description": "Session: split squat, 10 reps. Use for single-leg strength."
+  },
+  "crop_img_0461.png": {
+    "description": "Crop: workout days picker + 3-session plan. Use for detailed schedule close-up.",
+    "cropped": true,
+    "source": "img_0461.png"
+  },
+  "crop_cat_cow.png": {
+    "description": "Crop: cat-cow video player. Use for guided stretch close-up.",
+    "cropped": true,
+    "source": "cat_cow.png"
+  },
+  "crop_home.png": {
+    "description": "Crop: today's session card + Start Session. Use for start-today CTA, not the full home screen.",
+    "cropped": true,
+    "source": "home.png"
+  },
+  "crop_home_2.png": {
+    "description": "Crop: weekly sessions, completed and not completed and in progress. Use for accountability and tracking session completed",
+    "cropped": true,
+    "source": "home.png"
+  },
+  "crop_img_0462.png": {
+    "description": "Crop: pain trends. Use for recovery proof close-up.",
+    "cropped": true,
+    "source": "img_0462.png",
+    "assign": false
+  },
+  "crop_img_0462_2.png": {
+    "description": "Crop:  activity bars. Use for acountability/tracking",
+    "cropped": true,
+    "source": "img_0462.png"
+  },
+  "crop_img_0465.png": {
+    "description": "Crop: single-leg glute bridge video. Use for exercise close-up.",
+    "cropped": true,
+    "source": "img_0465.png"
+  },
+  "crop_img_0469.png": {
+    "description": "Crop: thoracic extension on chair. Use for desk/mobility close-up.",
+    "cropped": true,
+    "source": "img_0469.png"
+  },
+  "crop_img_0470.png": {
+    "description": "Crop: bird dog hold. Use for core/stability close-up.",
+    "cropped": true,
+    "source": "img_0470.png"
+  },
+  "crop_img_0472.png": {
+    "description": "Crop: barbell hip thrust. Use for gym strength close-up.",
+    "cropped": true,
+    "source": "img_0472.png"
+  },
+  "crop_img_0473.png": {
+    "description": "Crop: bodyweight squat. Use for no-equipment close-up.",
+    "cropped": true,
+    "source": "img_0473.png"
+  },
+  "crop_pain_check.png": {
+    "description": "Crop: 1–10 pain slider. Use for check-in close-up.",
+    "cropped": true,
+    "source": "pain_check.png"
+  },
+  "crop_profile.png": {
+    "description": "Crop: profile stats + plan. Use only when the slide is about identity + plan. has a bit of reminders as well",
+    "cropped": true,
+    "source": "profile.png"
+  },
+  "crop_progress.png": {
+    "description": "Crop: week ring Use for visual tracking of weekly progress",
+    "cropped": true,
+    "source": "progress.png"
+  },
+  "crop_progress_2.png": {
+    "description": "Crop: larger week ring + weekly completions. Use as a larger accountability/tracking ss",
+    "cropped": true,
+    "source": "progress.png"
+  },
+  "crop_progress_3.png": {
+    "description": "Crop: acountability/weekly session completed. use for accountability",
+    "cropped": true,
+    "source": "progress.png"
+  },
+  "crop_img_0462_4.png": {
+    "description": "Crop: pain trend + activity bars. Use for recovery proof close-up + accountability + visual display",
+    "cropped": true,
+    "source": "img_0462.png"
+  },
+  "crop_session.png": {
+    "description": "Crop: exercise video + reps counter. Use for in-app form proof.",
+    "cropped": true,
+    "source": "session.png"
+  },
+  "crop_session_preview.png": {
+    "description": "Crop: session preview Use for plan/length close-up of a session - displays minutes, exercises, focus,etc",
+    "cropped": true,
+    "source": "session_preview.png"
+  },
+  "img_0524.png": {
+    "description": "Founder: 4 in 5 people get back pain. Use for lifetime-stat / why-we-built slides."
+  },
+  "img_0525.png": {
+    "description": "Education: 50% less pain in ~6 weeks chart. Use for research / hope / timeline."
+  },
+  "img_0526.png": {
+    "description": "Onboarding: where did you hear about us. Use for first-touch / discovery."
+  },
+  "img_0527.png": {
+    "description": "Onboarding: have you tried to fix it before. Use for stretch-failed / YouTube-failed."
+  },
+  "img_0528.png": {
+    "description": "Onboarding: main goal options (unselected). Prefer img_0529 when the slide needs a filled answer.",
+    "assign": false
+  },
+  "img_0531.png": {
+    "description": "Onboarding: how long you've had it (3–12 months). Use for chronic / personal plan."
+  },
+  "img_0530.png": {
+    "description": "Onboarding: where is your back pain (lower selected). Use for tailored / not-generic."
+  },
+  "img_0529.png": {
+    "description": "Onboarding: main goal selected (pain + mobility). Use for tailored / personal plan."
+  },
+  "img_0534.png": {
+    "description": "Onboarding: activity level (desk / light / lifting). Use for desk-worker plan."
+  },
+  "img_0533.png": {
+    "description": "Onboarding: pain type (stiff / ache / sharp). Use for personalization / mobility."
+  },
+  "img_0532.png": {
+    "description": "Onboarding: how long you've had it (unselected). Prefer img_0531.",
+    "assign": false
+  },
+  "img_0537.png": {
+    "description": "Onboarding: equipment (gym / bands / floor). Use for no-gym / gym plan."
+  },
+  "img_0536.png": {
+    "description": "Onboarding: what makes pain worse (standing + mornings). Use for flare / sitting."
+  },
+  "img_0535.png": {
+    "description": "Onboarding: what makes pain worse (unselected). Prefer img_0536.",
+    "assign": false
+  },
+  "img_0540.png": {
+    "description": "Onboarding: your matched Lower Back Pain Relief Program. Use for tailored-plan proof.",
+    "assign": false
+  },
+  "img_0539.png": {
+    "description": "Onboarding: building your plan. Use for personalization moment / analyzing answers."
+  },
+  "img_0538.png": {
+    "description": "Onboarding: 15 min + 4 days per week. Use for schedule / fits-your-life."
+  }
+}

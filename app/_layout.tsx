@@ -46,11 +46,17 @@ function RootNavigator() {
   // same handoff shape as a pending purchase (PromoCodeSheet → sign-up →
   // building-plan redeems the stash).
   const [hasPendingPromo, setHasPendingPromo] = useState<boolean | null>(null);
+  // Cold-start email links resolve asynchronously. The unauth funnel resume must
+  // not send the user to Your Program before confirm/recovery has claimed the URL.
+  const [deepLinkChecked, setDeepLinkChecked] = useState(false);
 
+  const sessionUserId = session?.user.id ?? null;
   useEffect(() => {
+    setHasPendingPurchase(null);
+    setHasPendingPromo(null);
     getPendingPurchase().then((p) => setHasPendingPurchase(!!p));
     getPendingPromo().then((p) => setHasPendingPromo(!!p));
-  }, [session]);
+  }, [sessionUserId]);
 
   // --- Global deep-link handler for auth flows ---
   // In-memory nav-once guards so a single deep-link URL doesn't trigger two navigations
@@ -88,12 +94,23 @@ function RootNavigator() {
 
     // Cold start: check the URL that launched the app.
     void (async () => {
-      const u = await Linking.getInitialURL();
-      if (!u) return;
-      // Pitfall 4: skip if this credential was already consumed on a previous launch.
-      if (await isAuthLinkAlreadyHandled(u)) return;
-      maybeOpenRecovery(u);
-      maybeOpenConfirm(u);
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        setDeepLinkChecked(true);
+      };
+      const watchdog = setTimeout(finish, 2000);
+      try {
+        const u = await Linking.getInitialURL();
+        if (u && !(await isAuthLinkAlreadyHandled(u))) {
+          maybeOpenRecovery(u);
+          maybeOpenConfirm(u);
+        }
+      } finally {
+        clearTimeout(watchdog);
+        finish();
+      }
     })();
 
     // Warm start: the app was already running when the link was tapped.
@@ -185,7 +202,7 @@ function RootNavigator() {
       // purchase/promo) before routing, so a purchase or partial funnel saved just
       // before a force-quit is resumed correctly rather than being routed back to a
       // blank welcome screen.
-      if (!hydrated || hasPendingPurchase === null || hasPendingPromo === null) return;
+      if (!hydrated || hasPendingPurchase === null || hasPendingPromo === null || !deepLinkChecked) return;
       if ((hasPendingPurchase || hasPendingPromo) && quizFinished) {
         // Purchased (or validated a promo code) on the paywall, then quit before
         // finishing sign-up. Resume at the auth entry so building-plan can persist
@@ -224,6 +241,7 @@ function RootNavigator() {
     // context, so it skipped the upsert and assign-program failed with
     // incomplete_answers.
     if (!hydrated) return;
+    if (hasPendingPurchase === null || hasPendingPromo === null) return;
     if ((hasPendingPurchase || hasPendingPromo) && !inBuilding) {
       let active = true;
       void Promise.all([getPendingPurchase(), getPendingPromo()]).then(
@@ -310,7 +328,7 @@ function RootNavigator() {
       if (retaking && inOnboarding) return;
       router.replace('/(tabs)');
     }
-  }, [session, loading, onboardingDone, premium, hasActivePlan, retaking, answers, hydrated, hasPendingPurchase, hasPendingPromo, progress, segments]);
+  }, [session, loading, onboardingDone, premium, hasActivePlan, retaking, answers, hydrated, hasPendingPurchase, hasPendingPromo, deepLinkChecked, progress, segments]);
 
   const supplementaryReady = !loading && !(session && (onboardingDone === null || premium === null || hasActivePlan === null));
 

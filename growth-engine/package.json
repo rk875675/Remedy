@@ -1,0 +1,33 @@
+{
+  "name": "remedy-growth-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Autonomous carousel/slideshow marketing engine for the Remedy app",
+  "type": "module",
+  "workspaces": [
+    "apps/server",
+    "apps/web",
+    "packages/db"
+  ],
+  "scripts": {
+    "db:push": "npm run db:push -w packages/db",
+    "db:seed": "npm run seed -w packages/db",
+    "dev": "npm run dev -w apps/server",
+    "dev:web": "npm run dev -w apps/web",
+    "build:web": "npm run build -w apps/web",
+    "deploy": "npm run build:web && npx wrangler pages deploy apps/web/dist --project-name=remedy-growth --branch=main --commit-dirty=true",
+    "start": "npm run start -w apps/server",
+    "generate": "npm run cli -w apps/server -- generate",
+    "pull": "npm run cli -w apps/server -- pull",
+    "diagnose": "npm run cli -w apps/server -- diagnose",
+    "daily": "npm run cli -w apps/server -- daily",
+    "publish-due": "npm run cli -w apps/server -- publish-due",
+    "send-drafts": "npm run cli -w apps/server -- send-drafts",
+    "rerender": "npm run cli -w apps/server -- rerender",
+    "snapshot": "npm run cli -w apps/server -- snapshot",
+    "typecheck": "tsc --noEmit -p apps/server && tsc --noEmit -p packages/db && tsc --noEmit -p apps/web"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

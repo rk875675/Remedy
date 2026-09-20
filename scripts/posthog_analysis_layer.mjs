@@ -89,23 +89,23 @@ const SQL_EXCLUDE_INTERSTITIALS = ONBOARDING_INTERSTITIALS.length
 /** Exact on-screen headings. Bars stay `q5`; this is what you see after opening the tile. */
 const ONBOARDING_STEP_QUESTIONS = {
   welcome: 'Welcome',
-  founder: 'Founder story',
-  education: 'Education',
+  founder: 'Why we built Remedy',
+  education: 'The good news',
   q0: 'Where did you hear about us?',
   safety: 'Do any of these apply to you?',
   q9: 'Have you tried to fix your back pain before?',
   q6: "What's your main goal?",
   q1: 'Where is your back pain?',
   q2: 'How long have you had it?',
-  recognize: 'Which of these feel true?',
-  seen: "You're not imagining this",
+  recognize: 'Which of these sound like you?',
+  seen: 'Mindset interstitial',
   alarm: 'Pain is a protector',
   why: 'Why Remedy exists',
   q3: 'How would you describe it?',
   q4: "What's your activity level?",
   q5: 'What makes your pain worse?',
   q7: 'What equipment do you have access to?',
-  q8: 'How much time can you give your back each day?',
+  q8: 'How much time do you have each day?',
   finalizing: 'Building your plan',
   match: 'Your plan preview',
 };
@@ -228,7 +228,7 @@ function findExistingInsight(existing, i) {
   );
 }
 
-/** First tile full-width; the rest two-up. Leftover tiles (moved insights) are dropped. */
+/** First tile full-width; `fullWidth: true` tiles also span the row. Rest are two-up. */
 async function syncDashboardTiles(dashId, insights) {
   const dash = await api(`/dashboards/${dashId}/`);
   const byName = new Map();
@@ -237,22 +237,35 @@ async function syncDashboardTiles(dashId, insights) {
   }
   const insightNames = insights.map((i) => i.name);
   const tiles = [];
+  let y = 0;
+  let col = 0;
   insights.forEach((insight, i) => {
     const t = byName.get(insight.name);
     if (!t) return;
-    const fullWidth = i === 0;
-    const pairIndex = i - 1;
-    const row = fullWidth ? 0 : Math.floor(pairIndex / 2);
-    const col = fullWidth ? 0 : (pairIndex % 2) * 6;
-    const y = fullWidth ? 0 : 6 + row * 5;
+    const fullWidth = i === 0 || insight.fullWidth === true;
+    const w = fullWidth ? 12 : 6;
+    const h = fullWidth ? 6 : 5;
+    if (fullWidth && col !== 0) {
+      y += 5;
+      col = 0;
+    }
     tiles.push({
       id: t.id,
       order: i,
       show_description: insight.showDescription === true,
       layouts: {
-        sm: { x: col, y, w: fullWidth ? 12 : 6, h: fullWidth ? 6 : 5 },
+        sm: { x: fullWidth ? 0 : col, y, w, h },
       },
     });
+    if (fullWidth) {
+      y += h;
+      col = 0;
+    } else if (col === 0) {
+      col = 6;
+    } else {
+      y += h;
+      col = 0;
+    }
   });
   for (const t of dash.tiles ?? []) {
     if (t.deleted) continue;
@@ -424,6 +437,33 @@ const byEventProp = (prop) => ({ breakdownFilter: { breakdown: prop, breakdown_t
 const byPersonProp = (prop) => ({ breakdownFilter: { breakdown: prop, breakdown_type: 'person' } });
 const BAR = 'ActionsBarValue';
 
+const FULL_PATH_STEPS = [
+  'welcome', 'founder', 'education', 'q0', 'safety', 'q9', 'recognize', 'seen',
+  'q6', 'q1', 'q2', 'q3', 'q4', 'q5', 'q7', 'q8', 'finalizing', 'match',
+];
+
+const stepViewed = (key) => ev('onboarding_step_viewed', {
+  custom_name: ONBOARDING_STEP_QUESTIONS[key] ?? key,
+  ...eventPropEq('step_key', key),
+});
+
+/** Unique people who tapped an option (not a deselect) on one step. */
+const optionMix = (stepKey, optionValues) => ev('onboarding_option_selected', {
+  math: 'dau',
+  properties: [
+    { key: 'step_key', type: 'event', value: [stepKey], operator: 'exact' },
+    { key: 'is_deselect', type: 'event', value: ['false'], operator: 'exact' },
+    ...(optionValues
+      ? [{ key: 'option_value', type: 'event', value: optionValues, operator: 'exact' }]
+      : []),
+  ],
+});
+
+const completedMix = (prop) => trends(
+  [ev('onboarding_completed', { math: 'dau' })],
+  { ...byEventProp(prop), display: BAR },
+);
+
 // --- dashboards and their insights ------------------------------------------
 //
 // Numbered so the PostHog sidebar reads in journey order (alpha would scramble them).
@@ -558,7 +598,7 @@ ORDER BY week`),
     formerNames: ['Remedy — Acquisition'],
     name: '1. Onboarding',
     description:
-      'How people start: questions, drop-off, signup, where they heard about us. ' +
+      'How people start: every screen, every answer, the safety gate, and signup. ' +
       'Not whether they come back (2. Users & Retention) and not money (4. Revenue).',
     insights: [
       {
@@ -579,10 +619,31 @@ ORDER BY week`),
         ]),
       },
       {
+        name: 'Full path — every onboarding screen',
+        description:
+          'Same event (step viewed) once per screen, in current order. Includes story ' +
+          'screens the question table hides (founder, education, seen, finalizing). ' +
+          'Use this to see if new copy / the safety gate / the mindset block is where people leave.',
+        fullWidth: true,
+        showDescription: true,
+        query: funnel(FULL_PATH_STEPS.map(stepViewed)),
+      },
+      {
+        name: 'Onboarding completion rate (weekly)',
+        description:
+          'Unique people who tapped Get Started vs who reached Start My Program that week. ' +
+          'Headline quiz-finish rate. Drop-off detail is the full-path funnel and F2.',
+        showDescription: true,
+        query: trends([
+          ev('onboarding_started', { math: 'dau', custom_name: 'Started' }),
+          ev('onboarding_completed', { math: 'dau', custom_name: 'Finished quiz' }),
+        ]),
+      },
+      {
         name: 'F2 — Onboarding drop-off by step',
         description:
-          'Which question is the expensive one. The question column is the on-screen heading. ' +
-          'median_seconds separates a hard question from a boring one.',
+          'Question screens only (safety + q0/q9/recognize + q1–q8). Interstitials are ' +
+          'in Full path. median_seconds separates a hard question from a boring one.',
         query: sql(`SELECT
   toInt(properties.step_index) AS step_index,
   any(toString(properties.step_key)) AS step_key,
@@ -627,13 +688,120 @@ ORDER BY exits DESC`),
         ),
       },
       {
-        name: 'F5 — Signup funnel by method',
+        name: 'Safety — red-flag answers',
         description:
-          'Runs AFTER money has changed hands, so a failure here is a paid user with no ' +
-          'account. Broken down by method to catch Apple/Google/Email failing differently.',
-        query: funnel(
-          [ev('signup_started'), ev('signup_completed')],
-          byEventProp('method'),
+          'Yes = they said a contraindication applies. A high Yes share means the list is ' +
+          'matching (or scaring) a lot of people. Pair with clinician-first exits and F2 safety row.',
+        showDescription: true,
+        query: trends(
+          [optionMix('safety', ['yes', 'no'])],
+          { ...byEventProp('option_value'), display: BAR },
+        ),
+      },
+      {
+        name: 'Safety — clinician-first exits',
+        description:
+          'Tapped "I\'ll check with a clinician first" after saying Yes. These people self-selected ' +
+          'out of the product. If this is far below Yes answers, most red-flag users are continuing anyway.',
+        showDescription: true,
+        query: trends(
+          [ev('onboarding_clinician_exit_confirmed', { math: 'dau' })],
+          { display: BAR },
+        ),
+      },
+      {
+        name: 'Tried before (q9)',
+        description:
+          'First-timers vs people who have already tried to fix their back. Recognize and ' +
+          'the seen interstitial change copy off this answer.',
+        showDescription: true,
+        query: trends(
+          [optionMix('q9', ['yes', 'no'])],
+          { ...byEventProp('option_value'), display: BAR },
+        ),
+      },
+      {
+        name: 'Recognition patterns',
+        description:
+          'Which stuck-pain stories people tap (effort, return loop, flinch, permanence). ' +
+          'Tells you which mindset copy is landing so you can keep or rewrite the rest.',
+        showDescription: true,
+        query: trends(
+          [optionMix('recognize', ['effort', 'return_loop', 'flinch', 'permanence'])],
+          { ...byEventProp('option_value'), display: BAR },
+        ),
+      },
+      {
+        name: 'Completers — pain location',
+        description:
+          'Who finished the quiz. Upper vs lower vs all-over — drives program naming and ' +
+          'which exercise library to invest in.',
+        showDescription: true,
+        query: completedMix('pain_location'),
+      },
+      {
+        name: 'Completers — pain duration',
+        description:
+          'Acute vs subacute vs chronic among people who finished. Chronic users need a ' +
+          'different plan shape; if they dominate, week-1 intensity is the lever.',
+        showDescription: true,
+        query: completedMix('pain_duration'),
+      },
+      {
+        name: 'Completers — activity level',
+        description:
+          'Sedentary / light / active / athlete among finishers. Feeds the q8 days recommendation. ' +
+          'If almost everyone is sedentary, the athlete path is unused.',
+        showDescription: true,
+        query: completedMix('activity_level'),
+      },
+      {
+        name: 'Completers — primary goal',
+        description:
+          'First-selected goal among finishers. Program name and tagline hang off this. ' +
+          'A dead goal means that positioning is not why people stay.',
+        showDescription: true,
+        query: completedMix('primary_goal'),
+      },
+      {
+        name: 'Completers — equipment',
+        description:
+          'What gear finishers have. If almost everyone is open_space, gym-only progressions ' +
+          'will not get used. Pair with the equipment disclaimer tiles on Reliability if confirmation drops.',
+        showDescription: true,
+        query: completedMix('equipment_tier'),
+      },
+      {
+        name: 'q8 — days per week chosen',
+        description:
+          'Explicit day-bubble taps (not the silent recommended pre-select). 6 and 7 are new. ' +
+          'If nobody picks them, the extra bubbles are noise.',
+        showDescription: true,
+        query: trends(
+          [optionMix('q8', ['days_3', 'days_4', 'days_5', 'days_6', 'days_7'])],
+          { ...byEventProp('option_value'), display: BAR },
+        ),
+      },
+      {
+        name: 'q8 — session length',
+        description:
+          '15 / 20 / 30+ minutes. Compare later to actual workout minutes on 3. In-App — ' +
+          'if everyone asks for 15 and sessions run 25, the plan is over-promising.',
+        showDescription: true,
+        query: trends(
+          [optionMix('q8', ['minutes_15', 'minutes_20', 'minutes_30'])],
+          { ...byEventProp('option_value'), display: BAR },
+        ),
+      },
+      {
+        name: 'q8 — picked the recommended days?',
+        description:
+          'Of people who tapped a day bubble, did they take the recommended center slot? ' +
+          'If almost nobody does, the recommendation or the podium layout is wrong.',
+        showDescription: true,
+        query: trends(
+          [optionMix('q8', ['days_3', 'days_4', 'days_5', 'days_6', 'days_7'])],
+          { ...byEventProp('is_recommended'), display: BAR },
         ),
       },
       {
@@ -644,6 +812,48 @@ ORDER BY exits DESC`),
         query: trends(
           [ev('onboarding_completed', { math: 'dau' })],
           { ...byPersonProp('acquisition_source'), display: BAR },
+        ),
+      },
+      {
+        name: 'Fresh start vs resume',
+        description:
+          'Get Started taps: new funnel vs continuing a saved one. A high resume share ' +
+          'means people are leaving mid-quiz and coming back — look at F2 for the hole.',
+        showDescription: true,
+        query: trends(
+          [ev('onboarding_started', { math: 'dau' })],
+          { ...byEventProp('is_resume'), display: BAR },
+        ),
+      },
+      {
+        name: 'Time to finish the quiz',
+        description:
+          'Average time_in_funnel_ms from Get Started to Start My Program. If this is ' +
+          '15+ minutes the funnel is too long; pair with time-on-step to see which screen.',
+        showDescription: true,
+        query: trends(
+          [ev('onboarding_completed', { math: 'avg', math_property: 'time_in_funnel_ms' })],
+        ),
+      },
+      {
+        name: 'Plan preview source',
+        description:
+          'server = assign-program preview worked. fallback = the user saw client-side copy ' +
+          'because the edge function failed. A fallback spike is a product incident, not a copy problem.',
+        showDescription: true,
+        query: trends(
+          [ev('onboarding_plan_previewed', { math: 'dau' })],
+          { ...byEventProp('preview_source'), display: BAR },
+        ),
+      },
+      {
+        name: 'F5 — Signup funnel by method',
+        description:
+          'Runs AFTER money has changed hands, so a failure here is a paid user with no ' +
+          'account. Broken down by method to catch Apple/Google/Email failing differently.',
+        query: funnel(
+          [ev('signup_started'), ev('signup_completed')],
+          byEventProp('method'),
         ),
       },
     ],

@@ -1,0 +1,2358 @@
+{
+  "$comment": "Vendored + Remedy-owned illustration library for slides 1-3. See CURATION.md. Prefer Remedy originals (custom/*.svg) and Remedy flat (flat/*.svg). Rejected gym/interior/object tiles stay disabled.",
+  "illustrations": [
+    {
+      "id": "119-working",
+      "file": "illlustrations/119-working.svg",
+      "name": "Working at desk",
+      "description": "Woman focused at her desk setup.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day13-it-girl",
+      "file": "illlustrations/day13-it-girl.svg",
+      "name": "Desk session",
+      "description": "Working on a laptop at a desk.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "105-freelancer",
+      "file": "illlustrations/105-freelancer.svg",
+      "name": "Freelancer",
+      "description": "Standing with a coffee, ready to work.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "111-coding",
+      "file": "illlustrations/111-coding.svg",
+      "name": "Late night screen",
+      "description": "Desk setup glowing at night.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "113-workstation",
+      "file": "illlustrations/113-workstation.svg",
+      "name": "Workstation",
+      "description": "Full desk workstation scene.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "121-work-from-home-1",
+      "file": "illlustrations/121-work-from-home-1.svg",
+      "name": "Work from home call",
+      "description": "Video call from the home office.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "122-work-from-home-2",
+      "file": "illlustrations/122-work-from-home-2.svg",
+      "name": "Remote meeting",
+      "description": "On a laptop call at home.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day92-freelancing",
+      "file": "illlustrations/day92-freelancing.svg",
+      "name": "Laptop on the floor",
+      "description": "Sitting cross-legged with a laptop.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day93-programing",
+      "file": "illlustrations/day93-programing.svg",
+      "name": "Desk monitors",
+      "description": "Multi-monitor desk scene.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day94-ui-ux",
+      "file": "illlustrations/day94-ui-ux.svg",
+      "name": "Design desk",
+      "description": "Designer's desk with screens.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day95-app-development",
+      "file": "illlustrations/day95-app-development.svg",
+      "name": "App development desk",
+      "description": "Workspace with dev tools.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day41-desktop",
+      "file": "illlustrations/day41-desktop.svg",
+      "name": "Desktop at night",
+      "description": "PC tower and monitor in the dark.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day62-office-bag",
+      "file": "illlustrations/day62-office-bag.svg",
+      "name": "Office bag",
+      "description": "Commuter work bag.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day30-cafe",
+      "file": "illlustrations/day30-cafe.svg",
+      "name": "Cafe",
+      "description": "Cozy cafe storefront.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day55-living-room-interior",
+      "file": "illlustrations/day55-living-room-interior.svg",
+      "name": "Living room",
+      "description": "Couch-time living room scene.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day56-tv-room",
+      "file": "illlustrations/day56-tv-room.svg",
+      "name": "TV room",
+      "description": "Evening TV room scene.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day57-reading-room",
+      "file": "illlustrations/day57-reading-room.svg",
+      "name": "Reading corner",
+      "description": "Armchair and bookshelf corner.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day58-bedroom",
+      "file": "illlustrations/day58-bedroom.svg",
+      "name": "Bedroom",
+      "description": "Calm bedroom scene.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day12-bed",
+      "file": "illlustrations/day12-bed.svg",
+      "name": "Bed at night",
+      "description": "Bed scene — rest and rough nights.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day31-sweet-home",
+      "file": "illlustrations/day31-sweet-home.svg",
+      "name": "Sweet home",
+      "description": "House and yard scene.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day79-coffee",
+      "file": "illlustrations/day79-coffee.svg",
+      "name": "Coffee cup",
+      "description": "Takeaway coffee.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "day80-tea",
+      "file": "illlustrations/day80-tea.svg",
+      "name": "Tea time",
+      "description": "Kettle and cup.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day66-travel",
+      "file": "illlustrations/day66-travel.svg",
+      "name": "Road trip",
+      "description": "Camper van on the road.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "day25-sport-bicycle",
+      "file": "illlustrations/day25-sport-bicycle.svg",
+      "name": "Bicycle",
+      "description": "Sport bicycle — getting moving again.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "101-gym-guy",
+      "file": "illlustrations/101-gym-guy.svg",
+      "name": "Gym check-in",
+      "description": "Guy with workout icons.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "102-gym-cycle",
+      "file": "illlustrations/102-gym-cycle.svg",
+      "name": "Exercise bike",
+      "description": "Stationary gym bike.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "103-gym-time",
+      "file": "illlustrations/103-gym-time.svg",
+      "name": "Gym time",
+      "description": "Stopwatch — a few minutes a day.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "107-healthy",
+      "file": "illlustrations/107-healthy.svg",
+      "name": "Healthy habits",
+      "description": "Fresh fruit and water.",
+      "source": "illlustrations.co",
+      "license": "MIT",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "back-pain-sitting",
+      "file": "custom/back-pain-sitting.svg",
+      "name": "Back pain sitting",
+      "description": "Sitting too long — lower back flaring, warm highlight (no exclamation marks).",
+      "source": "Open Doodles (modified)",
+      "license": "CC0",
+      "themes": [
+        "pain",
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "back-pain-laying",
+      "file": "custom/back-pain-laying.svg",
+      "name": "Back pain laying",
+      "description": "Laid out on the floor with a lower-back highlight (no exclamation marks).",
+      "source": "Open Doodles (modified)",
+      "license": "CC0",
+      "themes": [
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sitting",
+      "file": "opendoodles/sitting.svg",
+      "name": "Sitting",
+      "description": "Sitting slouched on the floor.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sitting-reading",
+      "file": "opendoodles/sitting-reading.svg",
+      "name": "Sitting reading",
+      "description": "Reading in a chair, leaning back.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle",
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "reading",
+      "file": "opendoodles/reading.svg",
+      "name": "Reading",
+      "description": "Cross-legged with a book.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "reading-side",
+      "file": "opendoodles/reading-side.svg",
+      "name": "Reading by the plant",
+      "description": "Relaxed reading beside a plant.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "laying",
+      "file": "opendoodles/laying.svg",
+      "name": "Laying down",
+      "description": "Flat on the floor scrolling — back-pain-day mood.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "chilling",
+      "file": "opendoodles/chilling.svg",
+      "name": "Chilling",
+      "description": "Slumped back, taking it easy.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "clumsy",
+      "file": "opendoodles/clumsy.svg",
+      "name": "Caught off guard",
+      "description": "Mid-stumble — the moment it tweaks.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "meditating",
+      "file": "opendoodles/meditating.svg",
+      "name": "Meditating",
+      "description": "Seated breathing and calm.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "coffee",
+      "file": "opendoodles/coffee.svg",
+      "name": "Coffee break",
+      "description": "Big sip of coffee.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "strolling",
+      "file": "opendoodles/strolling.svg",
+      "name": "Strolling",
+      "description": "Easy walk — movement is medicine.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "running",
+      "file": "opendoodles/running.svg",
+      "name": "Running",
+      "description": "Out for a run.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sprinting",
+      "file": "opendoodles/sprinting.svg",
+      "name": "Sprinting",
+      "description": "Full-speed sprint.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dancing",
+      "file": "opendoodles/dancing.svg",
+      "name": "Dancing",
+      "description": "Moving freely again.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "jumping",
+      "file": "opendoodles/jumping.svg",
+      "name": "Jumping",
+      "description": "Jumping with energy.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "ballet",
+      "file": "opendoodles/ballet.svg",
+      "name": "Ballet leap",
+      "description": "Graceful, flexible movement.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "rolling",
+      "file": "opendoodles/rolling.svg",
+      "name": "Cartwheel",
+      "description": "Playful cartwheel.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "levitate",
+      "file": "opendoodles/levitate.svg",
+      "name": "Levitating",
+      "description": "Weightless and pain-free.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "float",
+      "file": "opendoodles/float.svg",
+      "name": "Floating",
+      "description": "Relaxed float.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sleek",
+      "file": "opendoodles/sleek.svg",
+      "name": "Sleek",
+      "description": "Confident stride.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "groovy",
+      "file": "opendoodles/groovy.svg",
+      "name": "Groovy",
+      "description": "Feeling good, moving loose.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "plant",
+      "file": "opendoodles/plant.svg",
+      "name": "Plant care",
+      "description": "Tending a big plant.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "petting",
+      "file": "opendoodles/petting.svg",
+      "name": "Dog walk",
+      "description": "Out with the dog.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "loving",
+      "file": "opendoodles/loving.svg",
+      "name": "Self care",
+      "description": "Hands on heart.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "swinging",
+      "file": "opendoodles/swinging.svg",
+      "name": "Swinging",
+      "description": "On a swing, carefree.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "selfie",
+      "file": "opendoodles/selfie.svg",
+      "name": "Selfie",
+      "description": "Snapping a selfie.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "roller-skating",
+      "file": "opendoodles/roller-skating.svg",
+      "name": "Roller skating",
+      "description": "Gliding on skates.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "ice-cream",
+      "file": "opendoodles/ice-cream.svg",
+      "name": "Ice cream",
+      "description": "Enjoying an ice cream.",
+      "source": "Open Doodles",
+      "license": "CC0",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "desk-worker",
+      "file": "custom/desk-worker.svg",
+      "name": "Desk worker",
+      "description": "Hunched at a desk, hand on the lower back. No exclamation mark.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "phone-app",
+      "file": "custom/phone-app.svg",
+      "name": "Phone + app",
+      "description": "Standing, looking at Remedy on the phone.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "spine",
+      "file": "custom/spine.svg",
+      "name": "Spine",
+      "description": "Spine with a warm lower-back highlight. No red bang.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "laptop-slouch",
+      "file": "custom/laptop-slouch.svg",
+      "name": "Laptop slouch",
+      "description": "Hunched at a laptop — desk-worker cousin for 'your chair is the problem'.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "rising-chair",
+      "file": "custom/rising-chair.svg",
+      "name": "Getting up from the chair",
+      "description": "Standing up from the office chair, hand on the lower back.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "video-call",
+      "file": "custom/video-call.svg",
+      "name": "Video-call slump",
+      "description": "Slumped on a call — remote-worker identity hook.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "late-night-desk",
+      "file": "custom/late-night-desk.svg",
+      "name": "Late night desk",
+      "description": "Tired at the glowing screen after hours.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "morning-edge",
+      "file": "custom/morning-edge.svg",
+      "name": "Morning on the bed",
+      "description": "Sitting on the edge of the bed, stiff, hand on the back.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "stiff-wake",
+      "file": "custom/stiff-wake.svg",
+      "name": "Stiff wake-up",
+      "description": "Sitting up in bed — the morning that hurts.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "tying-shoes",
+      "file": "custom/tying-shoes.svg",
+      "name": "Tying shoes",
+      "description": "Bent to tie a shoe, back glowing. Relatable moment — not a stretch diagram.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "floor-reach",
+      "file": "custom/floor-reach.svg",
+      "name": "Reaching for keys",
+      "description": "Reaching for keys on the floor. Story beat, not a form check.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "car-commute",
+      "file": "custom/car-commute.svg",
+      "name": "Car commute",
+      "description": "Driving, lower back glowing — pain after the commute.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "couch-slump",
+      "file": "custom/couch-slump.svg",
+      "name": "Couch slump",
+      "description": "Person slumped on the couch with a back glow. Not an empty room.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "kitchen-stiff",
+      "file": "custom/kitchen-stiff.svg",
+      "name": "Stiff in the kitchen",
+      "description": "Standing at the counter with a mug, hand on the back.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "explaining",
+      "file": "custom/explaining.svg",
+      "name": "Explaining the pain",
+      "description": "Standing, gesturing — 'me explaining my back to people who sit fine'.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "bed-scroll",
+      "file": "custom/bed-scroll.svg",
+      "name": "Scrolling in bed",
+      "description": "Propped in bed looking at the phone, back glowing.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "movie-sit",
+      "file": "custom/movie-sit.svg",
+      "name": "Sitting through it",
+      "description": "Parked in a seat, slouched, back glowing.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "standing-tall",
+      "file": "custom/standing-tall.svg",
+      "name": "Standing tall",
+      "description": "Upright, slight smile — the after.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "easy-walk",
+      "file": "custom/easy-walk.svg",
+      "name": "Easy walk",
+      "description": "Walking comfortably. Movement, not a gym scene.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "coffee-walk",
+      "file": "custom/coffee-walk.svg",
+      "name": "Coffee walk",
+      "description": "Walking with a mug — morning that doesn't hurt.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "follow-app",
+      "file": "custom/follow-app.svg",
+      "name": "Following the app",
+      "description": "Seated, looking at Remedy on the phone — starting the session.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "morning-ok",
+      "file": "custom/morning-ok.svg",
+      "name": "Morning that is fine",
+      "description": "On the bed edge, upright, slight smile. Pair with morning-edge.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "progress-phone",
+      "file": "custom/progress-phone.svg",
+      "name": "Progress on the phone",
+      "description": "Standing tall showing Remedy. Cousin of phone + app.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "commute-ok",
+      "file": "custom/commute-ok.svg",
+      "name": "Commute, fine",
+      "description": "Standing with a bag, good posture.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "desk-break",
+      "file": "custom/desk-break.svg",
+      "name": "Desk + phone break",
+      "description": "Standing beside the desk with Remedy open. Good posture.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "session-ready",
+      "file": "custom/session-ready.svg",
+      "name": "Session ready",
+      "description": "On a mat looking at the phone. Starting a session — not an exercise pose.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "shoes-easy",
+      "file": "custom/shoes-easy.svg",
+      "name": "Shoes on, fine",
+      "description": "Standing after shoes — pair with tying-shoes.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "after-walk",
+      "file": "custom/after-walk.svg",
+      "name": "After a walk",
+      "description": "Standing easy, no glow.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "drive-ok",
+      "file": "custom/drive-ok.svg",
+      "name": "Drive, fine",
+      "description": "Driving upright, no glow. Pair with car-commute.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "keys-ok",
+      "file": "custom/keys-ok.svg",
+      "name": "Picked up the keys",
+      "description": "Standing, keys in hand. Pair with floor-reach.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sock-hop",
+      "file": "custom/sock-hop.svg",
+      "name": "Putting on a sock",
+      "description": "One-foot hop to get a sock on. Funny-wonky everyday stretch.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dropped-pen",
+      "file": "custom/dropped-pen.svg",
+      "name": "Dropped pen",
+      "description": "Reaching under the desk for a pen. Cousin of reaching for keys.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "couch-launch",
+      "file": "custom/couch-launch.svg",
+      "name": "Getting off the couch",
+      "description": "The long lean to stand up. Funny, not a form check.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "high-shelf",
+      "file": "custom/high-shelf.svg",
+      "name": "Top shelf",
+      "description": "On tiptoes for the top shelf. Everyday reach-stretch.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sneeze",
+      "file": "custom/sneeze.svg",
+      "name": "The sneeze",
+      "description": "Mid-sneeze, back glowing. Relatable and a little funny.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "chair-twist",
+      "file": "custom/chair-twist.svg",
+      "name": "Chair twist",
+      "description": "Twisted in the chair to grab something behind. Desk stretch moment.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "seatbelt",
+      "file": "custom/seatbelt.svg",
+      "name": "Seatbelt reach",
+      "description": "Twisting for the seatbelt. Commute struggle.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "laundry-bend",
+      "file": "custom/laundry-bend.svg",
+      "name": "Laundry basket",
+      "description": "Bent over a basket. Same energy as tying shoes.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "grocery-lean",
+      "file": "custom/grocery-lean.svg",
+      "name": "Grocery bags",
+      "description": "Listing sideways with two bags.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "penguin-steps",
+      "file": "custom/penguin-steps.svg",
+      "name": "Penguin walk",
+      "description": "First stiff steps of the morning. Arms out for balance.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "jacket-stuck",
+      "file": "custom/jacket-stuck.svg",
+      "name": "Jacket stuck",
+      "description": "One arm in, twisted to find the other sleeve.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "alarm-slap",
+      "file": "custom/alarm-slap.svg",
+      "name": "Hitting the alarm",
+      "description": "Reaching from the bed to slap the clock.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "sit-hover",
+      "file": "custom/sit-hover.svg",
+      "name": "Hovering over the chair",
+      "description": "Afraid to sit down. Funny mid-air pause.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "over-shoulder",
+      "file": "custom/over-shoulder.svg",
+      "name": "Look back",
+      "description": "Twisted to look over the shoulder. Everyday stretch, not a pose chart.",
+      "source": "Remedy original",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-trigger-standing",
+      "file": "flat/trigger-standing.svg",
+      "name": "Kitchen stand",
+      "description": "Standing at a mustard kitchen counter with a mug.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-goal-exercise",
+      "file": "flat/goal-exercise.svg",
+      "name": "Tying sneakers",
+      "description": "Kneeling to lace mustard sneakers before a session.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-goal-sleep",
+      "file": "flat/goal-sleep.svg",
+      "name": "Asleep",
+      "description": "Tucked under a sage blanket beside a glowing lamp.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-desk-slouch",
+      "file": "flat/desk-slouch.svg",
+      "name": "Desk slouch",
+      "description": "Hunched at a laptop, one hand on the lower back.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-couch-laptop",
+      "file": "flat/couch-laptop.svg",
+      "name": "Couch laptop",
+      "description": "Working from the sofa with a laptop on the knees.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-high-shelf",
+      "file": "flat/high-shelf.svg",
+      "name": "High shelf",
+      "description": "Reaching up to a kitchen shelf.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-car-commute",
+      "file": "flat/car-commute.svg",
+      "name": "Car commute",
+      "description": "Sitting in the car, hands on the wheel.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-coffee-walk",
+      "file": "flat/coffee-walk.svg",
+      "name": "Coffee walk",
+      "description": "An easy outdoor walk with a mug.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-laundry",
+      "file": "flat/laundry.svg",
+      "name": "Laundry basket",
+      "description": "Carrying a laundry basket through the house.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-after-walk",
+      "file": "flat/after-walk.svg",
+      "name": "After a walk",
+      "description": "Standing tall after a short walk, feeling looser.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-phone-bed",
+      "file": "flat/phone-bed.svg",
+      "name": "Phone in bed",
+      "description": "Propped in bed looking at a phone.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-floor-stretch",
+      "file": "flat/floor-stretch.svg",
+      "name": "Floor stretch",
+      "description": "Gentle stretch on the living-room rug.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-video-call",
+      "file": "flat/video-call.svg",
+      "name": "Video call",
+      "description": "Slouched on a video call at the desk.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-phone-stand",
+      "file": "flat/phone-stand.svg",
+      "name": "Phone stand",
+      "description": "Standing in the hallway looking down at a phone.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-chair-twist",
+      "file": "flat/chair-twist.svg",
+      "name": "Chair twist",
+      "description": "Twisted in an office chair looking back.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-bag-floor",
+      "file": "flat/bag-floor.svg",
+      "name": "Bag on the floor",
+      "description": "Bending to pick up a tote in the entryway.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-backpack",
+      "file": "flat/backpack.svg",
+      "name": "Backpack walk",
+      "description": "Walking with a backpack on one shoulder.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-socks",
+      "file": "flat/socks.svg",
+      "name": "Putting on socks",
+      "description": "Sitting on the bed edge pulling on a sock.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-out-of-bed",
+      "file": "flat/out-of-bed.svg",
+      "name": "Out of bed",
+      "description": "Sitting up stiff on the edge of the bed.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-dishwasher",
+      "file": "flat/dishwasher.svg",
+      "name": "Dishwasher",
+      "description": "Loading a plate into the dishwasher.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-fridge-reach",
+      "file": "flat/fridge-reach.svg",
+      "name": "Fridge reach",
+      "description": "Reaching into the fridge.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-jacket",
+      "file": "flat/jacket.svg",
+      "name": "Jacket on",
+      "description": "Putting on a jacket in the hallway.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-tv-slouch",
+      "file": "flat/tv-slouch.svg",
+      "name": "TV slouch",
+      "description": "Sunk into the sofa watching TV.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-stove-cook",
+      "file": "flat/stove-cook.svg",
+      "name": "Cooking",
+      "description": "Stirring a pot at the stove.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-stairs",
+      "file": "flat/stairs.svg",
+      "name": "Stairs",
+      "description": "Walking up a flight of stairs.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-chair-rise",
+      "file": "flat/chair-rise.svg",
+      "name": "Getting up",
+      "description": "Pushing up from an armchair.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-dishes-up",
+      "file": "flat/dishes-up.svg",
+      "name": "Dishes up",
+      "description": "Putting a plate on a high kitchen shelf.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-fold-laundry",
+      "file": "flat/fold-laundry.svg",
+      "name": "Folding laundry",
+      "description": "Sitting on the bed folding clothes.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-water-plant",
+      "file": "flat/water-plant.svg",
+      "name": "Watering plant",
+      "description": "Watering a tall houseplant.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-window-look",
+      "file": "flat/window-look.svg",
+      "name": "Window look",
+      "description": "Standing at a window looking out.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-doorway-stretch",
+      "file": "flat/doorway-stretch.svg",
+      "name": "Doorway stretch",
+      "description": "Hands on a doorway frame, easy reach.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-park-bench",
+      "file": "flat/park-bench.svg",
+      "name": "Park bench",
+      "description": "Sitting on a park bench under rounded trees.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-dog-walk",
+      "file": "flat/dog-walk.svg",
+      "name": "Dog walk",
+      "description": "An easy walk with a dog.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-floor-tea",
+      "file": "flat/floor-tea.svg",
+      "name": "Tea on the floor",
+      "description": "Cross-legged on a rug with a mug.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-suitcase",
+      "file": "flat/suitcase.svg",
+      "name": "Suitcase",
+      "description": "Kneeling to zip a suitcase.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-mail",
+      "file": "flat/mail.svg",
+      "name": "Getting the mail",
+      "description": "At the front door collecting mail.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-cafe-sit",
+      "file": "flat/cafe-sit.svg",
+      "name": "Cafe sit",
+      "description": "Sitting at a cafe table with a cup.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-book-couch",
+      "file": "flat/book-couch.svg",
+      "name": "Reading on the couch",
+      "description": "Lying on the sofa with a book.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-front-steps",
+      "file": "flat/front-steps.svg",
+      "name": "Front steps",
+      "description": "Walking up the front steps home.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-pet-lean",
+      "file": "flat/pet-lean.svg",
+      "name": "Pet the cat",
+      "description": "Leaning from a chair to pet a cat.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-grocery-counter",
+      "file": "flat/grocery-counter.svg",
+      "name": "Groceries down",
+      "description": "Setting grocery bags on the kitchen counter.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-bathroom-sink",
+      "file": "flat/bathroom-sink.svg",
+      "name": "Bathroom sink",
+      "description": "Standing at the bathroom sink.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-umbrella-walk",
+      "file": "flat/umbrella-walk.svg",
+      "name": "Umbrella walk",
+      "description": "Walking under a mustard umbrella.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-bus-sit",
+      "file": "flat/bus-sit.svg",
+      "name": "Bus sit",
+      "description": "Sitting on a bus looking out the window.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-vacuum",
+      "file": "flat/vacuum.svg",
+      "name": "Vacuuming",
+      "description": "Vacuuming the living room.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-garden-water",
+      "file": "flat/garden-water.svg",
+      "name": "Garden",
+      "description": "Watering plants outside.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-ottoman-feet",
+      "file": "flat/ottoman-feet.svg",
+      "name": "Feet up",
+      "description": "In an armchair with feet on an ottoman.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle",
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "flat-packing-tote",
+      "file": "flat/packing-tote.svg",
+      "name": "Packing a tote",
+      "description": "Packing a tote bag on the bed.",
+      "source": "Remedy flat",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-bend-reach",
+      "file": "people/person-bend-reach.jpg",
+      "name": "person bend reach",
+      "description": "Remedy people photo (person bend reach).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-couch-ache",
+      "file": "people/person-couch-ache.jpg",
+      "name": "person couch ache",
+      "description": "Remedy people photo (person couch ache).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "pain",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-desk-slouch",
+      "file": "people/person-desk-slouch.jpg",
+      "name": "person desk slouch",
+      "description": "Remedy people photo (person desk slouch).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office",
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-floor-rest",
+      "file": "people/person-floor-rest.jpg",
+      "name": "person floor rest",
+      "description": "Remedy people photo (person floor rest).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-kitchen-stand",
+      "file": "people/person-kitchen-stand.jpg",
+      "name": "person kitchen stand",
+      "description": "Remedy people photo (person kitchen stand).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-morning-bed",
+      "file": "people/person-morning-bed.jpg",
+      "name": "person morning bed",
+      "description": "Remedy people photo (person morning bed).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-standing-relief",
+      "file": "people/person-standing-relief.jpg",
+      "name": "person standing relief",
+      "description": "Remedy people photo (person standing relief).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "recovery"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "person-walk-outside",
+      "file": "people/person-walk-outside.jpg",
+      "name": "person walk outside",
+      "description": "Remedy people photo (person walk outside).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-desk-rub",
+      "file": "people/man-desk-rub.jpg",
+      "name": "man desk rub",
+      "description": "Remedy people photo (man desk rub).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-floor-knees",
+      "file": "people/man-floor-knees.jpg",
+      "name": "man floor knees",
+      "description": "Remedy people photo (man floor knees).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-sofa-stiff",
+      "file": "people/man-sofa-stiff.jpg",
+      "name": "man sofa stiff",
+      "description": "Remedy people photo (man sofa stiff).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-window-ease",
+      "file": "people/man-window-ease.jpg",
+      "name": "man window ease",
+      "description": "Remedy people photo (man window ease).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-bed-knit",
+      "file": "people/woman-bed-knit.jpg",
+      "name": "woman bed knit",
+      "description": "Remedy people photo (woman bed knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-chair-knit",
+      "file": "people/woman-chair-knit.jpg",
+      "name": "woman chair knit",
+      "description": "Remedy people photo (woman chair knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-desk-knit",
+      "file": "people/woman-desk-knit.jpg",
+      "name": "woman desk knit",
+      "description": "Remedy people photo (woman desk knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-door-lean",
+      "file": "people/woman-door-lean.jpg",
+      "name": "woman door lean",
+      "description": "Remedy people photo (woman door lean).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-floor-side",
+      "file": "people/woman-floor-side.jpg",
+      "name": "woman floor side",
+      "description": "Remedy people photo (woman floor side).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-kitchen-knit",
+      "file": "people/woman-kitchen-knit.jpg",
+      "name": "woman kitchen knit",
+      "description": "Remedy people photo (woman kitchen knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-ottoman-knit",
+      "file": "people/woman-ottoman-knit.jpg",
+      "name": "woman ottoman knit",
+      "description": "Remedy people photo (woman ottoman knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-sofa-knit",
+      "file": "people/woman-sofa-knit.jpg",
+      "name": "woman sofa knit",
+      "description": "Remedy people photo (woman sofa knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-sofa-side",
+      "file": "people/woman-sofa-side.jpg",
+      "name": "woman sofa side",
+      "description": "Remedy people photo (woman sofa side).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-window-knit",
+      "file": "people/woman-window-knit.jpg",
+      "name": "woman window knit",
+      "description": "Remedy people photo (woman window knit).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dad-toddler-floor",
+      "file": "people/dad-toddler-floor.jpg",
+      "name": "dad toddler floor",
+      "description": "Remedy people photo (dad toddler floor).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-blue-window",
+      "file": "people/man-blue-window.jpg",
+      "name": "man blue window",
+      "description": "Remedy people photo (man blue window).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-car-commute",
+      "file": "people/man-car-commute.jpg",
+      "name": "man car commute",
+      "description": "Remedy people photo (man car commute).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-close-wince",
+      "file": "people/man-close-wince.jpg",
+      "name": "man close wince",
+      "description": "Remedy people photo (man close wince).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "pain"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-flannel-kitchen",
+      "file": "people/man-flannel-kitchen.jpg",
+      "name": "man flannel kitchen",
+      "description": "Remedy people photo (man flannel kitchen).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-gym-locker",
+      "file": "people/man-gym-locker.jpg",
+      "name": "man gym locker",
+      "description": "Remedy people photo (man gym locker).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-hood-floor",
+      "file": "people/man-hood-floor.jpg",
+      "name": "man hood floor",
+      "description": "Remedy people photo (man hood floor).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-overhead-couch",
+      "file": "people/man-overhead-couch.jpg",
+      "name": "man overhead couch",
+      "description": "Remedy people photo (man overhead couch).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "man-restaurant-booth",
+      "file": "people/man-restaurant-booth.jpg",
+      "name": "man restaurant booth",
+      "description": "Remedy people photo (man restaurant booth).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-airport-seat",
+      "file": "people/woman-airport-seat.jpg",
+      "name": "woman airport seat",
+      "description": "Remedy people photo (woman airport seat).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-behind-desk",
+      "file": "people/woman-behind-desk.jpg",
+      "name": "woman behind desk",
+      "description": "Remedy people photo (woman behind desk).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-denim-walk",
+      "file": "people/woman-denim-walk.jpg",
+      "name": "woman denim walk",
+      "description": "Remedy people photo (woman denim walk).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "recovery",
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-grocery-cart",
+      "file": "people/woman-grocery-cart.jpg",
+      "name": "woman grocery cart",
+      "description": "Remedy people photo (woman grocery cart).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-office-fluorescent",
+      "file": "people/woman-office-fluorescent.jpg",
+      "name": "woman office fluorescent",
+      "description": "Remedy people photo (woman office fluorescent).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "office"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-profile-night",
+      "file": "people/woman-profile-night.jpg",
+      "name": "woman profile night",
+      "description": "Remedy people photo (woman profile night).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "woman-stairs-bag",
+      "file": "people/woman-stairs-bag.jpg",
+      "name": "woman stairs bag",
+      "description": "Remedy people photo (woman stairs bag).",
+      "source": "Remedy people",
+      "license": "owned",
+      "themes": [
+        "lifestyle"
+      ],
+      "enabled": true
+    }
+  ]
+}

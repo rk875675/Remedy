@@ -5,7 +5,7 @@ import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedTagline } from '../../components/onboarding/AnimatedTagline';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboarding, type OnboardingProgress } from '../../context/OnboardingContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePremium } from '../../context/PremiumContext';
 import {
@@ -45,7 +45,9 @@ import {
   toRestoreReason,
 } from '../../lib/analytics/purchaseErrors';
 import { openLegalDocument } from '../../lib/legalLinks';
+import { sessionLength } from '../../lib/analytics/events/enums';
 import { onboardingFunnelDurationMs } from '../../lib/analytics/onboardingSteps';
+import type { z } from 'zod';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { type OnboardingAnswersInput, type PlanPreview } from '../../lib/schemas';
@@ -140,7 +142,7 @@ function reportPlanPreview(properties: Parameters<typeof onboardingPlanPreviewed
 export default function MatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { answers, retaking } = useOnboarding();
+  const { answers, retaking, progress } = useOnboarding();
   const { user } = useAuth();
   const { refreshPremium } = usePremium();
   const { identify } = useUser();
@@ -772,7 +774,7 @@ export default function MatchScreen() {
           setLoading(false);
           return;
         }
-        reportOnboardingCompleted(complete, true);
+        reportOnboardingCompleted(complete, true, progress);
         // Keep `retaking` raised until building-plan finishes the re-assignment. Ending it
         // here raced the root guard: with the flag down but segments still in (onboarding),
         // the guard could bounce the user to the tabs before building-plan mounted — the
@@ -786,7 +788,7 @@ export default function MatchScreen() {
       // A lapsed reconvert who still has complete answers in context skips the
       // completion event and just re-opens checkout.
       if (!isReconvert) {
-        reportOnboardingCompleted(complete, false);
+        reportOnboardingCompleted(complete, false, progress);
       }
 
       await handleShowPaywall(isReconvert ? { forceInactive: true } : undefined);
@@ -937,8 +939,28 @@ function countMissingAnswers(answers: Partial<OnboardingAnswers>): number {
  * property a bounded breakdown dimension, and means a future free-text question
  * cannot leak into analytics by being spread into this payload.
  */
-function reportOnboardingCompleted(answers: RequiredAnswers, isRetake: boolean): void {
+function sessionLengthFromMinutes(
+  minutes: number | null | undefined,
+): z.infer<typeof sessionLength> | undefined {
+  if (minutes === 15) return 'minutes_15';
+  if (minutes === 20) return 'minutes_20';
+  if (minutes === 30) return 'minutes_30';
+  return undefined;
+}
+
+function reportOnboardingCompleted(
+  answers: RequiredAnswers,
+  isRetake: boolean,
+  progress: OnboardingProgress | null,
+): void {
   const timeInFunnelMs = onboardingFunnelDurationMs();
+  const prior =
+    progress?.tried_before === 'yes' || progress?.tried_before === 'no'
+      ? progress.tried_before
+      : undefined;
+  const length = sessionLengthFromMinutes(progress?.minutes);
+  const hasRedFlag = typeof progress?.has_red_flag === 'boolean' ? progress.has_red_flag : undefined;
+
   onboardingCompleted({
     pain_location: answers.pain_location,
     pain_duration: answers.pain_duration,
@@ -951,6 +973,9 @@ function reportOnboardingCompleted(answers: RequiredAnswers, isRetake: boolean):
     sessions_per_week_preference: answers.sessions_per_week_preference,
     is_retake: isRetake,
     ...(timeInFunnelMs === undefined ? {} : { time_in_funnel_ms: timeInFunnelMs }),
+    ...(hasRedFlag === undefined ? {} : { has_red_flag: hasRedFlag }),
+    ...(prior === undefined ? {} : { prior_attempts: prior }),
+    ...(length === undefined ? {} : { session_length: length }),
   });
 
   setPersonProperties({
@@ -960,6 +985,9 @@ function reportOnboardingCompleted(answers: RequiredAnswers, isRetake: boolean):
     equipment_tier: answers.equipment,
     primary_goal: answers.main_goal[0],
     sessions_per_week_preference: answers.sessions_per_week_preference,
+    ...(hasRedFlag === undefined ? {} : { has_red_flag: hasRedFlag }),
+    ...(prior === undefined ? {} : { prior_attempts: prior }),
+    ...(length === undefined ? {} : { session_length: length }),
   });
 }
 

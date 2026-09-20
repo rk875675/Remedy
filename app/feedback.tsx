@@ -25,7 +25,7 @@ import {
   feedbackSubmitted,
   reviewAskShown,
 } from '../lib/analytics/events/engagement';
-import { openWriteReviewPage } from '../lib/app-store-review';
+import { isManualWriteReviewAvailable, openWriteReviewPage } from '../lib/app-store-review';
 import type { FeedbackCategory } from '../types/database';
 
 const MIN_BODY = 10;
@@ -128,7 +128,7 @@ export default function FeedbackScreen() {
     hapticSuccess();
 
     const happy = rating === 4 || rating === 5;
-    if (happy && Platform.OS === 'ios') {
+    if (happy && Platform.OS === 'ios' && (await isManualWriteReviewAvailable())) {
       setAskRating(rating);
       setPhase('review_ask');
       return;

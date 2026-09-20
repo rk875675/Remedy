@@ -7,6 +7,7 @@ import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
+import { setPersonProperties } from '../../lib/analytics';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 
@@ -43,6 +44,7 @@ export default function Q9Screen() {
     } else {
       setAnswer(value);
       setLocalAnswer('tried_before', value);
+      setPersonProperties({ prior_attempts: value });
     }
   }
 

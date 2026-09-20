@@ -1,0 +1,23 @@
+{
+  "name": "@remedy-growth/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "db:push": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "drizzle-orm": "^0.44.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.19.0"
+  }
+}

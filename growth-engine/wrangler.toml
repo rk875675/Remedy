@@ -1,0 +1,13 @@
+name = "remedy-growth"
+compatibility_date = "2026-08-22"
+pages_build_output_dir = "./apps/web/dist"
+
+[[r2_buckets]]
+binding = "SLIDES"
+bucket_name = "slideshow"
+
+# STUDIO_PASSWORD is a Pages secret (never a plain var):
+#   npx wrangler pages secret put STUDIO_PASSWORD --project-name=remedy-growth
+[vars]
+UGC_OPERATOR_EMAILS = ""
+UGC_CREATORS = ""

@@ -134,6 +134,7 @@ export const PERSON_PROPS = new Set([
   'subscription_expires_at', 'first_purchase_at', 'first_product_id',
   'acquisition_source', 'signup_method', 'activity_level', 'pain_duration', 'pain_location',
   'equipment_tier', 'sessions_per_week_preference', 'primary_goal', 'paywall_variant_id',
+  'has_red_flag', 'prior_attempts', 'session_length',
   'paywall_experiment_id', 'program_week', 'first_session_completed_at',
 ]);
 

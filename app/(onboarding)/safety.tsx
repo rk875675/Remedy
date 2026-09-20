@@ -6,9 +6,14 @@ import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { recordLegalAcceptances } from '../../lib/legalAcceptance';
+import { setPersonProperties } from '../../lib/analytics';
 import { legalDocumentViewed } from '../../lib/analytics/events/engagement';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
-import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
+import {
+  onboardingClinicianExitConfirmed,
+  onboardingHintShown,
+  onboardingOptionSelected,
+} from '../../lib/analytics/events/onboarding';
+import { activeStepDwellMs, useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import { hapticSelection } from '../../lib/haptics';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
@@ -89,10 +94,22 @@ export default function SafetyScreen() {
     const next = isDeselect ? null : value;
     setHasRedFlag(next);
     setLocalAnswer('has_red_flag', next);
+    if (next !== null) {
+      setPersonProperties({ has_red_flag: next });
+    }
+    if (next === true) {
+      onboardingHintShown({ step_key: 'safety', hint_key: 'red_flag_warning' });
+    }
   }
 
   function handleToggleLegal() {
     const next = !agreedLegal;
+    onboardingOptionSelected({
+      step_key: 'safety',
+      option_value: 'legal_assent',
+      is_multi_select: false,
+      is_deselect: !next,
+    });
     setAgreedLegal(next);
     setLocalAnswer('agreed_legal', next);
   }
@@ -137,8 +154,9 @@ export default function SafetyScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <Text style={styles.heading}>Do any of these apply to you?</Text>
       <Text style={styles.lede}>
-        Remedy is a fitness program, not medical care. See a clinician first if
-        any of these apply.
+        A few causes of back pain need a clinician's attention before any
+        exercise. If any of these apply to you, see one first. Your program will
+        be waiting.
       </Text>
 
       <View style={styles.listCard}>
@@ -206,7 +224,13 @@ export default function SafetyScreen() {
         {hasRedFlag === true && (
           <TouchableOpacity
             style={styles.exitLink}
-            onPress={() => router.back()}
+            onPress={() => {
+              onboardingClinicianExitConfirmed({
+                step_key: 'safety',
+                time_on_step_ms: activeStepDwellMs() ?? 0,
+              });
+              router.back();
+            }}
             activeOpacity={0.6}
           >
             <Text style={styles.exitText}>I'll check with a clinician first</Text>

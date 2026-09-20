@@ -115,7 +115,14 @@ export const trainingCadence = z.enum([
   'days_7',
 ]);
 
-/** Every value an OptionCard can carry, across all questions. */
+/**
+ * Safety-gate legal checkbox. Not an OptionCard value — tracked through the
+ * same option_selected event so assent and the yes/no red-flag answer stay
+ * one breakdown (`step_key` + `option_value`).
+ */
+export const legalAssent = z.literal('legal_assent');
+
+/** Every value an OptionCard (or the safety checkbox) can carry. */
 export const optionValue = z.union([
   painLocation,
   painDuration,
@@ -129,6 +136,7 @@ export const optionValue = z.union([
   recognizePattern,
   sessionLength,
   trainingCadence,
+  legalAssent,
 ]);
 
 export const previewSource = z.enum(['server', 'fallback']);

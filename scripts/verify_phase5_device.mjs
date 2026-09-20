@@ -264,7 +264,7 @@ if (has('$screen')) {
 // --- onboarding step ordering ----------------------------------------------
 // Only *question* screens emit `onboarding_step_completed` — they are the ones that call
 // `useOnboardingStepCompletion`. The interstitials (welcome, founder, education,
-// seen, alarm, why, finalizing, match) have no answer to complete and report forward progress through
+// seen, finalizing, match) have no answer to complete and report forward progress through
 // `onboarding_step_exited` instead. The expected indices are therefore derived from the
 // step enum and the screens that actually wire up completion, not hardcoded: a step added
 // or reordered changes this check automatically instead of silently invalidating it.

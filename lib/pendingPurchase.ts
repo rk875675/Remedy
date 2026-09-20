@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLatestRemedyTransaction } from './iap';
 
 // Bridges a purchase made on the paywall (where the user is still anonymous) to the
 // account they create immediately after. The transaction is captured pre-signup,
@@ -53,4 +54,21 @@ export async function clearPendingPurchase(): Promise<void> {
   } catch {
     // Ignore — verify-purchase is idempotent, so a stale entry is harmless.
   }
+}
+
+// Email-confirm cold start: the paywall stash can be missing even though StoreKit
+// still holds the subscription. Re-copy it into the existing pending-purchase
+// handoff so the root guard / building-plan path runs instead of Your Program.
+export async function ensurePendingPurchaseFromStoreKit(): Promise<boolean> {
+  if (await getPendingPurchase()) return true;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+    const tx = await getLatestRemedyTransaction();
+    if (!tx) continue;
+    await setPendingPurchase(tx);
+    return !!(await getPendingPurchase());
+  }
+  return false;
 }

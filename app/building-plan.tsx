@@ -8,7 +8,7 @@ import { useOnboarding, clearStoredAnswers, clearStoredProgress } from '../conte
 import { supabase } from '../lib/supabase';
 import { isPremium, isDevUser } from '../lib/entitlements';
 import { assignResultSchema, onboardingAnswersInputSchema } from '../lib/schemas';
-import { getPendingPurchase, clearPendingPurchase } from '../lib/pendingPurchase';
+import { getPendingPurchase, clearPendingPurchase, ensurePendingPurchaseFromStoreKit } from '../lib/pendingPurchase';
 import { getPendingPromo, clearPendingPromo } from '../lib/pendingPromo';
 import { redeemPromoCode } from '../lib/promoCodes';
 import { getLatestRemedyTransaction } from '../lib/iap';
@@ -201,8 +201,13 @@ export default function BuildingPlanScreen() {
     // Skip the opportunistic StoreKit read when a promo stash exists — this funnel
     // ended with a code, not a purchase; a stale device transaction must not
     // pre-empt the redeem.
-    const purchase =
-      pending ?? (!dev && !pendingPromo ? await getLatestRemedyTransaction() : null);
+    let purchase = pending;
+    if (!purchase && !dev && !pendingPromo) {
+      purchase = await getLatestRemedyTransaction();
+      if (!purchase && (await ensurePendingPurchaseFromStoreKit())) {
+        purchase = await getPendingPurchase();
+      }
+    }
     if (purchase) {
       const verification = await retryWithBackoff(
         async () => {

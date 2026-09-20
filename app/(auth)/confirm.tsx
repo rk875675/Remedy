@@ -36,6 +36,7 @@ import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { parseAuthParamsFromUrl } from '../../lib/auth-redirects';
 import { peekPendingConfirmUrl, clearPendingConfirmUrl } from '../../lib/confirm-link-store';
+import { ensurePendingPurchaseFromStoreKit } from '../../lib/pendingPurchase';
 import { isCredentialHandled, markCredentialHandled } from '../../lib/auth-link-dedupe';
 import { friendlyAuthError } from '../../lib/passwordValidation';
 import { colors } from '../../constants/colors';
@@ -122,6 +123,16 @@ export default function ConfirmScreen() {
     setState('processing');
 
     try {
+      // Signup confirm often opens a cold app. Re-stash any StoreKit subscription
+      // before verifyOtp so the existing pending-purchase → building-plan path
+      // runs instead of Your Program / paywall. Other confirm types leave routing alone.
+      if (type === 'signup' || type === 'email') {
+        await Promise.race([
+          ensurePendingPurchaseFromStoreKit(),
+          new Promise<void>((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      }
+
       if (tokenHash) {
         // Standard token_hash path (Pitfall 11: survives email prefetchers).
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
