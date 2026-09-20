@@ -57,3 +57,6 @@ growth-engine/.wrangler/
 # Generated marketing renders (slides, thumbs, snapshots). Reproducible from the
 # growth-engine CLI, and ~76 MB per full run.
 growth-engine/output/
+
+# Metro/dev-server logs
+*.log
