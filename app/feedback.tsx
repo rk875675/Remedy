@@ -14,12 +14,13 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, serifFont } from '../constants/colors';
-import { PET_FEEDBACK_THANKS } from '../constants/petLines';
+import { PET_FEEDBACK_FORM_LINE, PET_FEEDBACK_THANKS } from '../constants/petLines';
 import { radius, spacing } from '../constants/spacing';
 import { shadows } from '../constants/shadows';
 import { type as typography } from '../constants/typography';
 import { ContinueButton } from '../components/onboarding/ContinueButton';
 import { PetBadge } from '../components/pet/PetBadge';
+import { PetSays } from '../components/pet/PetSays';
 import { hapticSelection, hapticSuccess, hapticError } from '../lib/haptics';
 import { submitFeedback } from '../lib/submitFeedback';
 import { fetchPetState } from '../lib/petApi';
@@ -228,6 +229,11 @@ export default function FeedbackScreen() {
             automaticallyAdjustKeyboardInsets
             showsVerticalScrollIndicator={false}
           >
+            {pet ? (
+              <View style={styles.petRow}>
+                <PetSays stage={pet.stage} mood="ready" line={PET_FEEDBACK_FORM_LINE} />
+              </View>
+            ) : null}
             <Text style={styles.title}>What’s on your mind?</Text>
             <Text style={styles.subtitle}>
               A bug, an idea, or just something to say. We read every note.
@@ -348,6 +354,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 48,
+  },
+  petRow: {
+    marginBottom: 16,
   },
   title: {
     ...typography.question,

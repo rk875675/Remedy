@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { colors } from '../../constants/colors';
 import { motion } from '../../constants/typography';
 import type { PetMood, PetStage } from '../../constants/petImages';
@@ -74,6 +74,22 @@ export function PetSays({ line, mood, stage = 1, size = 64 }: PetSaysProps) {
       </View>
     </View>
   );
+}
+
+/**
+ * Renders its children only on phones tall enough to spare the room.
+ * For forms with a keyboard: on a short phone the pet must never push a field
+ * or the submit button under the keyboard.
+ */
+export function OnTallScreens({
+  children,
+  minHeight = 720,
+}: {
+  children: React.ReactNode;
+  minHeight?: number;
+}) {
+  const { height } = useWindowDimensions();
+  return height >= minHeight ? <>{children}</> : null;
 }
 
 /** Same bubble without the pet, for places where the pet is already drawn large. */

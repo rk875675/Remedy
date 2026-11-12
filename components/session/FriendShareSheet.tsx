@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -24,6 +24,10 @@ import {
 } from '../../lib/analytics/events/engagement';
 import type { friendShareDismissReason } from '../../lib/analytics/events/enums';
 import { AppLogo } from '../brand/AppLogo';
+import { PetSays } from '../pet/PetSays';
+import { PET_SHARE_LINE } from '../../constants/petLines';
+import { fetchPetState } from '../../lib/petApi';
+import type { PetState } from '../../lib/pet';
 import {
   friendShareOutboundMessage,
   friendShareSheetCopy,
@@ -50,6 +54,17 @@ export function FriendShareSheet({ firstName, painImproved, onDismiss }: Props) 
   const rise = useRef(new Animated.Value(0)).current;
   const copy = friendShareSheetCopy(firstName, painImproved);
   const shown = useRef({ firstName, painImproved });
+  const [pet, setPet] = useState<PetState | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void fetchPetState().then((state) => {
+      if (live) setPet(state);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     const { firstName: name, painImproved: improved } = shown.current;
@@ -153,6 +168,11 @@ export function FriendShareSheet({ firstName, painImproved, onDismiss }: Props) 
           ]}
         >
           <View style={styles.handle} />
+          {pet ? (
+            <View style={styles.petRow}>
+              <PetSays line={PET_SHARE_LINE} mood="celebrating" stage={pet.stage} size={56} />
+            </View>
+          ) : null}
           <TouchableOpacity
             style={styles.close}
             onPress={() => finish('close')}
@@ -255,6 +275,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.circle,
     backgroundColor: colors.border,
     marginBottom: 22,
+  },
+  // Keeps the bubble clear of the absolute close control at the top right.
+  petRow: {
+    marginBottom: 16,
+    paddingRight: 36,
   },
   close: {
     position: 'absolute',

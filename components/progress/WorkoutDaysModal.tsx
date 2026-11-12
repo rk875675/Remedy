@@ -13,6 +13,10 @@ import {
   Alert,
 } from 'react-native';
 import { colors } from '../../constants/colors';
+import { PET_WORKOUT_DAYS_LINE } from '../../constants/petLines';
+import { PetSays } from '../pet/PetSays';
+import { fetchPetState } from '../../lib/petApi';
+import type { PetState } from '../../lib/pet';
 import { radius } from '../../constants/spacing';
 import { hapticSelection } from '../../lib/haptics';
 import { useAuth } from '../../context/AuthContext';
@@ -150,6 +154,7 @@ export function WorkoutDaysModal(props: Props) {
   // Snapshot of whether reminders were already on when the sheet opened.
   // preferNotifOn means the Profile toggle just flipped on — previous state is off.
   const notifWasEnabled = useRef(false);
+  const [pet, setPet] = useState<PetState | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -166,6 +171,17 @@ export function WorkoutDaysModal(props: Props) {
     void hydrate();
     // Only re-hydrate when the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    let live = true;
+    void fetchPetState().then((state) => {
+      if (live) setPet(state);
+    });
+    return () => {
+      live = false;
+    };
   }, [visible]);
 
   useEffect(() => {
@@ -327,6 +343,11 @@ export function WorkoutDaysModal(props: Props) {
           contentContainerStyle={sheet.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {pet ? (
+            <View style={sheet.petRow}>
+              <PetSays stage={pet.stage} mood="ready" line={PET_WORKOUT_DAYS_LINE} size={56} />
+            </View>
+          ) : null}
           <Text style={sheet.title}>Workout Days</Text>
           <View style={sheet.intro}>
             <Text style={sheet.subtitle}>
@@ -503,6 +524,9 @@ const sheet = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  petRow: {
+    marginBottom: 16,
   },
   title: {
     fontSize: 22,

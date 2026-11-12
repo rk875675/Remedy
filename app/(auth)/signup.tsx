@@ -32,6 +32,9 @@ import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../../lib/haptics';
+import { PetSays } from '../../components/pet/PetSays';
+import { PET_CHECK_INBOX_LINE } from '../../constants/petLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -42,6 +45,7 @@ export default function SignUpScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { stage } = useOnboardingPet();
 
   async function handleSignUp() {
     setError(null);
@@ -107,6 +111,9 @@ export default function SignUpScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.center}>
+          <View style={styles.petRow}>
+            <PetSays stage={stage} mood="ready" line={PET_CHECK_INBOX_LINE} />
+          </View>
           <Text style={styles.successIcon}>✉</Text>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
@@ -245,6 +252,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
     paddingHorizontal: 24,
+  },
+  petRow: {
+    alignSelf: 'stretch',
   },
   title: {
     fontSize: 28,

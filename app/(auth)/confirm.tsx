@@ -40,6 +40,9 @@ import { ensurePendingPurchaseFromStoreKit } from '../../lib/pendingPurchase';
 import { isCredentialHandled, markCredentialHandled } from '../../lib/auth-link-dedupe';
 import { friendlyAuthError } from '../../lib/passwordValidation';
 import { colors } from '../../constants/colors';
+import { PET_CHECK_INBOX_LINE } from '../../constants/petLines';
+import { PetSays } from '../../components/pet/PetSays';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 
@@ -55,6 +58,7 @@ function normalizeType(raw: string | undefined): EmailOtpType {
 export default function ConfirmScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage } = useOnboardingPet();
   const routeParams = useLocalSearchParams<{
     token_hash?: string;
     type?: string;
@@ -266,6 +270,9 @@ export default function ConfirmScreen() {
     return (
       <View style={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.center}>
+          <View style={styles.petRow}>
+            <PetSays stage={stage} mood="ready" line={PET_CHECK_INBOX_LINE} />
+          </View>
           <Text style={styles.title}>Waiting for confirmation link</Text>
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>
@@ -288,6 +295,11 @@ export default function ConfirmScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.center}>
+        {state === 'waiting' ? (
+          <View style={styles.petRow}>
+            <PetSays stage={stage} mood="ready" line={PET_CHECK_INBOX_LINE} />
+          </View>
+        ) : null}
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.title}>
           {state === 'processing' ? 'Confirming your email…' : 'Waiting for confirmation…'}
@@ -316,6 +328,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
+  },
+  petRow: {
+    alignSelf: 'stretch',
   },
   icon: {
     fontSize: 48,

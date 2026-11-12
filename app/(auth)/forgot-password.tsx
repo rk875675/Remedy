@@ -26,6 +26,9 @@ import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../../lib/haptics';
+import { OnTallScreens, PetSays } from '../../components/pet/PetSays';
+import { PET_CHECK_INBOX_LINE, PET_FORGOT_PASSWORD_LINE } from '../../constants/petLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -34,6 +37,7 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { stage } = useOnboardingPet();
 
   async function handleSend() {
     setError(null);
@@ -72,6 +76,9 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <View style={styles.center}>
+          <View style={styles.petRow}>
+            <PetSays stage={stage} mood="ready" line={PET_CHECK_INBOX_LINE} />
+          </View>
           <Text style={styles.successIcon}>✉</Text>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
@@ -107,6 +114,11 @@ export default function ForgotPasswordScreen() {
 
       <View style={styles.content}>
         <View style={styles.form}>
+          <OnTallScreens>
+            <View style={styles.petRow}>
+              <PetSays stage={stage} mood="ready" line={PET_FORGOT_PASSWORD_LINE} />
+            </View>
+          </OnTallScreens>
           <Text style={styles.title}>Reset password</Text>
           <Text style={styles.subtitle}>
             Enter the email you signed up with and we'll send you a reset link.
@@ -177,6 +189,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     gap: 14,
     alignItems: 'center',
+  },
+  petRow: {
+    alignSelf: 'stretch',
   },
   center: {
     flex: 1,

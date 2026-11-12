@@ -39,6 +39,10 @@ import {
 } from '../constants/onboardingQuestions';
 import type { OnboardingAnswersInput } from '../lib/schemas';
 import type { OnboardingAnswers } from '../types/database';
+import { PetSays } from '../components/pet/PetSays';
+import { PET_ANSWERS_LINE } from '../constants/petLines';
+import { fetchPetState } from '../lib/petApi';
+import type { PetState } from '../lib/pet';
 
 type Draft = OnboardingAnswersInput;
 
@@ -97,11 +101,22 @@ export default function OnboardingAnswersScreen() {
   const sheetTranslate = useRef(new Animated.Value(SHEET_SLIDE_DISTANCE)).current;
   const sheetClosing = useRef(false);
   const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+  const [pet, setPet] = useState<PetState | null>(null);
   const confirmOpacity = useRef(new Animated.Value(0)).current;
   const confirmScale = useRef(new Animated.Value(0.94)).current;
   const confirmClosing = useRef(false);
 
   const dirty = saved !== null && draft !== null && !draftsEqual(saved, draft);
+
+  useEffect(() => {
+    let live = true;
+    void fetchPetState().then((state) => {
+      if (live && state) setPet(state);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const load = useCallback(() => {
     if (!user) return;
@@ -405,6 +420,11 @@ export default function OnboardingAnswersScreen() {
           <Text style={styles.empty}>No answers found.</Text>
         ) : (
           <>
+            {pet ? (
+              <View style={styles.petRow}>
+                <PetSays stage={pet.stage} mood="ready" line={PET_ANSWERS_LINE} />
+              </View>
+            ) : null}
             <Text style={styles.explainer}>
               {editing
                 ? 'Tap any row to change it. Save at the bottom when you\u2019re done \u2014 or Exit to leave without saving.'
@@ -614,6 +634,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 24,
+  },
+  petRow: {
+    marginBottom: 16,
   },
   empty: {
     textAlign: 'center',

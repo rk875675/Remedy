@@ -29,6 +29,9 @@ import {
   useHasPendingPurchase,
 } from '../../lib/analytics/authAttempt';
 import { passwordResetRequested } from '../../lib/analytics/events/auth';
+import { OnTallScreens, PetSays } from '../../components/pet/PetSays';
+import { PET_EMAIL_SIGN_IN_LINE, PET_EMAIL_SIGN_UP_LINE } from '../../constants/petLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 export default function EmailAuthScreen() {
   const router = useRouter();
@@ -42,6 +45,7 @@ export default function EmailAuthScreen() {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const hasPendingPurchase = useHasPendingPurchase();
+  const { stage } = useOnboardingPet();
 
   function clearFeedback() {
     setError(null);
@@ -155,6 +159,15 @@ export default function EmailAuthScreen() {
 
       <View style={styles.content}>
         <View style={styles.form}>
+          <OnTallScreens>
+            <View style={styles.petRow}>
+              <PetSays
+                stage={stage}
+                mood="ready"
+                line={isSignUp ? PET_EMAIL_SIGN_UP_LINE : PET_EMAIL_SIGN_IN_LINE}
+              />
+            </View>
+          </OnTallScreens>
           <Text style={styles.title}>
             {isSignUp ? 'Create Account' : 'Sign In'}
           </Text>
@@ -289,6 +302,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     gap: 14,
     alignItems: 'center',
+  },
+  petRow: {
+    alignSelf: 'stretch',
   },
   title: {
     fontSize: 28,

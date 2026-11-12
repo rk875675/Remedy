@@ -47,6 +47,9 @@ import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../../lib/haptics';
+import { OnTallScreens, PetSays } from '../../components/pet/PetSays';
+import { PET_NEW_PASSWORD_LINE } from '../../constants/petLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 type RecoveryState = 'waiting' | 'processing' | 'form' | 'success' | 'error' | 'timeout';
 
@@ -67,6 +70,7 @@ export default function PasswordRecoveryScreen() {
   const [confirmPw, setConfirmPw] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { stage } = useOnboardingPet();
 
   // Pitfall 16: guard against parallel processing.
   const recoveryRef = useRef(false);
@@ -294,10 +298,18 @@ export default function PasswordRecoveryScreen() {
   if (state === 'form') {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { paddingBottom: insets.bottom + 24 }]}
+        style={[
+          styles.container,
+          { paddingTop: insets.top, paddingBottom: insets.bottom + 24 },
+        ]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.formHeader}>
+          <OnTallScreens>
+            <View style={styles.petRow}>
+              <PetSays stage={stage} mood="ready" line={PET_NEW_PASSWORD_LINE} />
+            </View>
+          </OnTallScreens>
           <Text style={styles.title}>Set a new password</Text>
         </View>
 
@@ -453,6 +465,9 @@ const styles = StyleSheet.create({
   },
   formHeader: {
     marginBottom: 24,
+  },
+  petRow: {
+    marginBottom: 16,
   },
   formBody: {
     flex: 1,

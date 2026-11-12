@@ -94,6 +94,32 @@ export const PET_ERROR_LINE = "Well. That wasn't supposed to happen.";
 export const PET_SIGN_IN_LINE = 'Welcome back. I kept your spot.';
 export const PET_SIGN_UP_LINE = "One last step. Then it's you and me.";
 
+/** Email entry: creating an account, or signing back in. */
+export const PET_EMAIL_SIGN_UP_LINE = "Email works too. I'm not fussy.";
+export const PET_EMAIL_SIGN_IN_LINE = 'Good to see you again.';
+
+/** Forgotten password, and setting a new one. */
+export const PET_FORGOT_PASSWORD_LINE = "It happens. Let's get you back in.";
+export const PET_NEW_PASSWORD_LINE = 'New password, same me.';
+
+/** Waiting on an emailed link or code. */
+export const PET_CHECK_INBOX_LINE = "Check your inbox. I'll wait right here.";
+
+/** Feedback form. */
+export const PET_FEEDBACK_FORM_LINE = 'Say anything. It all gets read.';
+
+/** Editing the answers that shape the program. */
+export const PET_ANSWERS_LINE = "Change anything. I'll rebuild around it.";
+
+/** Choosing workout days and the reminder time. */
+export const PET_WORKOUT_DAYS_LINE = "Pick your days. I'll be ready on each one.";
+
+/** Sharing the app with a friend after a session. */
+export const PET_SHARE_LINE = 'Know someone with a grumpy back? Send them my way.';
+
+/** Heading of the daily tip card on Home. `{name}` is the pet's name. */
+export const PET_TIP_HEADING = "{name}'s tip";
+
 /** Home, on the hill under the pet, when there is nothing to start. */
 export const PET_HOME_DONE_LINE = 'Done for today. I can feel it.';
 export const PET_HOME_REST_LINE = "Rest day. I'm napping. You should too.";

@@ -83,6 +83,8 @@ import {
   SceneButton,
   SceneLink,
 } from '../../components/pet/PetScene';
+import { PetBadge } from '../../components/pet/PetBadge';
+import type { PetStage } from '../../constants/petImages';
 import { PET_HOME_DONE_LINE, PET_HOME_REST_LINE } from '../../constants/petLines';
 import {
   PetNameSheet,
@@ -115,7 +117,7 @@ function formatCountdown(ms: number): string {
 
 // Live countdown to the next stretch reminder. Reads its settings from
 // AsyncStorage (written by the Profile tab) and self-hides when disabled.
-function StretchReminderCard() {
+function StretchReminderCard({ petStage }: { petStage?: PetStage }) {
   const [enabled, setEnabled] = useState(false);
   const [paused, setPaused] = useState(false);
   const [intervalMin, setIntervalMin] = useState(60);
@@ -199,7 +201,16 @@ function StretchReminderCard() {
   return (
     <View style={styles.stretchCard}>
       <View style={styles.stretchCardText}>
-        <Text style={styles.stretchCardLabel}>Stretch Break</Text>
+        {petStage != null ? (
+          <View style={styles.stretchHeadingRow}>
+            <PetBadge stage={petStage} mood="stiff" size={40} />
+            <Text style={[styles.stretchCardLabel, styles.stretchCardLabelBesidePet]}>
+              Stretch Break
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.stretchCardLabel}>Stretch Break</Text>
+        )}
         <Text style={styles.stretchCardValue}>{valueText}</Text>
       </View>
       <TouchableOpacity
@@ -768,8 +779,8 @@ export default function HomeScreen() {
         />
       ) : null}
 
-      <StretchReminderCard />
-      <InsightPager />
+      <StretchReminderCard petStage={pet?.stage} />
+      <InsightPager petStage={pet?.stage} petName={pet?.name} />
 
     </ScrollView>
 
@@ -876,6 +887,16 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     letterSpacing: 0.2,
     marginBottom: 4,
+  },
+  stretchHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 4,
+  },
+  stretchCardLabelBesidePet: {
+    flex: 1,
+    marginBottom: 0,
   },
   stretchCardValue: {
     fontSize: 17,

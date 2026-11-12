@@ -19,6 +19,9 @@ import {
   friendlyAuthError,
   passwordMeetsComplexity,
 } from '../lib/passwordValidation';
+import { OnTallScreens, PetSays } from '../components/pet/PetSays';
+import { PET_NEW_PASSWORD_LINE } from '../constants/petLines';
+import { useOnboardingPet } from '../lib/useOnboardingPet';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -26,6 +29,7 @@ export default function ResetPasswordScreen() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { stage } = useOnboardingPet();
 
   async function handleSubmit() {
     setError(null);
@@ -68,6 +72,11 @@ export default function ResetPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
+        <OnTallScreens>
+          <View style={styles.petRow}>
+            <PetSays stage={stage} mood="ready" line={PET_NEW_PASSWORD_LINE} />
+          </View>
+        </OnTallScreens>
         <Text style={styles.title}>Set a new password</Text>
 
         {error && (
@@ -122,6 +131,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: 'center',
     gap: 14,
+  },
+  petRow: {
+    alignSelf: 'stretch',
   },
   title: {
     fontSize: 28,
