@@ -24,6 +24,7 @@ import { supabase } from '../lib/supabase';
 import { OptionCard } from '../components/onboarding/OptionCard';
 import { ContinueButton } from '../components/onboarding/ContinueButton';
 import { ProgressBar } from '../components/onboarding/ProgressBar';
+import { PetSays } from '../components/pet/PetSays';
 import { colors, serifFont } from '../constants/colors';
 import { radius, spacing } from '../constants/spacing';
 import { shadows } from '../constants/shadows';
@@ -34,6 +35,7 @@ import {
   PAIN_LOCATION_OPTIONS,
   SESSIONS_PER_WEEK_VALUES,
 } from '../constants/onboardingQuestions';
+import { PET_NEXT_PROGRAM_BUILDING, PET_NEXT_PROGRAM_READY } from '../constants/petLines';
 import { GOAL_ILLUSTRATIONS, LOCATION_IMAGES } from '../constants/onboardingImages';
 import {
   CHECKIN_COPY,
@@ -58,6 +60,8 @@ import {
 import { nextProgramHighlights, type PlanShape, type ProgramHighlight } from '../lib/programSummary';
 import { nextProgramFailed, nextProgramStarted } from '../lib/analytics/events/program';
 import { hapticCelebration, hapticError, hapticSelection } from '../lib/haptics';
+import { fetchPetState } from '../lib/petApi';
+import type { PetState } from '../lib/pet';
 import { invalidateTabRefresh } from '../lib/tabRefresh';
 import {
   equipmentSchema,
@@ -188,7 +192,7 @@ function wait(ms: number): Promise<void> {
 // Building + reveal
 // ---------------------------------------------------------------------------
 
-function BuildingView({ steps }: { steps: string[] }) {
+function BuildingView({ steps, pet }: { steps: string[]; pet: PetState | null }) {
   const pulse = useRef(new Animated.Value(1)).current;
   const fill = useRef(new Animated.Value(0)).current;
   const [current, setCurrent] = useState(0);
@@ -234,6 +238,11 @@ function BuildingView({ steps }: { steps: string[] }) {
 
   return (
     <View style={styles.centerBlock}>
+      {pet ? (
+        <View style={styles.phasePet}>
+          <PetSays stage={pet.stage} mood="ready" line={PET_NEXT_PROGRAM_BUILDING} size={72} />
+        </View>
+      ) : null}
       <Animated.View style={[styles.buildIconWrap, { transform: [{ scale: pulse }] }]}>
         <View style={styles.buildHalo} />
         <View style={styles.buildIcon}>
@@ -272,12 +281,14 @@ function RevealView({
   worsePain,
   onDone,
   bottomInset,
+  pet,
 }: {
   result: StartNextProgramResult;
   highlights: ProgramHighlight[];
   worsePain: boolean;
   onDone: () => void;
   bottomInset: number;
+  pet: PetState | null;
 }) {
   const pop = useRef(new Animated.Value(0)).current;
   const rows = useRef(highlights.map(() => new Animated.Value(0))).current;
@@ -310,6 +321,11 @@ function RevealView({
   return (
     <View style={[styles.revealRoot, { paddingBottom: Math.max(bottomInset, 16) + 8 }]}>
       <ScrollView contentContainerStyle={styles.revealScroll} showsVerticalScrollIndicator={false}>
+        {pet ? (
+          <View style={styles.phasePet}>
+            <PetSays stage={pet.stage} mood="celebrating" line={PET_NEXT_PROGRAM_READY} size={72} />
+          </View>
+        ) : null}
         <Animated.View style={[styles.revealBadge, { transform: [{ scale: pop }] }]}>
           <Text style={styles.revealBadgeGlyph}>✓</Text>
         </Animated.View>
@@ -361,6 +377,7 @@ export default function NextProgramScreen() {
   const [result, setResult] = useState<StartNextProgramResult | null>(null);
   const [highlights, setHighlights] = useState<ProgramHighlight[]>([]);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [pet, setPet] = useState<PetState | null>(null);
 
   const draftRef = useRef<CheckinDraft | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -484,6 +501,16 @@ export default function NextProgramScreen() {
     });
     return () => sub.remove();
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPetState().then((state) => {
+      if (!cancelled && state) setPet(state);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -683,7 +710,7 @@ export default function NextProgramScreen() {
   if (phase === 'building') {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 40 }]}>
-        <BuildingView steps={BUILD_STEPS[choice]} />
+        <BuildingView steps={BUILD_STEPS[choice]} pet={pet} />
       </View>
     );
   }
@@ -697,6 +724,7 @@ export default function NextProgramScreen() {
           worsePain={draft?.pain_change === 'worse'}
           onDone={finish}
           bottomInset={insets.bottom}
+          pet={pet}
         />
       </View>
     );
@@ -1069,6 +1097,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 8,
     backgroundColor: colors.background,
+  },
+  phasePet: {
+    alignSelf: 'stretch',
+    marginBottom: 20,
   },
   centerBlock: {
     flex: 1,

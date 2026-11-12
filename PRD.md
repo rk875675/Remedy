@@ -87,7 +87,10 @@ Onboarding alternates between questions and interstitial insight screens. The go
 
 **Screen flow:**
 
-1. **Welcome** — App name, tagline, CTA ("Get Started")
+1. **Welcome** — App name, tagline, CTA ("Get Started"), with the pet curled up in its ball
+1a. **Meet your armadillo** — the user names the pet (a "Suggest one" link offers names). First screen after welcome; skipped for users who already have a pet
+1b. **Growth preview** — the user taps through the five stages to see the pet uncurl as sessions add up
+   - From here on, the pet presents every onboarding screen with one speech bubble. On question screens the bubble shows a prompt and is rewritten the moment an answer is tapped (copy in `constants/petOnboardingLines.ts`)
 2. **Q1: Where is your back pain?** — Upper / Middle / Lower / All over
 3. **Interstitial: Social proof stat** — e.g. *"80% of adults experience back pain at some point. Most never get a structured plan."* (animated stat graphic)
 4. **Q2: How long have you had it?** — Less than 2 weeks / 2 weeks–3 months / 3+ months
@@ -98,8 +101,8 @@ Onboarding alternates between questions and interstitial insight screens. The go
 8. **Interstitial: Money saved** — *"The average PT recovery program costs $1,200+. Remedy costs less than one session."* (cost comparison visual)
 9. **Q5: What makes it worse?** — Sitting too long / Bending / Standing / Morning stiffness / Exercise
 10. **Q6: What's your main goal?** — Reduce daily pain / Get back to working out / Sleep better / Improve mobility
-11. **Meet your armadillo** — The pet is introduced curled up in a ball; the user gives it a name (see §6.9). Shown after the last question, before the commitment and program match screens
-12. **Program match screen** — Personalized program summary based on all answers, with brief description of approach; the named pet sits beside the program card
+11. **Commitment** — hold-to-commit, presented by the pet
+12. **Program match screen** — Personalized program summary based on all answers, with brief description of approach, presented by the pet; if the paywall is closed without buying, the pet says it will wait
 13. **Paywall** — trial then $4.99/week (7-day trial), $12.99/month (14-day trial), or $79.99/year (14-day trial)
 14. **Sign up** — Apple / Google / Email (after paywall, so user is committed before creating account)
 15. **Home / dashboard**
@@ -163,8 +166,9 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Program progress bar (Week 2 of 5)
 
 ### 6.7 Home Screen
-- Pet scene across roughly the top 40% of the screen: the armadillo at its current stage and mood, its name, and "N sessions until it grows"
-- Today's session card (or rest day indicator)
+- Pet scene (forest green, full-bleed) as the top of the screen: the pet's name, the armadillo at its current stage and mood standing on a hill, and "N sessions until it grows"
+- The day's action lives on that hill, not in a separate card: one label line (e.g. "TODAY · 18 MIN · 5 EXERCISES"), the session title, and one Start button; rest day, done-for-today, program-complete and no-plan states use the same block
+- This-week card below the scene
 - Quick pain summary ("Your pain is trending down 📉")
 - Program progress
 
@@ -178,12 +182,12 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Users can access: onboarding + first session for free before hitting paywall
 
 ### 6.9 Pet (Armadillo)
-- **One pet per user, named by the user.** Named on the "Meet your armadillo" onboarding screen (1–20 characters, no default name). Existing users name it from a one-time sheet on Home. Renamable from Profile.
+- **One pet per user, named by the user.** Named on the "Meet your armadillo" screen, the first screen after welcome (1–20 characters, no default name). Existing users name it from a one-time sheet on Home. Renamable from Profile.
 - **Stage (1–5), server-authoritative, only ever goes up.** Driven by lifetime completed sessions: closed ball (0) → peeking out of the ball (1) → sitting (4) → standing (9) → fully grown (15). The stage is raised inside the same server operation that completes a session. Missing days never lowers it.
 - **Mood, display only, derived on the client:** idle, ready (session available today), celebrating (session just completed), proud (stage-up, week complete, program complete), sleepy (rest day or late evening), stiff (missed planned days), concerned (pain score higher after a session).
 - **No guilt mechanics.** The pet never gets hurt, loses progress, or dies. Its state reflects the user's consistency, not the condition of their back — no medical claims are made through the pet.
-- **Where it appears:** Home (hero scene), session preview, session complete (with a growth moment when a stage is reached), week complete, program complete, onboarding welcome, the naming screen, the plan-building loading screens, the program match screen, Progress (five-stage card), Profile (beside the user's name), and reminder notification copy.
-- **Not shown** during exercise video playback, rest timers, or pain check-ins.
+- **The app is built around the pet; it is not an add-on.** It appears on: Home (the scene that holds the day's action), every onboarding screen (speech bubble that reacts to answers), sign-in, session preview, both pain check-ins (it reacts as the slider moves), rest timers, session complete (with a growth moment when a stage is reached), week complete, program complete, the first-session orientation, the next-program flow, Progress (a green journey panel where the pet stands on the current week, plus the five-stage strip), Profile (beside the user's name), feedback thanks, the error screen, and reminder notification copy.
+- **Not shown** over the exercise video itself.
 - **Voice:** warm and a little cheeky. Used in completion and reminder copy.
 - **Art:** flat 2D sticker style with a thick black outline, a striped shell that reads as a beanie, one tooth, and a plaster on the shell until it is fully grown. One transparent image per stage and mood in `assets/pet/`, animated with the core `Animated` API (breathing, bounce, crossfade). No new packages.
 - **Brand:** the armadillo replaces the current logo in-app (welcome, loading, splash), on the app icon, and on the website and emails. Growth-engine marketing content is unchanged until the pet is live.

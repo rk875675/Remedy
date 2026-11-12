@@ -52,6 +52,57 @@ export const PET_NAME_MAX_LENGTH = 20;
 /** Program match screen, beside the program card. */
 export const PET_MATCH_LINE = '{name} is ready to start with you.';
 
+/**
+ * Pain check-in: the pet reacts as the slider moves (score 1 to 10).
+ * First person, sympathetic, never diagnostic.
+ */
+export const PET_CHECKIN_BEFORE_PROMPT = "How's the back right now? Be honest.";
+export const PET_CHECKIN_AFTER_PROMPT = 'And now? Same scale.';
+
+export function petCheckinReaction(score: number): {
+  line: string;
+  mood: 'celebrating' | 'ready' | 'concerned' | 'stiff';
+} {
+  if (score <= 2) return { line: 'Barely there. Lovely.', mood: 'celebrating' };
+  if (score <= 4) return { line: 'A bit grumbly. Okay, noted.', mood: 'ready' };
+  if (score <= 6) return { line: "Noticeable. We'll take it easy.", mood: 'stiff' };
+  if (score <= 8) return { line: "That's a rough one. Go gently today.", mood: 'concerned' };
+  return { line: "That's a lot. Your body gets the final say.", mood: 'concerned' };
+}
+
+/** Rest between sets and exercises, picked at random per rest. */
+export const PET_REST_LINES = [
+  "Breathe. I'm resting too.",
+  'Shake it out. No rush.',
+  'Good set. That counted.',
+  'Shoulders down. There you go.',
+] as const;
+
+/** Orientation slides before the first session, one line per slide (last one repeats). */
+export const PET_ORIENTATION_LINES = [
+  'Three quick things before we start.',
+  'This part matters. Read it slowly.',
+  "Ready? I'm right behind you.",
+] as const;
+
+/** Next program: while it builds, and when it is revealed. */
+export const PET_NEXT_PROGRAM_BUILDING = 'Building the next one. Bigger this time.';
+export const PET_NEXT_PROGRAM_READY = 'New program. Same team.';
+
+/** Feedback sent. */
+export const PET_FEEDBACK_THANKS = "Thank you. I'll pass it on.";
+
+/** Something broke. */
+export const PET_ERROR_LINE = "Well. That wasn't supposed to happen.";
+
+/** Sign-in screen: returning users, and new users creating an account after the paywall. */
+export const PET_SIGN_IN_LINE = 'Welcome back. I kept your spot.';
+export const PET_SIGN_UP_LINE = "One last step. Then it's you and me.";
+
+/** Home, on the hill under the pet, when there is nothing to start. */
+export const PET_HOME_DONE_LINE = 'Done for today. I can feel it.';
+export const PET_HOME_REST_LINE = "Rest day. I'm napping. You should too.";
+
 /** Reminder notifications. */
 export const PET_WORKOUT_REMINDER = {
   title: '{name} is ready when you are',

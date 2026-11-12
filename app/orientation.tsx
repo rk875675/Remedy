@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { ContinueButton } from '../components/onboarding/ContinueButton';
+import { PetSays } from '../components/pet/PetSays';
 import { useAuth } from '../context/AuthContext';
 import { colors, serifFont } from '../constants/colors';
 import { ORIENTATION_SLIDES } from '../constants/mindset';
+import { PET_ORIENTATION_LINES } from '../constants/petLines';
 import { orientationCompleted } from '../lib/analytics/events/engagement';
 import { markOrientationCompleted } from '../lib/orientation';
+import { fetchPetState } from '../lib/petApi';
+import type { PetState } from '../lib/pet';
 
 const sessionIdSchema = z.string().uuid();
 
@@ -21,8 +25,22 @@ export default function OrientationScreen() {
     ? params.session
     : undefined;
   const [index, setIndex] = useState(0);
+  const [pet, setPet] = useState<PetState | null>(null);
   const slide = ORIENTATION_SLIDES[index];
   const isLast = index === ORIENTATION_SLIDES.length - 1;
+  const orientationLine =
+    PET_ORIENTATION_LINES[Math.min(index, PET_ORIENTATION_LINES.length - 1)] ??
+    PET_ORIENTATION_LINES[0];
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPetState().then((state) => {
+      if (!cancelled && state) setPet(state);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!slide) return null;
 
@@ -46,6 +64,11 @@ export default function OrientationScreen() {
     <>
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
+        {pet ? (
+          <View style={styles.petWrap}>
+            <PetSays stage={pet.stage} mood="ready" line={orientationLine} size={72} />
+          </View>
+        ) : null}
         <View style={styles.content}>
           <Text style={styles.eyebrow}>{slide.eyebrow}</Text>
           <Text style={styles.title}>{slide.title}</Text>
@@ -73,6 +96,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 24,
+  },
+  petWrap: {
+    marginBottom: 16,
   },
   content: {
     flex: 1,

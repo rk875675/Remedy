@@ -27,6 +27,9 @@ import { openLegalDocument } from '../../lib/legalLinks';
 import { getPendingPromo, setPendingPromo } from '../../lib/pendingPromo';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import { AppLogo } from '../../components/brand/AppLogo';
+import { PetSays } from '../../components/pet/PetSays';
+import { PET_SIGN_IN_LINE, PET_SIGN_UP_LINE } from '../../constants/petLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null;
 try {
@@ -72,6 +75,7 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { mode, promo } = useLocalSearchParams<{ mode?: string; promo?: string }>();
   const isSignUp = mode === 'signup';
+  const { stage } = useOnboardingPet();
   const [loading, setLoading] = useState(false);
   const hasPendingPurchase = useHasPendingPurchase();
 
@@ -233,7 +237,15 @@ export default function SignInScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top + 56,
+          paddingBottom: Math.max(insets.bottom + 14, 32),
+        },
+      ]}
+    >
       <TouchableOpacity
         style={[styles.backButton, { top: insets.top + 8 }]}
         onPress={handleBack}
@@ -244,6 +256,14 @@ export default function SignInScreen() {
       </TouchableOpacity>
 
       <View style={styles.header}>
+        <View style={styles.petRow}>
+          <PetSays
+            stage={stage}
+            mood="ready"
+            line={isSignUp ? PET_SIGN_UP_LINE : PET_SIGN_IN_LINE}
+            size={64}
+          />
+        </View>
         <AppLogo size="sm" style={styles.logo} />
         <Text style={styles.appName}>Remedy</Text>
         <Text style={styles.tagline}>
@@ -324,8 +344,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
     justifyContent: 'space-between',
-    paddingTop: 120,
-    paddingBottom: 48,
+  },
+  petRow: {
+    alignSelf: 'stretch',
+    marginBottom: 12,
   },
   backButton: {
     position: 'absolute',

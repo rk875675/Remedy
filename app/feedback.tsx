@@ -14,12 +14,16 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, serifFont } from '../constants/colors';
+import { PET_FEEDBACK_THANKS } from '../constants/petLines';
 import { radius, spacing } from '../constants/spacing';
 import { shadows } from '../constants/shadows';
 import { type as typography } from '../constants/typography';
 import { ContinueButton } from '../components/onboarding/ContinueButton';
+import { PetBadge } from '../components/pet/PetBadge';
 import { hapticSelection, hapticSuccess, hapticError } from '../lib/haptics';
 import { submitFeedback } from '../lib/submitFeedback';
+import { fetchPetState } from '../lib/petApi';
+import type { PetState } from '../lib/pet';
 import {
   feedbackSubmitFailed,
   feedbackSubmitted,
@@ -54,6 +58,7 @@ export default function FeedbackScreen() {
   const [phase, setPhase] = useState<Phase>('form');
   const [askRating, setAskRating] = useState<4 | 5 | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pet, setPet] = useState<PetState | null>(null);
 
   const trimmed = body.trim();
   const canSend = category !== null && trimmed.length >= MIN_BODY && !submitting;
@@ -63,6 +68,16 @@ export default function FeedbackScreen() {
       reviewAskShown({ source_screen: 'feedback', rating: askRating });
     }
   }, [phase, askRating]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPetState().then((state) => {
+      if (!cancelled && state) setPet(state);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleCategory(next: FeedbackCategory) {
     hapticSelection();
@@ -185,13 +200,20 @@ export default function FeedbackScreen() {
         </View>
       ) : phase === 'thanks' ? (
         <View style={[styles.successWrap, { paddingBottom: insets.bottom + spacing.xl }]}>
-          <View style={styles.successMark}>
-            <Text style={styles.successMarkText}>✓</Text>
-          </View>
+          {pet ? (
+            <View style={styles.successPet}>
+              <PetBadge stage={pet.stage} mood="celebrating" size={120} />
+            </View>
+          ) : (
+            <View style={styles.successMark}>
+              <Text style={styles.successMarkText}>✓</Text>
+            </View>
+          )}
           <Text style={styles.successTitle}>Thank you</Text>
           <Text style={styles.successBody}>
             We read every note. If we need more, we’ll email you.
           </Text>
+          {pet ? <Text style={styles.successBody}>{PET_FEEDBACK_THANKS}</Text> : null}
           <View style={styles.successCta}>
             <ContinueButton label="Done" onPress={() => router.back()} />
           </View>
@@ -474,6 +496,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 36,
+  },
+  successPet: {
+    marginBottom: 20,
   },
   successMark: {
     width: 64,

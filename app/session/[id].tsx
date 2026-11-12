@@ -65,16 +65,21 @@ import { firstNameFromDisplayName, resolveDisplayName } from '../../lib/greeting
 import { orderedEquipmentForExercises } from '../../lib/equipment';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import { PetBadge } from '../../components/pet/PetBadge';
+import { PetSays } from '../../components/pet/PetSays';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
 import { fetchPetState } from '../../lib/petApi';
 import { petGrowthCopy, type PetState } from '../../lib/pet';
 import { markPetStageSeen, takePetGrowth } from '../../lib/petGrowth';
 import type { PetMood, PetStage } from '../../constants/petImages';
 import {
+  PET_CHECKIN_AFTER_PROMPT,
+  PET_CHECKIN_BEFORE_PROMPT,
   PET_GREW_LINES,
   PET_GREW_TITLE,
   PET_PAIN_UP_LINE,
+  PET_REST_LINES,
   PET_SESSION_COMPLETE_LINES,
+  petCheckinReaction,
   petLine,
 } from '../../constants/petLines';
 import type { movementPattern } from '../../lib/analytics/events/enums';
@@ -105,7 +110,15 @@ const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 /** Auto-play this many times at the start of each set, then pause. */
 const VIDEO_INTRO_LOOPS = 2;
 
-function RestRing({ seconds, total }: { seconds: number; total: number }) {
+function RestRing({
+  seconds,
+  total,
+  petBelow = false,
+}: {
+  seconds: number;
+  total: number;
+  petBelow?: boolean;
+}) {
   const progress = useRef(new Animated.Value(Math.min(seconds / total, 1))).current;
 
   useEffect(() => {
@@ -124,7 +137,7 @@ function RestRing({ seconds, total }: { seconds: number; total: number }) {
   });
 
   return (
-    <View style={styles.restRingWrap}>
+    <View style={[styles.restRingWrap, petBelow && styles.restRingAbovePet]}>
       <Svg width={REST_RING_SIZE} height={REST_RING_SIZE}>
         <Circle
           cx={REST_RING_SIZE / 2}
@@ -236,6 +249,7 @@ export default function SessionPlayerScreen() {
   const [pet, setPet] = useState<PetState | null>(null);
   const [grewFrom, setGrewFrom] = useState<PetStage | null>(null);
   const petWarmCopyRef = useRef<string | null>(null);
+  const restPetLineRef = useRef<string>(PET_REST_LINES[0]);
   const mountedRef = useRef(true);
 
   const player = useSilentVideoPlayer(null, (p) => {
@@ -729,6 +743,8 @@ export default function SessionPlayerScreen() {
   }
 
   function startRest(seconds: number, kind: 'set' | 'exercise') {
+    restPetLineRef.current =
+      PET_REST_LINES[Math.floor(Math.random() * PET_REST_LINES.length)] ?? PET_REST_LINES[0];
     setRestKind(kind);
     setRestSeconds(seconds);
     setRestTotal(Math.max(seconds, 1));
@@ -1189,6 +1205,8 @@ export default function SessionPlayerScreen() {
         onSubmit={handleBeginSession}
         insets={insets}
         safetyNote
+        phase="checkin_before"
+        pet={pet}
       />
     );
   }
@@ -1208,7 +1226,17 @@ export default function SessionPlayerScreen() {
 
         <View style={[styles.centered, styles.restBody, { paddingBottom: insets.bottom }]}>
           <Text style={styles.restLabel}>Rest</Text>
-          <RestRing seconds={restSeconds} total={restTotal} />
+          <RestRing
+            seconds={restSeconds}
+            total={restTotal}
+            petBelow={pet !== null && SCREEN_HEIGHT >= 720}
+          />
+
+          {pet !== null && SCREEN_HEIGHT >= 720 ? (
+            <View style={styles.restPet}>
+              <PetSays stage={pet.stage} mood="idle" line={restPetLineRef.current} size={64} />
+            </View>
+          ) : null}
 
           {nextEx && (
             <View style={styles.nextExCard}>
@@ -1373,6 +1401,8 @@ export default function SessionPlayerScreen() {
         onSubmit={handleComplete}
         submitting={isSubmitting}
         insets={insets}
+        phase="checkin_after"
+        pet={pet}
       />
     );
   }
@@ -1827,6 +1857,8 @@ function PainCheckinView({
   submitting = false,
   insets,
   safetyNote = false,
+  phase,
+  pet,
 }: {
   title: string;
   value: number;
@@ -1837,9 +1869,17 @@ function PainCheckinView({
   insets: { top: number; bottom: number };
   /** Shows the pre-exercise safety reminder (before check-in only). */
   safetyNote?: boolean;
+  phase: 'checkin_before' | 'checkin_after';
+  pet: PetState | null;
 }) {
   const sliderRef = useRef<View>(null);
   const [sliderLayoutWidth, setSliderLayoutWidth] = useState(0);
+  const [sliderMoved, setSliderMoved] = useState(false);
+  const [movedPhase, setMovedPhase] = useState(phase);
+  if (movedPhase !== phase) {
+    setMovedPhase(phase);
+    setSliderMoved(false);
+  }
 
   function handleSliderTouch(pageX: number) {
     sliderRef.current?.measure((_x, _y, width, _height, px) => {
@@ -1849,9 +1889,13 @@ function PainCheckinView({
       if (val !== value) {
         hapticSelection();
         onValueChange(val);
+        setSliderMoved(true);
       }
     });
   }
+
+  const checkinPrompt = phase === 'checkin_before' ? PET_CHECKIN_BEFORE_PROMPT : PET_CHECKIN_AFTER_PROMPT;
+  const checkinSpeech = sliderMoved ? petCheckinReaction(value) : null;
 
   const thumbPosition = sliderLayoutWidth > 0
     ? ((value - 1) / 9) * (sliderLayoutWidth - SLIDER_THUMB)
@@ -1860,6 +1904,16 @@ function PainCheckinView({
 
   return (
     <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+      {pet ? (
+        <View style={styles.checkinPet}>
+          <PetSays
+            stage={pet.stage}
+            mood={checkinSpeech?.mood ?? 'ready'}
+            line={checkinSpeech?.line ?? checkinPrompt}
+            size={72}
+          />
+        </View>
+      ) : null}
       <Text style={styles.checkinTitle}>{title}</Text>
       <Text style={styles.painScore}>{value}</Text>
       <Text style={styles.painScoreSub}>out of 10</Text>
@@ -1916,6 +1970,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+  },
+  checkinPet: {
+    alignSelf: 'stretch',
+    marginBottom: 20,
   },
   checkinTitle: {
     fontFamily: serifFont,
@@ -2038,6 +2096,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 28,
+  },
+  restRingAbovePet: {
+    marginBottom: 0,
+  },
+  restPet: {
+    alignSelf: 'stretch',
+    marginTop: 16,
+    marginBottom: 16,
   },
   restRingCenter: {
     position: 'absolute',
