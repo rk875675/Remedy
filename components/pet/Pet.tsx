@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { motion } from '../../constants/typography';
 import { petImage, petScale, type PetMood, type PetStage } from '../../constants/petImages';
@@ -27,17 +27,50 @@ export function Pet({
   onPress,
   accessibilityLabel,
 }: PetProps) {
-  const [reduceMotion, setReduceMotion] = useState(false);
+  // null until the OS answers, so a loop never starts and then has to be cancelled.
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
   const reduceMotionRef = useRef(false);
   const mounted = useRef(true);
 
   const [previous, setPrevious] = useState<Pose | null>(null);
   const lastPose = useRef<Pose>({ stage, mood });
+  const poseToken = useRef(0);
+  const fading = useRef(false);
+  const fadeAnim = useRef<Animated.CompositeAnimation | null>(null);
+  const popAnim = useRef<Animated.CompositeAnimation | null>(null);
 
   const breath = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(1)).current;
   const pop = useRef(new Animated.Value(1)).current;
   const hop = useRef(new Animated.Value(0)).current;
+
+  // Built once. New interpolations created mid-animation are not driven by the
+  // native driver, which froze the breath after the first crossfade and left
+  // the outgoing pose stuck at full opacity.
+  const prevOpacity = useMemo(
+    () => fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+    [fade],
+  );
+  const hopY = useMemo(
+    () => hop.interpolate({ inputRange: [0, 1], outputRange: [0, -size * HOP_HEIGHT] }),
+    [hop, size],
+  );
+  const breathY = useMemo(
+    () => breath.interpolate({ inputRange: [0, 1], outputRange: [0, (-size * BREATH_Y) / 2] }),
+    [breath, size],
+  );
+  const breathScaleX = useMemo(
+    () => breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1 - BREATH_X] }),
+    [breath],
+  );
+  const breathScaleY = useMemo(
+    () => breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + BREATH_Y] }),
+    [breath],
+  );
+  const hopShadow = useMemo(
+    () => hop.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }),
+    [hop],
+  );
 
   useEffect(() => {
     mounted.current = true;
@@ -52,26 +85,54 @@ export function Pet({
     });
     return () => {
       mounted.current = false;
+      fadeAnim.current?.stop();
+      fadeAnim.current = null;
+      popAnim.current?.stop();
+      popAnim.current = null;
       sub.remove();
     };
   }, []);
 
-  // Crossfade to the new pose. Layout effect so the incoming image never paints at full opacity first.
+  function stopMotion() {
+    fadeAnim.current?.stop();
+    fadeAnim.current = null;
+    popAnim.current?.stop();
+    popAnim.current = null;
+  }
+
+  // Prepare the crossfade before paint. The animation itself starts after the
+  // outgoing image has mounted (see the effect below). A second change while
+  // a fade is running snaps to the new pose instead of restarting from 0,
+  // which kept the pet invisible across rapid pain-slider buckets.
   useLayoutEffect(() => {
     const last = lastPose.current;
     if (last.stage === stage && last.mood === mood) return;
+    const prevPose = last;
     lastPose.current = { stage, mood };
+    poseToken.current += 1;
+    stopMotion();
 
-    if (reduceMotionRef.current || petImage(last.stage, last.mood) === petImage(stage, mood)) {
+    const sameImage =
+      reduceMotionRef.current ||
+      petImage(prevPose.stage, prevPose.mood) === petImage(stage, mood);
+
+    if (sameImage || fading.current) {
+      fading.current = false;
       fade.setValue(1);
       pop.setValue(1);
       setPrevious(null);
       return;
     }
 
+    fading.current = true;
     fade.setValue(0);
     pop.setValue(POP_FROM);
-    setPrevious(last);
+    setPrevious(prevPose);
+  }, [stage, mood, fade, pop]);
+
+  useEffect(() => {
+    if (!previous || !fading.current) return;
+    const token = poseToken.current;
     const anim = Animated.parallel([
       Animated.timing(fade, {
         toValue: 1,
@@ -86,15 +147,23 @@ export function Pet({
         bounciness: 6,
       }),
     ]);
+    fadeAnim.current = anim;
     anim.start(({ finished }) => {
-      if (finished && mounted.current) setPrevious(null);
+      if (poseToken.current !== token) return;
+      if (fadeAnim.current === anim) fadeAnim.current = null;
+      if (!finished) return;
+      fading.current = false;
+      if (mounted.current) setPrevious(null);
     });
-    return () => anim.stop();
-  }, [stage, mood, fade, pop]);
+    return () => {
+      anim.stop();
+      if (fadeAnim.current === anim) fadeAnim.current = null;
+    };
+  }, [previous, fade, pop]);
 
   useEffect(() => {
     breath.setValue(0);
-    if (reduceMotion) return;
+    if (reduceMotion !== false) return;
     const half = (mood === 'sleepy' ? 3600 : 2600) / 2;
     const ease = Easing.inOut(Easing.sin);
     const loop = Animated.loop(
@@ -108,11 +177,11 @@ export function Pet({
       loop.stop();
       breath.setValue(0);
     };
-  }, [mood, reduceMotion, breath]);
+  }, [mood, reduceMotion, breath, size]);
 
   useEffect(() => {
     hop.setValue(0);
-    if (mood !== 'celebrating' || reduceMotionRef.current) return;
+    if (mood !== 'celebrating' || reduceMotion !== false) return;
     const up = { toValue: 1, duration: 150, easing: Easing.out(Easing.quad), useNativeDriver: true };
     const down = { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: true };
     const hops = Animated.sequence([
@@ -127,17 +196,22 @@ export function Pet({
       hops.stop();
       hop.setValue(0);
     };
-  }, [mood, hop]);
+  }, [mood, reduceMotion, hop, size]);
 
   function handlePress() {
     if (!reduceMotionRef.current) {
+      popAnim.current?.stop();
       pop.setValue(POP_FROM);
-      Animated.spring(pop, {
+      const anim = Animated.spring(pop, {
         toValue: 1,
         useNativeDriver: true,
         speed: 18,
         bounciness: 8,
-      }).start();
+      });
+      popAnim.current = anim;
+      anim.start(() => {
+        if (popAnim.current === anim) popAnim.current = null;
+      });
     }
     onPress?.();
   }
@@ -145,21 +219,21 @@ export function Pet({
   const drawn = size * petScale(stage, mood);
   const shadowWidth = drawn * 0.55;
   const shadowHeight = drawn * 0.07;
+  const labeled = !onPress && !!accessibilityLabel;
 
-  // Scaling happens about the box centre; these translations keep the bottom edge (the feet) planted.
   const breathTransform = [
-    { translateY: hop.interpolate({ inputRange: [0, 1], outputRange: [0, -size * HOP_HEIGHT] }) },
-    { translateY: breath.interpolate({ inputRange: [0, 1], outputRange: [0, (-size * BREATH_Y) / 2] }) },
-    { scaleX: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1 - BREATH_X] }) },
-    { scaleY: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + BREATH_Y] }) },
+    { translateY: hopY },
+    { translateY: breathY },
+    { scaleX: breathScaleX },
+    { scaleY: breathScaleY },
   ];
 
   const body = (
     <View
       style={{ width: size, height: size }}
-      accessible={!onPress}
-      accessibilityRole={onPress ? undefined : 'image'}
-      accessibilityLabel={onPress ? undefined : accessibilityLabel}
+      accessible={labeled}
+      accessibilityRole={labeled ? 'image' : undefined}
+      accessibilityLabel={labeled ? accessibilityLabel : undefined}
     >
       {shadow ? (
         <Animated.View
@@ -171,20 +245,14 @@ export function Pet({
               height: shadowHeight,
               borderRadius: shadowWidth / 2,
               left: (size - shadowWidth) / 2,
-              transform: [
-                { scale: hop.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }) },
-              ],
+              transform: [{ scale: hopShadow }],
             },
           ]}
         />
       ) : null}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { transform: breathTransform }]}>
         {previous ? (
-          <PoseImage
-            pose={previous}
-            size={size}
-            opacity={fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })}
-          />
+          <PoseImage pose={previous} size={size} opacity={prevOpacity} />
         ) : null}
         <PoseImage pose={{ stage, mood }} size={size} opacity={fade} pop={pop} />
       </Animated.View>
@@ -215,6 +283,16 @@ function PoseImage({
   pop?: Animated.Value;
 }) {
   const drawn = size * petScale(pose.stage, pose.mood);
+  const lift = useMemo(
+    () =>
+      pop
+        ? pop.interpolate({
+            inputRange: [POP_FROM, 1],
+            outputRange: [(drawn * (1 - POP_FROM)) / 2, 0],
+          })
+        : null,
+    [pop, drawn],
+  );
   return (
     <Animated.Image
       source={petImage(pose.stage, pose.mood)}
@@ -226,17 +304,7 @@ function PoseImage({
         width: drawn,
         height: drawn,
         opacity,
-        transform: pop
-          ? [
-              {
-                translateY: pop.interpolate({
-                  inputRange: [POP_FROM, 1],
-                  outputRange: [(drawn * (1 - POP_FROM)) / 2, 0],
-                }),
-              },
-              { scale: pop },
-            ]
-          : [],
+        transform: pop && lift ? [{ translateY: lift }, { scale: pop }] : [],
       }}
     />
   );

@@ -43,7 +43,12 @@ export default function FounderScreen() {
         <View style={styles.petSays}>
           <PetSays line={PET_PRESENTS.founder.line} mood={PET_PRESENTS.founder.mood} stage={stage} />
         </View>
-        <Animated.View style={[styles.content, { opacity: fade }]}>
+        <Animated.ScrollView
+          style={[styles.scroll, { opacity: fade }]}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <Text style={styles.title}>Your back is stronger than it feels.</Text>
           {LINES.map((line) => (
             <Text key={line} style={styles.body}>
@@ -53,7 +58,7 @@ export default function FounderScreen() {
           <Text style={styles.promise}>
             And that kind of back pain gets better with the right movement.
           </Text>
-        </Animated.View>
+        </Animated.ScrollView>
 
         <View style={styles.footer}>
           <Text style={styles.source}>
@@ -76,8 +81,11 @@ const styles = StyleSheet.create({
   petSays: {
     marginBottom: 20,
   },
-  content: {
+  scroll: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     justifyContent: 'center',
   },
   title: {

@@ -42,15 +42,10 @@ export const PET_PROGRAM_COMPLETE_LINE = '{name} made it the whole way with you.
 
 /** Onboarding: meeting and naming the pet. */
 export const PET_MEET_TITLE = 'Meet your armadillo';
-export const PET_MEET_BODY =
-  "It's curled up tight right now. Every session helps it loosen up and grow.";
 export const PET_NAME_LABEL = 'Give it a name';
 export const PET_NAME_PLACEHOLDER = 'Biscuit';
 export const PET_NAME_INVALID = 'Names are 1 to 20 characters.';
 export const PET_NAME_MAX_LENGTH = 20;
-
-/** Program match screen, beside the program card. */
-export const PET_MATCH_LINE = '{name} is ready to start with you.';
 
 /**
  * Pain check-in: the pet reacts as the slider moves (score 1 to 10).

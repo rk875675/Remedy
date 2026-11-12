@@ -25,10 +25,20 @@ const TAIL = 12;
 export function PetSays({ line, mood, stage = 1, size = 64 }: PetSaysProps) {
   const appear = useRef(new Animated.Value(1)).current;
   const first = useRef(true);
+  const lastLineAt = useRef(0);
 
   useEffect(() => {
     if (first.current) {
       first.current = false;
+      return;
+    }
+    const now = Date.now();
+    // A pain slider can cross several buckets inside one fade. Restarting from
+    // 0 each time holds the line at opacity 0 until the finger stops.
+    const rapid = now - lastLineAt.current < motion.fast;
+    lastLineAt.current = now;
+    if (rapid) {
+      appear.setValue(1);
       return;
     }
     appear.setValue(0);

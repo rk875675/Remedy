@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -248,6 +248,10 @@ export default function SessionPlayerScreen() {
   const shareOfferRef = useRef<{ preview: boolean } | null>(null);
   const [pet, setPet] = useState<PetState | null>(null);
   const [grewFrom, setGrewFrom] = useState<PetStage | null>(null);
+  // Set once completion owns the pet snapshot, so the mount fetch cannot
+  // overwrite a newer stage or the "seen" stage takePetGrowth just recorded.
+  const petLock = useRef(false);
+  const mountPetPromise = useRef<Promise<PetState | null> | null>(null);
   const petWarmCopyRef = useRef<string | null>(null);
   const restPetLineRef = useRef<string>(PET_REST_LINES[0]);
   const mountedRef = useRef(true);
@@ -400,6 +404,23 @@ export default function SessionPlayerScreen() {
     new Animated.Value(0),
     new Animated.Value(0),
   ]).current;
+  // Stable nodes. Rebuilding these when the pet arrives mid-entrance detaches
+  // them from the native animation and freezes the cards 10px down.
+  const completeEnter = useMemo(
+    () =>
+      completeStatAnims.map((anim) => ({
+        opacity: anim,
+        transform: [
+          {
+            translateY: anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [10, 0],
+            }),
+          },
+        ],
+      })),
+    [completeStatAnims],
+  );
   const sliderWidth = useRef(0);
 
   const loadSession = useCallback(() => {
@@ -517,8 +538,10 @@ export default function SessionPlayerScreen() {
   useEffect(() => {
     let cancelled = false;
     const userId = user?.id;
-    void fetchPetState().then((state) => {
-      if (cancelled || !state) return;
+    const promise = fetchPetState();
+    mountPetPromise.current = promise;
+    void promise.then((state) => {
+      if (cancelled || !state || petLock.current) return;
       setPet(state);
       if (userId) void markPetStageSeen(userId, state.stage);
     });
@@ -1059,17 +1082,31 @@ export default function SessionPlayerScreen() {
       !result.program_done &&
       result.ramp_ready !== false
     ) {
+      // The in-flight mount fetch must not rewrite the stage weekly-ramp records.
+      petLock.current = true;
       router.replace(`/weekly-ramp?week=${result.completed_week}`);
       return;
     }
 
     setPhase('complete');
 
-    // Best-effort: the summary renders without it.
+    // Best-effort: the summary renders without it. Wait for the pre-completion
+    // snapshot so a late mount response cannot mark the new stage first.
+    petLock.current = true;
     const userId = user.id;
-    void fetchPetState().then(async (state) => {
-      if (!state || !mountedRef.current) return;
+    void (async () => {
+      const pre = await mountPetPromise.current;
+      const state = await fetchPetState();
+      if (!mountedRef.current) return;
+      if (!state) {
+        if (pre) setPet(pre);
+        return;
+      }
       setPet(state);
+      if (pre && pre.total_sessions < state.total_sessions && pre.stage <= state.stage) {
+        await markPetStageSeen(userId, pre.stage);
+      }
+      if (!mountedRef.current) return;
       const from = await takePetGrowth(userId, state.stage);
       if (from === null || !mountedRef.current) return;
       setGrewFrom(from);
@@ -1079,7 +1116,7 @@ export default function SessionPlayerScreen() {
         stage: state.stage,
         total_sessions: state.total_sessions,
       });
-    });
+    })();
   }
 
   // Native App Store review sheet, then the friend-share card on the sessions
@@ -1459,17 +1496,7 @@ export default function SessionPlayerScreen() {
       <Animated.View
         style={[
           styles.completeSummaryCard,
-          {
-            opacity: completeStatAnims[0],
-            transform: [
-              {
-                translateY: completeStatAnims[0].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [10, 0],
-                }),
-              },
-            ],
-          },
+          completeEnter[0],
         ]}
       >
         <View style={styles.completeStatItem}>
@@ -1493,18 +1520,7 @@ export default function SessionPlayerScreen() {
       </Animated.View>
 
       <Animated.View
-        style={{
-          alignItems: 'center',
-          opacity: completeStatAnims[1],
-          transform: [
-            {
-              translateY: completeStatAnims[1].interpolate({
-                inputRange: [0, 1],
-                outputRange: [10, 0],
-              }),
-            },
-          ],
-        }}
+        style={[{ alignItems: 'center' }, completeEnter[1]]}
       >
         {!pet ? (
           <Text style={styles.warmCopy}>{warmCopy}</Text>
@@ -1526,17 +1542,7 @@ export default function SessionPlayerScreen() {
         <Animated.View
           style={[
             styles.completePetCard,
-            {
-              opacity: completeStatAnims[1],
-              transform: [
-                {
-                  translateY: completeStatAnims[1].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [10, 0],
-                  }),
-                },
-              ],
-            },
+            completeEnter[1],
           ]}
         >
           <PetStageStrip stage={pet.stage} size={48} />
@@ -1548,17 +1554,7 @@ export default function SessionPlayerScreen() {
         <Animated.View
           style={[
             styles.nextSessionCard,
-            {
-              opacity: completeStatAnims[2],
-              transform: [
-                {
-                  translateY: completeStatAnims[2].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [10, 0],
-                  }),
-                },
-              ],
-            },
+            completeEnter[2],
           ]}
         >
           <Text style={styles.nextSessionLabel}>Next session</Text>

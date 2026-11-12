@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
@@ -58,7 +58,12 @@ export default function GrowScreen() {
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
-        <View style={styles.content}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <Text style={styles.title}>{fillPetLine(PET_GROW_PREVIEW.title, { name })}</Text>
           <View style={styles.badgeWrap}>
             <PetBadge stage={STAGES[selected]} mood={stage.mood} size={height < 720 ? 180 : 220} />
@@ -76,6 +81,7 @@ export default function GrowScreen() {
                   onPress={() => handleSelect(i)}
                   activeOpacity={0.7}
                   accessibilityRole="button"
+                  accessibilityLabel={/^\d+$/.test(label) ? `${label} sessions` : label}
                   accessibilityState={{ selected: active }}
                 >
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
@@ -84,7 +90,7 @@ export default function GrowScreen() {
             })}
           </View>
           <Text style={styles.note}>{fillPetLine(PET_GROW_PREVIEW.note, { name })}</Text>
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
           <ContinueButton
@@ -104,8 +110,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 28,
   },
-  content: {
+  flex: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

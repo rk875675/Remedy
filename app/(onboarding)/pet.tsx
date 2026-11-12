@@ -119,6 +119,7 @@ export default function PetScreen() {
               <TextInput
                 style={styles.input}
                 value={name}
+                accessibilityLabel={PET_NAME_LABEL}
                 onChangeText={setName}
                 placeholder={PET_NAME_PLACEHOLDER}
                 placeholderTextColor={colors.textTertiary}

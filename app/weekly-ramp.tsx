@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  ScrollView,
   ActivityIndicator,
   Alert,
   useWindowDimensions,
@@ -357,7 +358,12 @@ export default function WeeklyRampScreen() {
         { paddingTop: insets.top + (pet ? 16 : 48), paddingBottom: insets.bottom + 24 },
       ]}
     >
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentInner}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {pet ? (
           <View style={styles.petWrap}>
             <PetBadge stage={pet.stage} mood="proud" size={petBadgeSize} />
@@ -388,7 +394,7 @@ export default function WeeklyRampScreen() {
               : 'We will keep next week at the same intensity so your body can keep adapting.'}
           </Text>
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <Pressable
@@ -429,6 +435,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentInner: {
+    flexGrow: 1,
     justifyContent: 'center',
   },
   eyebrow: {

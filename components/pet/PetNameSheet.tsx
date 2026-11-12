@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -45,14 +44,17 @@ export function PetNameSheet({ visible, stage, onNamed, onDismiss }: Props) {
   const { height } = useWindowDimensions();
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<'invalid' | 'failed' | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const trimmed = name.trim();
   const valid = trimmed.length >= 1 && trimmed.length <= PET_NAME_MAX_LENGTH;
 
   useEffect(() => {
     if (visible) return;
     const clear = setTimeout(() => {
+      savingRef.current = false;
       setName('');
       setSaving(false);
       setError(null);
@@ -64,8 +66,14 @@ export function PetNameSheet({ visible, stage, onNamed, onDismiss }: Props) {
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const show = Keyboard.addListener(showEvent, () => setKeyboardOpen(true));
-    const hide = Keyboard.addListener(hideEvent, () => setKeyboardOpen(false));
+    const show = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardOpen(true);
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    });
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardOpen(false);
+      setKeyboardHeight(0);
+    });
     return () => {
       show.remove();
       hide.remove();
@@ -73,10 +81,12 @@ export function PetNameSheet({ visible, stage, onNamed, onDismiss }: Props) {
   }, []);
 
   async function handleSave() {
-    if (!valid || saving) return;
+    if (!valid || savingRef.current) return;
+    savingRef.current = true;
     setError(null);
     setSaving(true);
     const result = await setPetName(trimmed);
+    savingRef.current = false;
     setSaving(false);
     if (result.ok) {
       onNamed(result.state);
@@ -86,7 +96,7 @@ export function PetNameSheet({ visible, stage, onNamed, onDismiss }: Props) {
   }
 
   function dismiss() {
-    if (saving) return;
+    if (savingRef.current) return;
     onDismiss();
   }
 
@@ -105,8 +115,17 @@ export function PetNameSheet({ visible, stage, onNamed, onDismiss }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Not now"
         />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                // A KeyboardAvoidingView inside a Modal does not lift this sheet.
+                // Android already resizes the window, so only iOS needs the inset.
+                marginBottom: Platform.OS === 'ios' ? keyboardHeight : 0,
+                paddingBottom: keyboardHeight > 0 ? 16 : Math.max(insets.bottom, 16) + 8,
+              },
+            ]}
+          >
             <View style={styles.handle} />
             <View style={styles.badgeWrap}>
               <PetBadge
@@ -151,7 +170,6 @@ export function PetNameSheet({ visible, stage, onNamed, onDismiss }: Props) {
               <Text style={styles.cancelText}>Not now</Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

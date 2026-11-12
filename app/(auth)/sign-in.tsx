@@ -241,8 +241,8 @@ export default function SignInScreen() {
       style={[
         styles.container,
         {
-          paddingTop: insets.top + 56,
-          paddingBottom: Math.max(insets.bottom + 14, 32),
+          paddingTop: insets.top + 48,
+          paddingBottom: Math.max(insets.bottom + 14, 24),
         },
       ]}
     >
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   petRow: {
     alignSelf: 'stretch',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   backButton: {
     position: 'absolute',
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   appName: {
     fontSize: 36,

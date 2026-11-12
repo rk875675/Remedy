@@ -482,6 +482,7 @@ export default function ProfileScreen() {
   const [editingPet, setEditingPet] = useState(false);
   const [petInput, setPetInput] = useState('');
   const [petSaving, setPetSaving] = useState(false);
+  const petSaveLock = useRef(false);
   const [petError, setPetError] = useState<string | null>(null);
 
   // Restore state
@@ -647,17 +648,23 @@ export default function ProfileScreen() {
   }
 
   async function savePet() {
-    if (!pet || petSaving) return;
+    if (!pet || petSaveLock.current) return;
     const trimmed = petInput.trim();
     if (!trimmed) return;
+    if (trimmed.length > PET_NAME_MAX_LENGTH) {
+      setPetError(PET_NAME_INVALID);
+      return;
+    }
     if (trimmed === (pet.name ?? '')) {
       cancelEditingPet();
       return;
     }
+    petSaveLock.current = true;
     setPetSaving(true);
     setPetError(null);
     const hadName = Boolean(pet.name);
     const result = await setPetName(trimmed);
+    petSaveLock.current = false;
     setPetSaving(false);
     if (result.ok) {
       setPet(result.state);
@@ -1042,6 +1049,7 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         <Text style={styles.title}>Profile</Text>
 
@@ -1119,7 +1127,10 @@ export default function ProfileScreen() {
                     <TextInput
                       style={styles.petInput}
                       value={petInput}
-                      onChangeText={setPetInput}
+                      onChangeText={(t) => {
+                        setPetInput(t);
+                        setPetError(null);
+                      }}
                       onSubmitEditing={() => { void savePet(); }}
                       returnKeyType="done"
                       placeholder={PET_NAME_PLACEHOLDER}

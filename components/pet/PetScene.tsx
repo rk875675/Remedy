@@ -54,8 +54,10 @@ export function PetScene({
 
       <View style={{ height: petAreaHeight }} pointerEvents="box-none">
         {pet ? (
+          // Centred on the hill's crest. Only the ears reach the header's height, and
+          // they sit near the centre, clear of the left-hand name column.
           <View pointerEvents="box-none" style={styles.petSlot}>
-            <Pet stage={pet.stage} mood={mood} size={petSize} accessibilityLabel={petName} />
+            <Pet stage={pet.stage} mood={mood} size={petSize} />
           </View>
         ) : null}
       </View>
@@ -93,16 +95,18 @@ export function PetScene({
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Edit name"
+              style={styles.greetingHit}
             >
               <Text style={styles.greeting}>{firstName}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
         <Text
+          // Long names shrink a little, then wrap once, rather than running under the pet.
           style={styles.petName}
-          numberOfLines={1}
+          numberOfLines={2}
           adjustsFontSizeToFit
-          minimumFontScale={0.7}
+          minimumFontScale={0.75}
         >
           {petName}
         </Text>
@@ -172,6 +176,7 @@ const styles = StyleSheet.create({
     left: 0,
     paddingHorizontal: 20,
     maxWidth: '48%',
+    overflow: 'hidden',
   },
   greetingRow: {
     flexDirection: 'row',
@@ -182,6 +187,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.85)',
+  },
+  greetingHit: {
+    maxWidth: '100%',
   },
   petName: {
     ...type.title,
