@@ -23,6 +23,8 @@ const PROGRESS_KEY = 'remedy.onboardingProgress';
 // resume an unauthenticated user at their last screen and rebuild the back stack.
 export const ONBOARDING_FLOW = [
   'welcome',
+  'pet',
+  'grow',
   'founder',
   'education',
   'proof',
@@ -45,6 +47,8 @@ export type OnboardingStep = (typeof ONBOARDING_FLOW)[number];
 // Route path for each step (welcome is the onboarding group index route).
 export const ONBOARDING_STEP_PATHS: Record<OnboardingStep, string> = {
   welcome: '/(onboarding)',
+  pet: '/(onboarding)/pet',
+  grow: '/(onboarding)/grow',
   founder: '/(onboarding)/founder',
   education: '/(onboarding)/education',
   proof: '/(onboarding)/proof',

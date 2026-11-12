@@ -4,8 +4,11 @@ import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
+import { PetSays } from '../../components/pet/PetSays';
 import { useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors, serifFont } from '../../constants/colors';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 // Reassurance reframe. The source line must keep naming the published review:
 // "most back pain has no specific structural cause" is population-level research,
@@ -18,6 +21,7 @@ const LINES = [
 export default function FounderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage } = useOnboardingPet();
   useTrackOnboardingStep('founder');
 
   const fade = useRef(new Animated.Value(0)).current;
@@ -34,8 +38,11 @@ export default function FounderScreen() {
   return (
     <>
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
-      <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
+        <View style={styles.petSays}>
+          <PetSays line={PET_PRESENTS.founder.line} mood={PET_PRESENTS.founder.mood} stage={stage} />
+        </View>
         <Animated.View style={[styles.content, { opacity: fade }]}>
           <Text style={styles.title}>Your back is stronger than it feels.</Text>
           {LINES.map((line) => (
@@ -65,6 +72,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 28,
     overflow: 'hidden',
+  },
+  petSays: {
+    marginBottom: 20,
   },
   content: {
     flex: 1,

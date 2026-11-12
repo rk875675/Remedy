@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
@@ -9,11 +9,22 @@ import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLa
 import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { PAIN_DURATION_OPTIONS } from '../../constants/onboardingQuestions';
+import { PET_Q2, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
-import { PAIN_DURATION_OPTIONS } from '../../constants/onboardingQuestions';
-import type { OnboardingAnswers } from '../../types/database';
+
+const Q2_REACTION_KEYS = Object.keys(PET_Q2.reactions);
+
+function isQ2Key(key: string): key is keyof typeof PET_Q2.reactions {
+  return Q2_REACTION_KEYS.includes(key);
+}
+
+function q2Say(id: string | null): PetSay {
+  if (id && isQ2Key(id)) return PET_Q2.reactions[id];
+  return PET_Q2.prompt;
+}
 
 export default function Q2Screen() {
   const router = useRouter();
@@ -26,6 +37,7 @@ export default function Q2Screen() {
   const [selectedId, setSelectedId] = useState<string | null>(
     () => PAIN_DURATION_OPTIONS.find((o) => o.value === answers.pain_duration)?.id ?? null,
   );
+  const say = q2Say(selectedId);
 
   function handleSelect(opt: (typeof PAIN_DURATION_OPTIONS)[number]) {
     const isDeselect = selectedId === opt.id;
@@ -49,8 +61,12 @@ export default function Q2Screen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
-      <PersonalizingLayout currentStep="q2" compact>
-        <View style={styles.content}>
+      <PersonalizingLayout currentStep="q2" compact say={say}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.heading}>How long have you had it?</Text>
           <View style={styles.options}>
             {PAIN_DURATION_OPTIONS.map((opt) => (
@@ -68,7 +84,7 @@ export default function Q2Screen() {
               />
             ))}
           </View>
-        </View>
+        </ScrollView>
       </PersonalizingLayout>
 
       <ContinueButton
@@ -88,9 +104,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-  content: {
+  scroll: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 8,
   },
   heading: {
     ...type.question,

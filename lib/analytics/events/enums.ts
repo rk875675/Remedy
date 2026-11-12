@@ -54,6 +54,8 @@ export const sessionsPerWeek = sessionsPerWeekSchema;
  */
 export const onboardingStepKey = z.enum([
   'welcome',
+  'pet',
+  'grow',
   'founder',
   'education',
   'proof',
@@ -69,7 +71,6 @@ export const onboardingStepKey = z.enum([
   'q5',
   'q7',
   'q8',
-  'pet',
   'commit',
   'finalizing',
   'match',

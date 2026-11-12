@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { PetSays } from '../../components/pet/PetSays';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { PET_Q0 } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { setPersonProperties } from '../../lib/analytics';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 type HearAboutSource =
   | 'instagram'
@@ -43,6 +46,7 @@ export default function Q0Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { progress, setLocalAnswer } = useOnboarding();
+  const { stage } = useOnboardingPet();
   useTrackOnboardingStep('q0');
   const completeStep = useOnboardingStepCompletion();
   // Analytics attribution signal only (not in the strict answers schema). Persisted
@@ -51,6 +55,7 @@ export default function Q0Screen() {
     const saved = progress?.hear_about;
     return options.some((opt) => opt.value === saved) ? (saved as HearAboutSource) : null;
   });
+  const say = source ? PET_Q0.answered : PET_Q0.prompt;
 
   function handleSelect(value: HearAboutSource) {
     const isDeselect = source === value;
@@ -82,24 +87,33 @@ export default function Q0Screen() {
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
       <View style={styles.content}>
-        <Text style={styles.heading}>Where did you hear about us?</Text>
-        <View style={styles.options}>
-          {options.map((opt) => {
-            const selected = source === opt.value;
-            return (
-              <OptionCard
-                key={opt.value}
-                label={opt.label}
-                icon={
-                  <Ionicons name={opt.iconName} size={ICON_SIZE} color={opt.iconColor} />
-                }
-                iconStyle="plain"
-                selected={selected}
-                onPress={() => handleSelect(opt.value)}
-              />
-            );
-          })}
+        <View style={styles.say}>
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
         </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.heading}>Where did you hear about us?</Text>
+          <View style={styles.options}>
+            {options.map((opt) => {
+              const selected = source === opt.value;
+              return (
+                <OptionCard
+                  key={opt.value}
+                  label={opt.label}
+                  icon={
+                    <Ionicons name={opt.iconName} size={ICON_SIZE} color={opt.iconColor} />
+                  }
+                  iconStyle="plain"
+                  selected={selected}
+                  onPress={() => handleSelect(opt.value)}
+                />
+              );
+            })}
+          </View>
+        </ScrollView>
       </View>
 
       <ContinueButton onPress={handleContinue} disabled={!source} />
@@ -115,7 +129,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  say: {
+    marginBottom: 16,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 8,
   },
   heading: {
     ...type.question,

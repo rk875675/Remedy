@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { usePremium } from '../../context/PremiumContext';
 import { useUser } from '../../lib/superwall';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import { hapticWarning } from '../../lib/haptics';
 import { signedOut } from '../../lib/analytics/events/auth';
 import { onboardingStarted } from '../../lib/analytics/events/onboarding';
@@ -23,7 +24,8 @@ import { colors, serifFont } from '../../constants/colors';
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { resetAnswers, answers, progress } = useOnboarding();
+  const { resetAnswers, answers, progress, retaking } = useOnboarding();
+  const { name: petName } = useOnboardingPet();
   // A stale session (signed in during a previous test/session) is otherwise invisible
   // here: tapping "Sign in" would silently bounce to the tabs (root guard treats an
   // already-authed, fully-onboarded user on an auth route as misplaced) with no
@@ -34,6 +36,9 @@ export default function WelcomeScreen() {
   // off Your Program. The CTA returns them to the paywall — never through the quiz.
   const { premium, onboardingDone } = usePremium();
   const isLapsed = !!user && onboardingDone === true && premium === false;
+  // A signed-in user whose pet already has a server name (or a retake) is never asked to
+  // name or grow it again; a name typed in this funnel (progress.pet_name) is not that.
+  const hasPet = retaking || (!!user && !!petName && !progress?.pet_name);
 
   async function handleSignOut() {
     hapticWarning();
@@ -70,15 +75,18 @@ export default function WelcomeScreen() {
     if (canResume) {
       // Push every step up to the resume target so swipe-back works through the quiz
       // instead of dead-ending on a single orphaned screen.
-      const targetIndex = ONBOARDING_FLOW.indexOf(resumeStep);
+      const skipPetSteps = hasPet && (resumeStep === 'pet' || resumeStep === 'grow');
+      const targetIndex = ONBOARDING_FLOW.indexOf(skipPetSteps ? 'founder' : resumeStep);
       for (let i = 1; i <= targetIndex; i++) {
+        const step = ONBOARDING_FLOW[i];
+        if (hasPet && (step === 'pet' || step === 'grow')) continue;
         router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
       }
       return;
     }
     // Fresh run: clear any orphaned answers/progress before beginning.
     resetAnswers();
-    router.push('/(onboarding)/founder');
+    router.push(hasPet ? '/(onboarding)/founder' : '/(onboarding)/pet');
   }
 
   const logoOpacity = useRef(new Animated.Value(0)).current;

@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, Animated, Easing, Pressable } from 'react-nativ
 import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
+import { PetSays } from '../../components/pet/PetSays';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { colors, serifFont } from '../../constants/colors';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticHeavy, hapticPrimaryAction, hapticSuccess } from '../../lib/haptics';
@@ -15,8 +18,10 @@ const PULSE_MS = 90;
 export default function CommitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage } = useOnboardingPet();
   const { progress, setLocalAnswer } = useOnboarding();
   const committed = !!progress?.committed_at;
+  const petPresent = committed ? PET_PRESENTS.commitAfter : PET_PRESENTS.commitBefore;
   const fill = useRef(new Animated.Value(committed ? 1 : 0)).current;
   const pulse = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -78,6 +83,9 @@ export default function CommitScreen() {
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
+        <View style={styles.petSays}>
+          <PetSays line={petPresent.line} mood={petPresent.mood} stage={stage} />
+        </View>
         <View style={styles.content}>
           <Text style={styles.title}>I'm done working around my back.</Text>
         </View>
@@ -115,6 +123,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 28,
+  },
+  petSays: {
+    marginBottom: 20,
   },
   content: {
     flex: 1,

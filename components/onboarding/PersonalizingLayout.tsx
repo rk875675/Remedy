@@ -1,9 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { colors } from '../../constants/colors';
+import type { PetMood } from '../../constants/petImages';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
+import { PetSays } from '../pet/PetSays';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import type { OnboardingAnswers } from '../../types/database';
 
 type PersonalizingLayoutProps = {
@@ -16,6 +19,8 @@ type PersonalizingLayoutProps = {
    */
   currentStep: PersonalizingStep;
   compact?: boolean;
+  /** Pet line above the plan card. Omitted on screens that do not show the pet. */
+  say?: { line: string; mood: PetMood };
 };
 
 /**
@@ -117,8 +122,14 @@ function AnimatedBarFill({ progress }: { progress: number }) {
   return <Animated.View style={[styles.barFill, { width }]} />;
 }
 
-export function PersonalizingLayout({ children, currentStep, compact = false }: PersonalizingLayoutProps) {
+export function PersonalizingLayout({
+  children,
+  currentStep,
+  compact = false,
+  say,
+}: PersonalizingLayoutProps) {
   const { answers } = useOnboarding();
+  const { stage } = useOnboardingPet();
   const currentStepIndex = STEP_INDEX[currentStep];
 
   // Only reflect answers collected on this step or earlier, so swiping back shows
@@ -143,7 +154,12 @@ export function PersonalizingLayout({ children, currentStep, compact = false }: 
 
   return (
     <View style={styles.container}>
-      <View style={[styles.card, compact && styles.cardCompact]}>
+      {say ? (
+        <View style={styles.say}>
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
+        </View>
+      ) : null}
+      <View style={[styles.card, (compact || say != null) && styles.cardCompact]}>
         <Text style={styles.header}>Your plan</Text>
         <View style={styles.slots}>
           {slots.map((slot) => (
@@ -171,6 +187,9 @@ export function PersonalizingLayout({ children, currentStep, compact = false }: 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  say: {
+    marginBottom: 12,
   },
   card: {
     backgroundColor: colors.surface,

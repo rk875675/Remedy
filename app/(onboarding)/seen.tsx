@@ -4,13 +4,17 @@ import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { PetSays } from '../../components/pet/PetSays';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { tailoredMindsetCopy } from '../../constants/mindset';
 import { colors, serifFont } from '../../constants/colors';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 export default function SeenScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage } = useOnboardingPet();
   const { progress } = useOnboarding();
   useTrackOnboardingStep('seen');
   const copy = tailoredMindsetCopy(
@@ -23,6 +27,9 @@ export default function SeenScreen() {
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
+        <View style={styles.petSays}>
+          <PetSays line={PET_PRESENTS.seen.line} mood={PET_PRESENTS.seen.mood} stage={stage} />
+        </View>
         <View style={styles.content}>
           <Text style={styles.title}>{copy.title}</Text>
           <View style={styles.rule} />
@@ -40,6 +47,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 28,
+  },
+  petSays: {
+    marginBottom: 20,
   },
   content: {
     flex: 1,

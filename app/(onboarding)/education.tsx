@@ -4,8 +4,11 @@ import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
+import { PetSays } from '../../components/pet/PetSays';
 import { useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors, serifFont } from '../../constants/colors';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import { useAfterTransition } from '../../lib/useAfterTransition';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
@@ -65,6 +68,7 @@ function PainBar({ pain, label, delay }: { pain: number; label: string; delay: n
 export default function EducationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage } = useOnboardingPet();
   useTrackOnboardingStep('education');
 
   return (
@@ -72,6 +76,9 @@ export default function EducationScreen() {
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
+        <View style={styles.petSays}>
+          <PetSays line={PET_PRESENTS.education.line} mood={PET_PRESENTS.education.mood} stage={stage} />
+        </View>
         <View style={styles.content}>
           <Text style={styles.eyebrow}>THE GOOD NEWS</Text>
           <Text style={styles.stat}>50% less pain</Text>
@@ -103,6 +110,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
     overflow: 'hidden',
+  },
+  petSays: {
+    marginBottom: 20,
   },
   content: {
     flex: 1,

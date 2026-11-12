@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
@@ -8,12 +8,30 @@ import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { PAIN_TRIGGER_OPTIONS } from '../../constants/onboardingQuestions';
+import { TRIGGER_ILLUSTRATIONS } from '../../constants/onboardingImages';
+import { PET_Q5, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
-import { PAIN_TRIGGER_OPTIONS } from '../../constants/onboardingQuestions';
-import { TRIGGER_ILLUSTRATIONS } from '../../constants/onboardingImages';
 import type { PainTrigger } from '../../types/database';
+
+const Q5_REACTION_KEYS = Object.keys(PET_Q5.reactions);
+
+function isQ5Key(key: string): key is keyof typeof PET_Q5.reactions {
+  return Q5_REACTION_KEYS.includes(key);
+}
+
+function q5Say(selectedKeys: readonly PainTrigger[], lastTapped: PainTrigger | null): PetSay {
+  if (lastTapped !== null && selectedKeys.includes(lastTapped)) {
+    return isQ5Key(lastTapped) ? PET_Q5.reactions[lastTapped] : PET_Q5.prompt;
+  }
+  for (let i = selectedKeys.length - 1; i >= 0; i -= 1) {
+    const key = selectedKeys[i];
+    if (key && isQ5Key(key)) return PET_Q5.reactions[key];
+  }
+  return PET_Q5.prompt;
+}
 
 export default function Q5Screen() {
   const router = useRouter();
@@ -21,10 +39,13 @@ export default function Q5Screen() {
   const { answers, setAnswer } = useOnboarding();
   useTrackOnboardingStep('q5');
   const completeStep = useOnboardingStepCompletion();
+  const [lastTapped, setLastTapped] = useState<PainTrigger | null>(null);
 
   const selected = answers.pain_trigger ?? [];
+  const say = q5Say(selected, lastTapped);
 
   function toggle(val: PainTrigger) {
+    setLastTapped(val);
     const isDeselect = selected.includes(val);
     const next = isDeselect ? selected.filter((v) => v !== val) : [...selected, val];
     setAnswer('pain_trigger', next);
@@ -40,8 +61,12 @@ export default function Q5Screen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
-      <PersonalizingLayout currentStep="q5" compact>
-        <View style={styles.content}>
+      <PersonalizingLayout currentStep="q5" compact say={say}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.heading}>What makes your pain worse?</Text>
           <Text style={styles.subheading}>Select all that apply</Text>
           <View style={styles.options}>
@@ -56,7 +81,7 @@ export default function Q5Screen() {
               />
             ))}
           </View>
-        </View>
+        </ScrollView>
       </PersonalizingLayout>
 
       <ContinueButton
@@ -76,9 +101,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-  content: {
+  scroll: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 8,
   },
   heading: {
     ...type.question,

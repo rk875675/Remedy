@@ -63,6 +63,8 @@ sessions, they have churned.**
 ```
 Application Installed
   → /(onboarding)              welcome
+  → /(onboarding)/pet          meet and name the pet (skipped on a retake or when the account already has a pet)
+  → /(onboarding)/grow         tap through the pet's five stages (skipped on a retake or when the account already has a pet)
   → /(onboarding)/founder      interstitial
   → /(onboarding)/education    interstitial
   → /(onboarding)/proof        why Remedy works + "Agree & continue" legal/health-data assent (hard gate)
@@ -78,7 +80,6 @@ Application Installed
   → /(onboarding)/q5           pain triggers         (multi)
   → /(onboarding)/q7           equipment tier + safety disclaimer modal
   → /(onboarding)/q8           time budget + cadence → sessions_per_week_preference
-  → /(onboarding)/pet          meet and name the pet (skipped on a retake)
   → /(onboarding)/commit       "Hold to commit" interstitial
   → /(onboarding)/finalizing   animated "building your plan"
   → /(onboarding)/match        server-computed plan preview  →  Superwall paywall
@@ -338,11 +339,11 @@ second, staler source of truth for the same fact.
 Enforced in code as the `KNOWN_SCREENS` allow-list in `lib/analytics/routes.ts`. The two lists
 must stay identical.
 
-`/(onboarding)`, `/(onboarding)/founder`, `/(onboarding)/education`, `/(onboarding)/proof`, `/(onboarding)/q0`,
+`/(onboarding)`, `/(onboarding)/pet`, `/(onboarding)/grow`, `/(onboarding)/founder`, `/(onboarding)/education`, `/(onboarding)/proof`, `/(onboarding)/q0`,
 `/(onboarding)/q9`, `/(onboarding)/q6`, `/(onboarding)/q1`, `/(onboarding)/q2`,
 `/(onboarding)/recognize`, `/(onboarding)/seen`,
 `/(onboarding)/q3`, `/(onboarding)/q4`, `/(onboarding)/q5`, `/(onboarding)/q7`,
-`/(onboarding)/q8`, `/(onboarding)/pet`, `/(onboarding)/commit`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
+`/(onboarding)/q8`, `/(onboarding)/commit`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
 `/(auth)/sign-in`, `/(auth)/email`, `/(legal)/terms`, `/(legal)/privacy`, `/(tabs)`,
 `/(tabs)/progress`, `/(tabs)/profile`, `/session/[id]`, `/building-plan`, `/weekly-ramp`,
 `/orientation`, `/program-complete`, `/next-program`, `/onboarding-answers`, `/auth-callback`,

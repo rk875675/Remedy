@@ -19,6 +19,8 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s1_idle: require('../assets/pet/s1_idle.png'),
   s1_ready: require('../assets/pet/s1_ready.png'),
   s1_celebrating: require('../assets/pet/s1_celebrating.png'),
+  s1_stiff: require('../assets/pet/s1_stiff.png'),
+  s1_concerned: require('../assets/pet/s1_concerned.png'),
 
   s2_idle: require('../assets/pet/s2_idle.png'),
   s2_ready: require('../assets/pet/s2_ready.png'),
@@ -53,7 +55,7 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
 
 /** Poses the early stages were never drawn in. */
 const POSE_FALLBACKS: Partial<Record<PetStage, Partial<Record<PetMood, PetMood>>>> = {
-  1: { proud: 'celebrating', sleepy: 'idle', stiff: 'idle', concerned: 'ready' },
+  1: { proud: 'celebrating', sleepy: 'idle' },
   2: { proud: 'celebrating', stiff: 'sleepy' },
 };
 

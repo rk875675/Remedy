@@ -4,12 +4,15 @@ import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
+import { PetSays } from '../../components/pet/PetSays';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { recordLegalAcceptances } from '../../lib/legalAcceptance';
 import { legalDocumentViewed } from '../../lib/analytics/events/engagement';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { MEDICAL_DISCLAIMER_LINE } from '../../constants/legalTerms';
 import { colors, serifFont } from '../../constants/colors';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 // Every claim here must stay literally true of the product and the cited guidelines.
 // No clinician-authorship claims: the program is rules-based and the demo videos are
@@ -32,6 +35,7 @@ const REASONS: { title: string; body: string }[] = [
 export default function ProofScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage } = useOnboardingPet();
   const { setLocalAnswer } = useOnboarding();
   useTrackOnboardingStep('proof');
 
@@ -72,6 +76,9 @@ export default function ProofScreen() {
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
+        <View style={styles.petSays}>
+          <PetSays line={PET_PRESENTS.proof.line} mood={PET_PRESENTS.proof.mood} stage={stage} />
+        </View>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
@@ -120,6 +127,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 28,
     overflow: 'hidden',
+  },
+  petSays: {
+    marginBottom: 20,
   },
   scroll: {
     flex: 1,

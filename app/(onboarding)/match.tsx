@@ -18,10 +18,9 @@ import {
   dismissSuperwall,
 } from '../../lib/superwall';
 import { PromoCodeSheet } from '../../components/PromoCodeSheet';
-import { PetBadge } from '../../components/pet/PetBadge';
-import { PET_MATCH_LINE, petLine } from '../../constants/petLines';
-import type { PetStage } from '../../constants/petImages';
-import { fetchPetState } from '../../lib/petApi';
+import { PetSays } from '../../components/pet/PetSays';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import { supabase } from '../../lib/supabase';
 import { getPendingPurchase, setPendingPurchase } from '../../lib/pendingPurchase';
 import { getLatestRemedyTransaction, restoreRemedyTransaction } from '../../lib/iap';
@@ -54,7 +53,7 @@ import { sessionLength } from '../../lib/analytics/events/enums';
 import { onboardingFunnelDurationMs } from '../../lib/analytics/onboardingSteps';
 import type { z } from 'zod';
 import { colors, serifFont } from '../../constants/colors';
-import { radius, spacing } from '../../constants/spacing';
+import { radius } from '../../constants/spacing';
 import { type OnboardingAnswersInput, type PlanPreview } from '../../lib/schemas';
 import {
   answersPreviewKey,
@@ -148,6 +147,7 @@ export default function MatchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers, retaking, progress } = useOnboarding();
+  const { stage: petStage } = useOnboardingPet();
   const { user } = useAuth();
   const { refreshPremium } = usePremium();
   const { identify } = useUser();
@@ -186,10 +186,8 @@ export default function MatchScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   // "Have a code?" promo sheet (backend creator codes + Apple offer-code fallback).
   const [promoVisible, setPromoVisible] = useState(false);
-  // Lapsed / returning users already have a pet on the server; first-run users meet stage 1.
-  const [petStage, setPetStage] = useState<PetStage>(1);
-  const [serverPetName, setServerPetName] = useState<string | null>(null);
-  const petFetched = useRef(false);
+  // Paywall closed with no purchase. Cleared when Continue opens it again.
+  const [showDismissedLine, setShowDismissedLine] = useState(false);
 
   // Lapsed subscriber: Continue opens Superwall, back goes to Welcome (sign in / out).
   const { lapsed } = useLocalSearchParams<{ lapsed?: string }>();
@@ -200,16 +198,6 @@ export default function MatchScreen() {
 
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
-
-  useEffect(() => {
-    if (!user || petFetched.current) return;
-    petFetched.current = true;
-    void fetchPetState().then((state) => {
-      if (!state || !mounted.current) return;
-      setPetStage(state.stage);
-      if (state.name) setServerPetName(state.name);
-    });
-  }, [user]);
 
   // replace() onto match leaves it alone in the stack — iOS swipe-back is a no-op.
   // Put Welcome underneath so the only back target is sign in / sign out.
@@ -490,7 +478,10 @@ export default function MatchScreen() {
       } else {
         // transactionComplete may have raised the busy overlay preemptively;
         // a dismiss without a purchase result must not leave it stuck.
-        if (mounted.current) setBusy(null);
+        if (mounted.current) {
+          setBusy(null);
+          setShowDismissedLine(true);
+        }
       }
     },
     onSkip: (reason) => {
@@ -846,6 +837,13 @@ export default function MatchScreen() {
     complete?.sessions_per_week_preference ??
     3;
   const minutes = avgMinutes(preview) ?? 20;
+  const petPresent = showDismissedLine
+    ? PET_PRESENTS.paywallDismissed
+    : retaking
+      ? PET_PRESENTS.matchRetake
+      : isReconvert
+        ? PET_PRESENTS.matchLapsed
+        : PET_PRESENTS.match;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 8 }]}>
@@ -858,11 +856,8 @@ export default function MatchScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View style={styles.petRow}>
-            <PetBadge stage={petStage} mood="ready" size={64} />
-            <Text style={styles.petLine} numberOfLines={2}>
-              {petLine(PET_MATCH_LINE, serverPetName ?? progress?.pet_name)}
-            </Text>
+          <View style={styles.petSays}>
+            <PetSays line={petPresent.line} mood={petPresent.mood} stage={petStage} />
           </View>
 
           <Text style={styles.eyebrow}>{retaking ? 'YOUR UPDATED PROGRAM' : isReconvert ? 'RESUME YOUR PROGRAM' : 'YOUR PROGRAM'}</Text>
@@ -895,7 +890,10 @@ export default function MatchScreen() {
         <View style={styles.footer}>
           <ContinueButton
             label={retaking ? 'Update My Program' : 'Continue'}
-            onPress={() => { void handleStart(); }}
+            onPress={() => {
+              setShowDismissedLine(false);
+              void handleStart();
+            }}
             disabled={loading || presenting}
           />
           {!retaking && (
@@ -1048,19 +1046,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 8,
   },
-  petRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md - 4,
-    maxWidth: 320,
-    marginBottom: spacing.lg,
-  },
-  petLine: {
-    flexShrink: 1,
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: colors.textPrimary,
+  petSays: {
+    alignSelf: 'stretch',
+    marginBottom: 20,
   },
   eyebrow: {
     fontSize: 12,

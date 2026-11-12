@@ -22,6 +22,8 @@ export const UNKNOWN_SCREEN = 'unknown';
 export const KNOWN_SCREENS = [
   // Onboarding funnel
   '/(onboarding)',
+  '/(onboarding)/pet',
+  '/(onboarding)/grow',
   '/(onboarding)/founder',
   '/(onboarding)/education',
   '/(onboarding)/proof',
@@ -37,7 +39,6 @@ export const KNOWN_SCREENS = [
   '/(onboarding)/q5',
   '/(onboarding)/q7',
   '/(onboarding)/q8',
-  '/(onboarding)/pet',
   '/(onboarding)/commit',
   '/(onboarding)/finalizing',
   '/(onboarding)/match',

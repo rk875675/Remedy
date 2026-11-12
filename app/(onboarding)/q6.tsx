@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
@@ -9,12 +9,30 @@ import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLa
 import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { MAIN_GOAL_OPTIONS } from '../../constants/onboardingQuestions';
+import { GOAL_ILLUSTRATIONS } from '../../constants/onboardingImages';
+import { PET_Q6, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
-import { MAIN_GOAL_OPTIONS } from '../../constants/onboardingQuestions';
-import { GOAL_ILLUSTRATIONS } from '../../constants/onboardingImages';
 import type { MainGoal } from '../../types/database';
+
+const Q6_REACTION_KEYS = Object.keys(PET_Q6.reactions);
+
+function isQ6Key(key: string): key is keyof typeof PET_Q6.reactions {
+  return Q6_REACTION_KEYS.includes(key);
+}
+
+function q6Say(selectedKeys: readonly MainGoal[], lastTapped: MainGoal | null): PetSay {
+  if (lastTapped !== null && selectedKeys.includes(lastTapped)) {
+    return isQ6Key(lastTapped) ? PET_Q6.reactions[lastTapped] : PET_Q6.prompt;
+  }
+  for (let i = selectedKeys.length - 1; i >= 0; i -= 1) {
+    const key = selectedKeys[i];
+    if (key && isQ6Key(key)) return PET_Q6.reactions[key];
+  }
+  return PET_Q6.prompt;
+}
 
 export default function Q6Screen() {
   const router = useRouter();
@@ -22,10 +40,13 @@ export default function Q6Screen() {
   const { answers, setAnswer } = useOnboarding();
   useTrackOnboardingStep('q6');
   const completeStep = useOnboardingStepCompletion();
+  const [lastTapped, setLastTapped] = useState<MainGoal | null>(null);
 
   const selected = answers.main_goal ?? [];
+  const say = q6Say(selected, lastTapped);
 
   function toggle(val: MainGoal) {
+    setLastTapped(val);
     const isDeselect = selected.includes(val);
     const next = isDeselect ? selected.filter((v) => v !== val) : [...selected, val];
     setAnswer('main_goal', next);
@@ -41,8 +62,12 @@ export default function Q6Screen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
-      <PersonalizingLayout currentStep="q6" compact>
-        <View style={styles.content}>
+      <PersonalizingLayout currentStep="q6" compact say={say}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.heading}>What's your main goal?</Text>
           <Text style={styles.subheading}>Select all that apply</Text>
           <View style={styles.options}>
@@ -62,7 +87,7 @@ export default function Q6Screen() {
               />
             ))}
           </View>
-        </View>
+        </ScrollView>
       </PersonalizingLayout>
 
       <ContinueButton
@@ -82,9 +107,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-  content: {
+  scroll: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 8,
   },
   heading: {
     ...type.question,

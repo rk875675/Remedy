@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
@@ -9,12 +9,25 @@ import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLa
 import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { PAIN_LOCATION_OPTIONS } from '../../constants/onboardingQuestions';
+import { LOCATION_IMAGES } from '../../constants/onboardingImages';
+import { PET_Q1, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
-import { PAIN_LOCATION_OPTIONS } from '../../constants/onboardingQuestions';
-import { LOCATION_IMAGES } from '../../constants/onboardingImages';
 import type { OnboardingAnswers } from '../../types/database';
+
+const Q1_REACTION_KEYS = Object.keys(PET_Q1.reactions);
+
+function isQ1Key(key: string): key is keyof typeof PET_Q1.reactions {
+  return Q1_REACTION_KEYS.includes(key);
+}
+
+function q1Say(current: string | null, lastTapped: string | null): PetSay {
+  const key = lastTapped !== null ? (current === lastTapped ? lastTapped : null) : current;
+  if (key && isQ1Key(key)) return PET_Q1.reactions[key];
+  return PET_Q1.prompt;
+}
 
 export default function Q1Screen() {
   const router = useRouter();
@@ -22,8 +35,11 @@ export default function Q1Screen() {
   const { answers, setAnswer, clearAnswer } = useOnboarding();
   useTrackOnboardingStep('q1');
   const completeStep = useOnboardingStepCompletion();
+  const [lastTapped, setLastTapped] = useState<string | null>(null);
+  const say = q1Say(answers.pain_location ?? null, lastTapped);
 
   function handleSelect(value: OnboardingAnswers['pain_location']) {
+    setLastTapped(value);
     const isDeselect = answers.pain_location === value;
     onboardingOptionSelected({
       step_key: 'q1',
@@ -41,8 +57,12 @@ export default function Q1Screen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
-      <PersonalizingLayout currentStep="q1" compact>
-        <View style={styles.content}>
+      <PersonalizingLayout currentStep="q1" compact say={say}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.heading}>Where is your back pain?</Text>
           <View style={styles.options}>
             {PAIN_LOCATION_OPTIONS.map((opt) => (
@@ -61,7 +81,7 @@ export default function Q1Screen() {
               />
             ))}
           </View>
-        </View>
+        </ScrollView>
       </PersonalizingLayout>
 
       <ContinueButton
@@ -81,9 +101,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-  content: {
+  scroll: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 8,
   },
   heading: {
     ...type.question,

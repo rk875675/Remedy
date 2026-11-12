@@ -5,8 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { PetSays } from '../../components/pet/PetSays';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { PET_Q9, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
@@ -14,6 +16,7 @@ import { setPersonProperties } from '../../lib/analytics';
 import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import type { AppBelief } from '../../lib/analytics/events/enums';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
 const options: {
   label: string;
@@ -31,15 +34,24 @@ const BUBBLE = '#FFF4EA';
 const HOLD_MS = 4400;
 const BOB_MS = 400;
 
+function q9Say(value: AppBelief | null): PetSay {
+  if (value === 'yes') return PET_Q9.yes;
+  if (value === 'maybe') return PET_Q9.unsure;
+  if (value === 'no') return PET_Q9.no;
+  return PET_Q9.prompt;
+}
+
 export default function Q9Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { progress, setLocalAnswer } = useOnboarding();
+  const { stage } = useOnboardingPet();
   useTrackOnboardingStep('q9');
   const completeStep = useOnboardingStepCompletion();
   // Analytics signal only (not in the strict answers schema). Persisted via progress
   // so it restores on resume/back-navigation.
   const answer = progress?.app_belief ?? null;
+  const say = q9Say(answer);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(-16)).current;
@@ -151,6 +163,9 @@ export default function Q9Screen() {
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
       <View style={styles.content}>
+        <View style={styles.say}>
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
+        </View>
         <Text style={styles.heading}>Do you believe Remedy can fix your back pain?</Text>
         <View style={styles.options}>
           {options.map((opt) => (
@@ -200,6 +215,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
+  },
+  say: {
+    marginBottom: 16,
   },
   heading: {
     ...type.question,

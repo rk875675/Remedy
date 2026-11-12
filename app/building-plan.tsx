@@ -31,7 +31,8 @@ import { toVerificationReason } from '../lib/analytics/purchaseErrors';
 import type { programAssignmentFailureReason } from '../lib/analytics/events/enums';
 import type { z } from 'zod';
 import { colors, serifFont } from '../constants/colors';
-import { PetBadge } from '../components/pet/PetBadge';
+import { PetSays } from '../components/pet/PetSays';
+import { PET_PRESENTS } from '../constants/petOnboardingLines';
 import type { PetStage } from '../constants/petImages';
 import { fetchPetState, setPetName } from '../lib/petApi';
 import { petNamed } from '../lib/analytics/events/engagement';
@@ -637,7 +638,12 @@ export default function BuildingPlanScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
       <View style={styles.content}>
         <View style={styles.logoWrap}>
-          <PetBadge stage={petStage} mood="ready" size={120} />
+          <PetSays
+            line={PET_PRESENTS.buildingPlan.line}
+            mood={PET_PRESENTS.buildingPlan.mood}
+            stage={petStage}
+            size={84}
+          />
         </View>
         <Text style={styles.appName}>Remedy</Text>
         <Text style={styles.title}>
@@ -665,6 +671,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoWrap: {
+    width: '100%',
+    maxWidth: 320,
     marginBottom: 20,
   },
   appName: {

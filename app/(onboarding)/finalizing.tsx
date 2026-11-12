@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
-import { PetBadge } from '../../components/pet/PetBadge';
+import { PetSays } from '../../components/pet/PetSays';
 import { colors, serifFont } from '../../constants/colors';
+import { PET_PRESENTS } from '../../constants/petOnboardingLines';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import { prefetchPlanPreview } from '../../lib/planPreview';
 
 const steps = [
@@ -31,6 +33,7 @@ export default function FinalizingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers } = useOnboarding();
+  const { stage } = useOnboardingPet();
   // Checked-off count. Equals `steps.length` once the last line has a check.
   const [completed, setCompleted] = useState(0);
 
@@ -98,7 +101,12 @@ export default function FinalizingScreen() {
       <WarmBackground />
       <View style={styles.content}>
         <View style={styles.iconWrap}>
-          <PetBadge stage={1} mood="ready" size={120} />
+          <PetSays
+            line={PET_PRESENTS.finalizing.line}
+            mood={PET_PRESENTS.finalizing.mood}
+            stage={stage}
+            size={84}
+          />
         </View>
 
         <Text style={styles.title}>Building your plan</Text>
@@ -149,6 +157,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconWrap: {
+    width: '100%',
+    maxWidth: 320,
     marginBottom: 28,
   },
   title: {

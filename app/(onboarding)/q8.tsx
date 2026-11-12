@@ -17,6 +17,7 @@ import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { fillPetLine, PET_Q8, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useAfterTransition } from '../../lib/useAfterTransition';
@@ -374,6 +375,11 @@ function DaySlider({
   );
 }
 
+function q8DaysSay(days: DayOption): PetSay {
+  const template = days === 3 ? PET_Q8.daysLow : days <= 5 ? PET_Q8.daysMid : PET_Q8.daysHigh;
+  return { line: fillPetLine(template.line, { n: days }), mood: template.mood };
+}
+
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
@@ -381,7 +387,7 @@ function DaySlider({
 export default function Q8Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { answers, setAnswer, progress, setLocalAnswer, retaking } = useOnboarding();
+  const { answers, setAnswer, progress, setLocalAnswer } = useOnboarding();
   useTrackOnboardingStep('q8');
   const completeStep = useOnboardingStepCompletion();
 
@@ -396,8 +402,13 @@ export default function Q8Screen() {
     return null;
   });
   const selectedRef = useRef(selectedDays);
+  // Days are pre-filled below. That is not a choice: stay on the prompt unless a
+  // days answer was already saved, or the user changes minutes or days.
+  const openedWithDays = useRef(selectedDays);
+  const [lastChange, setLastChange] = useState<'minutes' | 'days' | null>(null);
 
   function handleMinutes(opt: (typeof MINUTE_OPTIONS)[number]) {
+    setLastChange('minutes');
     const isDeselect = minutes === opt.value;
     if (isDeselect) {
       setMinutes(RECOMMENDED_MINUTES);
@@ -425,6 +436,7 @@ export default function Q8Screen() {
   }, [suggested]);
 
   function selectDay(day: DayOption) {
+    setLastChange('days');
     if (selectedRef.current === day) return;
     selectedRef.current = day;
     onboardingOptionSelected({
@@ -439,6 +451,16 @@ export default function Q8Screen() {
     hapticSelection();
   }
 
+  const savedDays = openedWithDays.current;
+  const say: PetSay =
+    lastChange === 'minutes'
+      ? PET_Q8.minutes
+      : lastChange === 'days' && selectedDays != null
+        ? q8DaysSay(selectedDays)
+        : lastChange === null && savedDays != null
+          ? q8DaysSay(savedDays)
+          : PET_Q8.prompt;
+
   return (
     <View
       style={[
@@ -447,7 +469,7 @@ export default function Q8Screen() {
       ]}
     >
       <WarmBackground />
-      <PersonalizingLayout currentStep="q8">
+      <PersonalizingLayout currentStep="q8" say={say}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -488,8 +510,7 @@ export default function Q8Screen() {
       <ContinueButton
         onPress={() => {
           completeStep();
-          // Someone retaking the quiz already has a pet; only new users meet and name it.
-          router.push(retaking ? '/(onboarding)/commit' : '/(onboarding)/pet');
+          router.push('/(onboarding)/commit');
         }}
         disabled={answers.sessions_per_week_preference == null}
       />
