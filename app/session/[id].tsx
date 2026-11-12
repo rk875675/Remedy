@@ -46,13 +46,14 @@ import {
   hapticWarning,
   hapticPrimaryAction,
   hapticSelection,
+  hapticCelebration,
 } from '../../lib/haptics';
 import { Skeleton } from '../../components/ui/Skeleton';
 import {
   incrementSessionsCompleted,
   maybeRequestReviewAfterSession,
 } from '../../lib/app-store-review';
-import { friendShareArmed } from '../../lib/analytics/events/engagement';
+import { friendShareArmed, petGrew } from '../../lib/analytics/events/engagement';
 import {
   armFriendShareHome,
   claimFriendSharePreview,
@@ -63,6 +64,19 @@ import {
 import { firstNameFromDisplayName, resolveDisplayName } from '../../lib/greeting';
 import { orderedEquipmentForExercises } from '../../lib/equipment';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
+import { PetBadge } from '../../components/pet/PetBadge';
+import { PetStageStrip } from '../../components/pet/PetStageStrip';
+import { fetchPetState } from '../../lib/petApi';
+import { petGrowthCopy, type PetState } from '../../lib/pet';
+import { markPetStageSeen, takePetGrowth } from '../../lib/petGrowth';
+import type { PetMood, PetStage } from '../../constants/petImages';
+import {
+  PET_GREW_LINES,
+  PET_GREW_TITLE,
+  PET_PAIN_UP_LINE,
+  PET_SESSION_COMPLETE_LINES,
+  petLine,
+} from '../../constants/petLines';
 import type { movementPattern } from '../../lib/analytics/events/enums';
 import type { Exercise, ExercisePhase, UserPlanSession } from '../../types/database';
 
@@ -219,6 +233,10 @@ export default function SessionPlayerScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const warmCopyRef = useRef<string | null>(null);
   const shareOfferRef = useRef<{ preview: boolean } | null>(null);
+  const [pet, setPet] = useState<PetState | null>(null);
+  const [grewFrom, setGrewFrom] = useState<PetStage | null>(null);
+  const petWarmCopyRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
 
   const player = useSilentVideoPlayer(null, (p) => {
     p.loop = false;
@@ -479,6 +497,28 @@ export default function SessionPlayerScreen() {
       cancelled = true;
     };
   }, [user?.id]);
+
+  // Best-effort. Records the stage before this session is completed, so the
+  // summary can tell whether completing it made the pet grow.
+  useEffect(() => {
+    let cancelled = false;
+    const userId = user?.id;
+    void fetchPetState().then((state) => {
+      if (cancelled || !state) return;
+      setPet(state);
+      if (userId) void markPetStageSeen(userId, state.stage);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (previewReported.current) return;
@@ -1008,6 +1048,22 @@ export default function SessionPlayerScreen() {
     }
 
     setPhase('complete');
+
+    // Best-effort: the summary renders without it.
+    const userId = user.id;
+    void fetchPetState().then(async (state) => {
+      if (!state || !mountedRef.current) return;
+      setPet(state);
+      const from = await takePetGrowth(userId, state.stage);
+      if (from === null || !mountedRef.current) return;
+      setGrewFrom(from);
+      hapticCelebration();
+      petGrew({
+        source_screen: 'session',
+        stage: state.stage,
+        total_sessions: state.total_sessions,
+      });
+    });
   }
 
   // Native App Store review sheet, then the friend-share card on the sessions
@@ -1117,6 +1173,7 @@ export default function SessionPlayerScreen() {
         onBegin={() => setPhase('checkin_before')}
         onBack={() => router.back()}
         insets={insets}
+        pet={pet}
       />
     );
   }
@@ -1335,17 +1392,36 @@ export default function SessionPlayerScreen() {
     warmCopyRef.current = WARM_COPY[Math.floor(Math.random() * WARM_COPY.length)] ?? '';
   }
   const warmCopy = warmCopyRef.current;
+  if (petWarmCopyRef.current === null) {
+    petWarmCopyRef.current =
+      PET_SESSION_COMPLETE_LINES[Math.floor(Math.random() * PET_SESSION_COMPLETE_LINES.length)] ?? '';
+  }
+  const petWarmCopy = petWarmCopyRef.current;
+  const petCompleteMood: PetMood = painAfter > painBefore ? 'concerned' : 'celebrating';
+  const compactHeight = SCREEN_HEIGHT < 720;
+  const badgeSize = compactHeight ? 132 : 176;
+  const showNextSession = nextSession !== null && !isProgramCompleted;
+  const showPetStrip = pet !== null && !(compactHeight && showNextSession);
+  const petStage = pet?.stage;
+  const petGrewLine =
+    pet && grewFrom !== null && petStage !== undefined && petStage !== 1
+      ? petLine(PET_GREW_LINES[petStage], pet.name)
+      : null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.centered, { flex: 1 }]}>
       <Animated.View
         style={[
-          styles.completeIconWrap,
+          pet ? styles.completePetWrap : styles.completeIconWrap,
           { transform: [{ scale: completionScale }] },
         ]}
       >
-        <Text style={styles.completeIcon}>✓</Text>
+        {pet ? (
+          <PetBadge stage={pet.stage} mood={petCompleteMood} size={badgeSize} />
+        ) : (
+          <Text style={styles.completeIcon}>✓</Text>
+        )}
       </Animated.View>
 
       <Text style={styles.completeTitle}>Session Complete!</Text>
@@ -1400,8 +1476,43 @@ export default function SessionPlayerScreen() {
           ],
         }}
       >
-        <Text style={styles.warmCopy}>{warmCopy}</Text>
+        {!pet ? (
+          <Text style={styles.warmCopy}>{warmCopy}</Text>
+        ) : petGrewLine !== null ? (
+          <>
+            <Text style={[styles.warmCopy, styles.petGrewTitle]}>
+              {petLine(PET_GREW_TITLE, pet.name)}
+            </Text>
+            <Text style={styles.warmCopy}>{petGrewLine}</Text>
+          </>
+        ) : painAfter > painBefore ? (
+          <Text style={styles.warmCopy}>{petLine(PET_PAIN_UP_LINE, pet.name)}</Text>
+        ) : (
+          <Text style={styles.warmCopy}>{petLine(petWarmCopy, pet.name)}</Text>
+        )}
       </Animated.View>
+
+      {pet && showPetStrip && (
+        <Animated.View
+          style={[
+            styles.completePetCard,
+            {
+              opacity: completeStatAnims[1],
+              transform: [
+                {
+                  translateY: completeStatAnims[1].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <PetStageStrip stage={pet.stage} size={48} />
+          <Text style={styles.completePetGrowth}>{petGrowthCopy(pet)}</Text>
+        </Animated.View>
+      )}
 
       {nextSession && !isProgramCompleted && (
         <Animated.View
@@ -1486,6 +1597,7 @@ function SessionPreviewScreen({
   onBegin,
   onBack,
   insets,
+  pet,
 }: {
   sessionMeta: { title: string; duration_minutes: number; week_number: number; session_number: number; phase: string } | null;
   exerciseCount: number;
@@ -1493,6 +1605,7 @@ function SessionPreviewScreen({
   onBegin: () => void;
   onBack: () => void;
   insets: { top: number; bottom: number };
+  pet: PetState | null;
 }) {
   // Visible during the native push — fading the whole preview from 0 made
   // the incoming session screen look blank, then pop in after the slide.
@@ -1514,6 +1627,11 @@ function SessionPreviewScreen({
 
       <View style={previewStyles.body}>
         <View style={previewStyles.hero}>
+          {pet ? (
+            <View style={previewStyles.petWrap}>
+              <PetBadge stage={pet.stage} mood="ready" size={SCREEN_HEIGHT < 720 ? 88 : 120} />
+            </View>
+          ) : null}
           <Text style={previewStyles.preLabel}>
             {sessionMeta
               ? `Week ${sessionMeta.week_number} · Session ${sessionMeta.session_number}`
@@ -1596,6 +1714,10 @@ const previewStyles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 24,
+  },
+  petWrap: {
+    alignItems: 'center',
+    marginBottom: 16,
   },
   preLabel: {
     fontSize: 13,
@@ -2199,6 +2321,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  completePetWrap: {
+    marginBottom: 16,
+  },
   completeTitle: {
     fontFamily: serifFont,
     fontSize: 32,
@@ -2249,6 +2374,27 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  petGrewTitle: {
+    color: colors.primary,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  completePetCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+    width: '100%',
+  },
+  completePetGrowth: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
   nextSessionCard: {
     backgroundColor: colors.surface,

@@ -31,6 +31,10 @@ import {
 } from '../lib/programSummary';
 import { loadCheckinDraft } from '../lib/nextProgram';
 import type { NextProgramChoice } from '../lib/schemas';
+import { fetchPetState } from '../lib/petApi';
+import type { PetState } from '../lib/pet';
+import { PetBadge } from '../components/pet/PetBadge';
+import { PET_PROGRAM_COMPLETE_LINE, petLine } from '../constants/petLines';
 
 type Loaded = {
   planId: string;
@@ -115,6 +119,7 @@ export default function ProgramCompleteScreen() {
   const [data, setData] = useState<Loaded | null>(null);
   const [hasDraft, setHasDraft] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [pet, setPet] = useState<PetState | null>(null);
   const tracked = useRef(false);
   const leaving = useRef(false);
 
@@ -151,6 +156,17 @@ export default function ProgramCompleteScreen() {
       ),
     ]).start();
   }, [phase, ready, revealAnims]);
+
+  // Best-effort and independent of `phase`: without a pet the glyph stays.
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPetState().then((state) => {
+      if (!cancelled && state) setPet(state);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -294,19 +310,28 @@ export default function ProgramCompleteScreen() {
       contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 32, 48) }]}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View style={[styles.iconWrap, { transform: [{ scale: iconScale }] }]}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>❋</Text>
-        </View>
+      <Animated.View
+        style={[styles.iconWrap, pet && styles.petIconWrap, { transform: [{ scale: iconScale }] }]}
+      >
+        {pet ? (
+          <PetBadge stage={pet.stage} mood="proud" size={150} />
+        ) : (
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconText}>❋</Text>
+          </View>
+        )}
       </Animated.View>
 
       {data && data.programNumber > 1 ? (
         <Text style={styles.eyebrow}>PROGRAM {data.programNumber}</Text>
       ) : null}
       <Text style={styles.heading}>Program Complete</Text>
-      <Text style={styles.subheading}>
+      <Text style={[styles.subheading, pet && styles.subheadingWithPet]}>
         {data ? `You finished your ${data.programName}.` : 'You finished your program.'}
       </Text>
+      {pet ? (
+        <Text style={styles.subheading}>{petLine(PET_PROGRAM_COMPLETE_LINE, pet.name)}</Text>
+      ) : null}
 
       {phase === 'loading' ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
@@ -409,6 +434,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
+  petIconWrap: {
+    width: 150,
+    height: 150,
+  },
   iconCircle: {
     width: 96,
     height: 96,
@@ -448,6 +477,9 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginBottom: 28,
     paddingHorizontal: 8,
+  },
+  subheadingWithPet: {
+    marginBottom: 6,
   },
   loader: {
     marginTop: 24,

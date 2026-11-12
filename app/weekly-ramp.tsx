@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  useWindowDimensions,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -7,10 +15,20 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { weeklyRampDecided, weeklyRampSuggested } from '../lib/analytics/events/program';
 import { maybeRequestReviewAfterSession } from '../lib/app-store-review';
-import { friendShareArmed } from '../lib/analytics/events/engagement';
+import { friendShareArmed, petGrew } from '../lib/analytics/events/engagement';
 import { armFriendShareHome, isShareTestAccount } from '../lib/friendShare';
 import { firstNameFromDisplayName, resolveDisplayName } from '../lib/greeting';
-import { hapticPrimaryAction, hapticSelection } from '../lib/haptics';
+import { hapticCelebration, hapticPrimaryAction, hapticSelection } from '../lib/haptics';
+import { fetchPetState } from '../lib/petApi';
+import type { PetState } from '../lib/pet';
+import { takePetGrowth } from '../lib/petGrowth';
+import { PetBadge } from '../components/pet/PetBadge';
+import {
+  PET_GREW_LINES,
+  PET_GREW_TITLE,
+  PET_WEEK_COMPLETE_LINE,
+  petLine,
+} from '../constants/petLines';
 import { colors, serifFont } from '../constants/colors';
 import { radius } from '../constants/spacing';
 import { shadows } from '../constants/shadows';
@@ -42,6 +60,35 @@ export default function WeeklyRampScreen() {
   const tracked = useRef(false);
   // Increment to re-trigger the load effect on manual retry.
   const [retryCount, setRetryCount] = useState(0);
+  const [pet, setPet] = useState<PetState | null>(null);
+  const [petGrewHere, setPetGrewHere] = useState(false);
+  // Short phones cannot fit the full badge above the suggestion card and both buttons.
+  const { height: windowHeight } = useWindowDimensions();
+  const petBadgeSize = windowHeight < 720 ? 84 : 132;
+
+  // Sessions that end a week skip the session summary, so the growth moment
+  // shows here. Best-effort: never touches loading or the buttons.
+  useEffect(() => {
+    let cancelled = false;
+    const userId = user?.id;
+    void fetchPetState().then(async (state) => {
+      if (cancelled || !state) return;
+      setPet(state);
+      if (!userId) return;
+      const from = await takePetGrowth(userId, state.stage);
+      if (cancelled || from === null) return;
+      setPetGrewHere(true);
+      hapticCelebration();
+      petGrew({
+        source_screen: 'weekly_ramp',
+        stage: state.stage,
+        total_sessions: state.total_sessions,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -297,12 +344,37 @@ export default function WeeklyRampScreen() {
           ? 'Your pain held steady across sessions this week.'
           : 'Your pain ticked up slightly this week.'
       : 'Nice work completing the week.';
+  const petStage = pet?.stage;
+  const petGrowthLine =
+    pet && petGrewHere && petStage !== undefined && petStage !== 1
+      ? petLine(PET_GREW_LINES[petStage], pet.name)
+      : null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + (pet ? 16 : 48), paddingBottom: insets.bottom + 24 },
+      ]}
+    >
       <View style={styles.content}>
+        {pet ? (
+          <View style={styles.petWrap}>
+            <PetBadge stage={pet.stage} mood="proud" size={petBadgeSize} />
+          </View>
+        ) : null}
         <Text style={styles.eyebrow}>WEEK {week} COMPLETE</Text>
         <Text style={styles.title}>Ready for next week?</Text>
+        {pet ? (
+          petGrowthLine !== null ? (
+            <Text style={styles.petLine}>
+              <Text style={styles.petLineGrew}>{petLine(PET_GREW_TITLE, pet.name)}</Text>{' '}
+              {petGrowthLine}
+            </Text>
+          ) : (
+            <Text style={styles.petLine}>{petLine(PET_WEEK_COMPLETE_LINE, pet.name)}</Text>
+          )
+        ) : null}
         <Text style={styles.body}>{deltaLine}</Text>
 
         <View style={styles.recCard}>
@@ -379,6 +451,19 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.textSecondary,
     marginBottom: 28,
+  },
+  petWrap: {
+    marginBottom: 20,
+  },
+  petLine: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  petLineGrew: {
+    color: colors.primary,
+    fontWeight: '700',
   },
   recCard: {
     backgroundColor: colors.surface,

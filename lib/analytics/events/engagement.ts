@@ -149,6 +149,24 @@ export const displayNameUpdated = defineEvent(
   z.object({ has_name: z.boolean() }).strict(),
 );
 
+/** The pet's name is never sent — only where it was named and whether it replaced an earlier name. */
+export const petNamed = defineEvent(
+  'pet_named',
+  z.object({ source_screen: sourceScreen, renamed: z.boolean() }).strict(),
+);
+
+/** The pet reached a new stage. Fired once, on the screen that shows the growth moment. */
+export const petGrew = defineEvent(
+  'pet_grew',
+  z
+    .object({
+      source_screen: sourceScreen,
+      stage: z.number().int().min(2).max(5),
+      total_sessions: count,
+    })
+    .strict(),
+);
+
 export const answersViewed = defineEvent(
   'answers_viewed',
   z.object({ source_screen: sourceScreen }).strict(),
