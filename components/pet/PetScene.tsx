@@ -13,13 +13,12 @@ type PetSceneProps = {
   onPressFirstName?: () => void;
   pet: PetState | null;
   mood: PetMood;
+  children?: React.ReactNode;
 };
 
 const TRACK_WIDTH = 180;
-/** Space at the bottom of the panel kept for the growth pill; the pet stands just above it. */
-const PILL_ZONE = 58;
 
-/** Home hero: forest-green panel with the pet standing on a soft hill. */
+/** Home hero: forest-green panel with the pet on a soft hill and the day's action on the hill. */
 export function PetScene({
   topInset,
   greeting,
@@ -27,18 +26,18 @@ export function PetScene({
   onPressFirstName,
   pet,
   mood,
+  children,
 }: PetSceneProps) {
   const { width, height } = useWindowDimensions();
-  const panelHeight = Math.min(330, Math.max(270, Math.round(height * 0.36)));
-  // The pet fills everything above the pill; its ears may reach up beside the name.
-  const petSize = Math.round((panelHeight - PILL_ZONE) * 0.94);
+  const petSize = Math.min(240, Math.max(170, Math.round(height * 0.27)));
+  const petAreaHeight = topInset + 30 + petSize;
   // The hill is the top of a large circle. A wide box with a big corner radius
   // would not work: the radius is clamped to half the shorter side, leaving a flat band.
   const hillSize = width * 1.8;
   const petName = pet?.name ?? 'Your armadillo';
 
   return (
-    <View style={[styles.panel, { height: panelHeight + topInset }]}>
+    <View style={styles.panel}>
       <View
         pointerEvents="none"
         style={[
@@ -48,16 +47,37 @@ export function PetScene({
             height: hillSize,
             borderRadius: hillSize / 2,
             left: (width - hillSize) / 2,
-            bottom: panelHeight * 0.45 - hillSize,
+            top: petAreaHeight - petSize * 0.24,
           },
         ]}
       />
 
+      <View style={{ height: petAreaHeight }} pointerEvents="box-none">
+        {pet ? (
+          <View pointerEvents="box-none" style={styles.petSlot}>
+            <Pet stage={pet.stage} mood={mood} size={petSize} accessibilityLabel={petName} />
+          </View>
+        ) : null}
+      </View>
+
       {pet ? (
-        <View pointerEvents="box-none" style={[styles.petSlot, { bottom: PILL_ZONE }]}>
-          <Pet stage={pet.stage} mood={mood} size={petSize} accessibilityLabel={petName} />
+        <View pointerEvents="none" style={styles.pillSlot}>
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>{petGrowthCopy(pet)}</Text>
+            {pet.stage < 5 ? (
+              <View style={styles.track}>
+                <View style={[styles.trackFill, { width: TRACK_WIDTH * stageProgress(pet) }]} />
+              </View>
+            ) : null}
+          </View>
         </View>
       ) : null}
+
+      {children ? (
+        <View style={styles.actions}>{children}</View>
+      ) : (
+        <View style={styles.noActions} />
+      )}
 
       {/* After the pet so the text stays readable and tappable where they meet. */}
       <View style={[styles.header, { paddingTop: topInset + 16 }]}>
@@ -87,25 +107,55 @@ export function PetScene({
           {petName}
         </Text>
       </View>
-
-      {pet ? (
-        <View pointerEvents="none" style={styles.pillSlot}>
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>{petGrowthCopy(pet)}</Text>
-            {pet.stage < 5 ? (
-              <View style={styles.track}>
-                <View style={[styles.trackFill, { width: TRACK_WIDTH * stageProgress(pet) }]} />
-              </View>
-            ) : null}
-          </View>
-        </View>
-      ) : null}
     </View>
   );
 }
 
+export function SceneLabel({ children }: { children: React.ReactNode }) {
+  return <Text style={styles.sceneLabel}>{children}</Text>;
+}
+
+export function SceneTitle({
+  children,
+  hasBody,
+}: {
+  children: React.ReactNode;
+  hasBody?: boolean;
+}) {
+  return (
+    <Text style={[styles.sceneTitle, hasBody ? styles.sceneTitleWithBody : null]} numberOfLines={2}>
+      {children}
+    </Text>
+  );
+}
+
+export function SceneBody({ children }: { children: React.ReactNode }) {
+  return <Text style={styles.sceneBody}>{children}</Text>;
+}
+
+export function SceneButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      style={styles.sceneButton}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+    >
+      <Text style={styles.sceneButtonText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+export function SceneLink({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button">
+      <Text style={styles.sceneLink}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 const styles = StyleSheet.create({
   panel: {
+    width: '100%',
     backgroundColor: colors.primary,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
@@ -142,13 +192,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
+    bottom: 0,
     alignItems: 'center',
   },
   pillSlot: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 12,
+    marginTop: 10,
     alignItems: 'center',
   },
   pill: {
@@ -175,5 +223,58 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: '#FFFFFF',
+  },
+  actions: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 22,
+  },
+  noActions: {
+    paddingBottom: 16,
+  },
+  sceneLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    marginBottom: 6,
+  },
+  sceneTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+    lineHeight: 30,
+    color: '#FFFFFF',
+    marginBottom: 14,
+  },
+  sceneTitleWithBody: {
+    marginBottom: 6,
+  },
+  sceneBody: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 14,
+  },
+  sceneButton: {
+    height: 54,
+    borderRadius: 999,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sceneButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.primaryDeep,
+  },
+  sceneLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.85)',
+    textAlign: 'center',
+    paddingVertical: 10,
   },
 });

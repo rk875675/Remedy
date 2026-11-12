@@ -12,9 +12,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { colors, serifFont } from '../../constants/colors';
+import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
+
 import { hapticPrimaryAction, hapticSelection } from '../../lib/haptics';
 import {
   scheduleStretchReminders,
@@ -75,7 +75,15 @@ import { flushPendingProgramApply } from '../../lib/applyProgramAnswers';
 import { derivePetMood, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
 import { countMissedThisWeek } from '../../lib/streak';
-import { PetScene } from '../../components/pet/PetScene';
+import {
+  PetScene,
+  SceneLabel,
+  SceneTitle,
+  SceneBody,
+  SceneButton,
+  SceneLink,
+} from '../../components/pet/PetScene';
+import { PET_HOME_DONE_LINE, PET_HOME_REST_LINE } from '../../constants/petLines';
 import {
   PetNameSheet,
   hasDismissedPetNamePrompt,
@@ -103,21 +111,6 @@ function formatCountdown(ms: number): string {
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function sessionPurposeLine(phase: string, weekNumber: number): string {
-  switch (phase) {
-    case 'mobility':
-      return `Week ${weekNumber} · Loosen up so daily movement feels easier`;
-    case 'activation':
-      return `Week ${weekNumber} · Wake up the muscles that support your spine`;
-    case 'strength':
-      return `Week ${weekNumber} · Build capacity so your back can handle more`;
-    case 'recovery':
-      return `Week ${weekNumber} · Easy movement so your body can adapt`;
-    default:
-      return `Week ${weekNumber} · Today's planned work for your back`;
-  }
 }
 
 // Live countdown to the next stretch reminder. Reads its settings from
@@ -217,15 +210,6 @@ function StretchReminderCard() {
       >
         <Text style={styles.stretchCardButtonText}>{paused ? '▶' : '❚❚'}</Text>
       </TouchableOpacity>
-    </View>
-  );
-}
-
-function MetaChip({ glyph, label }: { glyph: string; label: string }) {
-  return (
-    <View style={styles.chip}>
-      <Text style={styles.chipGlyph}>{glyph}</Text>
-      <Text style={styles.chipText}>{label}</Text>
     </View>
   );
 }
@@ -599,6 +583,125 @@ export default function HomeScreen() {
     missedPlannedDays: countMissedThisWeek(thisWeekCompletions, weekSchedule),
     hour: new Date().getHours(),
   });
+  // Today's session, rest day, or program completion: lives on the hill in the pet scene.
+  const sceneActions = !loaded ? null : userProgram && userProgram.current_week > durationWeeks ? (
+    <>
+      <SceneLabel>PROGRAM COMPLETE</SceneLabel>
+      <SceneTitle hasBody>You finished your program!</SceneTitle>
+      <SceneBody>
+        You completed your full program. View your summary and pick what&apos;s next.
+      </SceneBody>
+      <SceneButton
+        label="View summary"
+        onPress={() => {
+          hapticPrimaryAction();
+          router.push('/program-complete');
+        }}
+      />
+    </>
+  ) : userProgram && !userProgram.active_plan_id ? (
+    <>
+      <SceneLabel>ALMOST THERE</SceneLabel>
+      <SceneTitle hasBody>Your program needs to be built</SceneTitle>
+      <SceneBody>
+        Tap below to generate your personalized sessions from your quiz answers.
+      </SceneBody>
+      <SceneButton
+        label="Build my program"
+        onPress={() => {
+          hapticPrimaryAction();
+          router.replace('/building-plan');
+        }}
+      />
+    </>
+  ) : todaySession ? (
+    <>
+      <SceneLabel>
+        {`TODAY · ${todaySession.estimated_minutes} MIN · ${todaySession.exercise_count} EXERCISE${todaySession.exercise_count !== 1 ? 'S' : ''}`}
+      </SceneLabel>
+      <SceneTitle>{todaySession.title}</SceneTitle>
+      <SceneButton
+        label="Start session"
+        onPress={() => {
+          hapticPrimaryAction();
+          sessionStartTapped({
+            source_screen: 'home',
+            week_number: todaySession.week_number,
+            session_number: todaySession.session_number,
+          });
+          void goToSession(todaySession.id);
+        }}
+      />
+    </>
+  ) : isDoneToday ? (
+    <>
+      <SceneLabel>DONE FOR TODAY</SceneLabel>
+      <SceneTitle hasBody>You&apos;re good for today</SceneTitle>
+      <SceneBody>{PET_HOME_DONE_LINE}</SceneBody>
+      {nextWorkoutDay !== null && (
+        <SceneBody>Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}</SceneBody>
+      )}
+      {nextSessionId && (
+        <SceneLink
+          label="Do another session →"
+          onPress={() => {
+            const position = nextSessionPosition.current;
+            if (position) {
+              sessionStartTapped({
+                source_screen: 'home',
+                week_number: position.week,
+                session_number: position.session,
+              });
+            }
+            void goToSession(nextSessionId);
+          }}
+        />
+      )}
+    </>
+  ) : (
+    <>
+      <SceneLabel>{isRestDay ? 'REST DAY' : 'UP NEXT'}</SceneLabel>
+      <SceneTitle hasBody>{isRestDay ? 'Recovery day' : 'Your next session'}</SceneTitle>
+      <SceneBody>
+        {isRestDay ? PET_HOME_REST_LINE : 'Your next session is ready whenever you are.'}
+      </SceneBody>
+      {isRestDay && nextWorkoutDay !== null && (
+        <SceneBody>Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}</SceneBody>
+      )}
+      {nextSessionId &&
+        (isRestDay ? (
+          <SceneLink
+            label="View next session →"
+            onPress={() => {
+              const position = nextSessionPosition.current;
+              if (position) {
+                sessionStartTapped({
+                  source_screen: 'home',
+                  week_number: position.week,
+                  session_number: position.session,
+                });
+              }
+              void goToSession(nextSessionId);
+            }}
+          />
+        ) : (
+          <SceneButton
+            label="Start session"
+            onPress={() => {
+              const position = nextSessionPosition.current;
+              if (position) {
+                sessionStartTapped({
+                  source_screen: 'home',
+                  week_number: position.week,
+                  session_number: position.session,
+                });
+              }
+              void goToSession(nextSessionId);
+            }}
+          />
+        ))}
+    </>
+  );
   const petScene = (
     <View style={styles.petScene}>
       {/* Keeps the pull-down area green instead of showing the page background. */}
@@ -610,7 +713,9 @@ export default function HomeScreen() {
         onPressFirstName={openProfileNameEdit}
         pet={pet}
         mood={petMood}
-      />
+      >
+        {sceneActions}
+      </PetScene>
     </View>
   );
 
@@ -634,156 +739,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
       {petScene}
-
-      {/* Today's session, rest day, or program completion */}
-      {userProgram && userProgram.current_week > durationWeeks ? (
-        <View style={styles.sessionCard}>
-          <Text style={styles.sessionLabel}>Program Complete</Text>
-          <Text style={styles.sessionTitle}>You finished your program!</Text>
-          <Text style={styles.restTip}>
-            You completed your full program. View your summary and pick what&apos;s next.
-          </Text>
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={() => {
-              hapticPrimaryAction();
-              router.push('/program-complete');
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.startButtonText}>View Summary</Text>
-          </TouchableOpacity>
-        </View>
-      ) : userProgram && !userProgram.active_plan_id ? (
-        <View style={styles.sessionCard}>
-          <Text style={styles.sessionLabel}>Almost there</Text>
-          <Text style={styles.sessionTitle}>Your program needs to be built</Text>
-          <Text style={styles.restTip}>
-            Tap below to generate your personalized sessions from your quiz answers.
-          </Text>
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={() => {
-              hapticPrimaryAction();
-              router.replace('/building-plan');
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.startButtonText}>Build My Program</Text>
-          </TouchableOpacity>
-        </View>
-      ) : todaySession ? (
-        <View style={styles.sessionCard}>
-          <Text style={styles.sessionLabel}>Today's Session</Text>
-          <Text style={styles.sessionTitle}>{todaySession.title}</Text>
-          <Text style={styles.sessionPurpose}>
-            {sessionPurposeLine(todaySession.phase, todaySession.week_number)}
-          </Text>
-
-          <View style={styles.chipRow}>
-            <MetaChip glyph="◷" label={`${todaySession.estimated_minutes} min`} />
-            <MetaChip
-              glyph="▬"
-              label={`${todaySession.exercise_count} exercise${todaySession.exercise_count !== 1 ? 's' : ''}`}
-            />
-            <MetaChip
-              glyph="○"
-              label={`W${todaySession.week_number} · S${todaySession.session_number}`}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={() => {
-              hapticPrimaryAction();
-              sessionStartTapped({
-                source_screen: 'home',
-                week_number: todaySession.week_number,
-                session_number: todaySession.session_number,
-              });
-              void goToSession(todaySession.id);
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.startButtonText}>Start Session</Text>
-            <View style={styles.startArrow}>
-              <Text style={styles.startArrowText}>→</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      ) : isDoneToday ? (
-        <View style={styles.sessionCard}>
-          <Text style={styles.sessionLabel}>All set</Text>
-          <Text style={styles.sessionTitle}>You're good for today</Text>
-          <Text style={styles.restTip}>
-            Your session is done. Recovery is part of the program. Try a short walk or gentle stretching today.
-          </Text>
-          {nextWorkoutDay !== null && (
-            <View style={styles.nextChip}>
-              <Text style={styles.nextChipText}>
-                Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}
-              </Text>
-            </View>
-          )}
-          {nextSessionId && (
-            <TouchableOpacity
-              onPress={() => {
-                const position = nextSessionPosition.current;
-                if (position) {
-                  sessionStartTapped({
-                    source_screen: 'home',
-                    week_number: position.week,
-                    session_number: position.session,
-                  });
-                }
-                void goToSession(nextSessionId);
-              }}
-              activeOpacity={0.7}
-              style={styles.nextSessionButton}
-            >
-              <Text style={styles.nextSessionLink}>Do another session →</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ) : (
-        <View style={styles.sessionCard}>
-          <Text style={styles.sessionLabel}>{isRestDay ? 'Rest day' : 'Up Next'}</Text>
-          <Text style={styles.sessionTitle}>{isRestDay ? 'Recovery day' : 'Your next session'}</Text>
-          <Text style={styles.restTip}>
-            {isRestDay
-              ? 'Recovery is part of the program. A short walk or an easy stretch is enough today.'
-              : 'Your next session is ready whenever you are.'}
-          </Text>
-          {isRestDay && nextWorkoutDay !== null && (
-            <View style={styles.nextChip}>
-              <Text style={styles.nextChipText}>
-                Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}
-              </Text>
-            </View>
-          )}
-          {nextSessionId && (
-            <TouchableOpacity
-              onPress={() => {
-                const position = nextSessionPosition.current;
-                if (position) {
-                  sessionStartTapped({
-                    source_screen: 'home',
-                    week_number: position.week,
-                    session_number: position.session,
-                  });
-                }
-                void goToSession(nextSessionId);
-              }}
-              activeOpacity={0.7}
-              style={styles.nextSessionButton}
-            >
-              <Text style={styles.nextSessionLink}>
-                {isRestDay ? 'View next session →' : 'Start session →'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
 
       {userProgram?.active_plan_id ? (
         <ThisWeekCard
@@ -942,127 +897,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Session / rest day card — the hero; highest elevation on screen
-  // Tinted (not white) so it reads as a different material from the cards below.
-  sessionCard: {
-    backgroundColor: colors.primaryMuted,
-    borderRadius: 32,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 28,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  nextChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginBottom: 16,
-  },
-  nextChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  sessionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-    letterSpacing: 0.2,
-    marginBottom: 10,
-  },
-  sessionTitle: {
-    fontFamily: serifFont,
-    fontSize: 34,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 10,
-    lineHeight: 39,
-    letterSpacing: -0.6,
-    paddingRight: 24,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 22,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(62, 107, 78, 0.18)',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  chipGlyph: {
-    fontSize: 11,
-    color: colors.primary,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  sessionPurpose: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  startButton: {
-    height: 56,
-    borderRadius: 999,
-    backgroundColor: '#17261C',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.medium,
-    shadowColor: '#17261C',
-    shadowOpacity: 0.22,
-  },
-  startArrow: {
-    position: 'absolute',
-    right: 8,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  startArrowText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  startButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  restTip: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    lineHeight: 23,
-    marginBottom: 20,
-  },
-  nextSessionButton: {
-    alignSelf: 'flex-start',
-  },
-  nextSessionLink: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
   // Skeletons
   skeletonCard: {
     marginBottom: 16,

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,14 +15,16 @@ import { LineChart, BarChart } from 'react-native-gifted-charts';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { colors, serifFont } from '../../constants/colors';
+import { colors } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
+import { type } from '../../constants/typography';
 import { hapticSelection } from '../../lib/haptics';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { MiniRing } from '../../components/ui/MiniRing';
 import { progressRangeChanged } from '../../lib/analytics/events/engagement';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
+import { PET_STAGE_SCALE, petImage, type PetStage } from '../../constants/petImages';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
 import { PET_FALLBACK_NAME } from '../../constants/petLines';
@@ -87,19 +90,28 @@ function activityBarLayout(barCount: number, chartWidth: number): {
 const PATH_H = 48;
 const PATH_MID = 22;
 const PATH_PAD = 16;
+const PET_ON_NODE = 46;
+// The highest node is 6px above PATH_MID. The tallest pet is PET_ON_NODE and
+// stands with its bottom on that point, plus 8px of air so it is not clipped.
+const PATH_PET_PAD = PET_ON_NODE - (PATH_MID - 6) + 8;
+const JOURNEY_TRACK_W = 180;
+const STAGE_SLOT = 52;
+const PATH_LINE = 'rgba(255, 255, 255, 0.35)';
 
 // The program as a route: one stop per week on a gently rolling line.
-// Covered ground is solid, what's ahead is dashed, today is the warm stop.
+// Covered ground is solid, what's ahead is dashed, and the pet stands on today.
 function ProgramPath({
   weeks,
   currentWeek,
   complete,
   finishLabel,
+  pet,
 }: {
   weeks: number;
   currentWeek: number;
   complete: boolean;
   finishLabel: string;
+  pet: PetState | null;
 }) {
   const [width, setWidth] = useState(0);
   const span = width - PATH_PAD * 2;
@@ -114,6 +126,10 @@ function ProgramPath({
   });
   const currentIdx = complete ? weeks - 1 : currentWeek - 1;
   const lastIdx = weeks - 1;
+  const here =
+    !complete && currentIdx >= 0 && currentIdx < stops.length
+      ? stops[currentIdx]
+      : undefined;
 
   return (
     <View
@@ -123,72 +139,79 @@ function ProgramPath({
         complete ? 'Program complete' : `Week ${currentWeek} of ${weeks}`
       }
     >
+      <View style={styles.pathShift}>
+        {width > 0 ? (
+            <Svg width={width} height={PATH_H}>
+              {stops.slice(0, -1).map((a, i) => {
+                const b = stops[i + 1]!;
+                const dx = (b.x - a.x) / 2;
+                const walked = b.reached;
+                return (
+                  <Path
+                    key={`seg-${i}`}
+                    d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
+                    fill="none"
+                    strokeLinecap="round"
+                    stroke={PATH_LINE}
+                    strokeWidth={walked ? 3 : 2}
+                    strokeDasharray={walked ? undefined : '1 7'}
+                  />
+                );
+              })}
+              {stops.map((s, i) => {
+                if (s.current) {
+                  if (!pet) {
+                    return (
+                      <Circle
+                        key={`stop-${i}`}
+                        cx={s.x}
+                        cy={s.y}
+                        r={6.5}
+                        fill={colors.background}
+                      />
+                    );
+                  }
+                  return null;
+                }
+                if (s.reached) {
+                  const isEnd = complete && i === lastIdx;
+                  return (
+                    <React.Fragment key={`stop-${i}`}>
+                      {isEnd ? (
+                        <Circle cx={s.x} cy={s.y} r={15} fill="#FFFFFF" fillOpacity={0.2} />
+                      ) : null}
+                      <Circle cx={s.x} cy={s.y} r={6.5} fill={colors.background} />
+                      <Circle cx={s.x} cy={s.y} r={2} fill={colors.surface} />
+                    </React.Fragment>
+                  );
+                }
+                return (
+                  <Circle
+                    key={`stop-${i}`}
+                    cx={s.x}
+                    cy={s.y}
+                    r={5.5}
+                    fill={PATH_LINE}
+                    stroke={PATH_LINE}
+                    strokeWidth={2}
+                  />
+                );
+              })}
+            </Svg>
+        ) : null}
+      </View>
       {width > 0 ? (
-        <>
-          <Svg width={width} height={PATH_H}>
-            {stops.slice(0, -1).map((a, i) => {
-              const b = stops[i + 1]!;
-              const dx = (b.x - a.x) / 2;
-              const walked = b.reached;
-              return (
-                <Path
-                  key={`seg-${i}`}
-                  d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
-                  fill="none"
-                  strokeLinecap="round"
-                  stroke={walked ? colors.primary : colors.border}
-                  strokeWidth={walked ? 3 : 2}
-                  strokeDasharray={walked ? undefined : '1 7'}
-                />
-              );
-            })}
-            {stops.map((s, i) => {
-              if (s.current) {
-                return (
-                  <React.Fragment key={`stop-${i}`}>
-                    <Circle cx={s.x} cy={s.y} r={15} fill={colors.secondary} fillOpacity={0.14} />
-                    <Circle cx={s.x} cy={s.y} r={9} fill={colors.surface} stroke={colors.secondary} strokeWidth={2.5} />
-                    <Circle cx={s.x} cy={s.y} r={3.5} fill={colors.secondary} />
-                  </React.Fragment>
-                );
-              }
-              if (s.reached) {
-                const isEnd = complete && i === lastIdx;
-                return (
-                  <React.Fragment key={`stop-${i}`}>
-                    {isEnd ? (
-                      <Circle cx={s.x} cy={s.y} r={15} fill={colors.primary} fillOpacity={0.14} />
-                    ) : null}
-                    <Circle cx={s.x} cy={s.y} r={6.5} fill={colors.primary} />
-                    <Circle cx={s.x} cy={s.y} r={2} fill={colors.surface} />
-                  </React.Fragment>
-                );
-              }
-              return (
-                <Circle
-                  key={`stop-${i}`}
-                  cx={s.x}
-                  cy={s.y}
-                  r={5.5}
-                  fill={colors.background}
-                  stroke={colors.border}
-                  strokeWidth={2}
-                />
-              );
-            })}
-          </Svg>
-          <View style={styles.pathLabels}>
-            {currentIdx !== 0 ? (
-              <Text style={[styles.pathLabel, styles.pathLabelStart]}>Start</Text>
-            ) : null}
-            {currentIdx !== lastIdx ? (
-              <Text style={[styles.pathLabel, styles.pathLabelEnd]}>{finishLabel}</Text>
-            ) : null}
+        <View style={styles.pathLabels}>
+          {currentIdx !== 0 ? (
+            <Text style={[styles.pathLabel, styles.pathLabelStart]}>Start</Text>
+          ) : null}
+          {currentIdx !== lastIdx ? (
+            <Text style={[styles.pathLabel, styles.pathLabelEnd]}>{finishLabel}</Text>
+          ) : null}
+          {complete ? (
             <Text
               style={[
                 styles.pathLabel,
-                styles.pathLabelHere,
-                complete && styles.pathLabelDone,
                 currentIdx === 0
                   ? styles.pathLabelStart
                   : currentIdx === lastIdx
@@ -196,11 +219,69 @@ function ProgramPath({
                   : { left: (stops[currentIdx]?.x ?? 0) - 45, width: 90, textAlign: 'center' as const },
               ]}
             >
-              {complete ? 'Finished' : "You're here"}
+              Finished
             </Text>
-          </View>
-        </>
+          ) : null}
+        </View>
       ) : null}
+      {width > 0 && pet && here ? (
+        <NodePet x={here.x} y={here.y} stage={pet.stage} />
+      ) : null}
+    </View>
+  );
+}
+
+function NodePet({ x, y, stage }: { x: number; y: number; stage: PetStage }) {
+  const drawn = PET_ON_NODE * PET_STAGE_SCALE[stage];
+  const shadowW = drawn * 0.55;
+  const shadowH = Math.max(4, drawn * 0.08);
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: x - drawn / 2,
+        top: PATH_PET_PAD + y - drawn,
+        width: drawn,
+        height: drawn + shadowH / 2,
+        overflow: 'visible',
+      }}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          left: (drawn - shadowW) / 2,
+          top: drawn - shadowH / 2,
+          width: shadowW,
+          height: shadowH,
+          borderRadius: shadowW / 2,
+          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        }}
+      />
+      <Image
+        source={petImage(stage, 'idle')}
+        resizeMode="contain"
+        accessible={false}
+        style={{ position: 'absolute', top: 0, left: 0, width: drawn, height: drawn }}
+      />
+    </View>
+  );
+}
+
+function JourneyFrame({
+  topInset,
+  children,
+}: {
+  topInset: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.journeyBleed}>
+      {/* Keeps the pull-down area green instead of showing the page background. */}
+      <View pointerEvents="none" style={styles.journeyOverscroll} />
+      <View style={[styles.journeyPanel, { paddingTop: topInset + 16 }]}>
+        {children}
+      </View>
     </View>
   );
 }
@@ -432,7 +513,10 @@ export default function ProgressScreen() {
   if (!loaded) {
     return (
       <TabFadeWrapper>
-        <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.container}>
+          <JourneyFrame topInset={insets.top}>
+            <Text style={styles.journeyLabel}>PROGRESS</Text>
+          </JourneyFrame>
           <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonBlock} />
           <Skeleton height={100} borderRadius={radius.card} style={styles.skeletonBlock} />
           <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonBlock} />
@@ -441,55 +525,81 @@ export default function ProgressScreen() {
     );
   }
 
+  const petName = pet?.name ?? PET_FALLBACK_NAME;
+
   return (
     <TabFadeWrapper>
       <ScrollView
-        style={[styles.container, { paddingTop: insets.top + 16 }]}
+        style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Progress</Text>
-
-        {userProgram && (
-          <View style={styles.programBlock}>
-            <Text style={styles.kicker}>Program</Text>
-            <Text style={styles.heroFigure}>
-              {isProgramComplete ? 'Complete' : `Week ${programWeek}`}
-              {!isProgramComplete && (
-                <Text style={styles.progressWeekDim}> of {durationWeeks}</Text>
-              )}
-            </Text>
-            <Text style={styles.weeksToGo}>
+        <JourneyFrame topInset={insets.top}>
+          <Text style={styles.journeyLabel}>PROGRESS</Text>
+          <Text style={styles.journeyHeadline}>
+            {userProgram
+              ? isProgramComplete
+                ? 'Complete'
+                : `Week ${programWeek}`
+              : pet
+                ? petName
+                : 'Progress'}
+            {userProgram && !isProgramComplete ? (
+              <Text style={styles.journeyHeadlineDim}> of {durationWeeks}</Text>
+            ) : null}
+          </Text>
+          {userProgram ? (
+            <Text style={styles.journeySub}>
               {isProgramComplete
                 ? 'You finished your program!'
                 : weeksRemaining > 0
                 ? `${weeksRemaining} week${weeksRemaining !== 1 ? 's' : ''} to go`
                 : 'Final week'}
-              {estimatedEnd ? (
-                <Text style={styles.estimatedEnd}>{`  ·  Est. finish ${estimatedEnd}`}</Text>
-              ) : null}
+              {estimatedEnd ? `  ·  Est. finish ${estimatedEnd}` : null}
             </Text>
+          ) : null}
+          {userProgram ? (
             <ProgramPath
               weeks={durationWeeks}
               currentWeek={programWeek}
               complete={isProgramComplete}
               finishLabel={`Week ${durationWeeks}`}
+              pet={pet}
             />
-          </View>
-        )}
-
-        {pet && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{pet.name ?? PET_FALLBACK_NAME}</Text>
-            <PetStageStrip stage={pet.stage} size={52} />
-            <Text style={styles.petGrowthText}>{petGrowthCopy(pet)}</Text>
-            {pet.stage < 5 && (
-              <View style={styles.petBarTrack}>
-                <View style={[styles.petBarFill, { width: `${Math.round(stageProgress(pet) * 100)}%` }]} />
+          ) : null}
+          {pet ? (
+            <View style={styles.growthPillWrap}>
+              <View style={styles.growthPill}>
+                <Text style={styles.growthPillText}>{petGrowthCopy(pet)}</Text>
+                {pet.stage < 5 ? (
+                  <View style={styles.growthTrack}>
+                    <View
+                      style={[
+                        styles.growthTrackFill,
+                        { width: JOURNEY_TRACK_W * stageProgress(pet) },
+                      ]}
+                    />
+                  </View>
+                ) : null}
               </View>
-            )}
+            </View>
+          ) : null}
+        </JourneyFrame>
+
+        {pet ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{petName}</Text>
+            <PetStageStrip stage={pet.stage} size={STAGE_SLOT} />
+            <View style={styles.thresholdRow}>
+              {pet.thresholds.map((sessions, index) => (
+                <View key={index} style={styles.thresholdSlot}>
+                  <Text style={styles.thresholdLabel}>{sessions}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.thresholdUnit}>sessions</Text>
           </View>
-        )}
+        ) : null}
 
         {userProgram && !isProgramComplete && (
           <View style={styles.card}>
@@ -711,23 +821,58 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  title: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 16,
-    letterSpacing: -0.1,
+  // Full-bleed: cancels the container's horizontal padding.
+  journeyBleed: {
+    marginHorizontal: -24,
+    marginBottom: 20,
   },
-  programBlock: {
-    marginBottom: 24,
+  journeyOverscroll: {
+    position: 'absolute',
+    top: -600,
+    left: 0,
+    right: 0,
+    height: 600,
+    backgroundColor: colors.primary,
+  },
+  journeyPanel: {
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    overflow: 'visible',
+  },
+  journeyLabel: {
+    ...type.label,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 6,
+  },
+  journeyHeadline: {
+    ...type.title,
+    color: '#FFFFFF',
+  },
+  journeyHeadlineDim: {
+    fontSize: 20,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  journeySub: {
+    ...type.body,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 4,
   },
   pathWrap: {
     marginTop: 18,
-    height: PATH_H + 20,
+    height: PATH_PET_PAD + PATH_H + 20,
+    overflow: 'visible',
+  },
+  pathShift: {
+    marginTop: PATH_PET_PAD,
   },
   pathLabels: {
     position: 'absolute',
-    top: PATH_H + 2,
+    top: PATH_PET_PAD + PATH_H + 2,
     left: 0,
     right: 0,
     height: 18,
@@ -736,7 +881,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textTertiary,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   pathLabelStart: {
     left: 0,
@@ -745,26 +890,56 @@ const styles = StyleSheet.create({
     right: 0,
     textAlign: 'right',
   },
-  pathLabelHere: {
-    color: colors.secondary,
+  growthPillWrap: {
+    alignItems: 'center',
+    marginTop: 16,
   },
-  pathLabelDone: {
-    color: colors.primary,
+  growthPill: {
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    borderRadius: radius.circle,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: 'center',
   },
-  kicker: {
+  growthPillText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.primary,
-    marginBottom: 4,
+    color: '#FFFFFF',
   },
-  heroFigure: {
-    fontFamily: serifFont,
-    fontSize: 36,
-    lineHeight: 42,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.6,
-    marginBottom: 4,
+  growthTrack: {
+    width: JOURNEY_TRACK_W,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  growthTrackFill: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  thresholdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  thresholdSlot: {
+    width: STAGE_SLOT,
+    alignItems: 'center',
+  },
+  thresholdLabel: {
+    ...type.metric,
+    fontSize: 11,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  thresholdUnit: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
   },
   card: {
     backgroundColor: colors.surface,
@@ -874,17 +1049,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: colors.textSecondary,
   },
-  estimatedEnd: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  weeksToGo: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.primary,
-  },
   showingUpBody: {
     fontSize: 14,
     lineHeight: 21,
@@ -934,24 +1098,6 @@ const styles = StyleSheet.create({
   },
   showingUpDayLabelDone: {
     color: '#FFFFFF',
-  },
-  petGrowthText: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.textSecondary,
-    marginTop: 12,
-  },
-  petBarTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.borderLight,
-    overflow: 'hidden',
-    marginTop: 10,
-  },
-  petBarFill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
   },
   skeletonBlock: {
     marginBottom: 16,
