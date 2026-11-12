@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
+import { PetBadge } from '../../components/pet/PetBadge';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
@@ -38,31 +39,11 @@ export default function FinalizingScreen() {
   }, [answers]);
 
   const fillAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const proofOpacity = useRef(new Animated.Value(0)).current;
   const routerRef = useRef(router);
   routerRef.current = router;
 
   useEffect(() => {
-    // Gentle breathing pulse on the icon while the plan "builds".
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.06,
-          duration: 1100,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1100,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-
     Animated.timing(proofOpacity, {
       toValue: 1,
       duration: 400,
@@ -70,11 +51,7 @@ export default function FinalizingScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-
-    return () => {
-      loop.stop();
-    };
-  }, [pulseAnim, proofOpacity]);
+  }, [proofOpacity]);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,12 +97,9 @@ export default function FinalizingScreen() {
       <Stack.Screen options={{ gestureEnabled: false, headerShown: false }} />
       <WarmBackground />
       <View style={styles.content}>
-        <Animated.View style={[styles.iconWrap, { transform: [{ scale: pulseAnim }] }]}>
-          <View style={styles.iconHalo} />
-          <View style={styles.iconArea}>
-            <Text style={styles.icon}>◎</Text>
-          </View>
-        </Animated.View>
+        <View style={styles.iconWrap}>
+          <PetBadge stage={1} mood="ready" size={120} />
+        </View>
 
         <Text style={styles.title}>Building your plan</Text>
 
@@ -175,33 +149,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconWrap: {
-    width: 104,
-    height: 104,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 28,
-  },
-  iconHalo: {
-    position: 'absolute',
-    width: 104,
-    height: 104,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primaryMuted,
-  },
-  iconArea: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.high,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.3,
-  },
-  icon: {
-    fontSize: 36,
-    color: '#FFFFFF',
   },
   title: {
     fontSize: 26,

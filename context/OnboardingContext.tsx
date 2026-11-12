@@ -85,6 +85,9 @@ type LocalSelections = {
   // so resume can leave the screen.
   recognize_selected: RecognizeKey[];
   recognize_completed: boolean;
+  // Pet name typed on the pet screen. Sent with setPetName on building-plan, never
+  // with the onboarding_answers upsert.
+  pet_name: string | null;
 };
 
 export type OnboardingProgress = { step: OnboardingStep } & LocalSelections;
@@ -204,6 +207,7 @@ const DEFAULT_PROGRESS: OnboardingProgress = {
   agreed_legal: false,
   recognize_selected: [],
   recognize_completed: false,
+  pet_name: null,
 };
 
 export async function clearStoredAnswers(): Promise<void> {
@@ -325,6 +329,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                   agreed_legal: p.agreed_legal === true,
                   recognize_selected: parseRecognizeSelected(p.recognize_selected),
                   recognize_completed: p.recognize_completed === true,
+                  pet_name: typeof p.pet_name === 'string' ? p.pet_name : null,
                 });
               }
             }

@@ -18,6 +18,10 @@ import {
   dismissSuperwall,
 } from '../../lib/superwall';
 import { PromoCodeSheet } from '../../components/PromoCodeSheet';
+import { PetBadge } from '../../components/pet/PetBadge';
+import { PET_MATCH_LINE, petLine } from '../../constants/petLines';
+import type { PetStage } from '../../constants/petImages';
+import { fetchPetState } from '../../lib/petApi';
 import { supabase } from '../../lib/supabase';
 import { getPendingPurchase, setPendingPurchase } from '../../lib/pendingPurchase';
 import { getLatestRemedyTransaction, restoreRemedyTransaction } from '../../lib/iap';
@@ -50,7 +54,7 @@ import { sessionLength } from '../../lib/analytics/events/enums';
 import { onboardingFunnelDurationMs } from '../../lib/analytics/onboardingSteps';
 import type { z } from 'zod';
 import { colors, serifFont } from '../../constants/colors';
-import { radius } from '../../constants/spacing';
+import { radius, spacing } from '../../constants/spacing';
 import { type OnboardingAnswersInput, type PlanPreview } from '../../lib/schemas';
 import {
   answersPreviewKey,
@@ -182,6 +186,10 @@ export default function MatchScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   // "Have a code?" promo sheet (backend creator codes + Apple offer-code fallback).
   const [promoVisible, setPromoVisible] = useState(false);
+  // Lapsed / returning users already have a pet on the server; first-run users meet stage 1.
+  const [petStage, setPetStage] = useState<PetStage>(1);
+  const [serverPetName, setServerPetName] = useState<string | null>(null);
+  const petFetched = useRef(false);
 
   // Lapsed subscriber: Continue opens Superwall, back goes to Welcome (sign in / out).
   const { lapsed } = useLocalSearchParams<{ lapsed?: string }>();
@@ -192,6 +200,16 @@ export default function MatchScreen() {
 
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
+
+  useEffect(() => {
+    if (!user || petFetched.current) return;
+    petFetched.current = true;
+    void fetchPetState().then((state) => {
+      if (!state || !mounted.current) return;
+      setPetStage(state.stage);
+      if (state.name) setServerPetName(state.name);
+    });
+  }, [user]);
 
   // replace() onto match leaves it alone in the stack — iOS swipe-back is a no-op.
   // Put Welcome underneath so the only back target is sign in / sign out.
@@ -840,6 +858,13 @@ export default function MatchScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
+          <View style={styles.petRow}>
+            <PetBadge stage={petStage} mood="ready" size={64} />
+            <Text style={styles.petLine} numberOfLines={2}>
+              {petLine(PET_MATCH_LINE, serverPetName ?? progress?.pet_name)}
+            </Text>
+          </View>
+
           <Text style={styles.eyebrow}>{retaking ? 'YOUR UPDATED PROGRAM' : isReconvert ? 'RESUME YOUR PROGRAM' : 'YOUR PROGRAM'}</Text>
 
           <Text style={styles.programName} numberOfLines={3}>
@@ -1022,6 +1047,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 8,
+  },
+  petRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md - 4,
+    maxWidth: 320,
+    marginBottom: spacing.lg,
+  },
+  petLine: {
+    flexShrink: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   eyebrow: {
     fontSize: 12,

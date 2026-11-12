@@ -69,6 +69,7 @@ export const onboardingStepKey = z.enum([
   'q5',
   'q7',
   'q8',
+  'pet',
   'commit',
   'finalizing',
   'match',

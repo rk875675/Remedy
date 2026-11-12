@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
@@ -50,6 +50,7 @@ import {
   homeEmptyStateShown,
   homeNudgeShown,
   homeNudgeTapped,
+  petNamed,
 } from '../../lib/analytics/events/engagement';
 import { sessionStartTapped } from '../../lib/analytics/events/coreLoop';
 import type { homeEmptyStateReason } from '../../lib/analytics/events/enums';
@@ -75,6 +76,11 @@ import { derivePetMood, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
 import { countMissedThisWeek } from '../../lib/streak';
 import { PetScene } from '../../components/pet/PetScene';
+import {
+  PetNameSheet,
+  hasDismissedPetNamePrompt,
+  markPetNamePromptDismissed,
+} from '../../components/pet/PetNameSheet';
 import type { UserPlanSession, UserProgram } from '../../types/database';
 
 type SessionWithExerciseCount = UserPlanSession & { exercise_count: number };
@@ -257,6 +263,20 @@ export default function HomeScreen() {
   const [sharePrompt, setSharePrompt] = useState<FriendShareHomePrompt | null>(null);
   const [thisWeekCompletions, setWeekCompletions] = useState<RawCompletion[]>([]);
   const [pet, setPet] = useState<PetState | null>(null);
+  // null until read, so the naming sheet never flashes for someone who dismissed it.
+  const [petPromptDismissed, setPetPromptDismissed] = useState<boolean | null>(null);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let live = true;
+    void hasDismissedPetNamePrompt(user.id).then((dismissed) => {
+      if (live) setPetPromptDismissed(dismissed);
+    });
+    return () => {
+      live = false;
+    };
+  }, [user?.id]);
 
   const fetchData = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
@@ -830,6 +850,27 @@ export default function HomeScreen() {
           router.push('/onboarding-answers');
         }}
       />
+
+      {pet ? (
+        <PetNameSheet
+          visible={
+            isFocused &&
+            pet.name === null &&
+            petPromptDismissed === false &&
+            sharePrompt === null &&
+            !modalVisible
+          }
+          stage={pet.stage}
+          onNamed={(state) => {
+            setPet(state);
+            petNamed({ source_screen: 'home', renamed: false });
+          }}
+          onDismiss={() => {
+            setPetPromptDismissed(true);
+            if (user?.id) void markPetNamePromptDismissed(user.id);
+          }}
+        />
+      ) : null}
     </TabFadeWrapper>
   );
 }

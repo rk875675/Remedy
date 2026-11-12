@@ -37,6 +37,7 @@ export const KNOWN_SCREENS = [
   '/(onboarding)/q5',
   '/(onboarding)/q7',
   '/(onboarding)/q8',
+  '/(onboarding)/pet',
   '/(onboarding)/commit',
   '/(onboarding)/finalizing',
   '/(onboarding)/match',

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'reac
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { AppLogo } from '../../components/brand/AppLogo';
+import { PetBadge } from '../../components/pet/PetBadge';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import {
   useOnboarding,
@@ -127,7 +127,7 @@ export default function WelcomeScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
       <WarmBackground />
       <Animated.View style={[styles.logoWrap, { opacity: logoOpacity }]}>
-        <AppLogo size={40} />
+        <PetBadge stage={1} mood="idle" size={150} />
       </Animated.View>
 
       <View style={styles.content}>

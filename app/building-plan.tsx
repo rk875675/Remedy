@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Pressable, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
@@ -31,7 +31,10 @@ import { toVerificationReason } from '../lib/analytics/purchaseErrors';
 import type { programAssignmentFailureReason } from '../lib/analytics/events/enums';
 import type { z } from 'zod';
 import { colors, serifFont } from '../constants/colors';
-import { AppLogo } from '../components/brand/AppLogo';
+import { PetBadge } from '../components/pet/PetBadge';
+import type { PetStage } from '../constants/petImages';
+import { fetchPetState, setPetName } from '../lib/petApi';
+import { petNamed } from '../lib/analytics/events/engagement';
 
 type ProgramAssignmentFailureReason = z.infer<typeof programAssignmentFailureReason>;
 import { radius } from '../constants/spacing';
@@ -56,7 +59,7 @@ export default function BuildingPlanScreen() {
   const isRetake = params.retake === '1';
   const { user, signOut } = useAuth();
   const { refreshPremium } = usePremium();
-  const { answers, endRetake, resetAnswers, hydrated } = useOnboarding();
+  const { answers, endRetake, resetAnswers, hydrated, progress } = useOnboarding();
   const [phase, setPhase] = useState<Phase>('assigning');
   // Human-readable reason the assignment failed. Surfaced on the error screen (debug
   // box) so failures during testing are diagnosable without a device log stream.
@@ -75,8 +78,10 @@ export default function BuildingPlanScreen() {
   const activeAbortController = useRef<AbortController | null>(null);
   const preservePendingForRun = useRef(false);
   const [retryReady, setRetryReady] = useState(false);
-
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [petStage, setPetStage] = useState<PetStage>(1);
+  // setPetName fires at most once per visit, even across "Try again" re-runs.
+  const petNameSent = useRef(false);
+  const petNameSave = useRef<Promise<void> | null>(null);
 
   // Route to the error screen while recording why. `detail` is developer-facing
   // (surfaced only in the debug box) and deliberately never leaves the device:
@@ -172,6 +177,16 @@ export default function BuildingPlanScreen() {
       );
       if (upsertError) {
         throw new Error(`persist_answers_failed: ${upsertError.message}`);
+      }
+      // Best-effort and not awaited: naming the pet must never hold up plan assignment.
+      const petName = progress?.pet_name?.trim();
+      if (petName && !petNameSent.current) {
+        petNameSent.current = true;
+        petNameSave.current = setPetName(petName)
+          .then((result) => {
+            if (result.ok) petNamed({ source_screen: 'building_plan', renamed: false });
+          })
+          .catch(() => {});
       }
       // The DB row is now the source of truth; drop the crash-recovery copies.
       await clearStoredAnswers();
@@ -458,6 +473,16 @@ export default function BuildingPlanScreen() {
       if (gen !== runGen.current) return;
       await refreshPremium();
       if (gen !== runGen.current) return;
+      // Give the pet's name a moment to land so Home does not open on an unnamed pet
+      // and offer to name it again. Bounded: it normally finished long ago, and a slow
+      // or failed save never holds the user here (Home's naming sheet covers that).
+      if (petNameSave.current) {
+        await Promise.race([
+          petNameSave.current,
+          new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+        ]);
+        if (gen !== runGen.current) return;
+      }
       setPhase('done');
       // Onboarding is complete — drop any funnel-resume record so a finished user is
       // never routed back into the quiz (covers returning users whose answers were
@@ -514,23 +539,15 @@ export default function BuildingPlanScreen() {
   }, [phase]);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.06,
-          duration: 1100,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1100,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, []);
+    if (!user) return;
+    let live = true;
+    void fetchPetState().then((state) => {
+      if (live && state) setPetStage(state.stage);
+    });
+    return () => {
+      live = false;
+    };
+  }, [user?.id]);
 
   if (phase === 'error') {
     const showDebug = __DEV__ && !!errorDetail;
@@ -619,9 +636,9 @@ export default function BuildingPlanScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
       <View style={styles.content}>
-        <Animated.View style={[styles.logoWrap, { transform: [{ scale: pulseAnim }] }]}>
-          <AppLogo size="md" />
-        </Animated.View>
+        <View style={styles.logoWrap}>
+          <PetBadge stage={petStage} mood="ready" size={120} />
+        </View>
         <Text style={styles.appName}>Remedy</Text>
         <Text style={styles.title}>
           {isRetake ? 'Rebuilding your program' : 'Setting up your account'}

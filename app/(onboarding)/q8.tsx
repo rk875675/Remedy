@@ -381,7 +381,7 @@ function DaySlider({
 export default function Q8Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { answers, setAnswer, progress, setLocalAnswer } = useOnboarding();
+  const { answers, setAnswer, progress, setLocalAnswer, retaking } = useOnboarding();
   useTrackOnboardingStep('q8');
   const completeStep = useOnboardingStepCompletion();
 
@@ -488,7 +488,8 @@ export default function Q8Screen() {
       <ContinueButton
         onPress={() => {
           completeStep();
-          router.push('/(onboarding)/commit');
+          // Someone retaking the quiz already has a pet; only new users meet and name it.
+          router.push(retaking ? '/(onboarding)/commit' : '/(onboarding)/pet');
         }}
         disabled={answers.sessions_per_week_preference == null}
       />
