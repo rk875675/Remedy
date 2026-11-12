@@ -89,7 +89,6 @@ export default function GrowScreen() {
               );
             })}
           </View>
-          <Text style={styles.note}>{fillPetLine(PET_GROW_PREVIEW.note, { name })}</Text>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -160,12 +159,6 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: colors.surface,
-  },
-  note: {
-    ...type.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    maxWidth: 300,
   },
   footer: {
     paddingTop: spacing.md,

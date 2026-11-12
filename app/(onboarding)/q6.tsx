@@ -6,14 +6,14 @@ import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { MAIN_GOAL_OPTIONS } from '../../constants/onboardingQuestions';
 import { GOAL_ILLUSTRATIONS } from '../../constants/onboardingImages';
+import { getBubbleCopy } from '../../constants/personalizationBubbles';
 import { PET_Q6, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import type { MainGoal } from '../../types/database';
 
@@ -24,12 +24,19 @@ function isQ6Key(key: string): key is keyof typeof PET_Q6.reactions {
 }
 
 function q6Say(selectedKeys: readonly MainGoal[], lastTapped: MainGoal | null): PetSay {
+  const apply = (key: keyof typeof PET_Q6.reactions): PetSay => {
+    const reaction = PET_Q6.reactions[key];
+    const hint = getBubbleCopy('main_goal', key);
+    if (hint) return { line: hint, mood: reaction.mood };
+    return reaction;
+  };
+
   if (lastTapped !== null && selectedKeys.includes(lastTapped)) {
-    return isQ6Key(lastTapped) ? PET_Q6.reactions[lastTapped] : PET_Q6.prompt;
+    return isQ6Key(lastTapped) ? apply(lastTapped) : PET_Q6.prompt;
   }
   for (let i = selectedKeys.length - 1; i >= 0; i -= 1) {
     const key = selectedKeys[i];
-    if (key && isQ6Key(key)) return PET_Q6.reactions[key];
+    if (key && isQ6Key(key)) return apply(key);
   }
   return PET_Q6.prompt;
 }
@@ -57,6 +64,9 @@ export default function Q6Screen() {
       is_deselect: isDeselect,
       selection_count: next.length,
     });
+    if (!isDeselect && getBubbleCopy('main_goal', val)) {
+      onboardingHintShown({ step_key: 'q6', hint_key: 'main_goal' });
+    }
   }
 
   return (
@@ -79,11 +89,6 @@ export default function Q6Screen() {
                 photoSize={80}
                 selected={selected.includes(opt.value)}
                 onPress={() => toggle(opt.value)}
-                hint={
-                  selected[0] === opt.value ? (
-                    <PersonalizationHint field="main_goal" value={opt.value} />
-                  ) : null
-                }
               />
             ))}
           </View>

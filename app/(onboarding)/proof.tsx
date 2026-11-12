@@ -77,7 +77,13 @@ export default function ProofScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
         <View style={styles.petSays}>
-          <PetSays line={PET_PRESENTS.proof.line} mood={PET_PRESENTS.proof.mood} stage={stage} />
+          <PetSays
+            line={PET_PRESENTS.proof.line}
+            mood={PET_PRESENTS.proof.mood}
+            stage={stage}
+            asleep
+            entrance="none"
+          />
         </View>
         <ScrollView
           style={styles.scroll}

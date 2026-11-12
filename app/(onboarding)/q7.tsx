@@ -10,7 +10,6 @@ import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingC
 import { colors } from '../../constants/colors';
 import { EQUIPMENT_OPTIONS } from '../../constants/onboardingQuestions';
 import { PET_Q7, type PetSay } from '../../constants/petOnboardingLines';
-import { radius } from '../../constants/spacing';
 import { type } from '../../constants/typography';
 import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
@@ -29,7 +28,12 @@ function isQ7Key(key: string): key is keyof typeof PET_Q7.reactions {
 
 function q7Say(current: string | null, lastTapped: string | null): PetSay {
   const key = lastTapped !== null ? (current === lastTapped ? lastTapped : null) : current;
-  if (key && isQ7Key(key)) return PET_Q7.reactions[key];
+  if (key && isQ7Key(key)) {
+    const reaction = PET_Q7.reactions[key];
+    const nudge = NUDGE[key];
+    if (nudge) return { line: nudge, mood: reaction.mood };
+    return reaction;
+  }
   return PET_Q7.prompt;
 }
 
@@ -87,11 +91,6 @@ export default function Q7Screen() {
               />
             ))}
           </View>
-          {answers.equipment && NUDGE[answers.equipment] ? (
-            <View style={styles.nudge}>
-              <Text style={styles.nudgeText}>{NUDGE[answers.equipment]}</Text>
-            </View>
-          ) : null}
         </ScrollView>
       </PersonalizingLayout>
 
@@ -131,18 +130,5 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: 10,
-  },
-  nudge: {
-    marginTop: 12,
-    borderRadius: radius.chip,
-    backgroundColor: colors.secondaryMuted,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  nudgeText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
-    fontWeight: '500',
   },
 });

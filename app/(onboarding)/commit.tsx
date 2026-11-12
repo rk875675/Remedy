@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Pressable } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,8 @@ export default function CommitScreen() {
   const { progress, setLocalAnswer } = useOnboarding();
   const committed = !!progress?.committed_at;
   const petPresent = committed ? PET_PRESENTS.commitAfter : PET_PRESENTS.commitBefore;
+  const [holding, setHolding] = useState(false);
+  const petMood = committed ? petPresent.mood : holding ? 'stiff' : petPresent.mood;
   const fill = useRef(new Animated.Value(committed ? 1 : 0)).current;
   const pulse = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -47,6 +49,7 @@ export default function CommitScreen() {
 
   function handlePressIn() {
     if (committed) return;
+    setHolding(true);
     hapticHeavy();
     stopPulse();
     pulse.current = setInterval(hapticHeavy, PULSE_MS);
@@ -62,6 +65,7 @@ export default function CommitScreen() {
 
   function handlePressOut() {
     if (committed) return;
+    setHolding(false);
     stopPulse();
     Animated.timing(fill, {
       toValue: 0,
@@ -84,7 +88,7 @@ export default function CommitScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
         <View style={styles.petSays}>
-          <PetSays line={petPresent.line} mood={petPresent.mood} stage={stage} />
+          <PetSays line={petPresent.line} mood={petMood} stage={stage} entrance="spin" />
         </View>
         <View style={styles.content}>
           <Text style={styles.title}>I'm done working around my back.</Text>

@@ -88,7 +88,7 @@ export default function Q0Screen() {
       <WarmBackground />
       <View style={styles.content}>
         <View style={styles.say}>
-          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} entrance="roll" />
         </View>
         <ScrollView
           style={styles.scroll}

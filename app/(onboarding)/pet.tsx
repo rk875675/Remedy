@@ -20,6 +20,7 @@ import { PetBubble } from '../../components/pet/PetSays';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { useAuth } from '../../context/AuthContext';
 import { useOnboardingPet } from '../../lib/useOnboardingPet';
+import { rememberPetName } from '../../lib/petNameCache';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import { hapticSelection } from '../../lib/haptics';
 import { PET_NAMING, PET_NAME_SUGGESTIONS, fillPetLine } from '../../constants/petOnboardingLines';
@@ -46,6 +47,19 @@ export default function PetScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const trimmed = name.trim();
   const valid = trimmed.length >= 1 && trimmed.length <= PET_NAME_MAX_LENGTH;
+  // The bubble re-types whenever its line changes, so it follows the field
+  // only after the user pauses — not on every keystroke.
+  const [settledName, setSettledName] = useState(() => {
+    const initial = (progress?.pet_name ?? '').trim();
+    return initial.length >= 1 && initial.length <= PET_NAME_MAX_LENGTH ? initial : '';
+  });
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setSettledName(valid ? trimmed : '');
+    }, 500);
+    return () => clearTimeout(id);
+  }, [trimmed, valid]);
 
   // The input is the last thing in the scroll content; keep it above the keyboard.
   useEffect(() => {
@@ -71,15 +85,19 @@ export default function PetScreen() {
     const next = pool[start % pool.length];
     suggestIndex.current = (start + 1) % pool.length;
     setName(next);
+    setSettledName(next);
   }
 
   function handleContinue() {
     if (!valid) return;
     Keyboard.dismiss();
     setLocalAnswer('pet_name', trimmed);
+    void rememberPetName(trimmed);
     completeStep();
     router.push('/(onboarding)/grow');
   }
+
+  const badgeMood = trimmed.length === 0 ? 'idle' : settledName === trimmed ? 'celebrating' : 'ready';
 
   return (
     <>
@@ -102,17 +120,20 @@ export default function PetScreen() {
             <View style={styles.badgeWrap}>
               <PetBadge
                 stage={1}
-                mood={valid ? 'celebrating' : 'idle'}
+                mood={badgeMood}
                 size={height < 720 ? 150 : 220}
               />
             </View>
             <View style={styles.bubbleWrap}>
               <PetBubble
-                line={valid ? fillPetLine(PET_NAMING.named.line, { name: trimmed }) : PET_NAMING.asleep.line}
+                line={
+                  settledName
+                    ? fillPetLine(PET_NAMING.named.line, { name: settledName })
+                    : PET_NAMING.asleep.line
+                }
               />
             </View>
             <Text style={styles.title}>{PET_NAMING.title}</Text>
-            <Text style={styles.body}>{PET_NAMING.body}</Text>
 
             <View style={styles.field}>
               <Text style={styles.label}>{PET_NAME_LABEL}</Text>
@@ -188,13 +209,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: spacing.sm + 4,
-  },
-  body: {
-    ...type.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    maxWidth: 300,
-    marginBottom: spacing.xl,
   },
   field: {
     alignSelf: 'stretch',

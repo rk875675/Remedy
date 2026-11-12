@@ -156,7 +156,13 @@ export function PersonalizingLayout({
     <View style={styles.container}>
       {say ? (
         <View style={styles.say}>
-          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
+          <PetSays
+            line={say.line}
+            mood={say.mood}
+            stage={stage}
+            size={56}
+            entrance={(['roll', 'drop', 'spin'] as const)[currentStepIndex % 3]}
+          />
         </View>
       ) : null}
       <View style={[styles.card, (compact || say != null) && styles.cardCompact]}>

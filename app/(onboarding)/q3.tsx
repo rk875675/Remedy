@@ -6,14 +6,13 @@ import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { PAIN_TYPE_OPTIONS } from '../../constants/onboardingQuestions';
 import { PAIN_TYPE_IMAGES } from '../../constants/onboardingImages';
 import { PET_Q3, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import type { PainType } from '../../types/database';
 
@@ -26,13 +25,25 @@ function isQ3Key(key: string): key is keyof typeof PET_Q3.reactions {
   return Q3_REACTION_KEYS.includes(key);
 }
 
-function q3Say(selectedKeys: readonly PainType[], lastTapped: PainType | null): PetSay {
+function q3Say(
+  selectedKeys: readonly PainType[],
+  lastTapped: PainType | null,
+  nerveNote: boolean,
+): PetSay {
+  const apply = (key: keyof typeof PET_Q3.reactions): PetSay => {
+    const reaction = PET_Q3.reactions[key];
+    if (key === 'nerve' && nerveNote && selectedKeys.includes('nerve')) {
+      return { line: NERVE_NOTE, mood: reaction.mood };
+    }
+    return reaction;
+  };
+
   if (lastTapped !== null && selectedKeys.includes(lastTapped)) {
-    return isQ3Key(lastTapped) ? PET_Q3.reactions[lastTapped] : PET_Q3.prompt;
+    return isQ3Key(lastTapped) ? apply(lastTapped) : PET_Q3.prompt;
   }
   for (let i = selectedKeys.length - 1; i >= 0; i -= 1) {
     const key = selectedKeys[i];
-    if (key && isQ3Key(key)) return PET_Q3.reactions[key];
+    if (key && isQ3Key(key)) return apply(key);
   }
   return PET_Q3.prompt;
 }
@@ -49,7 +60,7 @@ export default function Q3Screen() {
   const [lastTapped, setLastTapped] = useState<PainType | null>(null);
 
   const selected = answers.pain_type ?? [];
-  const say = q3Say(selected, lastTapped);
+  const say = q3Say(selected, lastTapped, nerveNoteSeen);
   const showAcuteNote =
     (selected.includes('sharp') || selected.includes('nerve')) &&
     answers.pain_duration === 'acute';
@@ -68,6 +79,9 @@ export default function Q3Screen() {
     });
     if (val === 'nerve' && !isDeselect && !nerveNoteSeen) {
       setNerveNoteSeen(true);
+    }
+    if (!isDeselect && val === 'nerve') {
+      onboardingHintShown({ step_key: 'q3', hint_key: 'pain_type' });
     }
   }
 
@@ -91,16 +105,6 @@ export default function Q3Screen() {
                 photoSize={80}
                 selected={selected.includes(opt.value)}
                 onPress={() => toggle(opt.value)}
-                hint={
-                  opt.value === 'nerve' && selected.includes('nerve') && nerveNoteSeen ? (
-                    <PersonalizationHint
-                      field="pain_type"
-                      value="nerve"
-                      copy={NERVE_NOTE}
-                      color={colors.secondary}
-                    />
-                  ) : null
-                }
               />
             ))}
           </View>

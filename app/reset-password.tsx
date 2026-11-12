@@ -74,7 +74,13 @@ export default function ResetPasswordScreen() {
       <View style={styles.content}>
         <OnTallScreens>
           <View style={styles.petRow}>
-            <PetSays stage={stage} mood="ready" line={PET_NEW_PASSWORD_LINE} />
+            <PetSays
+              stage={stage}
+              mood="ready"
+              line={PET_NEW_PASSWORD_LINE}
+              asleep
+              entrance="none"
+            />
           </View>
         </OnTallScreens>
         <Text style={styles.title}>Set a new password</Text>

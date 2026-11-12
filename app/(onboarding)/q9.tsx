@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
@@ -10,8 +10,6 @@ import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingC
 import { colors } from '../../constants/colors';
 import { PET_Q9, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
-import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 import { setPersonProperties } from '../../lib/analytics';
 import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import type { AppBelief } from '../../lib/analytics/events/enums';
@@ -21,18 +19,11 @@ import { useOnboardingPet } from '../../lib/useOnboardingPet';
 const options: {
   label: string;
   value: AppBelief;
-  title: string;
-  body: string;
-  tone: 'yes' | 'maybe' | 'no';
 }[] = [
-  { label: 'Yes', value: 'yes', title: 'We like you already', body: "Let's prove you right.", tone: 'yes' },
-  { label: 'Maybe', value: 'maybe', title: "We'll earn the yes", body: 'Give it a few weeks.', tone: 'maybe' },
-  { label: 'No', value: 'no', title: 'Challenge accepted', body: "We'll take that personally.", tone: 'no' },
+  { label: 'Yes', value: 'yes' },
+  { label: 'Maybe', value: 'maybe' },
+  { label: 'No', value: 'no' },
 ];
-
-const BUBBLE = '#FFF4EA';
-const HOLD_MS = 4400;
-const BOB_MS = 400;
 
 function q9Say(value: AppBelief | null): PetSay {
   if (value === 'yes') return PET_Q9.yes;
@@ -53,86 +44,6 @@ export default function Q9Screen() {
   const answer = progress?.app_belief ?? null;
   const say = q9Say(answer);
 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const slide = useRef(new Animated.Value(-16)).current;
-  const scale = useRef(new Animated.Value(0.85)).current;
-  const bob = useRef(new Animated.Value(0)).current;
-  const playing = useRef<Animated.CompositeAnimation | null>(null);
-  const [sticker, setSticker] = useState<(typeof options)[number] | null>(null);
-
-  useEffect(() => () => playing.current?.stop(), []);
-
-  function showSticker(next: (typeof options)[number] | null) {
-    playing.current?.stop();
-    if (!next) {
-      playing.current = Animated.timing(opacity, {
-        toValue: 0,
-        duration: 140,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      });
-      playing.current.start();
-      return;
-    }
-    setSticker(next);
-    opacity.setValue(0);
-    slide.setValue(-16);
-    scale.setValue(0.85);
-    bob.setValue(0);
-    const bobOnce = Animated.sequence([
-      Animated.timing(bob, {
-        toValue: -4,
-        duration: BOB_MS,
-        easing: Easing.inOut(Easing.sin),
-        useNativeDriver: true,
-      }),
-      Animated.timing(bob, {
-        toValue: 0,
-        duration: BOB_MS,
-        easing: Easing.inOut(Easing.sin),
-        useNativeDriver: true,
-      }),
-    ]);
-    playing.current = Animated.sequence([
-      Animated.parallel([
-        Animated.spring(slide, {
-          toValue: 0,
-          useNativeDriver: true,
-          speed: 14,
-          bounciness: 10,
-        }),
-        Animated.spring(scale, {
-          toValue: 1,
-          useNativeDriver: true,
-          speed: 14,
-          bounciness: 12,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 180,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.loop(bobOnce, { iterations: Math.round(HOLD_MS / (BOB_MS * 2)) }),
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 260,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(slide, {
-          toValue: -10,
-          duration: 260,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]),
-    ]);
-    playing.current.start();
-  }
-
   function handleSelect(value: AppBelief) {
     const isDeselect = answer === value;
     onboardingOptionSelected({
@@ -143,14 +54,11 @@ export default function Q9Screen() {
     });
     if (isDeselect) {
       setLocalAnswer('app_belief', null);
-      showSticker(null);
       return;
     }
-    const next = options.find((o) => o.value === value) ?? null;
     setLocalAnswer('app_belief', value);
     setPersonProperties({ app_belief: value });
     onboardingHintShown({ step_key: 'q9', hint_key: 'app_belief' });
-    showSticker(next);
   }
 
   function handleContinue() {
@@ -164,7 +72,7 @@ export default function Q9Screen() {
       <WarmBackground />
       <View style={styles.content}>
         <View style={styles.say}>
-          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} entrance="spin" />
         </View>
         <Text style={styles.heading}>Do you believe Remedy can fix your back pain?</Text>
         <View style={styles.options}>
@@ -178,28 +86,6 @@ export default function Q9Screen() {
           ))}
         </View>
       </View>
-
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.toast,
-          { top: insets.top + 8 },
-          { opacity, transform: [{ translateY: Animated.add(slide, bob) }, { scale }] },
-        ]}
-      >
-        <View style={styles.tail} />
-        <View
-          style={[
-            styles.dot,
-            sticker?.tone === 'no' && styles.dotNo,
-            sticker?.tone === 'maybe' && styles.dotMaybe,
-          ]}
-        />
-        <View style={styles.toastText}>
-          <Text style={styles.toastTitle}>{sticker?.title ?? ''}</Text>
-          <Text style={styles.toastBody}>{sticker?.body ?? ''}</Text>
-        </View>
-      </Animated.View>
 
       <ContinueButton onPress={handleContinue} disabled={!answer} />
     </View>
@@ -226,58 +112,5 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: 12,
-  },
-  toast: {
-    position: 'absolute',
-    right: 16,
-    maxWidth: 290,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: BUBBLE,
-    borderRadius: radius.card + 4,
-    paddingVertical: 14,
-    paddingLeft: 16,
-    paddingRight: 20,
-    ...shadows.medium,
-    shadowColor: '#8A4B36',
-    shadowOpacity: 0.14,
-  },
-  tail: {
-    position: 'absolute',
-    bottom: -6,
-    right: 30,
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    backgroundColor: BUBBLE,
-    transform: [{ rotate: '45deg' }],
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-  },
-  dotMaybe: {
-    backgroundColor: colors.warning,
-  },
-  dotNo: {
-    backgroundColor: colors.secondary,
-  },
-  toastText: {
-    flexShrink: 1,
-  },
-  toastTitle: {
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.2,
-  },
-  toastBody: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.textSecondary,
   },
 });

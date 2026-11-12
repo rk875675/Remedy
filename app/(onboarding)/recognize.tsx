@@ -5,15 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { PetSays } from '../../components/pet/PetSays';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { recognizeOptionsFor, type RecognizeKey } from '../../constants/mindset';
 import { recognizeIllustrationsFor } from '../../constants/onboardingImages';
-import { PET_RECOGNIZE } from '../../constants/petOnboardingLines';
+import { PET_RECOGNIZE, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import { useOnboardingPet } from '../../lib/useOnboardingPet';
 
@@ -28,8 +27,11 @@ export default function RecognizeScreen() {
   const selected = progress?.recognize_selected ?? [];
   const options = recognizeOptionsFor(progress?.tried_before);
   const illustrations = recognizeIllustrationsFor(progress?.tried_before);
-  const say =
+  const reaction =
     selected.length >= 3 ? PET_RECOGNIZE.many : selected.length > 0 ? PET_RECOGNIZE.some : PET_RECOGNIZE.prompt;
+  // Caption sat on the first selected card, with that card's own hint (tried-before copy).
+  const firstHint = options.find((opt) => opt.value === selected[0])?.hint;
+  const say: PetSay = firstHint ? { line: firstHint, mood: reaction.mood } : reaction;
 
   function toggle(value: RecognizeKey) {
     const isDeselect = selected.includes(value);
@@ -42,6 +44,9 @@ export default function RecognizeScreen() {
       is_deselect: isDeselect,
       selection_count: next.length,
     });
+    if (!isDeselect && options.some((opt) => opt.value === value && opt.hint)) {
+      onboardingHintShown({ step_key: 'recognize', hint_key: 'recognize' });
+    }
   }
 
   function handleContinue() {
@@ -55,7 +60,7 @@ export default function RecognizeScreen() {
       <WarmBackground />
       <View style={styles.content}>
         <View style={styles.say}>
-          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} />
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} entrance="drop" />
         </View>
         <ScrollView
           style={styles.scroll}
@@ -73,15 +78,6 @@ export default function RecognizeScreen() {
                 photoSize={80}
                 selected={selected.includes(opt.value)}
                 onPress={() => toggle(opt.value)}
-                hint={
-                  selected[0] === opt.value ? (
-                    <PersonalizationHint
-                      field="recognize"
-                      value={opt.value}
-                      copy={opt.hint}
-                    />
-                  ) : null
-                }
               />
             ))}
           </View>

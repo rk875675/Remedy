@@ -31,10 +31,11 @@ import { toVerificationReason } from '../lib/analytics/purchaseErrors';
 import type { programAssignmentFailureReason } from '../lib/analytics/events/enums';
 import type { z } from 'zod';
 import { colors, serifFont } from '../constants/colors';
-import { PetSays } from '../components/pet/PetSays';
-import { PET_PRESENTS } from '../constants/petOnboardingLines';
-import type { PetStage } from '../constants/petImages';
-import { fetchPetState, setPetName } from '../lib/petApi';
+import { PetBubble } from '../components/pet/PetSays';
+import { PetRollTrack } from '../components/pet/PetRoll';
+import { PET_PRESENTS, fillPetLine } from '../constants/petOnboardingLines';
+import { setPetName } from '../lib/petApi';
+import { useOnboardingPet } from '../lib/useOnboardingPet';
 import { petNamed } from '../lib/analytics/events/engagement';
 
 type ProgramAssignmentFailureReason = z.infer<typeof programAssignmentFailureReason>;
@@ -79,7 +80,7 @@ export default function BuildingPlanScreen() {
   const activeAbortController = useRef<AbortController | null>(null);
   const preservePendingForRun = useRef(false);
   const [retryReady, setRetryReady] = useState(false);
-  const [petStage, setPetStage] = useState<PetStage>(1);
+  const { name } = useOnboardingPet();
   // setPetName fires at most once per visit, even across "Try again" re-runs.
   const petNameSent = useRef(false);
   const petNameSave = useRef<Promise<void> | null>(null);
@@ -539,17 +540,6 @@ export default function BuildingPlanScreen() {
     return () => clearTimeout(timeout);
   }, [phase]);
 
-  useEffect(() => {
-    if (!user) return;
-    let live = true;
-    void fetchPetState().then((state) => {
-      if (live && state) setPetStage(state.stage);
-    });
-    return () => {
-      live = false;
-    };
-  }, [user?.id]);
-
   if (phase === 'error') {
     const showDebug = __DEV__ && !!errorDetail;
     // Subscription bound to a different account — a distinct, recoverable case worth its
@@ -637,13 +627,11 @@ export default function BuildingPlanScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
       <View style={styles.content}>
-        <View style={styles.logoWrap}>
-          <PetSays
-            line={PET_PRESENTS.buildingPlan.line}
-            mood={PET_PRESENTS.buildingPlan.mood}
-            stage={petStage}
-            size={84}
-          />
+        <View style={styles.rollWrap}>
+          <PetRollTrack size={84} />
+        </View>
+        <View style={styles.bubbleWrap}>
+          <PetBubble line={fillPetLine(PET_PRESENTS.buildingPlan.line, { name })} />
         </View>
         <Text style={styles.appName}>Remedy</Text>
         <Text style={styles.title}>
@@ -670,10 +658,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoWrap: {
+  rollWrap: {
+    alignSelf: 'stretch',
     width: '100%',
-    maxWidth: 320,
+  },
+  bubbleWrap: {
+    marginTop: 14,
     marginBottom: 20,
+    maxWidth: 320,
+    alignSelf: 'center',
   },
   appName: {
     fontSize: 42,

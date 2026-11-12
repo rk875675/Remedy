@@ -28,7 +28,12 @@ export default function SeenScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
         <View style={styles.petSays}>
-          <PetSays line={PET_PRESENTS.seen.line} mood={PET_PRESENTS.seen.mood} stage={stage} />
+          <PetSays
+            line={PET_PRESENTS.seen.line}
+            mood={PET_PRESENTS.seen.mood}
+            stage={stage}
+            entrance="roll"
+          />
         </View>
         <View style={styles.content}>
           <Text style={styles.title}>{copy.title}</Text>

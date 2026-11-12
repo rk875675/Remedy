@@ -116,7 +116,13 @@ export default function ForgotPasswordScreen() {
         <View style={styles.form}>
           <OnTallScreens>
             <View style={styles.petRow}>
-              <PetSays stage={stage} mood="ready" line={PET_FORGOT_PASSWORD_LINE} />
+              <PetSays
+                stage={stage}
+                mood="ready"
+                line={PET_FORGOT_PASSWORD_LINE}
+                asleep
+                entrance="none"
+              />
             </View>
           </OnTallScreens>
           <Text style={styles.title}>Reset password</Text>

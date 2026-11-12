@@ -1,11 +1,41 @@
+import { useEffect, useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'remedy.petName';
 
-/** Best-effort copy of the pet's name so local notifications can use it. A null name clears it. */
+// The name is also kept in memory so any component can show it (the tag on the
+// pet's speech bubble) without each screen having to pass it down.
+let current: string | null = null;
+let loaded = false;
+const listeners = new Set<() => void>();
+
+function setCurrent(name: string | null): void {
+  if (current === name) return;
+  current = name;
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getCurrent(): string | null {
+  return current;
+}
+
+/**
+ * Best-effort copy of the pet's name: used by local notifications and by the
+ * name tag on the pet's speech bubble. A null name clears it.
+ */
 export async function rememberPetName(name: string | null): Promise<void> {
+  const clean = name && name.trim() ? name.trim() : null;
+  loaded = true;
+  setCurrent(clean);
   try {
-    if (name) await AsyncStorage.setItem(STORAGE_KEY, name);
+    if (clean) await AsyncStorage.setItem(STORAGE_KEY, clean);
     else await AsyncStorage.removeItem(STORAGE_KEY);
   } catch {
     // Best-effort: reminders fall back to the generic wording.
@@ -14,8 +44,22 @@ export async function rememberPetName(name: string | null): Promise<void> {
 
 export async function getRememberedPetName(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(STORAGE_KEY);
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    // Only adopt the stored value if nothing newer has been set this run.
+    if (!loaded) {
+      loaded = true;
+      setCurrent(stored);
+    }
+    return loaded ? current : stored;
   } catch {
-    return null;
+    return current;
   }
+}
+
+/** The pet's name if the device knows it; updates when it is named or renamed. */
+export function usePetName(): string | null {
+  useEffect(() => {
+    if (!loaded) void getRememberedPetName();
+  }, []);
+  return useSyncExternalStore(subscribe, getCurrent, getCurrent);
 }

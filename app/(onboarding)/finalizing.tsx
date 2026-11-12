@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
-import { PetSays } from '../../components/pet/PetSays';
+import { PetBubble } from '../../components/pet/PetSays';
+import { PetRollTrack } from '../../components/pet/PetRoll';
 import { colors, serifFont } from '../../constants/colors';
-import { PET_PRESENTS } from '../../constants/petOnboardingLines';
+import { PET_PRESENTS, fillPetLine } from '../../constants/petOnboardingLines';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -32,8 +33,9 @@ const SOCIAL_PROOF =
 export default function FinalizingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const { answers } = useOnboarding();
-  const { stage } = useOnboardingPet();
+  const { name } = useOnboardingPet();
   // Checked-off count. Equals `steps.length` once the last line has a check.
   const [completed, setCompleted] = useState(0);
 
@@ -96,17 +98,26 @@ export default function FinalizingScreen() {
   const activeIndex = completed < steps.length ? completed : -1;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          // The roll-plus-bubble stack is taller than the old side-by-side pet.
+          // On a 667pt phone the original +60 top padding leaves the checklist
+          // against the proof card, so that padding shrinks only on short screens.
+          paddingTop: insets.top + (height < 720 ? 32 : 60),
+          paddingBottom: insets.bottom + 40,
+        },
+      ]}
+    >
       <Stack.Screen options={{ gestureEnabled: false, headerShown: false }} />
       <WarmBackground />
       <View style={styles.content}>
-        <View style={styles.iconWrap}>
-          <PetSays
-            line={PET_PRESENTS.finalizing.line}
-            mood={PET_PRESENTS.finalizing.mood}
-            stage={stage}
-            size={84}
-          />
+        <View style={styles.rollWrap}>
+          <PetRollTrack size={84} />
+        </View>
+        <View style={styles.bubbleWrap}>
+          <PetBubble line={fillPetLine(PET_PRESENTS.finalizing.line, { name })} />
         </View>
 
         <Text style={styles.title}>Building your plan</Text>
@@ -156,10 +167,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconWrap: {
+  rollWrap: {
+    alignSelf: 'stretch',
     width: '100%',
-    maxWidth: 320,
+  },
+  bubbleWrap: {
+    marginTop: 14,
     marginBottom: 28,
+    maxWidth: 320,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 26,

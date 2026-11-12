@@ -77,7 +77,12 @@ export default function EducationScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
         <View style={styles.petSays}>
-          <PetSays line={PET_PRESENTS.education.line} mood={PET_PRESENTS.education.mood} stage={stage} />
+          <PetSays
+            line={PET_PRESENTS.education.line}
+            mood={PET_PRESENTS.education.mood}
+            stage={stage}
+            entrance="drop"
+          />
         </View>
         <View style={styles.content}>
           <Text style={styles.eyebrow}>THE GOOD NEWS</Text>

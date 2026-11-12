@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Dimensions,
   Easing,
   Image,
   StyleSheet,
   View,
 } from 'react-native';
+import { petImage } from '../constants/petImages';
+
+const LOGO_SIZE = 176;
 
 interface SplashOverlayProps {
   /** When true the overlay will animate out and then call onDone. */
@@ -28,6 +32,17 @@ export default function SplashOverlay({ isReady, onDone }: SplashOverlayProps) {
   // --- entry ---
   const logoScale = useRef(new Animated.Value(0.82)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
+  // 0 = off to the left, 1 = settled in the middle. A ball of radius r turns
+  // distance / r radians as it rolls.
+  const rollIn = useRef(new Animated.Value(0)).current;
+  const rollDistance = Dimensions.get('window').width * 0.7;
+  const rollDegrees = Math.round((rollDistance / (LOGO_SIZE * 0.445)) * (180 / Math.PI));
+  const rollX = useRef(
+    rollIn.interpolate({ inputRange: [0, 1], outputRange: [-rollDistance, 0] }),
+  ).current;
+  const rollTurn = useRef(
+    rollIn.interpolate({ inputRange: [0, 1], outputRange: [`-${rollDegrees}deg`, '0deg'] }),
+  ).current;
   const letterAnims = useRef(
     WORDMARK.split('').map(() => ({
       opacity: new Animated.Value(0),
@@ -49,6 +64,12 @@ export default function SplashOverlay({ isReady, onDone }: SplashOverlayProps) {
     const minTimer = setTimeout(() => setMinTimeElapsed(true), MIN_DISPLAY_MS);
 
     Animated.parallel([
+      Animated.timing(rollIn, {
+        toValue: 1,
+        duration: 760,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
       Animated.spring(logoScale, {
         toValue: 1,
         tension: 55,
@@ -151,7 +172,9 @@ export default function SplashOverlay({ isReady, onDone }: SplashOverlayProps) {
   }, [isReady, minTimeElapsed]);
 
   const logoTransform = [
+    { translateX: rollX },
     { scale: Animated.multiply(logoScale, breathe) },
+    { rotate: rollTurn },
   ];
 
   return (
@@ -159,9 +182,10 @@ export default function SplashOverlay({ isReady, onDone }: SplashOverlayProps) {
       pointerEvents="none"
       style={[StyleSheet.absoluteFill, styles.root, { opacity: overlayOpacity }]}
     >
+      {/* The armadillo, curled up, rolls in from the left and settles. */}
       <Animated.View style={{ opacity: logoOpacity, transform: logoTransform }}>
         <Image
-          source={require('../assets/splash-icon.png')}
+          source={petImage(1, 'ready')}
           style={styles.logo}
           resizeMode="contain"
           accessibilityLabel="Remedy"
@@ -208,9 +232,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 176,
-    height: 176,
-    borderRadius: 38,
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
   },
   wordmarkRow: {
     alignItems: 'center',

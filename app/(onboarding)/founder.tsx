@@ -41,7 +41,13 @@ export default function FounderScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
         <View style={styles.petSays}>
-          <PetSays line={PET_PRESENTS.founder.line} mood={PET_PRESENTS.founder.mood} stage={stage} />
+          <PetSays
+            line={PET_PRESENTS.founder.line}
+            mood={PET_PRESENTS.founder.mood}
+            stage={stage}
+            asleep
+            entrance="none"
+          />
         </View>
         <Animated.ScrollView
           style={[styles.scroll, { opacity: fade }]}

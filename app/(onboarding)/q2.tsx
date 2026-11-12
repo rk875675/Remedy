@@ -6,13 +6,13 @@ import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { PAIN_DURATION_OPTIONS } from '../../constants/onboardingQuestions';
+import { getBubbleCopy } from '../../constants/personalizationBubbles';
 import { PET_Q2, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 
 const Q2_REACTION_KEYS = Object.keys(PET_Q2.reactions);
@@ -22,7 +22,13 @@ function isQ2Key(key: string): key is keyof typeof PET_Q2.reactions {
 }
 
 function q2Say(id: string | null): PetSay {
-  if (id && isQ2Key(id)) return PET_Q2.reactions[id];
+  if (id && isQ2Key(id)) {
+    const reaction = PET_Q2.reactions[id];
+    const value = PAIN_DURATION_OPTIONS.find((opt) => opt.id === id)?.value;
+    const hint = getBubbleCopy('pain_duration', value);
+    if (hint) return { line: hint, mood: reaction.mood };
+    return reaction;
+  }
   return PET_Q2.prompt;
 }
 
@@ -55,6 +61,9 @@ export default function Q2Screen() {
     } else {
       setSelectedId(opt.id);
       setAnswer('pain_duration', opt.value);
+      if (getBubbleCopy('pain_duration', opt.value)) {
+        onboardingHintShown({ step_key: 'q2', hint_key: 'pain_duration' });
+      }
     }
   }
 
@@ -76,11 +85,6 @@ export default function Q2Screen() {
                 minHeight={76}
                 selected={selectedId === opt.id}
                 onPress={() => handleSelect(opt)}
-                hint={
-                  selectedId === opt.id ? (
-                    <PersonalizationHint field="pain_duration" value={opt.value} />
-                  ) : null
-                }
               />
             ))}
           </View>

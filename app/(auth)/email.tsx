@@ -165,6 +165,8 @@ export default function EmailAuthScreen() {
                 stage={stage}
                 mood="ready"
                 line={isSignUp ? PET_EMAIL_SIGN_UP_LINE : PET_EMAIL_SIGN_IN_LINE}
+                asleep
+                entrance="none"
               />
             </View>
           </OnTallScreens>

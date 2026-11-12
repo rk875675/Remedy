@@ -32,8 +32,7 @@ export const PET_NAME_SUGGESTIONS = [
 
 /** Naming screen (right after welcome). `{name}` is what the user typed. */
 export const PET_NAMING = {
-  title: 'Meet your armadillo',
-  body: "It's curled up tight right now. It'll be with you the whole way, and every session you finish helps it loosen up and grow.",
+  title: 'Name your armadillo',
   asleep: say('Zzz.', 'idle'),
   named: say('{name}. Yeah. That feels like me.', 'celebrating'),
   suggest: 'Suggest one',
@@ -45,14 +44,15 @@ export const PET_NAMING = {
  */
 export const PET_GROW_PREVIEW = {
   title: 'Every session, {name} uncurls a little',
-  note: '{name} grows when you finish sessions, and never shrinks if you miss a day.',
   chips: ['Today', '1 session', '4', '9', '15'],
+  // Read in order, the five lines carry the whole rule: it grows when you finish
+  // sessions, and it never shrinks when you miss a day.
   stages: [
-    say('This is me today. Tight as a fist.', 'stiff'),
-    say('One session in. Oh, hello.', 'ready'),
-    say('Four sessions. Look, legs.', 'celebrating'),
-    say('Nine. Standing up. Big day.', 'celebrating'),
-    say('Fifteen sessions. This is the plan.', 'proud'),
+    say("This is me now. Curled up tight.", 'stiff'),
+    say('Finish one session and I peek out.', 'ready'),
+    say('Every session you finish, I grow.', 'celebrating'),
+    say('Miss a day? I wait. I never shrink.', 'ready'),
+    say('Fifteen sessions and I am all grown.', 'proud'),
   ],
 } as const;
 
@@ -63,20 +63,20 @@ export const PET_PRESENTS = {
   proof: say("The serious bit. Read it properly, I'll wait."),
   seen: say('None of that was you failing. I mean it.', 'concerned'),
   commitBefore: say("Hold it down. I'll hold on too."),
-  commitAfter: say("That's a promise. I heard it.", 'celebrating'),
-  finalizing: say('Building your plan. And stretching a bit.'),
-  match: say("This one's ours. Ready when you are.", 'celebrating'),
+  commitAfter: say("That's a promise. {name} heard it.", 'celebrating'),
+  finalizing: say('Building your plan. {name} is supervising.'),
+  match: say("This plan is ours. {name} is ready when you are.", 'celebrating'),
   matchLapsed: say('You came back. I kept your spot.', 'celebrating'),
   matchRetake: say('New answers, new plan. Same me.'),
   /** Shown on the program screen after the paywall is closed without buying. */
-  paywallDismissed: say("No rush. I'll be right here.", 'concerned'),
-  buildingPlan: say('Putting the last pieces together.'),
+  paywallDismissed: say("No rush. {name} isn't going anywhere.", 'concerned'),
+  buildingPlan: say('Last pieces. {name} is on it.'),
 } as const;
 
 /** Where did you hear about us? Any answer gets the same thanks. */
 export const PET_Q0 = {
   prompt: say('Who sent you? I owe them a thank-you.'),
-  answered: say('Noted. Thank you, whoever you are.', 'celebrating'),
+  answered: say('Noted. {name} says thanks.', 'celebrating'),
 } as const;
 
 /** Do you believe Remedy can help? Map the screen's options onto these three. */
@@ -175,13 +175,49 @@ export const PET_Q8 = {
   prompt: say('How much time can you give this?'),
   minutes: say("That's enough. Really."),
   daysLow: say('{n} days a week. Solid.'),
-  daysMid: say("{n} days a week. I'll be ready.", 'celebrating'),
+  daysMid: say('{n} days a week. {name} will be ready.', 'celebrating'),
   daysHigh: say('{n} days. Ambitious. I like it.', 'celebrating'),
 } as const;
 
-/** Replace `{name}` and `{n}` in a line. */
+/**
+ * Replace `{name}` and `{n}` in a line. A placeholder is only replaced when its
+ * value is passed, so a line can be filled in two steps (the screen fills `{n}`,
+ * the speech bubble fills `{name}`). A null or empty name becomes "your armadillo",
+ * capitalised when it starts a sentence.
+ */
 export function fillPetLine(line: string, vars: { name?: string | null; n?: number }): string {
-  return line
-    .replace(/\{name\}/g, vars.name && vars.name.trim() ? vars.name.trim() : 'your armadillo')
-    .replace(/\{n\}/g, vars.n === undefined ? '' : String(vars.n));
+  let out = line;
+  if (vars.n !== undefined) out = out.replace(/\{n\}/g, String(vars.n));
+  if (vars.name !== undefined) {
+    const name = vars.name && vars.name.trim() ? vars.name.trim() : null;
+    out = out.replace(/\{name\}/g, (_match, offset: number, whole: string) => {
+      if (name) return name;
+      const before = whole.slice(0, offset).trimEnd();
+      return before === '' || /[.!?]$/.test(before) ? 'Your armadillo' : 'your armadillo';
+    });
+  }
+  return out;
 }
+
+/** Said when the pet is tapped. Cycled in order from a random start. */
+export const PET_POKE_LINES = [
+  'Hey. That tickles.',
+  'Boop received.',
+  '{name} is busy. Being round.',
+  'Careful. Freshly polished shell.',
+  'You poked {name}. {name} noticed.',
+  'Yes? I am listening. Mostly.',
+] as const;
+
+/** Said when a napping pet is tapped awake. */
+export const PET_WAKE_LINE = "Mm? I'm up. I'm up.";
+
+/** Said on Home after the pet does its roll. */
+export const PET_HOME_TRICK_LINES = [
+  'Wheee.',
+  'Did you see that? Tell me you saw that.',
+  '{name} rolls. It is what {name} does.',
+  'Again? Fine. One more.',
+  'Nailed the landing.',
+  'That was my whole warm-up, by the way.',
+] as const;

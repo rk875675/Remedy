@@ -6,14 +6,14 @@ import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
-import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { PAIN_LOCATION_OPTIONS } from '../../constants/onboardingQuestions';
 import { LOCATION_IMAGES } from '../../constants/onboardingImages';
+import { getBubbleCopy } from '../../constants/personalizationBubbles';
 import { PET_Q1, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
-import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
+import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import type { OnboardingAnswers } from '../../types/database';
 
@@ -25,7 +25,12 @@ function isQ1Key(key: string): key is keyof typeof PET_Q1.reactions {
 
 function q1Say(current: string | null, lastTapped: string | null): PetSay {
   const key = lastTapped !== null ? (current === lastTapped ? lastTapped : null) : current;
-  if (key && isQ1Key(key)) return PET_Q1.reactions[key];
+  if (key && isQ1Key(key)) {
+    const reaction = PET_Q1.reactions[key];
+    const hint = getBubbleCopy('pain_location', key);
+    if (hint) return { line: hint, mood: reaction.mood };
+    return reaction;
+  }
   return PET_Q1.prompt;
 }
 
@@ -51,6 +56,9 @@ export default function Q1Screen() {
       clearAnswer('pain_location');
     } else {
       setAnswer('pain_location', value);
+      if (getBubbleCopy('pain_location', value)) {
+        onboardingHintShown({ step_key: 'q1', hint_key: 'pain_location' });
+      }
     }
   }
 
@@ -73,11 +81,6 @@ export default function Q1Screen() {
                 photoSize={84}
                 selected={answers.pain_location === opt.value}
                 onPress={() => handleSelect(opt.value)}
-                hint={
-                  answers.pain_location === opt.value ? (
-                    <PersonalizationHint field="pain_location" value={opt.value} />
-                  ) : null
-                }
               />
             ))}
           </View>
