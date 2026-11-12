@@ -2,8 +2,8 @@ import { getDb, ugcAnalytics, ugcVideos } from "@remedy-growth/db";
 import { eq, inArray } from "drizzle-orm";
 import { latestFollowers } from "../analytics/audience.js";
 import { engagementRate } from "../analytics/store.js";
-import { fetchPostAnalytics, isBrightbeanPostId } from "../publish/brightbean.js";
-import type { PlatformPosts } from "../publish/index.js";
+import { fetchPostAnalytics, isZernioPostId } from "../publish/zernio.js";
+import { zernioRefs, type PlatformPosts } from "../publish/index.js";
 
 const MATURE_MS = 48 * 60 * 60 * 1000;
 
@@ -20,36 +20,39 @@ export async function pullUgcAnalytics(): Promise<{ pulled: number; errors: numb
     const pp = (video.platformPosts ?? {}) as PlatformPosts;
     const seen = new Set<string>();
     for (const [platform, rec] of Object.entries(pp)) {
-      if (!isBrightbeanPostId(rec?.publishId) || seen.has(rec.publishId)) continue;
-      seen.add(rec.publishId);
-      try {
-        const m = await fetchPostAnalytics(rec.publishId);
-        if (!m) continue;
-        const followers = latestFollowers(platform);
-        db.insert(ugcAnalytics)
-          .values({
-            ugcVideoId: video.id,
-            platform,
-            views: m.views,
-            likes: m.likes,
-            comments: m.comments,
-            shares: m.shares,
-            saves: m.saves,
-            engagementRate: engagementRate(m),
-            followers,
-            raw: m,
-          })
-          .run();
-        pulled++;
-      } catch (err) {
-        errors++;
-        console.warn(
-          `UGC metrics failed for ${video.uuid} ${platform}:`,
-          err instanceof Error ? err.message.slice(0, 200) : err,
-        );
+      for (const ref of zernioRefs(rec)) {
+        if (!isZernioPostId(ref.publishId) || seen.has(ref.publishId)) continue;
+        seen.add(ref.publishId);
+        try {
+          const m = await fetchPostAnalytics(ref.publishId, ref.keySlot);
+          if (!m) continue;
+          const followers = latestFollowers(platform);
+          db.insert(ugcAnalytics)
+            .values({
+              ugcVideoId: video.id,
+              platform,
+              views: m.views,
+              likes: m.likes,
+              comments: m.comments,
+              shares: m.shares,
+              saves: m.saves,
+              engagementRate: engagementRate(m),
+              followers,
+              raw: m,
+            })
+            .run();
+          pulled++;
+        } catch (err) {
+          errors++;
+          console.warn(
+            `UGC metrics failed for ${video.uuid} ${platform}:`,
+            err instanceof Error ? err.message.slice(0, 200) : err,
+          );
+        }
       }
     }
   }
+
   diagnoseUgc();
   if (pulled || errors) console.log(`UGC analytics: ${pulled} snapshots, ${errors} errors.`);
   return { pulled, errors };

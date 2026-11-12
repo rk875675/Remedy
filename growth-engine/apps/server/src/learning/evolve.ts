@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getDb, hooks, isLowSignalHook, posts } from "@remedy-growth/db";
+import { getDb, hooks, isLowSignalHook, matchContentPillar, posts } from "@remedy-growth/db";
 import { and, eq } from "drizzle-orm";
 import { BRAND } from "../config.js";
 import { generateJson } from "../generation/llm.js";
@@ -47,12 +47,14 @@ export async function evolveWinners(): Promise<number> {
       .all();
     if (children.length > 0) continue; // already evolved
 
+    const pillar = matchContentPillar(hook.text);
     const prompt = `This TikTok carousel hook for ${BRAND.appName} (a ${BRAND.niche} app) performed above the median on both views and engagement:
 "${hook.text}"
 
 Write 3 variations that keep the same core promise but change ONE element each
 (angle, framing, specificity, or emotional register). 1–2 on-screen lines (about 5–14 words).
 Keep the avatar or back-pain noun. No vague "this" / save / slide-N lines.
+${pillar ? `Stay in the "${pillar.title}" pillar. ${pillar.thesis}` : "Each variation must match one of the nine content pillars."}
 Fragments are good. No emojis, no brand name, no "How I fixed".
 Return JSON: {"variations":["...","...","..."]}`;
 
@@ -60,7 +62,7 @@ Return JSON: {"variations":["...","...","..."]}`;
     const variations = result?.variations ?? mutateHook(hook.text);
 
     for (const text of variations.slice(0, 3)) {
-      if (isLowSignalHook(text)) continue;
+      if (isLowSignalHook(text) || !matchContentPillar(text)) continue;
       db.insert(hooks)
         .values({
           text,

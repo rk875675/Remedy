@@ -24,13 +24,10 @@ They looked bad and must not come back.
 Pain is a warm coral glow on the lower back — never a red circle + bang,
 never radiating red rays with an “!” badge.
 
-## Keepers from the old set
+## Removed — do not restore
 
-Restored (no bang) as `custom/`:
-
-- `desk-worker` — hunched at a desk, hand on the back
-- `phone-app` — standing, looking at the app
-- `spine` — vertebrae with a warm lumbar highlight
+Remedy original (`custom/`), illlustrations.co, and Open Doodles were deleted.
+Do not vendor them back and do not run `scripts/build_remedy_figures.py`.
 
 ## Remedy flat (`source: Remedy flat`, `license: owned`)
 
@@ -40,34 +37,16 @@ Source art lives in `flat/src/`; `scripts/wrap_flat_illustrations.py` embeds
 it in SVG so Sharp and the SVGs tab render the actual picture — do not
 replace these with a geometric redraw.
 
-These are a separate type from `Remedy original`. The picker may use either
-owned kit on a post; it will not mix them with each other or with third-party
-tiles in the same carousel.
+New SVG slides use this kit only. About 34% of visual covers are Remedy flat.
+About 66% are Remedy people photos. 95% of new posts get one or the other on slide 1.
 
-## Remedy originals (`license: owned`)
+## Remedy people (`source: Remedy people`, `license: owned`)
 
-`desk-worker`, `phone-app`, `spine`, and the `custom/*.svg` figures built by
-`scripts/build_remedy_figures.py` are original vector drawings for Remedy.
-They are not traces of Humaaans, Open Doodles, or illlustrations.co.
-Style resemblance (flat people, simple shapes) is not copyright.
-
-When adding more:
-
-- Same kit: viewBox 600×700, skin `#f5cba7`, shirt `#4a7c59`, pants `#3d3d3d`,
-  coral glow for pain, Remedy-green phone UI.
-- **Action only.** One person + one prop, mid-struggle. No idle standing
-  portraits (just standing there smiling / holding keys).
-- **Keep it simple.** No multi-monitor desks, no 4-tile video calls, no
-  furniture catalogs.
-- **Funny-wonky is good.** `tying-shoes` and `floor-reach` are keepers because
-  they look a little broken — play into that for everyday stretch-struggles
-  (sock hop, sneeze, hovering over a chair). It has to read as a relatable
-  moment, not a yoga form-check and not uncanny/weird.
-- Never overwrite `desk-worker.svg` or `phone-app.svg`.
-- Prefer these over third-party tiles on new slides (the picker already does).
+Photographs in `people/`. Documentary, candid, real rooms. Not flat illustrations,
+not gym ads, not yoga form-checks. Reject anything that looks fake.
 
 ## What to add later
 
-More Remedy-owned figures in this kit, tailored to hooks. Do not vendor more
-third-party packs unless asked. If it looks like a gym ad, a furniture catalog,
-or a form-check diagram, skip it.
+More Remedy flat scenes and more real people photos. Do not restore Remedy
+original, illlustrations.co, or Open Doodles. If it looks like a gym ad, a
+furniture catalog, or a form-check diagram, skip it.

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { tailoredMindsetCopy } from '../../constants/mindset';
@@ -21,6 +22,7 @@ export default function SeenScreen() {
     <>
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
+        <WarmBackground />
         <View style={styles.content}>
           <Text style={styles.title}>{copy.title}</Text>
           <View style={styles.rule} />

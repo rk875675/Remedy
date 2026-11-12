@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
@@ -45,6 +46,7 @@ export default function RecognizeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+      <WarmBackground />
       <View style={styles.content}>
         <Text style={styles.heading}>Which of these sound like you?</Text>
         <Text style={styles.subheading}>Select any that apply</Text>
@@ -55,7 +57,6 @@ export default function RecognizeScreen() {
               label={opt.label}
               illustration={illustrations[opt.value]}
               photoSize={80}
-              hintLift={9}
               selected={selected.includes(opt.value)}
               onPress={() => toggle(opt.value)}
               hint={
@@ -64,7 +65,6 @@ export default function RecognizeScreen() {
                     field="recognize"
                     value={opt.value}
                     copy={opt.hint}
-                    numberOfLines={1}
                   />
                 ) : null
               }

@@ -10,7 +10,7 @@ import { allRatings } from "../learning/ratings.js";
 import { listExperiments, experimentPartner, createVariant } from "../learning/experiments.js";
 import { buildInReviewShorts } from "../generation/index.js";
 import { getAssetUsage } from "../generation/diversity.js";
-import { resolveBed } from "../generation/short.js";
+import { shortBedLabel } from "../generation/short.js";
 import { getCycleState } from "../learning/rounds.js";
 import { TEMPLATES } from "../generation/templates.js";
 import { postOutputDir, slideObjectKey, SLIDE_REV, CTA_CACHE } from "../generation/composer.js";
@@ -24,7 +24,7 @@ import { syncLibraryOverridesFromR2 } from "../generation/library-overrides.js";
 import { completeManualPost, syncManualCurrent } from "../manual/queue.js";
 import path from "node:path";
 import { buildAuthUrl, consumePendingOAuth, tiktokConnected } from "./tiktok.js";
-import { brightbeanPublicStatus, publisherReady } from "./brightbean.js";
+import { publisherReady, zernioPublicStatus } from "./zernio.js";
 import { loadAudience } from "../analytics/audience.js";
 import { listUgcSnapshot, ugcInsightsPayload, insertUploadedVideo, videoByUuid } from "../ugc/store.js";
 import { applyLibraryToVideos, loadLibrary } from "../ugc/library.js";
@@ -223,6 +223,9 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
       shotScaleLabel: string;
       ctaLayout: string | null;
       ctaReview: boolean;
+      zernioSlot: "1" | "2";
+      accountTwinOf: number | null;
+      accountTwinId: number | null;
       slides: Array<(typeof slides.$inferSelect) & { url: string }>;
       analytics: Array<typeof analytics.$inferSelect>;
     }
@@ -239,7 +242,7 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
     // Current phone-kit posts re-upload so the one Review slide still has the files.
     if ((inReview || keepShort) && existing.length) {
       const own = existing.filter((s) => slideOwnerFromPath(s.filePath, post.id) === post.id);
-      if (own.length) await uploadSlides(post.id, own.map((s) => s.filePath), prelaunch);
+      if (own.length) await uploadSlides(post.id, own.map((s) => s.filePath), true);
     }
     const shortPath = shortOutputPath(postOutputDir(post.id));
     let shortUrl: string | null = null;
@@ -261,7 +264,6 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
       .orderBy(desc(analytics.fetchedAt))
       .limit(8)
       .all();
-    const bed = resolveBed(variation.shortBed);
     mapped.push({
       ...post,
       prelaunch,
@@ -270,13 +272,14 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
       music: variation.music,
       musicCue: MUSIC_CUES[variation.music],
       shortBed: variation.shortBed ?? null,
-      shortBedLabel: !variation.shortBed || variation.shortBed === "silent" || variation.shortBed === "none" || bed?.id === "silent"
-        ? "No sound"
-        : bed ? `${bed.title} (${bed.mood})` : variation.shortBed,
+      shortBedLabel: shortBedLabel(post.id, variation.shortBed),
       shotScale: variation.shotScale,
       shotScaleLabel: shotScaleLabel(variation.shotScale),
       ctaLayout: variation.ctaLayout ?? null,
       ctaReview: variation.ctaReview === true,
+      zernioSlot: variation.zernioSlot === "2" ? "2" : "1",
+      accountTwinOf: variation.accountTwinOf ?? null,
+      accountTwinId: variation.accountTwinId ?? null,
       shortUrl,
       experiment: experimentPartner(post.id),
       slides: slideRows.map((s) => ({
@@ -284,7 +287,13 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
         url: publicSlideUrl(
           slideOwnerFromPath(s.filePath, post.id),
           s.idx,
-          variation.ctaReview ? CTA_CACHE : prelaunch ? `${CTA_CACHE}-prelaunch` : undefined,
+          variation.characterId
+            ? `character`
+            : s.kind === "cta" || variation.ctaReview
+              ? CTA_CACHE
+              : prelaunch
+                ? `${CTA_CACHE}-prelaunch`
+                : undefined,
         ),
       })),
       analytics: latestAnalytics,
@@ -465,7 +474,7 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
       tiktokPostMode: env.TIKTOK_POST_MODE,
       r2Configured: true,
       tiktokAppConfigured: publisherReady("tiktok"),
-      tiktokConnected: brightbeanPublicStatus().accounts.some((a) => a.mapped === "tiktok") || tiktokConnected(),
+      tiktokConnected: zernioPublicStatus().accounts.some((a) => a.mapped === "tiktok") || tiktokConnected(),
       tiktokNativeConnected: tiktokConnected(),
       tiktokNativeAppConfigured: Boolean(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
       tiktokAuthUrl: env.TIKTOK_CLIENT_KEY ? buildAuthUrl() : "",
@@ -474,7 +483,7 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
       facebookConfigured: publisherReady("facebook"),
       youtubeConfigured: publisherReady("youtube"),
       geminiConfigured: Boolean(env.GEMINI_API_KEY),
-      brightbean: brightbeanPublicStatus(),
+      zernio: zernioPublicStatus(),
       audience: loadAudience(),
       snapshotOnly: true,
       pendingCount,

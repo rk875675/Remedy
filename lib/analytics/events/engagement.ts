@@ -17,6 +17,7 @@ import {
   legalDocument,
   notificationPurpose,
   progressChart,
+  friendShareDismissReason,
   reviewPromptSkipReason,
   screenExitType,
   screenName,
@@ -222,4 +223,59 @@ export const feedbackSubmitFailed = defineEvent(
 export const reviewAskShown = defineEvent(
   'review_ask_shown',
   z.object({ source_screen: sourceScreen, rating: z.number().int().min(4).max(5) }).strict(),
+);
+
+/**
+ * Friend-share sheet. The decision it serves: whether the ask earns a send or
+ * gets closed, so the cooldown can be tightened. The name and the message body
+ * are never sent. `has_name` is only whether a first name was on screen.
+ */
+const friendShareContext = {
+  has_name: z.boolean(),
+  pain_improved: z.boolean(),
+};
+
+export const friendShareArmed = defineEvent(
+  'friend_share_armed',
+  z
+    .object({
+      source_screen: z.literal('session'),
+      ...friendShareContext,
+    })
+    .strict(),
+);
+
+export const friendShareOffered = defineEvent(
+  'friend_share_offered',
+  z
+    .object({
+      source_screen: z.literal('home'),
+      ...friendShareContext,
+    })
+    .strict(),
+);
+
+export const friendShareDismissed = defineEvent(
+  'friend_share_dismissed',
+  z
+    .object({
+      source_screen: z.literal('home'),
+      reason: friendShareDismissReason,
+    })
+    .strict(),
+);
+
+export const friendShareStarted = defineEvent(
+  'friend_share_started',
+  z.object({ source_screen: z.literal('home') }).strict(),
+);
+
+export const friendShareCompleted = defineEvent(
+  'friend_share_completed',
+  z.object({ source_screen: z.literal('home') }).strict(),
+);
+
+export const friendShareCancelled = defineEvent(
+  'friend_share_cancelled',
+  z.object({ source_screen: z.literal('home') }).strict(),
 );

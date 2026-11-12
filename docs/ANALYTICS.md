@@ -65,11 +65,11 @@ Application Installed
   → /(onboarding)              welcome
   → /(onboarding)/founder      interstitial
   → /(onboarding)/education    interstitial
+  → /(onboarding)/proof        why Remedy works + "Agree & continue" legal/health-data assent (hard gate)
   → /(onboarding)/q0           where did you hear about us      (analytics-only answer)
-  → /(onboarding)/safety       red-flag check + legal assent    (analytics-only; hard gate)
-  → /(onboarding)/q9           tried anything before            (analytics-only answer)
-  → /(onboarding)/recognize    which stuck-pain patterns feel true  (analytics-only; copy depends on q9)
-  → /(onboarding)/seen         one tailored mindset interstitial (q9 + recognize)
+  → /(onboarding)/q9           can Remedy fix it? yes/maybe/no  (analytics-only answer → app_belief)
+  → /(onboarding)/recognize    which stuck-pain patterns feel true  (analytics-only)
+  → /(onboarding)/seen         one tailored mindset interstitial (recognize)
   → /(onboarding)/q6           main goals            (multi)  ← personalizing quiz starts
   → /(onboarding)/q1           pain location
   → /(onboarding)/q2           pain duration
@@ -78,6 +78,7 @@ Application Installed
   → /(onboarding)/q5           pain triggers         (multi)
   → /(onboarding)/q7           equipment tier + safety disclaimer modal
   → /(onboarding)/q8           time budget + cadence → sessions_per_week_preference
+  → /(onboarding)/commit       "Hold to commit" interstitial
   → /(onboarding)/finalizing   animated "building your plan"
   → /(onboarding)/match        server-computed plan preview  →  Superwall paywall
   → /(auth)/sign-in            Apple / Google / Email          ← FIRST TIME AN ACCOUNT EXISTS
@@ -223,7 +224,7 @@ Every funnel below is answerable from the event table in §3.
 | Funnel | Steps | The drop-off question each step answers |
 |---|---|---|
 | **F1 — Onboarding → Activation** | `onboarding_started` → `onboarding_completed` → `paywall_viewed` → `purchase_flow_completed` → `signup_completed` → `program_assigned` | Where between "started onboarding" and "got a program" do we lose people? First session is In-App (F4) and the activation-rate tile, not this funnel. The product funnel still *conceptually* starts at `Application Installed`, but that event is once-per-install and last fired 2026-06-20 — a cutover-scoped insight that starts there is empty forever. Post-paywall handoff (purchase stash → signup → assignment) is still the risky drop. |
-| **F2 — Onboarding step funnel** | `onboarding_step_viewed` / `onboarding_step_completed` for the question keys only (`q0`, `safety`, `q9`, `q6`, `q1`–`q5`, `q7`, `q8`, `recognize`) | Which question is the expensive one? Interstitials (welcome / founder / education / seen / finalizing / match) are excluded — they live on the full-path tile. `time_on_step_ms` separates "hard question" from "boring question". |
+| **F2 — Onboarding step funnel** | `onboarding_step_viewed` / `onboarding_step_completed` for the question keys only (`q0`, `q9`, `q6`, `q1`–`q5`, `q7`, `q8`, `recognize`) | Which question is the expensive one? Interstitials (welcome / founder / education / proof / seen / commit / finalizing / match) are excluded — they live on the full-path tile. `time_on_step_ms` separates "hard question" from "boring question". |
 | **F3 — Monetization** | `paywall_viewed` → `paywall_presented` → `purchase_started` → `purchase_flow_completed` | Did they see the paywall, did Superwall actually render one, did they start a purchase, did Apple complete it? Stops at the client purchase because the no-trial SKU never emits `trial_started`. Server grant (`trial_started` **OR** `subscription_started`) is a separate SQL tile. Trial → paid stays its own funnel. |
 | **F4 — Session completion** | `session_start_tapped` → `session_previewed` → `session_started` → `exercise_started` → `session_completed` | Do people bail at the preview, at the pain check-in, at the first exercise, or midway? `session_abandoned` carries `phase_key` for exactly this. |
 | **F5 — Auth** | `signup_started` → `signup_completed`, broken down by `method` | Is Apple/Google/Email failing differently? This runs *after* money has changed hands, so a failure here is a paid user with no account. |
@@ -336,15 +337,15 @@ second, staler source of truth for the same fact.
 Enforced in code as the `KNOWN_SCREENS` allow-list in `lib/analytics/routes.ts`. The two lists
 must stay identical.
 
-`/(onboarding)`, `/(onboarding)/founder`, `/(onboarding)/education`, `/(onboarding)/q0`,
-`/(onboarding)/safety`, `/(onboarding)/q9`, `/(onboarding)/q6`, `/(onboarding)/q1`, `/(onboarding)/q2`,
+`/(onboarding)`, `/(onboarding)/founder`, `/(onboarding)/education`, `/(onboarding)/proof`, `/(onboarding)/q0`,
+`/(onboarding)/q9`, `/(onboarding)/q6`, `/(onboarding)/q1`, `/(onboarding)/q2`,
 `/(onboarding)/recognize`, `/(onboarding)/seen`,
 `/(onboarding)/q3`, `/(onboarding)/q4`, `/(onboarding)/q5`, `/(onboarding)/q7`,
-`/(onboarding)/q8`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
+`/(onboarding)/q8`, `/(onboarding)/commit`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
 `/(auth)/sign-in`, `/(auth)/email`, `/(legal)/terms`, `/(legal)/privacy`, `/(tabs)`,
 `/(tabs)/progress`, `/(tabs)/profile`, `/session/[id]`, `/building-plan`, `/weekly-ramp`,
-`/orientation`, `/program-complete`, `/onboarding-answers`, `/auth-callback`, `/reset-password`,
-`/feedback`.
+`/orientation`, `/program-complete`, `/next-program`, `/onboarding-answers`, `/auth-callback`,
+`/reset-password`, `/feedback`.
 
 Cardinality is bounded by that list rather than trusted to the router. A route not on it emits
 the literal name `unknown` and logs a warning in development naming the file to update — so a
@@ -363,10 +364,11 @@ absolute.
 ### 3.3 Onboarding — C
 
 Step keys are the members of `ONBOARDING_FLOW` in `context/OnboardingContext.tsx`, plus
-`finalizing` and `match`. `step_index` is the array index (0-based), so funnel ordering
-survives a reorder of the keys. The `recognize` / `seen` block sits after
-q9 and before the personalizing quiz (`q6`). The seen interstitial is tailored from
-q9 (`tried_before`) plus the first recognize selection.
+`commit`, `finalizing` and `match`. `step_index` is the array index (0-based), so it
+**shifts when steps are added or removed** — group historical data by `step_key`, not
+`step_index`. The `recognize` / `seen` block sits after q9 and before the personalizing
+quiz (`q6`). The seen interstitial is tailored from the first recognize selection (the
+legacy `tried_before` answer is no longer collected, so the "tried before" copy is used).
 
 | Event | Fires when | Trigger location | Required properties | Optional | Notes |
 |---|---|---|---|---|---|
@@ -374,9 +376,9 @@ q9 (`tried_before`) plus the first recognize selection.
 | `onboarding_step_viewed` | The router settles on a funnel step | `useOnboardingStepTracking` in `lib/analytics/onboardingSteps.ts` | `step_key` str, `step_index` int, `is_retake` bool | — | Driven off the active route, not screen mount: expo-router keeps earlier screens mounted, so a mount hook would miss every back-navigation and re-entry. Exactly one `viewed` and one `exited` per visit. |
 | `onboarding_step_completed` | Continue pressed with a valid answer | Each `q*.tsx` continue handler, via `useOnboardingStepCompletion()` | `step_key` str, `step_index` int, `time_on_step_ms` int, `is_retake` bool | `answer_count` int (multi-selects) | Primary F2 step event. |
 | `onboarding_step_exited` | Leaving a step by any route | `lib/analytics/onboardingSteps.ts` — route watcher + `AppState` listener | `step_key` str, `step_index` int, `time_on_step_ms` int, `exit_type` str | — | `exit_type` ∈ `forward` \| `backward` \| `backgrounded` \| `abandoned`. Without this, a user who took a phone call is indistinguishable from a user who quit. Returning to the foreground starts a *new* visit, so dwell time excludes the time away. |
-| `onboarding_option_selected` | An option is tapped on a question screen | Each `q*.tsx` select handler, plus the safety legal checkbox | `step_key` str, `option_value` str, `is_multi_select` bool, `is_deselect` bool | `selection_count` int, `is_recommended` bool | All option values are closed enums (§3.3.1). `q2` sends the engine bucket (`pain_duration`), not the UI row id. `is_recommended` is set on q8 day/minute taps. Safety yes/no uses the same tokens as q9 — always filter by `step_key`. |
+| `onboarding_option_selected` | An option is tapped on a question screen | Each `q*.tsx` select handler, plus "Agree & continue" on `proof` | `step_key` str, `option_value` str, `is_multi_select` bool, `is_deselect` bool | `selection_count` int, `is_recommended` bool | All option values are closed enums (§3.3.1). `q2` sends the engine bucket (`pain_duration`), not the UI row id. `is_recommended` is set on q8 day/minute taps. q9 yes/no share tokens with legacy safety/q9 answers — always filter by `step_key`, and note q9 meant "tried before" before the belief question replaced it. |
 | `onboarding_hint_shown` | Personalization bubble or safety warning renders | `PersonalizationHint`, `q7`, `q8` days nudge, `safety` red-flag warning | `step_key` str, `hint_key` str | — | Replaces `onboarding_option_bubble_shown`. New keys: `red_flag_warning`, `q8_days`. |
-| `onboarding_clinician_exit_confirmed` | "I'll check with a clinician first" tapped on safety | `app/(onboarding)/safety.tsx` | `step_key` str, `time_on_step_ms` int | — | Distinct from a swipe-back. These people self-selected out after seeing the red-flag warning. |
+| `onboarding_clinician_exit_confirmed` | **Legacy — no longer emitted** (safety screen removed). "I'll check with a clinician first" tapped on safety | formerly `app/(onboarding)/safety.tsx` | `step_key` str, `time_on_step_ms` int | — | Distinct from a swipe-back. These people self-selected out after seeing the red-flag warning. |
 | `onboarding_disclaimer_viewed` | Equipment safety modal opens | `components/onboarding/EquipmentDisclaimerModal.tsx` | `equipment_tier` str | — | Replaces `onboarding_equipment_disclaimer_shown`. |
 | `onboarding_disclaimer_confirmed` | Modal confirmed | same | `equipment_tier` str, `time_on_step_ms` int | — | Replaces `onboarding_equipment_disclaimer_confirmed`. |
 | `onboarding_plan_previewed` | `assign-program?preview_only` resolves on match | `app/(onboarding)/match.tsx` | `preview_source` str (`server` \| `fallback`), `duration_weeks` int, `sessions_per_week` int | `primary_focus` str, `equipment_tier` str | `fallback` means the edge function failed and the user is seeing client-side copy. The invoke itself is cached on the answers fingerprint for the JS session — Superwall remounts must not re-hit the edge function. The event is separately deduped on the result fingerprint. |
@@ -397,12 +399,13 @@ q9 (`tried_before`) plus the first recognize selection.
 | `main_goal` / `primary_goal` | `reduce_pain` \| `return_to_exercise` \| `sleep` \| `mobility` |
 | `sessions_per_week_preference` | int, 3–7 (derived from `sessionsPerWeekSchema`, which is a ranged int rather than a literal union) |
 | `acquisition_source` | `instagram` \| `facebook` \| `tiktok` \| `youtube` \| `google` \| `friend_family` \| `other` |
-| `prior_attempts` (`q9`) | `yes` \| `no` |
+| `prior_attempts` (legacy `q9`, no longer asked) | `yes` \| `no` |
+| `app_belief` (`q9`) | `yes` \| `maybe` \| `no` |
 | `recognize_pattern` (`recognize`) | `effort` \| `return_loop` \| `flinch` \| `permanence` |
 | `session_length` (`q8`) | `minutes_15` \| `minutes_20` \| `minutes_30` |
 | `training_cadence` (`q8`) | `days_3` \| `days_4` \| `days_5` \| `days_6` \| `days_7` (legacy: `every_day` \| `every_other_day`) |
-| `legal_assent` (`safety` checkbox) | `legal_assent` |
-| `has_red_flag` (`safety`) | bool — `option_value` on the yes/no cards is `yes` \| `no` (same tokens as `prior_attempts`; filter by `step_key`) |
+| `legal_assent` (`proof` "Agree & continue"; `safety` checkbox before it was removed) | `legal_assent` |
+| `has_red_flag` (legacy `safety`, removed) | bool — no longer emitted |
 | `home_empty_state_reason` | `program_complete` \| `no_active_plan` \| `rest_day` \| `session_done_today` \| `no_session_available` |
 | `exercise_phase` | `mobility` \| `activation` \| `strength` \| `recovery` |
 | `subscription_status` | `none` \| `trial` \| `active` \| `cancelled` \| `expired` \| `dev_trial` |
@@ -573,8 +576,18 @@ which is the reminder to update `lib/analytics/events/enums.ts` and this table t
 |---|---|---|---|
 | `weekly_ramp_suggested` | Ramp screen shows a suggestion | `app/weekly-ramp.tsx` | `week_number` int, `suggestion` str (`progress` \| `hold`), `pain_delta` float \| **null** |
 | `weekly_ramp_decided` | User chooses | `app/weekly-ramp.tsx` | `week_number` int, `suggestion` str, `decision` str, `followed_suggestion` bool, `pain_delta` float \| **null** |
-| `program_completed` | Program-complete screen loads its stats | `app/program-complete.tsx` | `sessions_completed_count` int, `days_active_count` int |
-| `program_restarted` | "Restart Program" | `app/program-complete.tsx` | `source_screen` str |
+| `program_completed` | Program-complete screen loads its stats | `app/program-complete.tsx` | `sessions_completed_count` int, `days_active_count` int; optional `program_number` int |
+| `next_program_chosen` | "Build my next program" or "Level up my current plan" | `app/program-complete.tsx` | `choice` str (`rebuild` \| `continue`), `has_draft` bool |
+| `next_program_started` | `start-next-program` returns the new plan | `app/next-program.tsx` | `choice` str, `from_level` int, `to_level` int, `program_number` int, `duration_weeks` int, `sessions_per_week` int, `equipment_tier` str, `replayed` bool, `duration_ms` int; rebuild only: `pain_change` str, `difficulty` str, `primary_goal` str, `feedback_length` int |
+| `next_program_failed` | `start-next-program` fails | `app/next-program.tsx` | `choice` str, `reason` str (`already_started` \| `not_entitled` \| `rate_limited` \| `network` \| `failed`) |
+
+Counts on `program_completed` cover the current program only (since
+`user_programs.program_started_at`), so a second program does not report lifetime totals.
+`program_restarted` was retired with the "Restart Program" button: a finished program now
+either levels up (`continue`) or is rebuilt from a check-in (`rebuild`). `from_level` /
+`to_level` are the engine progression level (-1–3). `pain_change` ∈ `much_better` \|
+`better` \| `same` \| `worse`; `difficulty` ∈ `too_easy` \| `just_right` \| `too_hard`. The
+written check-in note is never sent — only `feedback_length` (§6.1).
 
 `pain_delta` is nullable: a week with too few paired check-ins has no computable delta,
 which is a real state and distinct from "no change". It is a float — the screen rounds to
@@ -612,6 +625,12 @@ wrongly implies the user agreed with the suggestion — `followed_suggestion` ca
 | `feedback_submitted` | In-app feedback sent successfully | `app/feedback.tsx` | `category` str (`bug` \| `idea` \| `question` \| `other`), `feedback_length` int, `rating` int? (1–5) | **The body is never sent.** Length is the trimmed character count. Rating is omitted when the user skips the optional scale. |
 | `feedback_submit_failed` | Submit rejected or network failed | `app/feedback.tsx` | `reason` str (`rate_limited` \| `duplicate` \| `invalid_body` \| `request_failed`) | Caps doing their job vs our outage. Never includes the body. |
 | `review_ask_shown` | 4–5 rating success screen with App Store CTA | `app/feedback.tsx` | `source_screen` str (`feedback`), `rating` int (`4` \| `5`) | Funnel step before `review_manual_tapped`. Not the native `requestReview()` sheet. |
+| `friend_share_armed` | Back to Home tapped with a share offer waiting | `app/session/[id].tsx` | `source_screen` str (`session`), `has_name` bool, `pain_improved` bool | The sheet has not appeared yet. `has_name` is whether a first name was known. The name itself is never sent. |
+| `friend_share_offered` | Sheet has slid up on Home | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`), `has_name` bool, `pain_improved` bool | Fires once per show. Cadence lives in `lib/friendShare.ts`. |
+| `friend_share_dismissed` | Sheet closed without a send | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`), `reason` str (`close` \| `scrim` \| `left`) | `close` is the X. `scrim` is a tap outside the sheet. `left` is Home going away while the sheet was up. |
+| `friend_share_started` | Share tapped and the system sheet opened | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`) | Does not mean they sent it. |
+| `friend_share_completed` | System share sheet returned a send | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`) | The message body is never sent. |
+| `friend_share_cancelled` | System share sheet closed without a send | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`) | The Remedy sheet stays up. |
 
 #### 3.10.1 Reading the review-prompt funnel
 
@@ -661,8 +680,9 @@ same transition. See §5.
 | `equipment_tier` | str | C | On `onboarding_completed` and retake | Content-availability segment. |
 | `primary_goal` | str | C | On `onboarding_completed` | Program naming and motivation segment. |
 | `sessions_per_week_preference` | int | C | On `onboarding_completed` | Denominator for the adherence ratio in §1.4. |
-| `has_red_flag` | bool | C | On safety yes/no, and again on `onboarding_completed` | Segment later conversion / activation by the contraindication gate. Set pre-auth so the identify merge carries it. |
-| `prior_attempts` | str | C | On q9 answer, and again on `onboarding_completed` | First-timer vs already-tried. Recognize / seen copy depends on this. |
+| `has_red_flag` | bool | C | **Legacy — no longer set** (safety screen removed). Was set on safety yes/no and on `onboarding_completed` | Segment later conversion / activation by the contraindication gate. Set pre-auth so the identify merge carries it. |
+| `prior_attempts` | str | C | **Legacy — no longer set** (q9 now asks belief) | First-timer vs already-tried. |
+| `app_belief` | str | C | On q9 answer | `yes` / `maybe` / `no` to "Do you believe Remedy can fix your back pain?". Segment conversion by it. |
 | `session_length` | str | C | On `onboarding_completed` from the q8 minutes pick | `minutes_15` \| `minutes_20` \| `minutes_30`. Compare to actual workout minutes. |
 | `program_week` | int | C | On `session_completed` | "How deep into the program" cohorting. |
 | `first_session_completed_at` | iso | C | Once, on first `session_completed` | Activation timestamp; set-once semantics. |
@@ -999,9 +1019,9 @@ in a reviewed file means a change to the analysis layer shows up in a diff.
 
 | Dashboard | id | What it is (and is not) | Tiles, most important first |
 |---|---|---|---|
-| 1. Onboarding | 1981018 | How people start. Not whether they come back, not money. | F1, full-path (every screen including stories + safety), weekly start→finish, F2 (now includes safety), exits, time on step, safety red-flag + clinician-exit, q9 / recognize / completer profile (pain, duration, activity, goal, equipment), q8 days / minutes / recommendation, acquisition, resume, time-in-funnel, plan-preview source, F5 |
+| 1. Onboarding | 1981018 | How people start. Not whether they come back, not money. | F1, full-path (every screen including stories, proof, commit), weekly start→finish, F2 (grouped by step_key), exits, time on step, consent (proof viewed vs agreed), q9 belief / recognize / completer profile (pain, duration, activity, goal, equipment), q8 days / minutes / recommendation, acquisition, resume, time-in-funnel, plan-preview source, F5 |
 | 2. Users & Retention | 1981017 | Headcount and return rates. Paid-user *counts* live here; dollars do not. | North-star ratio, WAC, activation rate, program retention, open retention, completer lifecycle, session volume |
-| 3. In-App | 1981022 | What they do in the product. Core loop first, then time and screens, then content. Not whether they return. | F4, adherence, pain, time in app (week), screens viewed, tab mix, abandonment, workout minutes (user-week), time in app (day), app opens, screen dwell, workout minutes (session), F7, screen paths, exercises started, skipped, feature usage |
+| 3. In-App | 1981022 | What they do in the product. Core loop first, then time and screens, then content. Not whether they return. | F4, adherence, pain, time in app (week), screens viewed, tab mix, abandonment, workout minutes (user-week), time in app (day), app opens, screen dwell, workout minutes (session), F7, screen paths, exercises started, skipped, feature usage, share tap rate, friend share funnel, friend share dismissed, friend share cancelled |
 | 4. Revenue | 1981021 | Money only. LTV / target CAC need ad spend, which is not in this project yet. Headline chart is a cumulative dollar running total (monthly / annual / total / profit after Apple 15% + refunds). | Revenue ($) (cumulative monthly, annual, total, profit), F3, trial→paid, renewals, verification grant, variant performance, Superwall render loss, purchase failures, F6 |
 | 5. Reliability | 1981023 | Failures and friction — the niche board. | All pipeline failures, lost workouts, purchase confirmation, daily alerts, then per-reason bars, notification permission, then in-app feedback (volume, category, rating, submit failures, 4–5 → App Store ask) |
 

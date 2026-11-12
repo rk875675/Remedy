@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimitFixedWindow } from '../_shared/ratelimit.ts';
 import { requestSchema, resolvedPlanSchema } from '../_shared/assignment/schema.ts';
-import { buildPlan, type Answers } from '../_shared/assignment/engine.ts';
+import { buildPlan, clampProgressionLevel, type Answers } from '../_shared/assignment/engine.ts';
 import { getRebuildEligibility, nextRebuildStamp } from '../_shared/rebuildCooldown.ts';
 import { loadAssignmentContext } from '../_shared/assignment/loadContext.ts';
 import { isPendingApplyDue } from '../_shared/assignment/programAnswers.ts';
@@ -161,6 +161,18 @@ Deno.serve(async (req: Request) => {
       preservePointer = true;
     }
 
+    // A finished program's level (start-next-program) carries into every rebuild of the
+    // user's current program and into their previews. Anonymous previews are level 0.
+    let progressionLevel = 0;
+    if (authedUserId) {
+      const { data: levelRow } = await supabase
+        .from('user_programs')
+        .select('progression_level')
+        .eq('user_id', userId)
+        .maybeSingle();
+      progressionLevel = clampProgressionLevel(levelRow?.progression_level);
+    }
+
     const ctx = await loadAssignmentContext(supabase);
     if ('error' in ctx) return json({ error: ctx.error }, 500);
     const { rules, rulesVersion, templateId, template, exercises, replacements } = ctx;
@@ -174,6 +186,7 @@ Deno.serve(async (req: Request) => {
       template,
       replacements,
       startWeek,
+      progressionLevel,
     });
 
     // Output guard: never persist/return a malformed plan.

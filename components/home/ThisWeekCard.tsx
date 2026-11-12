@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Svg, { Path } from 'react-native-svg';
 import {
   View,
   Text,
@@ -63,7 +64,7 @@ export function ThisWeekCard({
       ) : null}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardTitle}>This Week</Text>
+          <Text style={styles.cardTitle}>This week</Text>
           <TouchableOpacity
             onPress={onEditDays}
             activeOpacity={0.7}
@@ -88,6 +89,7 @@ export function ThisWeekCard({
         {mindsetLine ? <Text style={styles.mindset}>{mindsetLine}</Text> : null}
 
         <View style={styles.weekRow}>
+          <WeekThread displayWeekDays={displayWeekDays} />
           {DAY_LABELS.map((label, i) => {
             const todayIdx = todayDayIndex();
             const isCompleted = displayWeekDays[i];
@@ -115,6 +117,7 @@ export function ThisWeekCard({
                     {label.charAt(0)}
                   </Text>
                 </View>
+                <View style={[styles.todayDot, i !== todayIdx && styles.todayDotHidden]} />
               </View>
             );
           })}
@@ -149,6 +152,50 @@ export function ThisWeekCard({
           </View>
         )}
       </View>
+    </View>
+  );
+}
+
+const CIRCLE = 38;
+
+// Hand-drawn-feeling line that threads the day circles; a stretch between two
+// completed days is drawn solid green, everything else as a faint dash.
+function WeekThread({ displayWeekDays }: { displayWeekDays: boolean[] }) {
+  const [width, setWidth] = useState(0);
+  const col = width / 7;
+  const mid = CIRCLE / 2;
+  const segments = width
+    ? Array.from({ length: 6 }, (_, i) => {
+        const x1 = col * (i + 0.5);
+        const x2 = col * (i + 1.5);
+        const bow = i % 2 === 0 ? -7 : 7;
+        return {
+          d: `M ${x1} ${mid} C ${x1 + col * 0.35} ${mid + bow}, ${x2 - col * 0.35} ${mid - bow}, ${x2} ${mid}`,
+          done: displayWeekDays[i] && displayWeekDays[i + 1],
+        };
+      })
+    : [];
+  return (
+    <View
+      pointerEvents="none"
+      style={StyleSheet.absoluteFill}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width ? (
+        <Svg width={width} height={CIRCLE}>
+          {segments.map((s, i) => (
+            <Path
+              key={i}
+              d={s.d}
+              fill="none"
+              strokeLinecap="round"
+              stroke={s.done ? colors.primary : colors.border}
+              strokeWidth={s.done ? 2 : 1.5}
+              strokeDasharray={s.done ? undefined : '2 5'}
+            />
+          ))}
+        </Svg>
+      ) : null}
     </View>
   );
 }
@@ -207,11 +254,12 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingHorizontal: 24,
-    paddingTop: 22,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 16,
-    ...shadows.low,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -220,11 +268,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardTitle: {
-    fontSize: 12,
+    fontSize: 17,
     fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
   editLink: {
     fontSize: 15,
@@ -288,9 +335,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.circle,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  todayDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+    marginTop: 6,
+  },
+  todayDotHidden: {
+    opacity: 0,
   },
   dayCirclePlanned: {
     backgroundColor: colors.primaryMuted,

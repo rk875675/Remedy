@@ -1,7 +1,7 @@
 /**
  * Channel audience (follower) history.
  *
- * BrightBean is the source. Each pull writes a snapshot per connected
+ * Zernio is the source. Each pull writes a snapshot per connected
  * account. A post freezes `followersAtPublish` on its first measurement
  * so later growth cannot make early posts look like duds.
  */
@@ -9,7 +9,7 @@
 import { getDb, settings, accountSnapshots, posts } from "@remedy-growth/db";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { brightbeanConfigured, fetchAccountAnalytics, loadBrightbeanCache } from "../publish/brightbean.js";
+import { fetchAccountAnalytics, loadZernioCache, zernioConfigured } from "../publish/zernio.js";
 import { configuredPlatforms } from "../config.js";
 
 const AUDIENCE_KEY = "audience";
@@ -95,20 +95,20 @@ export function freezeFollowersAtPublish(postId: number, currentFollowers: numbe
 }
 
 export async function pullAccountAudience(): Promise<AudienceCache | null> {
-  if (!brightbeanConfigured()) return loadAudience();
-  const cache = loadBrightbeanCache();
+  if (!zernioConfigured()) return loadAudience();
+  const cache = loadZernioCache();
   const platforms = [...new Set([
     ...configuredPlatforms(),
-    ...(loadBrightbeanCache()?.accounts.map((a) => a.mapped) ?? []),
+    ...(cache?.accounts.map((a) => a.mapped) ?? []),
   ])];
   const rows: AudienceRow[] = [];
   const db = getDb();
 
-  const bbAccounts = loadBrightbeanCache()?.accounts ?? [];
+  const zAccounts = cache?.accounts ?? [];
   for (const platform of platforms) {
     const account =
-      bbAccounts.find((a) => a.mapped === platform && a.status === "connected") ??
-      bbAccounts.find((a) => a.mapped === platform);
+      zAccounts.find((a) => a.mapped === platform && a.status === "connected") ??
+      zAccounts.find((a) => a.mapped === platform);
     if (!account) continue;
     try {
       const a = await fetchAccountAnalytics(account.id);
@@ -137,7 +137,7 @@ export async function pullAccountAudience(): Promise<AudienceCache | null> {
       });
     } catch (err) {
       console.warn(
-        `BrightBean account analytics failed for ${platform}:`,
+        `Zernio account analytics failed for ${platform}:`,
         err instanceof Error ? err.message.slice(0, 200) : err,
       );
       const prev = loadAudience()?.platforms.find((p) => p.platform === platform);
@@ -152,13 +152,13 @@ export async function pullAccountAudience(): Promise<AudienceCache | null> {
   }
 
   if (rows.length === 0 && cache) {
-    console.log("Audience pull: no BrightBean account analytics this pass.");
+    console.log("Audience pull: no Zernio account analytics this pass.");
     return loadAudience();
   }
 
   const next: AudienceCache = { platforms: rows, refreshedAt: new Date().toISOString() };
   writeAudience(next);
   const parts = rows.map((r) => `${r.platform}:${r.followers || "?"}`).join(", ");
-  console.log(`Audience: ${parts || "none"} (BrightBean).`);
+  console.log(`Audience: ${parts || "none"} (Zernio).`);
   return next;
 }

@@ -105,6 +105,11 @@ export type UserProgram = {
     sessions_per_week_preference: number | null;
   } | null;
   pending_apply_week: number | null;
+  // Migration 087. Written only by start_next_program.
+  progression_level: number;
+  programs_completed: number;
+  /** When the current program began. Null for a user's first program. */
+  program_started_at: string | null;
 };
 
 export type SessionCompletion = {

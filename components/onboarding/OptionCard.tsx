@@ -16,9 +16,7 @@ type OptionCardProps = {
   badge?: string;
   photoSize?: number;
   minHeight?: number;
-  /** Extra lift (pt) applied to the title when a hint is showing. Default 6. */
-  hintLift?: number;
-  /** Grey caption under the label, inside the card. Does not change card size. */
+  /** Grey caption under the label. The card grows to fit it. */
   hint?: React.ReactNode;
   selected: boolean;
   onPress: () => void;
@@ -69,7 +67,6 @@ export function OptionCard({
   badge,
   photoSize,
   minHeight,
-  hintLift = 6,
   hint,
   selected,
   onPress,
@@ -130,20 +127,13 @@ export function OptionCard({
           )
         ) : null}
         <View style={styles.textContainer}>
-          <View
-            style={[
-              styles.labelBlock,
-              !!hint && { transform: [{ translateY: -hintLift }] },
-            ]}
-          >
-            <View style={styles.labelRow}>
-              <Text style={[styles.label, selected && styles.labelSelected]}>
-                {label}
-              </Text>
-              {badge ? <Text style={styles.badge}>{badge}</Text> : null}
-            </View>
-            {hint ? <View style={styles.hintOverlay} pointerEvents="none">{hint}</View> : null}
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, selected && styles.labelSelected]}>
+              {label}
+            </Text>
+            {badge ? <Text style={styles.badge}>{badge}</Text> : null}
           </View>
+          {hint ? <View style={styles.hint}>{hint}</View> : null}
           {subtitle && (
             <Text style={[styles.subtitle, selected && styles.subtitleSelected]}>
               {subtitle}
@@ -220,14 +210,7 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
-  labelBlock: {
-    position: 'relative',
-  },
-  hintOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '100%',
+  hint: {
     marginTop: 2,
   },
   labelRow: {
@@ -247,6 +230,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   label: {
+    flexShrink: 1,
     fontSize: 17,
     fontWeight: '500',
     color: colors.textPrimary,

@@ -17,9 +17,28 @@ export interface ShortBed {
   title: string;
   artist: string;
   mood: BedMood;
+  /** Default Shorts pool. Legacy beds omit this and only play when a post already names them. */
+  upbeat?: boolean;
 }
 
 const BEDS: Array<Omit<ShortBed, "file"> & { file: string }> = [
+  { id: "monkeys-spinning-monkeys", file: "monkeys-spinning-monkeys.m4a", title: "Monkeys Spinning Monkeys", artist: "Kevin MacLeod", mood: "folk", upbeat: true },
+  { id: "electrodoodle", file: "electrodoodle.m4a", title: "Electrodoodle", artist: "Kevin MacLeod", mood: "ambient", upbeat: true },
+  { id: "sneaky-snitch", file: "sneaky-snitch.m4a", title: "Sneaky Snitch", artist: "Kevin MacLeod", mood: "folk", upbeat: true },
+  { id: "fluffing-a-duck", file: "fluffing-a-duck.m4a", title: "Fluffing a Duck", artist: "Kevin MacLeod", mood: "folk", upbeat: true },
+  { id: "cipher", file: "cipher.m4a", title: "Cipher", artist: "Kevin MacLeod", mood: "ambient", upbeat: true },
+  { id: "carefree", file: "carefree.m4a", title: "Carefree", artist: "Kevin MacLeod", mood: "pastoral", upbeat: true },
+  { id: "life-of-riley", file: "life-of-riley.m4a", title: "Life of Riley", artist: "Kevin MacLeod", mood: "pastoral", upbeat: true },
+  { id: "scheming-weasel", file: "scheming-weasel.m4a", title: "Scheming Weasel (faster version)", artist: "Kevin MacLeod", mood: "piano", upbeat: true },
+  { id: "pixel-peeker", file: "pixel-peeker.m4a", title: "Pixel Peeker Polka - faster", artist: "Kevin MacLeod", mood: "folk", upbeat: true },
+  { id: "who-likes-to-party", file: "who-likes-to-party.m4a", title: "Who Likes to Party", artist: "Kevin MacLeod", mood: "warm", upbeat: true },
+  { id: "hyperfun", file: "hyperfun.m4a", title: "Hyperfun", artist: "Kevin MacLeod", mood: "warm", upbeat: true },
+  { id: "local-forecast", file: "local-forecast.m4a", title: "Local Forecast", artist: "Kevin MacLeod", mood: "ambient", upbeat: true },
+  { id: "bossa-antigua", file: "bossa-antigua.m4a", title: "Bossa Antigua", artist: "Kevin MacLeod", mood: "pastoral", upbeat: true },
+  { id: "investigations", file: "investigations.m4a", title: "Investigations", artist: "Kevin MacLeod", mood: "piano", upbeat: true },
+  { id: "show-must-be-go", file: "show-must-be-go.m4a", title: "The Show Must Be Go", artist: "Kevin MacLeod", mood: "warm", upbeat: true },
+  { id: "quirky-dog", file: "quirky-dog.m4a", title: "Quirky Dog", artist: "Kevin MacLeod", mood: "folk", upbeat: true },
+  { id: "bit-quest", file: "bit-quest.m4a", title: "Bit Quest", artist: "Kevin MacLeod", mood: "ambient", upbeat: true },
   { id: "meditation-01", file: "meditation-01.m4a", title: "Meditation Impromptu 01", artist: "Kevin MacLeod", mood: "piano" },
   { id: "meditation-02", file: "meditation-02.m4a", title: "Meditation Impromptu 02", artist: "Kevin MacLeod", mood: "piano" },
   { id: "frost-waltz", file: "frost-waltz.m4a", title: "Frost Waltz", artist: "Kevin MacLeod", mood: "piano" },
@@ -45,6 +64,11 @@ export function listBeds(): ShortBed[] {
   return BEDS.filter((b) => fs.existsSync(path.join(AUDIO_DIR, b.file))).map(withAbs);
 }
 
+/** Every CC bed we ship, even if the file is not on disk yet. */
+export function knownBeds(): ShortBed[] {
+  return BEDS.map(withAbs);
+}
+
 export const SILENT_BED_ID = "silent";
 
 export const SILENT_BED: ShortBed = {
@@ -61,13 +85,14 @@ export function resolveBed(id: string | undefined): ShortBed | null {
   return beds.find((b) => b.id === id) ?? null;
 }
 
-/** Diversity-first pick: cold mood, then cold track, then rating weights. */
+/** Diversity-first pick from the shipping pool: cold mood, then cold track, then rating weights. */
 export function pickShortBed(opts?: {
   exclude?: string[];
   shipped?: Map<string, number>;
   weights?: Record<string, number>;
 }): ShortBed {
-  const beds = listBeds();
+  const shipping = listBeds().filter((b) => b.upbeat);
+  const beds = shipping.length ? shipping : listBeds();
   if (beds.length === 0) throw new Error("No YouTube beds in assets/audio/");
   const exclude = new Set(opts?.exclude ?? []);
   const pool = beds.filter((b) => !exclude.has(b.id));
@@ -91,6 +116,25 @@ export function pickShortBed(opts?: {
   return top[Math.floor(Math.random() * top.length)] ?? candidates[0]!;
 }
 
+/** Real silence only when a post asks for "none". Unset and the old "silent" default get an upbeat bed. */
+export const NO_MUSIC_BED_ID = "none";
+
+function shortBedFor(postId: number, preferredId?: string): ShortBed {
+  if (preferredId === NO_MUSIC_BED_ID) return SILENT_BED;
+  const beds = listBeds();
+  const chosen = preferredId && preferredId !== SILENT_BED_ID ? beds.find((b) => b.id === preferredId) : undefined;
+  if (chosen) return chosen;
+  const upbeat = beds.filter((b) => b.upbeat);
+  const pool = upbeat.length ? upbeat : beds;
+  return pool.length ? pool[Math.abs(postId) % pool.length]! : SILENT_BED;
+}
+
+/** Dashboard label for the bed a post's Short will actually use. */
+export function shortBedLabel(postId: number, preferredId?: string): string {
+  const bed = shortBedFor(postId, preferredId);
+  return bed.id === SILENT_BED_ID ? "No sound" : `${bed.title} (${bed.mood})`;
+}
+
 export function bedForPost(postId: number, preferredId?: string): ShortBed {
   const resolved = resolveBed(preferredId);
   if (resolved) return resolved;
@@ -101,7 +145,7 @@ export function bedForPost(postId: number, preferredId?: string): ShortBed {
 
 export function youtubeMusicCredit(bed: ShortBed): string {
   if (bed.id === SILENT_BED_ID) return "";
-  return `Music: "${bed.title}" by ${bed.artist} (incompetech.com) — CC BY 4.0`;
+  return `Music: "${bed.title}" by ${bed.artist} (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 https://creativecommons.org/licenses/by/4.0/`;
 }
 
 export function shortOutputPath(postDir: string): string {
@@ -154,18 +198,17 @@ function concatEscape(filePath: string): string {
 }
 
 /**
- * Turn carousel JPGs into a vertical Short with no audio so you can add
- * a catalog track when you post. Skips ffmpeg when the same slides were
- * already rendered silent.
+ * Turn carousel JPGs into a vertical Short with a CC music bed (faded in
+ * and out). Skips ffmpeg when the same slides and bed were already rendered.
  */
 export async function renderSlideshowShort(
   slidePaths: string[],
   outPath: string,
-  _postId: number,
-  _preferredBedId?: string,
+  postId: number,
+  preferredBedId?: string,
 ): Promise<{ file: string; bed: ShortBed; durationSec: number; reused: boolean }> {
   if (slidePaths.length < 2) throw new Error("Need at least 2 slides for a Short");
-  const bed = SILENT_BED;
+  const bed = shortBedFor(postId, preferredBedId);
   const sig = slideSignature(slidePaths, bed.id);
   const metaFile = metaPath(outPath);
   if (fs.existsSync(outPath) && fs.existsSync(metaFile)) {
@@ -192,6 +235,21 @@ export async function renderSlideshowShort(
   const durationSec = Math.round(slidePaths.length * SECONDS_PER_SLIDE * 10) / 10;
   const pad = BRAND.colors.dark.replace("#", "");
   const vf = `scale=${SHORT_W}:${SHORT_H}:force_original_aspect_ratio=decrease,pad=${SHORT_W}:${SHORT_H}:(ow-iw)/2:(oh-ih)/2:color=0x${pad},fps=30,format=yuv420p`;
+  const fadeOut = Math.max(0, durationSec - 1.2);
+  const audioArgs = bed.file
+    ? [
+        "-map",
+        "0:v",
+        "-map",
+        "1:a",
+        "-af",
+        `afade=t=in:d=0.3,afade=t=out:st=${fadeOut}:d=1.2`,
+        "-c:a",
+        "aac",
+        "-b:a",
+        "160k",
+      ]
+    : ["-an"];
   await runFfmpeg([
     "-y",
     "-f",
@@ -200,11 +258,12 @@ export async function renderSlideshowShort(
     "0",
     "-i",
     listPath,
+    ...(bed.file ? ["-i", bed.file] : []),
     "-t",
     String(durationSec),
     "-vf",
     vf,
-    "-an",
+    ...audioArgs,
     "-c:v",
     "libx264",
     "-preset",

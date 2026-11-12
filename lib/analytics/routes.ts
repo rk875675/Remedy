@@ -24,8 +24,8 @@ export const KNOWN_SCREENS = [
   '/(onboarding)',
   '/(onboarding)/founder',
   '/(onboarding)/education',
+  '/(onboarding)/proof',
   '/(onboarding)/q0',
-  '/(onboarding)/safety',
   '/(onboarding)/q9',
   '/(onboarding)/recognize',
   '/(onboarding)/seen',
@@ -37,6 +37,7 @@ export const KNOWN_SCREENS = [
   '/(onboarding)/q5',
   '/(onboarding)/q7',
   '/(onboarding)/q8',
+  '/(onboarding)/commit',
   '/(onboarding)/finalizing',
   '/(onboarding)/match',
 
@@ -59,6 +60,7 @@ export const KNOWN_SCREENS = [
   '/weekly-ramp',
   '/orientation',
   '/program-complete',
+  '/next-program',
   '/onboarding-answers',
   '/feedback',
 ] as const;

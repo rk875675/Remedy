@@ -62,11 +62,8 @@ export default function BuildingPlanScreen() {
   // box) so failures during testing are diagnosable without a device log stream.
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [preservePendingOnError, setPreservePendingOnError] = useState(false);
-  // Debug box is available to dev builds and dev-flagged accounts only — never to real
-  // users in production, who just see the friendly copy + recovery buttons. Even for
-  // dev, it stays collapsed behind an explicit tap so raw server errors are never
-  // dumped on screen by default.
-  const [isDev, setIsDev] = useState(false);
+  // Debug box is available to local dev builds only — never on TestFlight/App Store.
+  // Even in dev it stays collapsed behind an explicit tap.
   const [debugRevealed, setDebugRevealed] = useState(false);
   const ran = useRef(false);
   // Guards against overlapping runs. Paired with `runGen`: when the 30s watchdog
@@ -500,20 +497,6 @@ export default function BuildingPlanScreen() {
     runAssignment();
   }, [user, hydrated]);
 
-  // Gate the debug box: dev builds always, plus dev-flagged accounts on release builds.
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    isDevUser(user.id)
-      .then((dev) => {
-        if (active) setIsDev(dev);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [user]);
-
   // Watchdog: direct navigation inside the async setup chain can get swallowed, leaving
   // the user stuck on the spinner. If we're still assigning after 30s, surface the
   // error screen and invalidate the hung run so "Try again" works.
@@ -550,7 +533,7 @@ export default function BuildingPlanScreen() {
   }, []);
 
   if (phase === 'error') {
-    const showDebug = (__DEV__ || isDev) && !!errorDetail;
+    const showDebug = __DEV__ && !!errorDetail;
     // Subscription bound to a different account — a distinct, recoverable case worth its
     // own copy: the fix is to sign into the account that owns the subscription, not retry.
     const alreadyLinked = !!errorDetail?.includes('transaction_already_linked');

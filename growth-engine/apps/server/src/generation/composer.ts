@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
-import { BRAND, ASSETS_DIR, OUTPUT_DIR } from "../config.js";
+import { BRAND, ASSETS_DIR, OUTPUT_DIR, ROOT_DIR } from "../config.js";
 import {
   type Variation,
   SHOT_SCALE_SPEC,
@@ -23,9 +23,9 @@ const SAFE_BOTTOM = 1264;
 /** Gap above the REMEDY footer so plates/screenshots never cover the wordmark. */
 const FOOTER_CLEARANCE = 88;
 /** Bump this whenever framing changes so TikTok pulls new URLs instead of cache. */
-export const SLIDE_REV = "v25";
+export const SLIDE_REV = "v27";
 /** Bump when CTA last-slide pixels change so the dashboard does not keep a stale JPEG. */
-export const CTA_CACHE = "cta44";
+export const CTA_CACHE = "cta49";
 
 export function slideFileName(index: number): string {
   return `slide-${index + 1}-${SLIDE_REV}.jpg`;
@@ -539,19 +539,21 @@ async function loadCtaAppIcon(size: number, tiltDeg = 8): Promise<Buffer> {
     .toBuffer();
 }
 
-const STORE_BADGE_W = 430;
-const STORE_BADGE_H = 118;
+/** Official US/UK black badge (Apple artwork). Ratio from the source SVG. */
+const STORE_BADGE_H = 112;
+const STORE_BADGE_ASPECT = 119.66407 / 40;
+const STORE_BADGE_W = Math.round(STORE_BADGE_H * STORE_BADGE_ASPECT);
+const STORE_BADGE_PATH = path.join(ROOT_DIR, "assets", "badges", "download-on-the-app-store.svg");
 
-/** Official-style black badge: big Apple, stacked copy, tight padding. */
-function storeBadgeSvg(x: number, y: number, family: string): string {
-  return (
-    `<rect x="${x}" y="${y}" width="${STORE_BADGE_W}" height="${STORE_BADGE_H}" rx="22" fill="#000000"/>` +
-    `<g transform="translate(${x + 28},${y + 20}) scale(3.15)">` +
-    `<path fill="#ffffff" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>` +
-    `</g>` +
-    `<text x="${x + 124}" y="${y + 44}" text-anchor="start" font-family="${family}" font-size="22" font-weight="500" fill="#ffffff">Coming soon</text>` +
-    `<text x="${x + 124}" y="${y + 90}" text-anchor="start" font-family="${family}" font-size="40" font-weight="700" fill="#ffffff">App Store</text>`
-  );
+async function loadStoreBadge(height = STORE_BADGE_H): Promise<Buffer> {
+  const width = Math.round(height * STORE_BADGE_ASPECT);
+  if (!fs.existsSync(STORE_BADGE_PATH)) {
+    throw new Error(`Missing official App Store badge at ${STORE_BADGE_PATH}`);
+  }
+  return sharp(STORE_BADGE_PATH, { density: 400 })
+    .resize(width, height)
+    .png()
+    .toBuffer();
 }
 
 async function renderCtaProduct(
@@ -583,12 +585,19 @@ async function renderCtaProduct(
     return svg;
   }
 
-  const BAR_ICON = 112;
-  const BAR_GAP = 20;
-  const barW = BAR_ICON + BAR_GAP + STORE_BADGE_W;
+  const BAR_ICON = 132;
+  const BAR_GAP = 18;
+  const NAME_W = 400;
+  const TITLE_FS = 72;
+  const SUB_FS = 40;
+  const listing = BRAND.listingName.split(": ");
+  const listingTitle = listing[0] ?? BRAND.appName;
+  const listingSub = listing[1] ?? "";
+  const barW = BAR_ICON + BAR_GAP + NAME_W + BAR_GAP + STORE_BADGE_W;
   const barLeft = Math.round((SLIDE_W - barW) / 2);
+  const rowH = Math.max(BAR_ICON, STORE_BADGE_H, TITLE_FS + 10 + SUB_FS);
   const barBottom = SAFE_BOTTOM - 2;
-  const barTop = barBottom - Math.max(BAR_ICON, STORE_BADGE_H);
+  const barTop = barBottom - rowH;
 
   async function placeStoreRow(): Promise<string> {
     const rowIcon = await loadCtaAppIcon(BAR_ICON, 0);
@@ -598,9 +607,26 @@ async function renderCtaProduct(
     composites.push({
       input: rowIcon,
       left: barLeft + Math.round((BAR_ICON - rw) / 2),
-      top: barTop + Math.round((Math.max(BAR_ICON, STORE_BADGE_H) - rh) / 2),
+      top: barTop + Math.round((rowH - rh) / 2),
     });
-    return storeBadgeSvg(barLeft + BAR_ICON + BAR_GAP, barTop + Math.round((Math.max(BAR_ICON, STORE_BADGE_H) - STORE_BADGE_H) / 2), family);
+    const badge = await loadStoreBadge(STORE_BADGE_H);
+    const badgeMeta = await sharp(badge).metadata();
+    const bh = badgeMeta.height ?? STORE_BADGE_H;
+    const badgeLeft = barLeft + BAR_ICON + BAR_GAP + NAME_W + BAR_GAP;
+    composites.push({
+      input: badge,
+      left: badgeLeft,
+      top: barTop + Math.round((rowH - bh) / 2),
+    });
+    const nameX = barLeft + BAR_ICON + BAR_GAP;
+    const titleY = barTop + Math.round(rowH / 2) + 4;
+    const subY = titleY + SUB_FS + 4;
+    return (
+      `<text x="${nameX}" y="${titleY}" text-anchor="start" ` +
+        `font-family="${family}" font-size="${TITLE_FS}" font-weight="800" letter-spacing="-0.8" fill="#ffffff">${escapeXml(listingTitle)}</text>` +
+      `<text x="${nameX}" y="${subY}" text-anchor="start" ` +
+        `font-family="${family}" font-size="${SUB_FS}" font-weight="600" fill="#ffffff" opacity="0.9">${escapeXml(listingSub)}</text>`
+    );
   }
 
   if (!shotFile) {
@@ -949,6 +975,423 @@ export async function renderSlide(spec: SlideRenderSpec, variation: Variation, o
   const fullSvg = `<svg width="${SLIDE_W}" height="${SLIDE_H}" xmlns="http://www.w3.org/2000/svg">${backgroundSvg(variation.background, SLIDE_W, SLIDE_H)}${overlaySvgBody}</svg>`;
   await sharp(Buffer.from(fullSvg))
     .composite([...composites, { input: footerBuf, left: 0, top: 0 }])
+    .jpeg({ quality: 92 })
+    .toFile(outPath);
+}
+
+/** Wrap, then narrow the box until the last line is not a lone word. */
+function wrapNoWidow(text: string, size: number, maxW: number): string[] {
+  let lines = wrapText(text, size, maxW, 0.55);
+  for (let w = maxW; lines.length > 1 && !lines[lines.length - 1]!.includes(" ") && w > maxW * 0.6; w -= 30) {
+    const next = wrapText(text, size, w, 0.55);
+    if (next.length > lines.length + 1) break;
+    lines = next;
+  }
+  return lines;
+}
+
+// ---------------------------------------------------------------------------
+// Native deck slides (photo, split, quad, app) share one type system so a deck
+// reads as set on purpose: one face (Segoe UI Bold, the closest installed match
+// to the iOS system font the reference carousels use), white with a soft shadow
+// and a hairline instead of the thick TikTok outline, one size per role, and
+// one text position per slide role. Nothing else sits on a slide: no sub line,
+// no counter, no wordmark.
+// ---------------------------------------------------------------------------
+
+const NATIVE_FONT = "'Segoe UI', Arial, Helvetica, sans-serif";
+
+/** Fixed sizes per role. Lines only shrink (down to `min`) when they would need a 4th line. */
+export const NATIVE_TYPE = {
+  hook: 78,
+  body: 66,
+  splitHook: 64,
+  splitBody: 58,
+  quadTitle: 74,
+  quadBody: 62,
+  label: 44,
+  min: 46,
+  labelMin: 34,
+} as const;
+
+/** Blur for the shadow copy, plus the two scrims every native slide may use. */
+const NATIVE_DEFS =
+  `<defs>` +
+  `<filter id="nativeShadow" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>` +
+  `<linearGradient id="scrimBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#000" stop-opacity="0.32"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>` +
+  `<linearGradient id="scrimEdge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.5"/><stop offset="0.6" stop-color="#000" stop-opacity="0.22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>` +
+  `<radialGradient id="scrimSpot" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#000" stop-opacity="0.34"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>` +
+  `<linearGradient id="scrimEdgeUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.5"/><stop offset="0.6" stop-color="#000" stop-opacity="0.22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>` +
+  `</defs>`;
+
+function nativeOverlay(nodes: string): Buffer {
+  return Buffer.from(`<svg width="${SLIDE_W}" height="${SLIDE_H}" xmlns="http://www.w3.org/2000/svg">${NATIVE_DEFS}${nodes}</svg>`);
+}
+
+/** Look A line: white, soft shadow underneath, hairline so it holds on a bright wall. */
+function nativeText(line: string, size: number, y: number, x = SLIDE_W / 2): string {
+  const t = escapeXml(line);
+  const font = `font-family="${NATIVE_FONT}" font-weight="700" font-size="${size}" letter-spacing="-0.5" text-anchor="middle"`;
+  return (
+    `<text x="${x}" y="${Math.round(y + size * 0.06)}" ${font} fill="#000000" fill-opacity="0.5" filter="url(#nativeShadow)">${t}</text>` +
+    `<text x="${x}" y="${Math.round(y)}" ${font} fill="#ffffff" stroke="#000000" stroke-opacity="0.2" stroke-width="${Math.max(2, Math.round(size * 0.035))}" stroke-linejoin="round" paint-order="stroke">${t}</text>`
+  );
+}
+
+/** Look B line (Stories twin): black type on a white rounded box, TikTok "background" style. */
+function boxedText(line: string, size: number, y: number, x = SLIDE_W / 2): string {
+  const w = Math.min(SLIDE_W - 60, Math.round(line.length * size * 0.53 + size * 0.7));
+  const h = Math.round(size * 1.18);
+  const left = Math.round(x - w / 2);
+  const top = Math.round(y - size * 0.88);
+  return (
+    `<rect x="${left}" y="${top}" width="${w}" height="${h}" rx="${Math.round(size * 0.22)}" fill="#ffffff"/>` +
+    `<text x="${x}" y="${Math.round(y)}" text-anchor="middle" font-family="${NATIVE_FONT}" font-weight="700" font-size="${size}" fill="#111111">${escapeXml(line)}</text>`
+  );
+}
+
+/** "A" = Recoveries look (white type, soft shadow). "B" = Stories A/B look (tilted, re-framed, warmer, boxed text). */
+export type NativeLook = "A" | "B";
+
+/** Wrap at the role size; step down (to `min`) only when the line would need more than `maxLines`. */
+function fitLines(text: string, size: number, maxW: number, maxLines: number, min: number = NATIVE_TYPE.min): { size: number; lines: string[] } {
+  let s = size;
+  while (wrapText(text, s, maxW, 0.55).length > maxLines && s - 4 >= min) s -= 4;
+  return { size: s, lines: wrapNoWidow(text, s, maxW) };
+}
+
+function lineLead(size: number, look: NativeLook): number {
+  return size * (look === "B" ? 1.3 : 1.14);
+}
+
+/** A block of centered lines starting at `top`. */
+function textBlock(lines: string[], size: number, top: number, look: NativeLook, x = SLIDE_W / 2): string {
+  let y = top + size * 0.85;
+  let nodes = "";
+  for (const line of lines) {
+    nodes += look === "B" ? boxedText(line, size, y, x) : nativeText(line, size, y, x);
+    y += lineLead(size, look);
+  }
+  return nodes;
+}
+
+/**
+ * Darkening behind a text block. Near the top edge it fades down from the frame
+ * edge like a natural vignette; anywhere else it is a wide soft band with no
+ * visible edge. Look B boxes carry their own contrast and get none.
+ */
+function scrimFor(top: number, blockH: number, look: NativeLook): string {
+  if (look === "B") return "";
+  if (top < SAFE_TOP + 80) {
+    return `<rect x="0" y="0" width="${SLIDE_W}" height="${Math.round(top + blockH + 170)}" fill="url(#scrimEdge)"/>`;
+  }
+  return `<rect x="0" y="${Math.round(top - 150)}" width="${SLIDE_W}" height="${Math.round(blockH + 300)}" fill="url(#scrimBand)"/>`;
+}
+
+/** Average colour of the bottom rows of a screenshot, so a short crop can extend as "more screen". */
+async function bottomEdgeColor(buf: Buffer): Promise<{ r: number; g: number; b: number }> {
+  const meta = await sharp(buf).metadata();
+  const h = meta.height ?? 10;
+  const stats = await sharp(buf)
+    .extract({ left: 0, top: Math.max(0, h - 6), width: meta.width ?? 10, height: Math.min(6, h) })
+    .stats();
+  const [r, g, b] = stats.channels;
+  return { r: Math.round(r?.mean ?? 250), g: Math.round(g?.mean ?? 248), b: Math.round(b?.mean ?? 244) };
+}
+
+/**
+ * Native app slide: the deck photo stays recognisable behind (light blur, darkened),
+ * one line at the top, and the library crop as a tall screen plate anchored to the
+ * bottom edge like a phone held up to the camera. Short crops extend in their own
+ * background colour instead of being stretched or cut mid-text.
+ */
+export async function renderNativeScreenshotSlide(
+  bgPhotoPath: string,
+  screenshotFile: string,
+  headline: string,
+  outPath: string,
+  look: NativeLook = "A",
+): Promise<void> {
+  const bg = await sharp(bgPhotoPath)
+    .rotate()
+    .resize(SLIDE_W, SLIDE_H, { fit: "cover", position: "attention" })
+    .blur(5)
+    .modulate({ brightness: 0.6, saturation: 0.85 })
+    .toBuffer();
+  const maxW = SLIDE_W - 160;
+  const { size, lines } = fitLines(headline, NATIVE_TYPE.body, maxW, 3);
+  const blockH = lines.length * lineLead(size, look);
+  const top = SAFE_TOP + 44;
+  const nodes = scrimFor(top, blockH, look) + textBlock(lines, size, top, look);
+
+  const rim = 4;
+  const plateW = Math.round(SLIDE_W * (look === "B" ? 0.62 : 0.66));
+  const plateTop = Math.round(top + blockH + 64);
+  const plateH = SLIDE_H - plateTop + 80; // runs off the bottom edge
+  const innerW = plateW - rim * 2;
+  const innerH = plateH - rim;
+  const src = sharp(path.join(ASSETS_DIR, screenshotFile));
+  const fitted = await src.resize({ width: innerW }).png().toBuffer();
+  const fittedMeta = await sharp(fitted).metadata();
+  let screen: Buffer;
+  if ((fittedMeta.height ?? 0) >= innerH) {
+    screen = await sharp(fitted).extract({ left: 0, top: 0, width: innerW, height: innerH }).png().toBuffer();
+  } else {
+    const fill = await bottomEdgeColor(fitted);
+    screen = await sharp(fitted)
+      .extend({ top: 0, left: 0, right: 0, bottom: innerH - (fittedMeta.height ?? 0), background: { ...fill, alpha: 1 } })
+      .png()
+      .toBuffer();
+  }
+  const radius = 54;
+  const plateSvg = Buffer.from(
+    `<svg width="${plateW}" height="${plateH}" xmlns="http://www.w3.org/2000/svg"><rect width="${plateW}" height="${plateH}" rx="${radius}" ry="${radius}" fill="#ffffff" fill-opacity="0.42"/></svg>`,
+  );
+  const screenRounded = await roundCorners(screen, radius - rim);
+  // Built at full height for the rounded corners, then cut at the frame edge (sharp needs overlays inside the canvas).
+  const plateFull = await sharp(plateSvg).composite([{ input: screenRounded, left: rim, top: rim }]).png().toBuffer();
+  const plate = await sharp(plateFull).extract({ left: 0, top: 0, width: plateW, height: SLIDE_H - plateTop }).png().toBuffer();
+  const shadow = Buffer.from(
+    `<svg width="${SLIDE_W}" height="${SLIDE_H}" xmlns="http://www.w3.org/2000/svg"><defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="26"/></filter></defs>` +
+      `<rect x="${Math.round((SLIDE_W - plateW) / 2)}" y="${plateTop + 18}" width="${plateW}" height="${plateH}" rx="${radius}" fill="#000" fill-opacity="0.55" filter="url(#s)"/></svg>`,
+  );
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  await sharp(bg)
+    .composite([
+      { input: shadow, left: 0, top: 0 },
+      { input: plate, left: Math.round((SLIDE_W - plateW) / 2), top: plateTop },
+      { input: nativeOverlay(nodes), left: 0, top: 0 },
+    ])
+    .jpeg({ quality: 92 })
+    .toFile(outPath);
+}
+
+/**
+ * Generated photos come out too clean (plastic skin, perfect focus). Push them
+ * toward a real phone capture: lose a little fine detail, re-sharpen like a
+ * phone ISP, mute colour slightly, add fine sensor grain, then recompress.
+ * Tuned light on purpose: the earlier pass (62% downscale, lifted blacks, heavy
+ * grain, q74) made every slide look muddy and low-resolution. Real blacks and
+ * contrast are what read as a good phone photo.
+ */
+export async function phoneCapture(
+  photoPath: string,
+  seed = 1,
+  look: NativeLook = "A",
+  height = SLIDE_H,
+  /** 0-1 down the source photo where the crop starts (portrait photo into a landscape band). Default: saliency crop. */
+  focusY?: number,
+  width = SLIDE_W,
+): Promise<Buffer> {
+  let base: Buffer;
+  if (focusY === undefined) {
+    base = await sharp(photoPath).rotate().resize(width, height, { fit: "cover", position: "attention" }).toBuffer();
+  } else {
+    const scaled = await sharp(photoPath).rotate().resize({ width }).toBuffer({ resolveWithObject: true });
+    if (scaled.info.height <= height) {
+      base = await sharp(scaled.data).resize(width, height, { fit: "cover" }).toBuffer();
+    } else {
+      // The B look punches in and trims the top, so start a little higher to keep heads in.
+      const start = look === "B" ? focusY - 0.04 : focusY;
+      const topPx = Math.round(Math.min(Math.max(start * scaled.info.height, 0), scaled.info.height - height));
+      base = await sharp(scaled.data).extract({ left: 0, top: topPx, width, height }).toBuffer();
+    }
+  }
+  if (look === "B") {
+    // Stories B look: handheld tilt, punched in off-center, warmer and flatter.
+    // No mirroring: it flips steering wheels and handedness.
+    const zoom = 1.16 + (seed % 4) * 0.02;
+    const angle = (seed % 2 ? 1 : -1) * (1.4 + (seed % 3) * 0.3);
+    const tilted = await sharp(base)
+      .resize(Math.round(width * zoom), Math.round(height * zoom))
+      .rotate(angle, { background: "#000000" })
+      .toBuffer({ resolveWithObject: true });
+    const spareX = tilted.info.width - width;
+    const spareY = tilted.info.height - height;
+    base = await sharp(tilted.data)
+      .extract({
+        left: Math.round(spareX * (seed % 2 ? 0.4 : 0.6)),
+        top: Math.round(spareY * 0.45),
+        width,
+        height,
+      })
+      .modulate({ saturation: 0.82, hue: 10, brightness: 1.03 })
+      .toBuffer();
+  }
+  const soft = await sharp(base)
+    .resize(Math.round(width * 0.8), Math.round(height * 0.8))
+    .resize(width, height)
+    .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
+    .modulate({ saturation: 0.94 })
+    .linear(1.04, -5)
+    .toBuffer();
+  const grain = await sharp({
+    create: { width, height, channels: 3, background: "#808080", noise: { type: "gaussian", mean: 128, sigma: 13 + (seed % 4) } },
+  })
+    .greyscale()
+    .blur(0.5)
+    .png()
+    .toBuffer();
+  const grained = await sharp(soft).composite([{ input: grain, blend: "soft-light" }]).jpeg({ quality: 84, chromaSubsampling: "4:2:0" }).toBuffer();
+  return sharp(grained).toBuffer();
+}
+
+/**
+ * Native photo slide: the photo fills the frame and one line sits in a fixed
+ * band. "top" is the default and hugs the status-bar line on every slide so a
+ * deck lines up; "upper" (28%) and "lower" (64%, above TikTok's buttons) exist
+ * for photos with a face at the top. No card, counter, wordmark, or sub line.
+ */
+export async function renderNativePhotoSlide(
+  photoPath: string,
+  headline: string,
+  outPath: string,
+  opts: { hook?: boolean; textAt?: "top" | "upper" | "lower"; look?: NativeLook } = {},
+): Promise<void> {
+  const look = opts.look ?? "A";
+  const photo = await phoneCapture(photoPath, headline.length, look);
+
+  const maxW = SLIDE_W - 160;
+  const { size, lines } = fitLines(headline, opts.hook ? NATIVE_TYPE.hook : NATIVE_TYPE.body, maxW, 3);
+  const blockH = lines.length * lineLead(size, look);
+  const textAt = opts.textAt ?? "top";
+  let top =
+    textAt === "top" ? SAFE_TOP + 44 : textAt === "lower" ? Math.round(SLIDE_H * 0.64 - blockH / 2) : Math.round(SLIDE_H * 0.28 - blockH / 2);
+  top = Math.max(SAFE_TOP + 24, Math.min(top, Math.round(SLIDE_H * 0.8) - blockH));
+
+  const nodes = scrimFor(top, blockH, look) + textBlock(lines, size, top, look);
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  await sharp(photo).composite([{ input: nativeOverlay(nodes), left: 0, top: 0 }]).jpeg({ quality: 92 }).toFile(outPath);
+}
+
+/** "top line / bottom line": the two halves of one sentence on a split slide. */
+export function splitHeadline(headline: string): [string, string] {
+  const i = headline.indexOf(" / ");
+  if (i < 0) throw new Error(`Split headline needs " / " between its halves: "${headline}"`);
+  return [headline.slice(0, i).trim(), headline.slice(i + 3).trim()];
+}
+
+/** "contrast" greys the top (bad) half and warms the bottom; "natural" leaves both as shot. */
+export type SplitGrade = "contrast" | "natural";
+
+/** The grey, slightly lifted treatment for the "bad" image in a contrast grade. */
+function greyGrade(buf: Buffer): Promise<Buffer> {
+  return sharp(buf).greyscale().toColourspace("srgb").linear(1.08, -8).toBuffer();
+}
+
+/** One half's caption, centered on the half. */
+function splitHalfText(line: string, halfTop: number, hook: boolean, look: NativeLook): string {
+  const half = SLIDE_H / 2;
+  const { size, lines } = fitLines(line, hook ? NATIVE_TYPE.splitHook : NATIVE_TYPE.splitBody, SLIDE_W - 160, 3);
+  const blockH = lines.length * lineLead(size, look);
+  const top = Math.round(halfTop + half * 0.52 - blockH / 2);
+  const scrim = look === "B" ? "" : `<rect x="0" y="${Math.round(top - 130)}" width="${SLIDE_W}" height="${Math.round(blockH + 260)}" fill="url(#scrimBand)"/>`;
+  return scrim + textBlock(lines, size, top, look);
+}
+
+/**
+ * Split-comparison slide: two real photos stacked 50/50, one sentence across both
+ * (the top half sets it up, the bottom half lands it). Headline is "top / bottom".
+ * Same person, same place in both halves is what makes the contrast read as a state, not a casting change.
+ */
+export async function renderSplitSlide(
+  topPhotoPath: string,
+  bottomPhotoPath: string,
+  headline: string,
+  outPath: string,
+  opts: { hook?: boolean; look?: NativeLook; grade?: SplitGrade; topY?: number; bottomY?: number } = {},
+): Promise<void> {
+  const look = opts.look ?? "A";
+  const grade = opts.grade ?? "contrast";
+  const [topLine, bottomLine] = splitHeadline(headline);
+  const half = SLIDE_H / 2;
+  let top = await phoneCapture(topPhotoPath, headline.length, look, half, opts.topY);
+  let bottom = await phoneCapture(bottomPhotoPath, headline.length + 1, look, half, opts.bottomY);
+  if (grade === "contrast") {
+    top = await greyGrade(top);
+    bottom = await sharp(bottom).modulate({ saturation: 1.06, brightness: 1.02 }).linear([1.04, 1, 0.95], [2, 0, -2]).toBuffer();
+  }
+  const nodes = splitHalfText(topLine, 0, Boolean(opts.hook), look) + splitHalfText(bottomLine, half, Boolean(opts.hook), look);
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  await sharp({ create: { width: SLIDE_W, height: SLIDE_H, channels: 3, background: "#000000" } })
+    .composite([
+      { input: top, left: 0, top: 0 },
+      { input: bottom, left: 0, top: half },
+      { input: nativeOverlay(nodes), left: 0, top: 0 },
+    ])
+    .jpeg({ quality: 92 })
+    .toFile(outPath);
+}
+
+/** Quad grade: "natural" as shot; "contrast" greys all four cells (the slide about what did not work). */
+export type QuadGrade = "natural" | "contrast";
+export type Quad<T> = [T, T, T, T];
+
+/** Where quad cell labels sit: at the outer edge of each cell (clear of faces) or mid-cell. */
+export type QuadLabelAt = "edge" | "center";
+
+/**
+ * Quad slide (2x2 grid, from the reidbranded and barclayahmed carousels): four
+ * real photos butted together with no gutter, one line centered across the
+ * middle seam, and an optional short label per cell. Labels default to the
+ * outer edge of each cell (top cells at the top, bottom cells at the bottom),
+ * which is how the people-heavy decks do it so faces stay clear; "center"
+ * puts them mid-cell, which suits object cells. The four photos are four
+ * instances of the headline's idea. Cells are 540x675 (4:5, like the slide).
+ */
+export async function renderQuadSlide(
+  photoPaths: Quad<string>,
+  headline: string,
+  outPath: string,
+  opts: { labels?: Quad<string>; labelAt?: QuadLabelAt; hook?: boolean; look?: NativeLook; grade?: QuadGrade } = {},
+): Promise<void> {
+  const look = opts.look ?? "A";
+  const cw = SLIDE_W / 2;
+  const ch = SLIDE_H / 2;
+  let cells = await Promise.all(photoPaths.map((p, i) => phoneCapture(p, headline.length + i * 3, look, ch, undefined, cw)));
+  if (opts.grade === "contrast") cells = await Promise.all(cells.map(greyGrade));
+
+  const { size, lines } = fitLines(headline, opts.hook ? NATIVE_TYPE.quadTitle : NATIVE_TYPE.quadBody, SLIDE_W - 120, 3);
+  const blockH = lines.length * lineLead(size, look);
+  const top = Math.round(SLIDE_H / 2 - blockH / 2);
+  let nodes = look === "B" ? "" : `<rect x="0" y="${Math.round(top - 170)}" width="${SLIDE_W}" height="${Math.round(blockH + 340)}" fill="url(#scrimBand)"/>`;
+  nodes += textBlock(lines, size, top, look);
+
+  if (opts.labels) {
+    const labelAt = opts.labelAt ?? "edge";
+    const edgeInset = Math.round(ch * 0.09);
+    opts.labels.forEach((label, i) => {
+      const fit = fitLines(label, NATIVE_TYPE.label, cw - 90, 2, NATIVE_TYPE.labelMin);
+      const lh = fit.lines.length * lineLead(fit.size, look);
+      const cx = i % 2 === 0 ? cw / 2 : cw * 1.5;
+      const isTop = i < 2;
+      if (labelAt === "center") {
+        const cy = isTop ? ch / 2 : ch * 1.5;
+        if (look === "A") nodes += `<ellipse cx="${cx}" cy="${Math.round(cy)}" rx="${Math.round(cw * 0.48)}" ry="${Math.round(lh / 2 + 90)}" fill="url(#scrimSpot)"/>`;
+        nodes += textBlock(fit.lines, fit.size, Math.round(cy - lh / 2), look, cx);
+      } else {
+        const ltop = isTop ? edgeInset : Math.round(SLIDE_H - edgeInset - lh);
+        const left = i % 2 === 0 ? 0 : cw;
+        if (look === "A") {
+          const scrimH = Math.round(lh + edgeInset + 120);
+          nodes += isTop
+            ? `<rect x="${left}" y="0" width="${cw}" height="${scrimH}" fill="url(#scrimEdge)"/>`
+            : `<rect x="${left}" y="${SLIDE_H - scrimH}" width="${cw}" height="${scrimH}" fill="url(#scrimEdgeUp)"/>`;
+        }
+        nodes += textBlock(fit.lines, fit.size, ltop, look, cx);
+      }
+    });
+  }
+
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  await sharp({ create: { width: SLIDE_W, height: SLIDE_H, channels: 3, background: "#000000" } })
+    .composite([
+      { input: cells[0]!, left: 0, top: 0 },
+      { input: cells[1]!, left: cw, top: 0 },
+      { input: cells[2]!, left: 0, top: ch },
+      { input: cells[3]!, left: cw, top: ch },
+      { input: nativeOverlay(nodes), left: 0, top: 0 },
+    ])
     .jpeg({ quality: 92 })
     .toFile(outPath);
 }

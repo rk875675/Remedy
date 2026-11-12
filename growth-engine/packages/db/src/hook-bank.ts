@@ -175,6 +175,7 @@ export function hasDistributionSignal(text: string): boolean {
 export function isLowSignalHook(text: string): boolean {
   const t = text.trim();
   if (OLD_GEN_MECHANIC.test(t)) return true;
+  if (matchContentPillar(t)) return false;
   if (!hasDistributionSignal(t)) return true;
   return false;
 }
@@ -194,72 +195,163 @@ export function isUnsafeHook(text: string): boolean {
 export const CONTROVERSIAL_CATEGORIES = new Set<string>(["mistake", "contrarian", "myth_bust"]);
 
 /**
- * Five content pillars. Every slideshow sits in one of these.
- * Prefer controversial hooks (pillar 2–3 shape) — that's what won.
+ * Six content pillars. Every slideshow sits in one of these.
+ * Specificity beats a fixed phrase. Steal the job, not the wording.
  */
 export const CONTENT_PILLARS = [
   {
-    id: "pt_cost",
-    title: "PT is expensive as fuck",
+    id: "avatar_constraint",
+    title: "Avatar / constraint",
     thesis:
-      "Remedy exists so you're not paying hundreds a visit just to get a structured plan. Personalized program from your answers — not a generic stretch list.",
-    payoff: "Onboarding answers → matched program. Cost of PT vs a plan you own.",
-    hooks: [
-      "PT is expensive as fuck.",
-      "$1,200. That's the average PT course.",
-      "PT is $150 a session.",
-    ],
-  },
-  {
-    id: "playlist_vs_program",
-    title: "Playlist vs program",
-    thesis:
-      "Backs change from the same movements, in order, for weeks. TikTok/YouTube look cool and promise a fix. They're not yours and they're not a program.",
-    payoff: "That's why you're still hurting. Then the app / the plan. Not another 3-exercise reel.",
-    hooks: [
-      "You will never get your back right from YouTube.",
-      "You will never get your back right from TikTok.",
-      "You don't have a back problem. You have a plan problem.",
-      "That's why you're still hurting.",
-    ],
-  },
-  {
-    id: "stuck_advice",
-    title: "The advice that's keeping you stuck",
-    thesis: "The usual fixes are the trap. Stretch-only. Rest and wait. Buy a mattress.",
+      "The person has back pain. Simple words, 5th grade. Mental side is plain: they think about it, worry, are tired of it, change plans, have to be careful. Mix openings. Stay-line is listen up / watch this / read this / hear this. Not a desk worker. Not clever. Not 'my back scares me.'",
     payoff:
-      "Tight isn't the whole problem. Weak is. Sharp and new → doctor. Same desk/gym ache for months → stop waiting it out.",
+      "Slide 2 is that's-you for that person with back pain. Then movement, a plan picked for their back, and progression. Simple words.",
     hooks: [
-      "You are killing your back by stretching it.",
-      "The worst thing you can do is rest it and wait.",
-      "Your mattress isn't the issue.",
-      "You're foam rolling wrong.",
+      "You think about your back a lot. Listen up.",
+      "Are you tired of your back hurting? Watch this.",
+      "Your back has hurt for years. Read this.",
+      "Hear this if you worry about your back every day.",
+      "You change your plans because your back hurts. Listen up.",
+      "Read this if you have to be careful with your back.",
+      "You are sick of your back pain. Watch this.",
+      "Listen up. Your back still hurts, and you are tired of it.",
+      "You think about your back before you get out of bed. Hear this.",
+      "Watch this if your back pain will not go away.",
+    ],
+  },
+  {
+    id: "mistake",
+    title: "Mistake correction",
+    thesis:
+      "Name one specific thing they already use. Heating pad, ibuprofen at 10am, morning stretches, ice, mattress, a stretch video, skipping strength, cream, or one foam roller. Not 'you're only stretching.' Not 'stop resting it and waiting.' Do not stack foam rolling. Mix the opening.",
+    payoff:
+      "Slide 2 names that object. Why it fails, then the swap. Tight isn't the whole problem. Weak is. Sharp and new → doctor.",
+    hooks: [
+      "The heating pad isn't a plan for your back.",
+      "Ibuprofen at 10am isn't fixing your back.",
+      "Those morning stretches aren't fixing your back.",
+      "You're foam rolling every night and your back still hurts.",
+      "Your mattress isn't why your back still hurts.",
+      "Ice every night. Your back still hurts in the morning.",
+      "You skip the strength work. Your back still hurts.",
+      "That stretch video isn't a plan for your back.",
+      "You spent the weekend flat on the couch. Monday your back still hurt.",
+      "The cream you rub on isn't a plan for your back.",
+    ],
+  },
+  {
+    id: "activity_pain",
+    title: "Activity + pain",
+    thesis:
+      "Name a different WHEN each time, then why or how. Stand. Bed. Deadlift. Bend. 3pm. Desk day. Curiosity or the fix. A two-beat confession with no why/how is a miss.",
+    payoff:
+      "Stay on that trigger. Pay off the why or the how — not a generic app tour.",
+    hooks: [
+      "Why your back lights up when you stand.",
+      "How I fixed my get-out-of-bed wince.",
+      "Why deadlifts light your back up.",
+      "How I stopped wincing when I bend.",
+      "Why your back flares at 3pm.",
+      "How I sat through a workday without paying later.",
     ],
   },
   {
     id: "huge_untreated",
-    title: "This is huge and nobody treats it like a plan",
-    thesis: "Punchy number, then the gap: most people still don't have a program. One stat per video. Don't stack 80% + 619M + #1 in the same batch.",
-    payoff: "The number, then: still no program. That's the gap Remedy fills.",
+    title: "Huge and untreated",
+    thesis:
+      "Short. One real number, then the person with back pain, then the gap: no plan or no program. Vary the number. One per video. Never stack 80% + 619 million + #1. Not desk people.",
+    payoff: "The number, then that person still has no plan. Later slides can say Remedy is the plan. Keep it short.",
     hooks: [
-      "80% of adults get back pain.",
-      "2 in 5 adults. Last 3 months.",
-      "#1 cause of disability on earth.",
-      "619 million people.",
-      "Nobody tells you this starts at 20.",
+      "80% of adults get back pain. Yours still has no plan.",
+      "80% get back pain. Most with it never get a program.",
+      "2 in 5 adults, last 3 months. Your back still has no plan.",
+      "2 in 5. If your back still hurts, still no program.",
+      "#1 cause of disability. Your back still has no plan.",
+      "#1 cause of disability. People with back pain still wait.",
+      "619 million with back pain. Almost none have a program.",
+      "619 million. Your back is one of them. Still no plan.",
+      "1 in 13 have back pain right now. Most have no plan.",
+      "1 in 13 right now. If that's your back, still no program.",
     ],
   },
   {
-    id: "persona",
-    title: "Persona / situation",
-    thesis: "Same product, different that's-me. Match the face to the line.",
+    id: "self_test",
+    title: "Self-test",
+    thesis:
+      "Instruction plus the problem it solves. Pair the test with mornings, desk backs, the wince, the bend. Never a bare 'Stand up without using your hands.' Never diagnose a disease.",
     payoff:
-      "Desk = stretch-reminder is useless, show a real session. Gym-bro = get back to training, not become a yoga person. Time = 15 minutes, not an hour for PT. Age = this starts at 20. Don't have a 20-year-old say after the kids are down.",
+      "What the result usually means (weak, stiff, no plan) — then the swap. Ends in a plan, not a condition name. Sharp and new → doctor.",
     hooks: [
-      "I sit 9 hours. Desk stretches do nothing.",
-      "My back isn't injured. Deadlifts light it up.",
-      "You don't have an hour for PT.",
-      "Nobody tells you this starts at 20.",
+      "Can't get out of bed without wincing? Do this.",
+      "Stand up without using your hands. That's the back test.",
+      "Sit. Stand. Five times. This is why desk backs stay loud.",
+      "Bend like you're picking something up. This is why it hurts.",
+    ],
+  },
+  {
+    id: "reverse_psych",
+    title: "Reverse psychology",
+    thesis:
+      "The pain stays if they keep the habit. Mix the opening. Name the pain: morning back wince, 3pm back flare, stand-up back wince, low back pain, bend-wince. Do not start every line with Don't want.",
+    payoff:
+      "Slide 2 names that habit as the trap, then the swap. Same teach as mistake, inverted open.",
+    hooks: [
+      "Keep only stretching if you want that morning back wince to stay.",
+      "Want the 3pm back flare to stay? Keep sitting.",
+      "That morning back wince stays if you keep foam rolling.",
+      "Keep the heating pad. The morning back wince stays too.",
+      "If that stand-up back wince can stay, keep skipping strength.",
+      "Keep the ice if you want low back pain to stay.",
+      "Want your back to stay lit up when you bend? Keep only stretching.",
+      "Keep waiting it out. That get-out-of-bed back wince stays too.",
+      "That low-back bend-wince stays if you keep the stretch video.",
+      "Keep resting all weekend if you want the stand-up back pain to stay.",
+    ],
+  },
+  {
+    id: "bought_once",
+    title: "The thing you bought",
+    thesis:
+      "Someone who paid for a one-time product that was supposed to end it. Name the product and ask why the back still hurts. No PT.",
+    payoff:
+      "The slides answer that question. The thing they bought once did not do it. Talk about movement, a plan picked for their back, and it getting harder only when they can. Slide 2 is not a fixed line. No PT.",
+    hooks: [
+      "You bought the best chair. Why does your back still hurt?",
+      "You spent all that money on a mattress. Why does it still hurt to get out of bed?",
+      "Why does it still hurt to stand up? You already bought the best back brace.",
+      "Why is your back still sore in the morning? You already bought the massage gun.",
+      "If the standing desk worked, why does your back still hurt when you sit?",
+      "If that mattress fixed it, why does getting out of bed still hurt?",
+    ],
+  },
+  {
+    id: "already_did_the_work",
+    title: "You already did the work",
+    thesis:
+      "Someone who already showed up: the doctor, the PT visits, the videos, the exercises they were sent. The back still hurts. One question in a set is enough.",
+    payoff:
+      "Stay on their side. They showed up. The visits and the videos ended. Talk about movement that keeps going, a plan picked for their back, and progression. If the hook says we, every slide says we. If the hook says you, every slide says you.",
+    hooks: [
+      "We already went to the doctor. The back still hurts.",
+      "We did every PT visit. It still hurts to get out of bed.",
+      "You followed the videos. Standing up still hurts.",
+      "You did the exercises they sent. Your back still hurts at your desk.",
+      "You already did all of that. Why does your back still hurt?",
+    ],
+  },
+  {
+    id: "never_feeling",
+    title: "Here's why you will never",
+    thesis:
+      "Someone with lasting back pain, usually someone who sits. The hook is a feeling they live with, and a reason is coming. Here's why is one shape. The line has to name the back.",
+    payoff:
+      "Slide 2 is only the why. The gotcha. Do not mention Remedy, the app, a download, a program, or a plan on slide 2. The why has to give them something to do. You have to do it is one way to turn it, not a fixed line. A why that says the feeling is permanent does not work. Slides after that may talk about movement, a plan picked for their back, and progression.",
+    hooks: [
+      "You sit all day. Here's why your back will never stop lighting up.",
+      "If it's been years, that's why you still don't trust your back.",
+      "You sit for work. Here's why your back still aches.",
+      "Years of back pain. This is why your back still scares you.",
+      "If you sit all day, here's why your back never feels normal.",
     ],
   },
 ] as const;
@@ -273,16 +365,85 @@ export function isHugeProblemStat(text: string): boolean {
   return HUGE_PROBLEM_STAT.test(text.toLowerCase());
 }
 
+const HUGE_STAT_NOUN = /\b(adults?|back pain|disability|last 3 months)\b/;
+const HUGE_STAT_GAP =
+  /\b(plan|program|stretch|desk|never|still|nobody|almost none|the part they skip)\b/;
+
 export function matchContentPillar(text: string): (typeof CONTENT_PILLARS)[number] | undefined {
   const t = text.trim().toLowerCase();
   for (const p of CONTENT_PILLARS) {
     if (p.hooks.some((h) => h.toLowerCase() === t)) return p;
   }
-  if (/\b(pt is|physical therapy|\$1,?200|\$150|expensive as fuck)\b/.test(t)) return CONTENT_PILLARS[0];
-  if (/\b(youtube|tiktok|playlist|plan problem|still hurting)\b/.test(t)) return CONTENT_PILLARS[1];
-  if (/\b(stretch|foam roll|rest it|mattress|wait it out)\b/.test(t)) return CONTENT_PILLARS[2];
-  if (HUGE_PROBLEM_STAT.test(t) || /\bstarts at 20\b/.test(t)) return CONTENT_PILLARS[3];
-  if (/\b(sit 9|deadlift|hour for pt|15 minutes|desk stretch)\b/.test(t)) return CONTENT_PILLARS[4];
+  if (
+    /\bkeep\b/.test(t) &&
+    /\b(low[- ]back|back pain|back wince|back flare|back ache|your back)\b/.test(t) &&
+    (/\bdon't want\b/.test(t) ||
+      /\bwant .{0,48}(stay|stick)\b/.test(t) ||
+      /\bstays if you keep\b/.test(t) ||
+      /\bstays too\b/.test(t) ||
+      /\bcan stay\b/.test(t))
+  ) {
+    return CONTENT_PILLARS[5];
+  }
+  if (
+    /\b(do this|try this|that's the (back )?test|this is the test|this is why (it hurts|desk backs))\b/.test(t) &&
+    /\b(stand|sit|bend|bed|winc|hands|five times|picking)\b/.test(t)
+  ) {
+    return CONTENT_PILLARS[4];
+  }
+  if (HUGE_PROBLEM_STAT.test(t) && HUGE_STAT_NOUN.test(t) && HUGE_STAT_GAP.test(t)) {
+    return CONTENT_PILLARS[3];
+  }
+  if (
+    /\b(bought|spent)\b/.test(t) &&
+    /\b(chair|mattress|brace|massage gun|standing desk)\b/.test(t) &&
+    /\b(why|hurt|sore)\b/.test(t)
+  ) {
+    return CONTENT_PILLARS.find((p) => p.id === "bought_once");
+  }
+  if (/\bif (the|that) (standing desk|mattress|chair|brace|massage gun)\b/.test(t) && /\b(why|hurt)\b/.test(t)) {
+    return CONTENT_PILLARS.find((p) => p.id === "bought_once");
+  }
+  if (
+    /\b(went to the doctor|pt visit|followed the videos|exercises they sent|already did all of that)\b/.test(t) &&
+    /\b(hurts?|back|standing)\b/.test(t)
+  ) {
+    return CONTENT_PILLARS.find((p) => p.id === "already_did_the_work");
+  }
+  if (
+    /\b(here's why|heres why|this is why|that's why|thats why)\b/.test(t) &&
+    /\bback\b/.test(t) &&
+    /\b(lighting up|don't trust|dont trust|aches|scares|feels normal|never stop|still)\b/.test(t)
+  ) {
+    return CONTENT_PILLARS.find((p) => p.id === "never_feeling");
+  }
+  if (
+    /\b(heating pad|ibuprofen|morning stretches|ice pack|ice every night|hot bath|mattress isn't|stretch video|strength work|cream you rub|foam rolling every|flat on the couch)\b/.test(
+      t,
+    ) &&
+    /\bback\b/.test(t)
+  ) {
+    return CONTENT_PILLARS[1];
+  }
+  if (
+    /\b(foam roll(?:ing)? wrong|killing your back|mattress isn't|ibuprofen isn't|skipping the strength)\b/.test(t)
+  ) {
+    return CONTENT_PILLARS[1];
+  }
+  if (
+    /\b(how i (fixed|stopped|sat)|why your back|why deadlifts|lights up when|hurts when|wince when|when you (stand|bend)|flares at 3pm)\b/.test(
+      t,
+    )
+  ) {
+    return CONTENT_PILLARS[2];
+  }
+  if (
+    /\b(listen up|watch this|read this|hear this)\b/.test(t) &&
+    /\b(back|hurt|hurting|pain)\b/.test(t) &&
+    !/\b(desk workers|sit all day|sit 8 hours|sit for work)\b/.test(t)
+  ) {
+    return CONTENT_PILLARS[0];
+  }
   return undefined;
 }
 
@@ -293,18 +454,149 @@ export function contentPillarsPromptBlock(): string {
    Payoff: ${p.payoff}
    Example hooks: ${p.hooks.join(" / ")}`;
   }).join("\n\n");
-  return `CONTENT PILLARS — every hook and carousel sits in exactly one of these. Lean controversial (mistake / contrarian). "You're foam rolling wrong" is the proven winner shape.
+  return `CONTENT PILLARS — every hook and carousel sits in exactly one of these.
 
 ${body}
 
+Every generated hook MUST match one of these nine. A line that does not match is discarded. Mix pillars in every batch. Pick across pillars evenly. Older learnings do not override this.
+
 Pillar rules:
-- One "this is huge" stat per video. Do not stack 80% + 619 million + #1 disability in the same carousel.
-- PT cost is fair game. Never bash therapists as people. Never say you don't need a PT or that they hid something. Never claim Remedy has a PT or that a PT designed / filmed / approved the product. Authority copy may say backed by physiological studies.
+- Avatar / constraint: someone with back pain. Simple words. Mental side in plain language. Stay-line: listen up / watch this / read this / hear this. Mix openings. Not a desk worker. Not clever.
+- Mistake: one specific object (heating pad, ibuprofen at 10am, morning stretches, ice, mattress, stretch video, strength, cream, or one foam roller). Not "you're only stretching." Not "stop resting it and waiting."
+- Activity + pain: named WHEN plus why/how. Vary the when (stand, bed, deadlift, bend, 3pm, desk day).
+- Huge-stat: short. One real number, the person with back pain, then no plan or no program. Vary the number. Never a lone stat. One per video.
+- Self-test: instruction plus the problem it solves. Never diagnose. Sharp + new → doctor.
+- Reverse psychology: the pain stays if they keep the habit. Mix the opening. Name the pain. Do not start every line with "Don't want."
+- The thing you bought: name the one-time product and ask why the back still hurts. No PT.
+- You already did the work: doctor, PT visits, videos, or the exercises they sent. The back still hurts. If the hook says we, every slide says we. If it says you, every slide says you.
+- Here's why you will never: a lasting back feeling, and the person who has it. Slide 2 is only the why. No Remedy, app, download, program, or plan on slide 2.
 - Stretch-only payoff: tight isn't the whole problem. Weak is.
-- Sharp + new pain → see a doctor. Same desk/gym ache for months → stop waiting it out.
-- "PT is expensive as fuck" is organic-only. Meta/paid uses $150 a session or $1,200 course.
-- Persona must match the face. Don't have a 20-year-old say "after the kids are down."
-- Device/UGC only (not a slideshow slide): flash a bunch of "3 exercises to fix your back" videos → "that's why you're still hurting."`;
+- Never bash therapists as people. Never say you don't need a PT or that they hid something. Never claim Remedy has a PT or that a PT designed / filmed / approved the product. Authority copy may say backed by physiological studies.
+- "PT is expensive as fuck" is organic-only if you use the money wedge inside another pillar. Meta/paid uses $150 a session or $1,200 course.`;
+}
+
+/** Next hooks for each pillar. Same shapes as the locked lines. Not the exemplars. */
+export const PILLAR_HOOK_FACTORY: Record<ContentPillarId, readonly string[]> = {
+  avatar_constraint: [
+    "You worry about your back every day. Listen up.",
+    "Are you sick of your back hurting? Watch this.",
+    "Your back still hurts every morning. Read this.",
+    "Hear this if your back has hurt for a long time.",
+    "You say no to plans because your back hurts. Listen up.",
+    "Read this if your back is on your mind all day.",
+    "You are tired of your back pain. Watch this.",
+    "Listen up if you worry your back will hurt.",
+    "You think about your back when you wake up. Hear this.",
+    "Watch this if you have to be careful with your back.",
+  ],
+  mistake: [
+    "The ice pack isn't a plan for your back.",
+    "Ibuprofen before bed isn't fixing your back.",
+    "Those morning stretches still aren't fixing your back.",
+    "You're foam rolling every morning and your back still hurts.",
+    "A hot bath isn't a plan for your back.",
+    "Ice every night. Your back still hurts after.",
+    "You skip the strength work and your back still hurts.",
+    "That five-minute stretch video isn't a plan for your back.",
+    "You spent Sunday flat on the couch. Your back still hurt.",
+    "The cream you rub on every night isn't a plan for your back.",
+  ],
+  activity_pain: [
+    "Why your back hurts when you bend.",
+    "Why your back lights up when you get out of bed.",
+    "Why your back flares when you stand up.",
+    "Why your back hurts after you sit.",
+    "How I stopped the wince when I bend.",
+    "How I fixed the light-up when I stand.",
+    "How I stopped the afternoon back flare.",
+    "Why your back lights up at the end of the day.",
+    "How I stopped hurting when I get out of bed.",
+    "Why your back flares when you pick something up.",
+  ],
+  huge_untreated: [
+    "80% of adults get back pain. Most still have no plan.",
+    "80% get back pain. Your back still has no program.",
+    "2 in 5 adults. Last 3 months. Still no plan for your back.",
+    "2 in 5 with back pain. Most still have no program.",
+    "#1 cause of disability. Most with back pain have no plan.",
+    "#1 cause of disability. Your back still waits on a plan.",
+    "619 million have back pain. Most have no program.",
+    "619 million with back pain. Yours still has no plan.",
+    "1 in 13. Back pain right now. Most have no plan.",
+    "1 in 13 right now. Back pain still has no program.",
+  ],
+  self_test: [
+    "Can't stand up without your hands? Do this.",
+    "Bend down and stand back up. This is why it hurts.",
+    "Get out of bed without using your hands. That's the back test.",
+    "Sit. Stand. Five times. This is why it hurts.",
+    "Bend and pick it up. This is why it hurts.",
+    "Stand up from the couch. This is why it hurts.",
+    "Can't put your shoes on without your hands? Do this.",
+    "Sit up in bed. This is why it hurts.",
+    "Bend and touch your toes. This is why it hurts.",
+    "Stand up slow from the chair. This is why it hurts.",
+  ],
+  reverse_psych: [
+    "Keep only stretching if you want that morning back wince to stay.",
+    "Want the 3pm back flare to stay? Keep sitting.",
+    "That morning back wince stays if you keep foam rolling.",
+    "Keep the heating pad. The morning back wince stays too.",
+    "If that stand-up back wince can stay, keep skipping strength.",
+    "Keep the ice if you want low back pain to stay.",
+    "Want your back to stay lit up when you bend? Keep only stretching.",
+    "Keep waiting it out. That get-out-of-bed back wince stays too.",
+    "That low-back bend-wince stays if you keep the stretch video.",
+    "Keep resting all weekend if you want the stand-up back pain to stay.",
+  ],
+  bought_once: [
+    "You bought the best mattress. Why does it still hurt to stand up?",
+    "You spent all that money on a brace. Why is your back still sore in the morning?",
+    "Why does your back still hurt? You already bought the standing desk.",
+    "If the massage gun worked, why does it still hurt when you sit?",
+    "You bought the best chair. Why does it still hurt to get out of bed?",
+    "You spent all that money on a standing desk. Why does your back still hurt?",
+    "Why does it still hurt to stand up? You already bought the mattress.",
+    "If the brace worked, why is your back still sore in the morning?",
+    "You bought the massage gun. Why does your back still hurt when you sit?",
+    "If the chair worked, why does it still hurt to get out of bed?",
+  ],
+  already_did_the_work: [
+    "We already went to the doctor. Standing up still hurts.",
+    "We followed the videos. Your back still hurts.",
+    "We did the exercises they sent. Your back still hurts.",
+    "You already went to the doctor. Standing up still hurts.",
+    "You did every PT visit. Your back still hurts.",
+    "You followed the videos. Your back still hurts in the morning.",
+    "We did every PT visit. The back still hurts.",
+    "We already did all of that. Standing up still hurts.",
+    "You did the exercises they sent. Your back still hurts in the morning.",
+    "You already did all of that. Your back still hurts.",
+  ],
+  never_feeling: [
+    "You sit all day. This is why your back still aches.",
+    "You sit all day. That's why you still don't trust your back.",
+    "You sit for work. Here's why your back still scares you.",
+    "You sit for work. This is why your back will never stop lighting up.",
+    "If it's been years, here's why your back still aches.",
+    "If it's been years, this is why your back never feels normal.",
+    "Years of back pain. Here's why your back will never stop lighting up.",
+    "Years of back pain. That's why your back never feels normal.",
+    "If you sit all day, this is why you still don't trust your back.",
+    "If you sit all day, that's why your back still scares you.",
+  ],
+};
+
+export function factoryHooksForPillar(id: ContentPillarId, n: number, used: Set<string> = new Set()): string[] {
+  const out: string[] = [];
+  for (const text of PILLAR_HOOK_FACTORY[id]) {
+    if (out.length >= n) break;
+    if (used.has(text.trim().toLowerCase())) continue;
+    if (!matchContentPillar(text) || matchContentPillar(text)?.id !== id) continue;
+    if (isUnsafeHook(text)) continue;
+    out.push(text);
+  }
+  return out;
 }
 
 const FILLERS: Record<string, readonly string[]> = {
@@ -320,6 +612,14 @@ const FILLERS: Record<string, readonly string[]> = {
   ],
   n: ["3", "5", "7", "14", "21"],
   habit: ["a 15-minute back session", "a real program", "strength work"],
+  named_pain: [
+    "low back pain",
+    "that morning back wince",
+    "the 3pm back flare",
+    "the stand-up back wince",
+    "that low-back bend-wince",
+  ],
+  keep_habit: ["only stretching", "waiting it out", "sitting", "skipping strength", "foam rolling"],
   common_mistake: ["only stretching", "resting all day", "doing random YouTube", "foam rolling and hoping"],
   trigger: ["sitting all day", "sleeping", "a long drive", "3pm"],
   activity: ["tying your shoes", "getting out of bed", "a low couch", "sitting through a movie"],
@@ -399,6 +699,7 @@ export function pickDiverseHooks<T extends { text: string; category: string }>(p
   const score = (h: T): number => {
     const words = hookWordCount(h.text);
     const lines = hookSlideLines(h.text);
+    const pillar = matchContentPillar(h.text);
     let s = 0;
     if (isLowSignalHook(h.text)) s -= 16;
     if (hasDistributionSignal(h.text)) s += 6;
@@ -409,6 +710,13 @@ export function pickDiverseHooks<T extends { text: string; category: string }>(p
     if (!picked.some((p) => p.category === h.category)) s += 3;
     else s -= 2;
     if (CONTROVERSIAL_CATEGORIES.has(h.category) && !isLowSignalHook(h.text)) s += 3;
+    if (pillar) {
+      s += 12;
+      if (!picked.some((p) => matchContentPillar(p.text)?.id === pillar.id)) s += 10;
+      else s -= 6;
+    } else {
+      s -= 16;
+    }
     return s;
   };
   while (picked.length < n && remaining.length > 0) {
@@ -416,6 +724,36 @@ export function pickDiverseHooks<T extends { text: string; category: string }>(p
     const next = remaining.shift();
     if (!next) break;
     picked.push(next);
+  }
+  return picked;
+}
+
+/** One from each content pillar first, then fill leftovers. Unmatched hooks are skipped. */
+export function pickHooksAcrossPillars<T extends { text: string; category: string }>(pool: T[], n: number): T[] {
+  if (n <= 0 || pool.length === 0) return [];
+  const buckets = new Map<ContentPillarId, T[]>();
+  for (const p of CONTENT_PILLARS) buckets.set(p.id, []);
+  for (const h of pool) {
+    const id = matchContentPillar(h.text)?.id;
+    if (id) buckets.get(id)!.push(h);
+  }
+  for (const [id, list] of buckets) {
+    buckets.set(id, pickDiverseHooks(list, list.length));
+  }
+  const order = [...CONTENT_PILLARS].sort(() => Math.random() - 0.5);
+  const picked: T[] = [];
+  const used = new Set<string>();
+  let progressed = true;
+  while (picked.length < n && progressed) {
+    progressed = false;
+    for (const p of order) {
+      if (picked.length >= n) break;
+      const next = (buckets.get(p.id) ?? []).find((h) => !used.has(h.text.trim().toLowerCase()));
+      if (!next) continue;
+      used.add(next.text.trim().toLowerCase());
+      picked.push(next);
+      progressed = true;
+    }
   }
   return picked;
 }
@@ -513,6 +851,10 @@ export const HOOK_FORMULAS: HookFormulaDef[] = [
   { name: "Sitting isn't the villain", category: "contrarian", template: "Sitting isn't the villain. Weakness is.", notes: "Two-beat reframe." },
   { name: "Worst advice I got", category: "contrarian", template: "The worst {pain} advice I ever got.", notes: "Negative experience." },
   { name: "Strong beats flexible", category: "contrarian", template: "Strong beats flexible.", notes: "3-word brand line." },
+  { name: "Reverse keep habit", category: "contrarian", template: "Don't want {named_pain} gone? Keep {keep_habit}.", notes: "Reverse psych. Named pain + specific bad habit." },
+  { name: "If you sit hours listen up", category: "callout", template: "If you sit {hours} hours, listen up.", notes: "Avatar. Stay-line required." },
+  { name: "If no hour for PT watch this", category: "callout", template: "If you don't have an hour for PT, watch this.", notes: "Avatar. Stay-line required." },
+  { name: "If you sit all day hear this", category: "callout", template: "If you sit all day, hear this.", notes: "Avatar. Stay-line required." },
 
   // --- story ---
   { name: "I almost quit on my back", category: "story", template: "I almost quit on my back.", notes: "In medias res + vulnerability." },
@@ -643,7 +985,11 @@ export const HOOK_FORMULAS: HookFormulaDef[] = [
   { name: "Desk stretches do nothing", category: "identity", template: "I sit 9 hours. Desk stretches do nothing.", notes: "Desk persona. Show a real session, not a stretch-reminder." },
   { name: "Deadlifts light it up", category: "identity", template: "My back isn't injured. Deadlifts light it up.", notes: "Gym-bro. Remedy = get back to training." },
   { name: "No hour for PT", category: "constraint", template: "You don't have an hour for PT.", notes: "Time persona. Payoff: you have 15 minutes." },
-  { name: "You have 15 minutes", category: "constraint", template: "You have 15 minutes.", notes: "Time persona pair." },
+  { name: "You have 15 minutes", category: "constraint", template: "You have 15 minutes.", notes: "Time constraint. Avatar / constraint pillar." },
+  { name: "Why back lights up when you stand", category: "relatable", template: "Why your back lights up when you stand.", notes: "Activity + pain. The WHEN is stand." },
+  { name: "Stand up no hands", category: "challenge", template: "Stand up without using your hands.", notes: "Self-test. Instruction first." },
+  { name: "Sit stand five times", category: "challenge", template: "Sit. Stand. Five times.", notes: "Self-test. Count is the result." },
+  { name: "Bend like picking up", category: "challenge", template: "Bend like you're picking something up.", notes: "Self-test. Named move, no diagnosis." },
 
   // --- distribution jobs (steal the meaning, not a fixed phrase) ---
   { name: "If you avatar situation", category: "callout", template: "If you {avatar_situation}.", notes: "Avatar filter. Incomplete on purpose." },
@@ -1063,6 +1409,57 @@ export const SEED_HOOKS: SeedHookDef[] = [
   { text: "The reason stretching feels like the fix.", category: "open_loop" },
   { text: "The reason rest sounds like the back-pain fix.", category: "open_loop" },
   { text: "Why everyone tells you to just stretch.", category: "myth_bust" },
+
+  // locked pillar exemplars — add only
+  { text: "Why your back lights up when you stand.", category: "relatable" },
+  { text: "How I fixed my get-out-of-bed wince.", category: "how_to" },
+  { text: "Why deadlifts light your back up.", category: "relatable" },
+  { text: "How I stopped wincing when I bend.", category: "how_to" },
+  { text: "Why your back flares at 3pm.", category: "relatable" },
+  { text: "How I sat through a workday without paying later.", category: "how_to" },
+  { text: "If you sit 8 hours, listen up.", category: "callout" },
+  { text: "If you don't have an hour for PT, watch this.", category: "callout" },
+  { text: "If you sit all day, hear this.", category: "callout" },
+  { text: "80% of adults get back pain. Most never get a plan.", category: "stat_based" },
+  { text: "2 in 5 adults. Last 3 months. Almost none have a program.", category: "stat_based" },
+  { text: "#1 cause of disability. We still just stretch it.", category: "stat_based" },
+  { text: "80% of adults get this. Desk people still wait it out.", category: "stat_based" },
+  { text: "Can't get out of bed without wincing? Do this.", category: "challenge" },
+  { text: "Stand up without using your hands. That's the back test.", category: "challenge" },
+  { text: "Sit. Stand. Five times. This is why desk backs stay loud.", category: "challenge" },
+  { text: "Bend like you're picking something up. This is why it hurts.", category: "challenge" },
+  { text: "Don't want low back pain gone? Keep only stretching.", category: "contrarian" },
+  { text: "Don't want that morning back wince gone? Keep waiting it out.", category: "contrarian" },
+  { text: "Don't want the 3pm back flare gone? Keep sitting.", category: "contrarian" },
+  { text: "Don't want the stand-up back wince gone? Keep skipping strength.", category: "contrarian" },
+  { text: "Don't want that low-back bend-wince gone? Keep foam rolling.", category: "contrarian" },
+  { text: "Keep only stretching if you want that morning back wince to stay.", category: "contrarian" },
+  { text: "Want the 3pm back flare to stay? Keep sitting.", category: "contrarian" },
+  { text: "That morning back wince stays if you keep foam rolling.", category: "contrarian" },
+  { text: "Keep the heating pad. The morning back wince stays too.", category: "contrarian" },
+  { text: "If that stand-up back wince can stay, keep skipping strength.", category: "contrarian" },
+  { text: "Keep the ice if you want low back pain to stay.", category: "contrarian" },
+  { text: "Want your back to stay lit up when you bend? Keep only stretching.", category: "contrarian" },
+  { text: "Keep waiting it out. That get-out-of-bed back wince stays too.", category: "contrarian" },
+  { text: "That low-back bend-wince stays if you keep the stretch video.", category: "contrarian" },
+  { text: "Keep resting all weekend if you want the stand-up back pain to stay.", category: "contrarian" },
+
+  { text: "You bought the best chair. Why does your back still hurt?", category: "callout" },
+  { text: "You spent all that money on a mattress. Why does it still hurt to get out of bed?", category: "callout" },
+  { text: "Why does it still hurt to stand up? You already bought the best back brace.", category: "callout" },
+  { text: "Why is your back still sore in the morning? You already bought the massage gun.", category: "callout" },
+  { text: "If the standing desk worked, why does your back still hurt when you sit?", category: "callout" },
+  { text: "If that mattress fixed it, why does getting out of bed still hurt?", category: "callout" },
+  { text: "We already went to the doctor. The back still hurts.", category: "story" },
+  { text: "We did every PT visit. It still hurts to get out of bed.", category: "story" },
+  { text: "You followed the videos. Standing up still hurts.", category: "story" },
+  { text: "You did the exercises they sent. Your back still hurts at your desk.", category: "story" },
+  { text: "You already did all of that. Why does your back still hurt?", category: "callout" },
+  { text: "You sit all day. Here's why your back will never stop lighting up.", category: "open_loop" },
+  { text: "If it's been years, that's why you still don't trust your back.", category: "open_loop" },
+  { text: "You sit for work. Here's why your back still aches.", category: "open_loop" },
+  { text: "Years of back pain. This is why your back still scares you.", category: "open_loop" },
+  { text: "If you sit all day, here's why your back never feels normal.", category: "open_loop" },
 ];
 
 export const HOOK_RULES = [
@@ -1077,7 +1474,7 @@ export const HOOK_RULES = [
   "Never claim Remedy has a PT, used a PT, or that a PT designed / filmed / approved the product. Authority copy may say backed by physiological studies.",
   "Undefined-this, save/bookmark commands, and 'wait until slide N' are old-gen. Almost never generate them. Never make them the batch.",
   "Stat-first hooks only when the number is tied to back pain, sitting, PT cost, or a session — not a bare 80%.",
-  "Every carousel sits in one content pillar: PT cost, playlist vs program, stuck advice, huge-and-untreated, or persona. Prefer controversial (you're doing X wrong / trusted advice is the trap).",
+  "Every carousel sits in one of nine pillars. Mix them evenly. Avatar uses listen/watch/read/hear — never swipe. Activity needs why/how. Huge-stat and self-test need the gap or the problem. Reverse: if you don't want [named pain] to improve, keep doing Y. The thing you bought asks why the product didn't stop the pain. You already did the work stays on their side. Here's why you will never saves the product pitch for after the why.",
   "One huge-problem stat per video (80% lifetime / 2 in 5 last 3 months / #1 disability / 619 million). Never stack those in the same carousel.",
   "PT is expensive is a product wedge, not clinician-bashing. Organic: 'PT is expensive as fuck.' Meta-clean: $150 a session or $1,200 course.",
 ];

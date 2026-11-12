@@ -1,7 +1,7 @@
 import { getDb, posts } from "@remedy-growth/db";
 import { eq } from "drizzle-orm";
 import { env, configuredPlatforms } from "../config.js";
-import { brightbeanConfigured, publisherReady } from "../publish/brightbean.js";
+import { publisherReady, zernioConfigured } from "../publish/zernio.js";
 import { pullAnalytics } from "../analytics/pull.js";
 import { runDiagnosis } from "../learning/diagnosis.js";
 import { evolveWinners } from "../learning/evolve.js";
@@ -26,7 +26,7 @@ export interface DailyCycleReport {
 
 /**
  * The full autonomous loop, run once per day:
- * 1. Pull BrightBean audience (followers) + per-post metrics
+ * 1. Pull Zernio audience (followers) + per-post metrics
  * 2. Diagnose mature posts against the same follower era; only replicated gaps become rules
  * 3. Conclude A/B experiments whose posts are measured — results become signals
  * 4. Evolve winners into hook variations
@@ -39,11 +39,11 @@ export async function runDailyCycle(): Promise<DailyCycleReport> {
   let analyticsPulled = 0;
   if (!env.ANALYTICS_ENABLED) {
     console.log("Skipping analytics pull — ANALYTICS_ENABLED=false.");
-  } else if (brightbeanConfigured() || configuredPlatforms().some((p) => publisherReady(p))) {
+  } else if (zernioConfigured() || configuredPlatforms().some((p) => publisherReady(p))) {
     const pull = await pullAnalytics();
     analyticsPulled = pull.pulled;
   } else {
-    console.log("Skipping analytics pull (no BrightBean / platforms configured yet).");
+    console.log("Skipping analytics pull (no Zernio / platforms configured yet).");
   }
 
   let diagnosed = 0;

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors, serifFont } from '../../constants/colors';
 import { useAfterTransition } from '../../lib/useAfterTransition';
@@ -70,6 +71,7 @@ export default function EducationScreen() {
     <>
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
+        <WarmBackground />
         <View style={styles.content}>
           <Text style={styles.eyebrow}>THE GOOD NEWS</Text>
           <Text style={styles.stat}>50% less pain</Text>
@@ -88,7 +90,7 @@ export default function EducationScreen() {
         </View>
 
         <View style={styles.footer}>
-          <ContinueButton label="Continue" onPress={() => router.push('/(onboarding)/q0')} />
+          <ContinueButton label="Continue" onPress={() => router.push('/(onboarding)/proof')} />
         </View>
       </View>
     </>
@@ -100,6 +102,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 24,
+    overflow: 'hidden',
   },
   content: {
     flex: 1,

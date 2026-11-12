@@ -114,6 +114,48 @@ export const applyProgramAnswersResultSchema = z
 export type ApplyProgramAnswersResult = z.infer<typeof applyProgramAnswersResultSchema>;
 
 // ---------------------------------------------------------------------------
+// start-next-program edge function (program complete → next program)
+// Mirrors supabase/functions/_shared/assignment/schema.ts.
+// ---------------------------------------------------------------------------
+
+export const nextProgramChoiceSchema = z.enum(['continue', 'rebuild']);
+export type NextProgramChoice = z.infer<typeof nextProgramChoiceSchema>;
+export const painChangeSchema = z.enum(['much_better', 'better', 'same', 'worse']);
+export type PainChange = z.infer<typeof painChangeSchema>;
+export const difficultySchema = z.enum(['too_easy', 'just_right', 'too_hard']);
+export type Difficulty = z.infer<typeof difficultySchema>;
+export const NEXT_PROGRAM_FEEDBACK_MAX = 1000;
+
+export const programCheckinInputSchema = z
+  .object({
+    pain_change: painChangeSchema,
+    difficulty: difficultySchema,
+    main_goal: mainGoalSchema.max(4),
+    pain_location: painLocationSchema,
+    sessions_per_week: sessionsPerWeekSchema,
+    equipment: equipmentSchema,
+    feedback: z.string().max(NEXT_PROGRAM_FEEDBACK_MAX).optional(),
+  })
+  .strict();
+export type ProgramCheckinInput = z.infer<typeof programCheckinInputSchema>;
+
+export const startNextProgramResultSchema = z
+  .object({
+    plan_id: z.string().uuid(),
+    program_name: z.string(),
+    subtitle: z.string().nullable(),
+    duration_weeks: z.number().int().positive(),
+    sessions_per_week: z.number().int().positive(),
+    equipment_tier: equipmentSchema,
+    from_level: z.number().int(),
+    progression_level: z.number().int(),
+    program_number: z.number().int().positive(),
+    replayed: z.boolean(),
+  })
+  .strict();
+export type StartNextProgramResult = z.infer<typeof startNextProgramResultSchema>;
+
+// ---------------------------------------------------------------------------
 // In-app feedback (Profile → Send Feedback)
 // ---------------------------------------------------------------------------
 

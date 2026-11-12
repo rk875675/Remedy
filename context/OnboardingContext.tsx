@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import { clearPendingPurchase } from '../lib/pendingPurchase';
 import { onboardingAnswersInputSchema } from '../lib/schemas';
 import { parseRecognizeSelected, type RecognizeKey } from '../constants/mindset';
+import { appBelief, type AppBelief } from '../lib/analytics/events/enums';
 import type { OnboardingAnswers } from '../types/database';
 
 type AnswerFields = Omit<OnboardingAnswers, 'id' | 'user_id' | 'completed_at' | 'created_at'>;
@@ -24,8 +25,8 @@ export const ONBOARDING_FLOW = [
   'welcome',
   'founder',
   'education',
+  'proof',
   'q0',
-  'safety',
   'q9',
   'recognize',
   'seen',
@@ -46,7 +47,7 @@ export const ONBOARDING_STEP_PATHS: Record<OnboardingStep, string> = {
   welcome: '/(onboarding)',
   founder: '/(onboarding)/founder',
   education: '/(onboarding)/education',
-  safety: '/(onboarding)/safety',
+  proof: '/(onboarding)/proof',
   q0: '/(onboarding)/q0',
   q9: '/(onboarding)/q9',
   recognize: '/(onboarding)/recognize',
@@ -65,14 +66,19 @@ export const ONBOARDING_STEP_PATHS: Record<OnboardingStep, string> = {
 // persisted alongside progress so they restore on resume/back-navigation.
 type LocalSelections = {
   hear_about: string | null;
+  // Legacy q9 answer ('yes' | 'no'). No longer set; recognize/seen fall back to the
+  // "tried before" copy when it is null.
   tried_before: string | null;
+  // q9: "Do you think Remedy can fix your back pain?"
+  app_belief: AppBelief | null;
+  // Set once "Hold to commit" completes, so swiping back shows the committed state.
+  committed_at: string | null;
   minutes: number | null;
-  // Set when the safety/consent gate was accepted (ISO timestamp). The gate is a
-  // hard requirement: resume clamps back to it until acceptance exists.
+  // Set when "Agree & continue" on the proof screen was tapped (ISO timestamp). The
+  // assent is a hard requirement: resume clamps back to proof until it exists.
   safety_accepted_at: string | null;
-  // Safety gate selections, persisted as they are made so back-navigation and
-  // funnel resume restore them (the acceptance timestamp above only exists after
-  // Continue is tapped).
+  // Legacy red-flag answer from the removed safety screen. No longer set; kept so
+  // stored progress from older builds still parses.
   has_red_flag: boolean | null;
   agreed_legal: boolean;
   // Recognition multi-select (analytics / copy only). Completed even when empty
@@ -89,9 +95,9 @@ export type OnboardingProgress = { step: OnboardingStep } & LocalSelections;
 const STEP_REQUIREMENT: Partial<
   Record<OnboardingStep, (progress: OnboardingProgress, answers: Partial<AnswerFields>) => boolean>
 > = {
-  safety: (p) => p.safety_accepted_at !== null,
+  proof: (p) => p.safety_accepted_at !== null,
   q0: (p) => p.hear_about !== null,
-  q9: (p) => p.tried_before !== null,
+  q9: (p) => p.app_belief !== null,
   recognize: (p) => p.recognize_completed,
   q6: (_p, a) => Array.isArray(a.main_goal) && a.main_goal.length > 0,
   q1: (_p, a) => !!a.pain_location,
@@ -151,6 +157,7 @@ export function hasMeaningfulIncompleteFunnel(
   return (
     progress.hear_about !== null ||
     progress.tried_before !== null ||
+    progress.app_belief !== null ||
     progress.safety_accepted_at !== null ||
     progress.agreed_legal ||
     progress.has_red_flag !== null ||
@@ -189,6 +196,8 @@ const DEFAULT_PROGRESS: OnboardingProgress = {
   step: 'welcome',
   hear_about: null,
   tried_before: null,
+  app_belief: null,
+  committed_at: null,
   minutes: null,
   safety_accepted_at: null,
   has_red_flag: null,
@@ -295,6 +304,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               const step: OnboardingStep | null =
                 rawStep === 'alarm' || rawStep === 'why'
                   ? 'seen'
+                  : rawStep === 'safety'
+                    ? 'q0'
                   : rawStep && (ONBOARDING_FLOW as readonly string[]).includes(rawStep)
                     ? (rawStep as OnboardingStep)
                     : null;
@@ -303,6 +314,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                   step,
                   hear_about: typeof p.hear_about === 'string' ? p.hear_about : null,
                   tried_before: typeof p.tried_before === 'string' ? p.tried_before : null,
+                  app_belief: appBelief.safeParse(p.app_belief).success
+                    ? (p.app_belief as AppBelief)
+                    : null,
+                  committed_at: typeof p.committed_at === 'string' ? p.committed_at : null,
                   minutes: typeof p.minutes === 'number' ? p.minutes : null,
                   safety_accepted_at:
                     typeof p.safety_accepted_at === 'string' ? p.safety_accepted_at : null,

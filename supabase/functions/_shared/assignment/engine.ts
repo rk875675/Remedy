@@ -168,6 +168,19 @@ export interface BuildPlanInput {
   template: TemplateInput;
   replacements: ReplacementEntry[];
   startWeek?: number;
+  // user_programs.progression_level. 0 for a first program; each level shifts the
+  // weekly intensity target up one tier and adds LEVEL_REPS_STEP to strength/activation
+  // reps. -1 eases a program back after a "too hard" check-in. Clamped to the range below.
+  progressionLevel?: number;
+}
+
+export const MIN_PROGRESSION_LEVEL = -1;
+export const MAX_PROGRESSION_LEVEL = 3;
+const LEVEL_REPS_STEP = 0.1;
+
+export function clampProgressionLevel(level: number | null | undefined): number {
+  if (typeof level !== 'number' || !Number.isFinite(level)) return 0;
+  return Math.max(MIN_PROGRESSION_LEVEL, Math.min(MAX_PROGRESSION_LEVEL, Math.trunc(level)));
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +290,7 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
   const strengthStartWeek = Math.max(1, Math.ceil(strengthStartFraction * durationWeeks));
   const earlyWeeks = rules.global.early_weeks ?? 2;
   const bodyweightEarlyWeeks = rules.global.bodyweight_only_early_weeks ?? 2;
+  const level = clampProgressionLevel(input.progressionLevel);
   // Decision: if exactly 1 goal use it; if >1 use first for scoring / accel.
   const primaryGoal = answers.main_goal[0];
   const goalKey = rules.main_goal.goal_key_for_weight[primaryGoal] ?? primaryGoal;
@@ -304,9 +318,12 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
   // toward this, and reps double-progress from the week an exercise's tier
   // first becomes reachable (see resolveExercise). Acute users carry their
   // negative starting_intensity_offset through the whole ramp, so a short acute
-  // program peaks below max intensity instead of racing to tier 5.
+  // program peaks below max intensity instead of racing to tier 5. The progression
+  // level shifts the whole ramp, so a follow-on program starts where the last one
+  // left off. Safety filters (pain type, contraindications, early bodyweight-only)
+  // are keyed to answers and weeks, never to the level.
   const targetTierForWeek = (week: number): number =>
-    clamp(1 + Math.round(weekFraction(week, durationWeeks) * 4) + startingOffset, 1, 5);
+    clamp(1 + Math.round(weekFraction(week, durationWeeks) * 4) + startingOffset + level, 1, 5);
   // enterWeekByTier[t] = first week whose target tier reaches t (targetTier is
   // monotonic in week). Tiers never reached map to the final week.
   const enterWeekByTier: number[] = [0, 1, 1, 1, 1, 1];
@@ -432,6 +449,7 @@ export function buildPlan(input: BuildPlanInput): ResolvedPlan {
             startingOffset,
             isEarly,
             accelAfterWeek,
+            level,
           }),
         );
       }
@@ -662,6 +680,7 @@ interface IntensityCtx {
   startingOffset: number;
   isEarly: boolean;
   accelAfterWeek: number | null;
+  level: number;
 }
 
 // Strength AND activation work stay at or below 15 reps; beyond that the ladder
@@ -684,7 +703,10 @@ function resolveExercise(
   // strength/activation sets into endurance ranges — athletes progress via
   // harder variants, not more reps of easy ones.
   const activityMult = isWork ? Math.min(1, ctx.intensityMult) : ctx.intensityMult;
-  let repsFactor = activityMult * (1 + 0.25 * holdFraction);
+  // The level adds volume to work reps only: warm-up/cooldown dosing stays put and
+  // hold durations keep McGill-style 8–10s dosing.
+  const levelVolume = isWork ? 1 + LEVEL_REPS_STEP * ctx.level : 1;
+  let repsFactor = activityMult * (1 + 0.25 * holdFraction) * levelVolume;
   // Acute / negative starting offset: start gentler in the early weeks.
   if (ctx.startingOffset < 0 && ctx.isEarly) repsFactor *= 0.85;
   // return_to_exercise: accelerate loading after the configured week.
@@ -698,7 +720,10 @@ function resolveExercise(
       : null;
   const restSeconds = Math.max(10, Math.round(ex.rest_seconds * ctx.restMult));
   const loadTier = clamp(
-    1 + Math.round(ctx.fraction * 3) + (ctx.accelAfterWeek !== null && ctx.week > ctx.accelAfterWeek ? 1 : 0),
+    1 +
+      Math.round(ctx.fraction * 3) +
+      (ctx.accelAfterWeek !== null && ctx.week > ctx.accelAfterWeek ? 1 : 0) +
+      ctx.level,
     1,
     5,
   );

@@ -27,6 +27,9 @@ const EnvSchema = z
     CURSOR_MODEL: z.string().default("auto"),
     GEMINI_API_KEY: z.string().default(""),
     GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+    /** xAI key for community reply drafts. Empty = the community CLI refuses to call. */
+    XAI_API_KEY: z.string().default(""),
+    XAI_MODEL: z.string().default("grok-4"),
 
     // --- LLM rate limiting (defense-in-depth behind the studio password gate) ---
     LLM_MAX_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(4),
@@ -48,34 +51,54 @@ const EnvSchema = z
     /** MEDIA_UPLOAD = drafts you finish in the app; DIRECT_POST needs TikTok's audit */
     TIKTOK_POST_MODE: z.enum(["MEDIA_UPLOAD", "DIRECT_POST"]).default("MEDIA_UPLOAD"),
 
-    // --- Instagram / Facebook (Meta Graph API) — unused when BrightBean is connected ---
+    // --- Instagram / Facebook (Meta Graph API) — unused when Zernio is connected ---
     IG_USER_ID: z.string().default(""),
     IG_ACCESS_TOKEN: z.string().default(""),
     FB_PAGE_ID: z.string().default(""),
     FB_PAGE_TOKEN: z.string().default(""),
 
-    // --- BrightBean Studio (hosted publisher for TikTok / IG / FB / YouTube) ---
-    BRIGHTBEAN_TOKEN: z.string().default(""),
-    BRIGHTBEAN_BASE_URL: z.string().default("https://studio.brightbean.xyz"),
+    // --- Zernio (hosted publisher for TikTok / IG / FB / YouTube). Keys are env-only. ---
+    // One key per Zernio login. Each key publishes only to the accounts on that login.
+    ZERNIO_API_KEY: z.string().default(""),
+    ZERNIO_API_KEY_2: z.string().default(""),
+    ZERNIO_API_KEY_3: z.string().default(""),
+    ZERNIO_API_KEY_4: z.string().default(""),
+    ZERNIO_BASE_URL: z.string().default("https://zernio.com/api/v1"),
+    /**
+     * Second brand. A connected handle that contains this text (case-insensitive)
+     * gets the hook twin. Every other handle gets the original. Empty = no second brand.
+     */
+    ZERNIO_SECOND_HANDLE: z.string().default("stories"),
+    /**
+     * Curated accounts, comma-separated `platform:handle`. The engine never
+     * auto-publishes to these; they are posted by hand. Empty = none.
+     */
+    ZERNIO_CURATED: z.string().default("instagram:remedyrecoveries"),
 
     // --- Behavior ---
     PLATFORMS: z.string().default("tiktok,instagram,facebook"),
-    // youtube is added automatically when BrightBean has a YouTube account.
+    // youtube is added automatically when Zernio has a YouTube account.
     POSTS_PER_DAY: z.coerce.number().int().min(1).max(50).default(10),
     /** Warm-up ramp: "day:cap" pairs, e.g. "1:2,8:5,15:10". Needs RAMP_START_DATE. */
     RAMP_SCHEDULE: z.string().default("1:2,8:5,15:10"),
     /** ISO date the ramp starts counting from (e.g. 2026-08-22). Empty = ramp off. */
     RAMP_START_DATE: z.string().default(""),
+    /** Posts per day per account, drawn fresh each day so the count never looks fixed. TikTok and YouTube get every post. */
+    DAILY_POSTS_MIN: z.coerce.number().int().min(0).max(50).default(3),
+    DAILY_POSTS_MAX: z.coerce.number().int().min(0).max(50).default(8),
+    /** Instagram and Facebook feed posts per day, picked from that day's posts. */
+    FEED_POSTS_MIN: z.coerce.number().int().min(0).max(50).default(1),
+    FEED_POSTS_MAX: z.coerce.number().int().min(0).max(50).default(3),
     /** New slideshows / remakes / A/B variants. Off until you say generate. Ramp date does not turn this on. */
     GENERATE_ENABLED: boolStr("false"),
     /**
-     * Coming-soon last slide + caption (no App Store URL). Keep true until
-     * the app is for sale, then flip to false so new posts get the store CTA.
+     * Coming-soon last slide + caption (no App Store URL). Keep false now
+     * that the app is for sale so new posts get the store CTA.
      */
-    PRELAUNCH: boolStr("true"),
+    PRELAUNCH: boolStr("false"),
     /** Delete shorts 48h after publish. Off until you start posting. */
     EXPIRE_SHORTS: boolStr("false"),
-    /** BrightBean / platform metric pulls. Off until posting is measurable. */
+    /** Zernio / platform metric pulls. Off until posting is measurable. */
     ANALYTICS_ENABLED: boolStr("false"),
     /** Diagnosis, experiments, summaries, evolve. Off with analytics for now. */
     LEARNING_ENABLED: boolStr("false"),
@@ -84,11 +107,14 @@ const EnvSchema = z
     /** When true, cron fills empty slots on every approved post. Keep off so only hand-set times send. */
     AUTO_ASSIGN_SCHEDULE: boolStr("false"),
     /**
-     * Native Instagram/Facebook only (no BrightBean): they go live immediately,
-     * so they stay off until this is true. BrightBean IG/FB/YouTube always go
-     * live. TikTok is always a draft so you can add a sound in the app.
+     * Native Instagram/Facebook only (no Zernio): they go live immediately,
+     * so they stay off until this is true. Zernio posts always go live.
      */
     LIVE_PUBLISH: boolStr("false"),
+    /** Weekly format memes: schedule one a day on every account group through Zernio. False = build and review only. */
+    MEME_AUTOPOST: boolStr("true"),
+    /** YouTube meme copies get a CC bed instead of the format's sound. Off = test the original sound; flip on after a copyright warning. */
+    MEME_YOUTUBE_CC_BED: boolStr("false"),
     AUTO_APPROVE_CONFIDENCE: z.coerce.number().min(0).max(101).default(101),
     DISABLE_CRON: boolStr("false"),
     /** IANA timezone for the 4:30 AM generate cron (machine local if unset). */
@@ -133,7 +159,7 @@ export const PLATFORM_DAILY_CAPS: Record<Platform, number> = {
   youtube: 50,
 };
 
-/** Native platform keys only. Prefer `publisherReady()` from publish/brightbean.ts. */
+/** Native platform keys only. Prefer `publisherReady()` from publish/zernio.ts. */
 export function platformConfigured(p: Platform): boolean {
   switch (p) {
     case "tiktok":
@@ -143,12 +169,8 @@ export function platformConfigured(p: Platform): boolean {
     case "facebook":
       return Boolean(env.FB_PAGE_ID && env.FB_PAGE_TOKEN);
     case "youtube":
-      return false; // video-only; BrightBean YouTube via publisherReady()
+      return false; // video-only; Zernio YouTube via publisherReady()
   }
-}
-
-export function brightbeanEnvToken(): string {
-  return env.BRIGHTBEAN_TOKEN.trim();
 }
 
 export function r2Configured(): boolean {
@@ -168,7 +190,7 @@ export const EXPIRE_SHORTS_PAUSED_MESSAGE =
   "Short expiry is off until you start posting. Existing shorts stay on disk and R2.";
 
 export const ANALYTICS_PAUSED_MESSAGE =
-  "Analytics is paused. No BrightBean pulls until ANALYTICS_ENABLED=true.";
+  "Analytics is paused. No Zernio pulls until ANALYTICS_ENABLED=true.";
 
 export const LEARNING_PAUSED_MESSAGE =
   "Learning is paused. No diagnosis or evolve until LEARNING_ENABLED=true.";
@@ -176,6 +198,7 @@ export const LEARNING_PAUSED_MESSAGE =
 /** Brand configuration for Remedy — drives copy generation and slide styling. */
 export const BRAND = {
   appName: "Remedy",
+  listingName: "Remedy: Back Pain Relief",
   tagline: "A stronger back starts here.",
   niche: "back pain rehab",
   audience:

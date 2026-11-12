@@ -15,7 +15,7 @@
     "dev": "npm run dev -w apps/server",
     "dev:web": "npm run dev -w apps/web",
     "build:web": "npm run build -w apps/web",
-    "deploy": "npm run build:web && npx wrangler pages deploy apps/web/dist --project-name=remedy-growth --branch=main --commit-dirty=true",
+    "deploy": "npm run build:web && node scripts/deploy-pages.mjs",
     "start": "npm run start -w apps/server",
     "generate": "npm run cli -w apps/server -- generate",
     "pull": "npm run cli -w apps/server -- pull",
@@ -25,6 +25,7 @@
     "send-drafts": "npm run cli -w apps/server -- send-drafts",
     "rerender": "npm run cli -w apps/server -- rerender",
     "snapshot": "npm run cli -w apps/server -- snapshot",
+    "render-statics": "tsx scripts/render-meta-statics.ts",
     "typecheck": "tsc --noEmit -p apps/server && tsc --noEmit -p packages/db && tsc --noEmit -p apps/web"
   },
   "devDependencies": {

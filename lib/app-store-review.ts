@@ -52,6 +52,8 @@ const KEYS = {
   LAST_REQUEST_AT: 'remedy.appReview.lastRequestAt',
   LAST_REQUEST_TRIGGER: 'remedy.appReview.lastRequestTrigger',
   LISTING_LIVE: 'remedy.appReview.listingLive',
+  REQUEST_COUNT: 'remedy.appReview.requestCount',
+  REQUEST_WINDOW_START: 'remedy.appReview.requestWindowStart',
 } as const;
 
 /** Remote kill switch. Defaults off when PostHog is unreachable — see isFeatureEnabled. */
@@ -59,6 +61,9 @@ const FLAG_KEY = 'app_store_review_prompt';
 
 /** Numeric App Store Connect id for com.remedyappco.ios. */
 const APP_STORE_ID = '6813745106';
+
+/** Store listing, without the write-review action. */
+export const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
 
 const APP_STORE_REVIEW_URL = `https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review`;
 const ITUNES_LOOKUP_URL = `https://itunes.apple.com/lookup?id=${APP_STORE_ID}&country=us`;
@@ -137,6 +142,49 @@ const MIN_HOURS_SINCE_LAST_REQUEST = 0;
 /** Surfaces allowed to trigger the sheet. Both are post-session "it worked" moments. */
 export type ReviewSourceScreen = 'session' | 'weekly_ramp';
 
+/** What this completion did with the native review API. */
+export type ReviewAttempt = {
+  /** `requestReview()` was called. Says nothing about whether iOS drew the sheet. */
+  requested: boolean;
+  /**
+   * This call is still inside Apple's 3-per-365-days display cap, so the sheet
+   * might be on screen. Further calls in the same window are discarded by iOS.
+   */
+  mayDisplay: boolean;
+};
+
+const REVIEW_SKIPPED: ReviewAttempt = { requested: false, mayDisplay: false };
+
+/** Apple shows the sheet at most this many times per app, per 365 days. */
+const APPLE_PROMPT_CAP = 3;
+const REVIEW_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * Counts this request toward Apple's yearly cap. Returns whether the sheet
+ * might actually appear. A storage failure assumes it might, so a share card
+ * does not stack on top of a review sheet we failed to remember.
+ */
+async function noteReviewRequest(): Promise<{ withinCap: boolean; count: number; windowStart: string }> {
+  const now = Date.now();
+  let count = 0;
+  let windowStart = new Date(now).toISOString();
+  try {
+    const [rawCount, rawStart] = await Promise.all([
+      AsyncStorage.getItem(KEYS.REQUEST_COUNT),
+      AsyncStorage.getItem(KEYS.REQUEST_WINDOW_START),
+    ]);
+    const startMs = rawStart ? Date.parse(rawStart) : NaN;
+    if (Number.isFinite(startMs) && now - startMs < REVIEW_WINDOW_MS) {
+      windowStart = new Date(startMs).toISOString();
+      const parsed = rawCount ? parseInt(rawCount, 10) : 0;
+      count = Number.isNaN(parsed) ? 0 : parsed;
+    }
+  } catch {
+    return { withinCap: true, count: 1, windowStart };
+  }
+  return { withinCap: count + 1 <= APPLE_PROMPT_CAP, count: count + 1, windowStart };
+}
+
 function hoursSince(iso: string | null): number {
   if (!iso) return Infinity;
   return (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60);
@@ -177,18 +225,19 @@ export type ReviewTrigger = {
  * every completion; every rejection path is instrumented.
  *
  * Never await this before navigating — it resolves independently of whether the
- * sheet was shown.
+ * sheet was shown. The return value is only "did we call requestReview, and
+ * might Apple still display it", which the share card uses to stay off that screen.
  */
-export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Promise<void> {
+export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Promise<ReviewAttempt> {
   const { triggerKey, painImproved, sourceScreen, planSessionId, weekNumber } = trigger;
-  const skip = (reason: Parameters<typeof reviewPromptSkipped>[0]['reason']): void => {
+  const skip = (reason: Parameters<typeof reviewPromptSkipped>[0]['reason']): ReviewAttempt => {
     reviewPromptSkipped({ source_screen: sourceScreen, reason });
+    return REVIEW_SKIPPED;
   };
 
   // The only product rule: this is a "the app just worked for me" moment.
   if (!painImproved) {
-    skip('pain_not_improved');
-    return;
+    return skip('pain_not_improved');
   }
 
   // Gate A: build-time flag baked into the binary. Lets the feature ship dormant
@@ -196,26 +245,22 @@ export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Pr
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
   const buildEnabled = extra?.enableAppStoreReviewPrompt === true;
   if (__DEV__ && !buildEnabled) {
-    skip('dev');
-    return;
+    return skip('dev');
   }
   if (!buildEnabled) {
-    skip('build_gate_off');
-    return;
+    return skip('build_gate_off');
   }
 
   // Android maps to Play In-App Review, a different API with its own quota that
   // will not show in debug at all. Out of scope.
   if (Platform.OS !== 'ios') {
-    skip('not_ios');
-    return;
+    return skip('not_ios');
   }
 
   // Gate B: remote kill switch. Once a binary is on the App Store, a hardcoded
   // trigger cannot be turned off without another release cycle.
   if (!(await isFeatureEnabled(FLAG_KEY))) {
-    skip('flag_off');
-    return;
+    return skip('flag_off');
   }
 
   // Gate C: local eligibility.
@@ -234,36 +279,32 @@ export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Pr
   } catch {
     // Unreadable storage means the idempotency guard is gone. Skip rather than
     // risk double-prompting for one session.
-    skip('threshold');
-    return;
+    return skip('threshold');
   }
 
   if (Number.isNaN(count) || count < MIN_SESSIONS) {
-    skip('threshold');
-    return;
+    return skip('threshold');
   }
 
   if (lastTriggerKey && lastTriggerKey === triggerKey) {
-    skip('already_requested_for_trigger');
-    return;
+    return skip('already_requested_for_trigger');
   }
 
   if (MIN_HOURS_SINCE_LAST_REQUEST > 0 && hoursSince(lastRequestAt) < MIN_HOURS_SINCE_LAST_REQUEST) {
-    skip('cooldown');
-    return;
+    return skip('cooldown');
   }
 
   const StoreReview = getStoreReview();
   if (!StoreReview) {
-    skip('native_module_missing');
-    return;
+    return skip('native_module_missing');
   }
 
   // False in TestFlight, where requestReview() is a documented no-op.
   if (!(await StoreReview.isAvailableAsync())) {
-    skip('unavailable');
-    return;
+    return skip('unavailable');
   }
+
+  const noted = await noteReviewRequest();
 
   // Recorded BEFORE requesting: requestReview() resolves whether or not iOS
   // showed anything, so there is no success callback to record from.
@@ -271,6 +312,8 @@ export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Pr
     await AsyncStorage.multiSet([
       [KEYS.LAST_REQUEST_AT, new Date().toISOString()],
       [KEYS.LAST_REQUEST_TRIGGER, triggerKey],
+      [KEYS.REQUEST_COUNT, String(noted.count)],
+      [KEYS.REQUEST_WINDOW_START, noted.windowStart],
     ]);
   } catch {
     // Losing the write costs at most one duplicate request, which iOS throttles.
@@ -284,6 +327,7 @@ export async function maybeRequestReviewAfterSession(trigger: ReviewTrigger): Pr
 
   // Fire-and-forget. Apple decides whether the sheet appears; never await it.
   void StoreReview.requestReview();
+  return { requested: true, mayDisplay: noted.withinCap };
 }
 
 /**

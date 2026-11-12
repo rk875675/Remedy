@@ -7,6 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { weeklyRampDecided, weeklyRampSuggested } from '../lib/analytics/events/program';
 import { maybeRequestReviewAfterSession } from '../lib/app-store-review';
+import { friendShareArmed } from '../lib/analytics/events/engagement';
+import { armFriendShareHome, isShareTestAccount } from '../lib/friendShare';
+import { firstNameFromDisplayName, resolveDisplayName } from '../lib/greeting';
 import { hapticPrimaryAction, hapticSelection } from '../lib/haptics';
 import { colors, serifFont } from '../constants/colors';
 import { radius } from '../constants/spacing';
@@ -229,6 +232,16 @@ export default function WeeklyRampScreen() {
       sourceScreen: 'weekly_ramp',
       weekNumber: week,
     });
+
+    if (isShareTestAccount(user?.email)) {
+      const improved = painDelta !== null && painDelta > 0;
+      await armFriendShareHome({ painImproved: improved });
+      friendShareArmed({
+        source_screen: 'session',
+        has_name: Boolean(firstNameFromDisplayName(resolveDisplayName(null, user))),
+        pain_improved: improved,
+      });
+    }
 
     router.dismissTo('/(tabs)');
   }

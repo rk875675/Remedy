@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
@@ -15,6 +16,13 @@ const steps = [
   'Finalizing your program...',
 ];
 
+// Each line stays active, then checks off. The bar fills across the same span
+// so it hits 100% on the last check. Hold after that so the check is on screen
+// before Your Program — the old timer left at 100% while the last line was
+// still a dot (`i < currentStep` never included the final step).
+const STEP_MS = 900;
+const DONE_HOLD_MS = 800;
+
 const SOCIAL_PROOF =
   '4 in 5 adults experience back pain at some point. Staying active with structured, gradual movement is one of the best-supported ways to manage it.';
 
@@ -22,8 +30,8 @@ export default function FinalizingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { answers } = useOnboarding();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [progress, setProgress] = useState(0);
+  // Checked-off count. Equals `steps.length` once the last line has a check.
+  const [completed, setCompleted] = useState(0);
 
   useEffect(() => {
     prefetchPlanPreview(answers);
@@ -32,10 +40,12 @@ export default function FinalizingScreen() {
   const fillAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const proofOpacity = useRef(new Animated.Value(0)).current;
+  const routerRef = useRef(router);
+  routerRef.current = router;
 
   useEffect(() => {
     // Gentle breathing pulse on the icon while the plan "builds".
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.06,
@@ -50,7 +60,8 @@ export default function FinalizingScreen() {
           useNativeDriver: true,
         }),
       ]),
-    ).start();
+    );
+    loop.start();
 
     Animated.timing(proofOpacity, {
       toValue: 1,
@@ -60,43 +71,54 @@ export default function FinalizingScreen() {
       useNativeDriver: true,
     }).start();
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + 2;
-        if (next >= 100) {
-          clearInterval(interval);
-          setTimeout(() => router.replace('/(onboarding)/match'), 400);
-          return 100;
-        }
-        return next;
-      });
-    }, 80);
-
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      loop.stop();
+    };
+  }, [pulseAnim, proofOpacity]);
 
   useEffect(() => {
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
     Animated.timing(fillAnim, {
-      toValue: progress,
-      duration: 60,
+      toValue: 1,
+      duration: steps.length * STEP_MS,
       easing: Easing.linear,
       // Width interpolation cannot use the native driver.
       useNativeDriver: false,
     }).start();
 
-    if (progress < 25) setCurrentStep(0);
-    else if (progress < 50) setCurrentStep(1);
-    else if (progress < 75) setCurrentStep(2);
-    else setCurrentStep(3);
-  }, [progress]);
+    for (let i = 0; i < steps.length; i++) {
+      timers.push(
+        setTimeout(() => {
+          if (!cancelled) setCompleted(i + 1);
+        }, (i + 1) * STEP_MS),
+      );
+    }
+
+    timers.push(
+      setTimeout(() => {
+        if (!cancelled) routerRef.current.replace('/(onboarding)/match');
+      }, steps.length * STEP_MS + DONE_HOLD_MS),
+    );
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      fillAnim.stopAnimation();
+    };
+  }, [fillAnim]);
 
   const fillWidth = fillAnim.interpolate({
-    inputRange: [0, 100],
+    inputRange: [0, 1],
     outputRange: ['0%', '100%'],
   });
+  const activeIndex = completed < steps.length ? completed : -1;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
+      <Stack.Screen options={{ gestureEnabled: false, headerShown: false }} />
+      <WarmBackground />
       <View style={styles.content}>
         <Animated.View style={[styles.iconWrap, { transform: [{ scale: pulseAnim }] }]}>
           <View style={styles.iconHalo} />
@@ -112,22 +134,25 @@ export default function FinalizingScreen() {
         </View>
 
         <View style={styles.steps}>
-          {steps.map((step, i) => (
-            <View key={i} style={styles.stepRow}>
-              <Text style={[styles.stepCheck, i < currentStep && styles.stepCheckDone]}>
-                {i < currentStep ? '✓' : '·'}
-              </Text>
-              <Text
-                style={[
-                  styles.stepText,
-                  i <= currentStep && styles.stepTextActive,
-                  i === currentStep && styles.stepTextCurrent,
-                ]}
-              >
-                {step}
-              </Text>
-            </View>
-          ))}
+          {steps.map((step, i) => {
+            const done = i < completed;
+            return (
+              <View key={step} style={styles.stepRow}>
+                <Text style={[styles.stepCheck, done && styles.stepCheckDone]}>
+                  {done ? '✓' : '·'}
+                </Text>
+                <Text
+                  style={[
+                    styles.stepText,
+                    (done || i === activeIndex) && styles.stepTextActive,
+                    i === activeIndex && styles.stepTextCurrent,
+                  ]}
+                >
+                  {step}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       </View>
 

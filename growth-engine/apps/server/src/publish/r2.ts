@@ -48,14 +48,19 @@ export function publicUrl(key: string): string {
   return `${env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${key}`;
 }
 
-export async function uploadBuffer(key: string, body: Buffer, contentType: string): Promise<string> {
+export async function uploadBuffer(
+  key: string,
+  body: Buffer,
+  contentType: string,
+  cacheControl = "public, max-age=60",
+): Promise<string> {
   if (!r2Configured()) {
     throw new Error("R2 is not configured — set R2_* vars in growth-engine/.env");
   }
   const endpoint = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET}/${key}`;
   const res = await r2Fetch(endpoint, {
     method: "PUT",
-    headers: { "Content-Type": contentType, "Cache-Control": "public, max-age=60" },
+    headers: { "Content-Type": contentType, "Cache-Control": cacheControl },
     body: new Uint8Array(body),
   });
   if (!res.ok) {
@@ -69,6 +74,117 @@ export async function objectExists(key: string): Promise<boolean> {
   const endpoint = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET}/${key}`;
   const res = await r2Fetch(endpoint, { method: "HEAD" });
   return res.ok;
+}
+
+function objectEndpoint(key: string, query = ""): string {
+  return `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET}/${key}${query}`;
+}
+
+function xmlText(xml: string, tag: string): string | null {
+  const match = xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+  if (!match?.[1]) return null;
+  return match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+}
+
+function xmlEscape(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Start an S3 multipart upload. The bytes are stored later, unchanged. */
+export async function createMultipartUpload(key: string, contentType: string): Promise<string> {
+  if (!r2Configured()) throw new Error("R2 is not configured — set R2_* vars in growth-engine/.env");
+  const res = await r2Fetch(objectEndpoint(key, "?uploads"), {
+    method: "POST",
+    headers: { "Content-Type": contentType, "Content-Length": "0" },
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`R2 multipart start failed (${res.status}): ${text.slice(0, 180)}`);
+  const uploadId = xmlText(text, "UploadId");
+  if (!uploadId) throw new Error("R2 multipart start returned no upload id");
+  return uploadId;
+}
+
+/** Upload one part. Body is the original slice — do not transcode it. */
+export async function uploadMultipartPart(
+  key: string,
+  uploadId: string,
+  partNumber: number,
+  body: Uint8Array,
+): Promise<string> {
+  if (!r2Configured()) throw new Error("R2 is not configured — set R2_* vars in growth-engine/.env");
+  const query = `?partNumber=${partNumber}&uploadId=${encodeURIComponent(uploadId)}`;
+  const payload = new Uint8Array(body.byteLength);
+  payload.set(body);
+  const res = await r2Fetch(objectEndpoint(key, query), {
+    method: "PUT",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: payload,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`R2 part upload failed (${res.status}): ${text.slice(0, 180)}`);
+  }
+  const etag = res.headers.get("etag");
+  if (!etag) throw new Error("R2 part upload returned no etag");
+  return etag;
+}
+
+export async function completeMultipartUpload(
+  key: string,
+  uploadId: string,
+  parts: Array<{ partNumber: number; etag: string }>,
+): Promise<void> {
+  if (!r2Configured()) throw new Error("R2 is not configured — set R2_* vars in growth-engine/.env");
+  const sorted = [...parts].sort((a, b) => a.partNumber - b.partNumber);
+  const xml =
+    "<CompleteMultipartUpload>" +
+    sorted
+      .map(
+        (part) =>
+          `<Part><PartNumber>${part.partNumber}</PartNumber><ETag>${xmlEscape(part.etag)}</ETag></Part>`,
+      )
+      .join("") +
+    "</CompleteMultipartUpload>";
+  const query = `?uploadId=${encodeURIComponent(uploadId)}`;
+  const res = await r2Fetch(objectEndpoint(key, query), {
+    method: "POST",
+    headers: { "Content-Type": "application/xml" },
+    body: xml,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`R2 multipart complete failed (${res.status}): ${text.slice(0, 180)}`);
+  }
+  await res.text();
+}
+
+export async function abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+  if (!r2Configured()) return;
+  const query = `?uploadId=${encodeURIComponent(uploadId)}`;
+  const res = await r2Fetch(objectEndpoint(key, query), { method: "DELETE" });
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text();
+    throw new Error(`R2 multipart abort failed (${res.status}): ${text.slice(0, 180)}`);
+  }
+}
+
+export async function objectSize(key: string): Promise<number | null> {
+  if (!r2Configured()) return null;
+  const res = await r2Fetch(objectEndpoint(key), { method: "HEAD" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`R2 head failed (${res.status})`);
+  const size = Number(res.headers.get("content-length"));
+  return Number.isFinite(size) ? size : null;
+}
+
+/** Stream an object, including Range, without loading it into memory. */
+export async function openObject(key: string, range: string | null): Promise<Response | null> {
+  if (!r2Configured()) return null;
+  const headers: Record<string, string> = {};
+  if (range) headers.Range = range;
+  const res = await r2Fetch(objectEndpoint(key), { method: "GET", headers });
+  if (res.status === 404) return null;
+  return res;
 }
 
 export async function uploadFileIfAbsent(localPath: string, key: string): Promise<string> {

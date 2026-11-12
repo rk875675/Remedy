@@ -73,7 +73,7 @@ export function reshuffleManualCurrent(): ManualPosting {
   return saveManualPosting(state);
 }
 
-/** Mark posted-by-hand so Send now / BrightBean will not pick it, then drop the Short. */
+/** Mark posted-by-hand so Send now / Zernio will not pick it, then drop the Short. */
 export async function completeManualPost(postId?: number): Promise<ManualPosting> {
   const state = loadManualPosting();
   const id = postId ?? state.currentPostId;

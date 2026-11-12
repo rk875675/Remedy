@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { getDb, posts, slides, rounds, hooks as hooksTable, isLowSignalHook } from "@remedy-growth/db";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { ASSETS_DIR, BRAND, env, configuredPlatforms, r2Configured, GENERATE_PAUSED_MESSAGE, type Platform } from "../config.js";
-import { accountFor } from "../publish/brightbean.js";
+import { accountFor } from "../publish/zernio.js";
 import {
   generateHooks,
   generateCarouselCopy,
@@ -18,7 +18,7 @@ import {
 import { TEMPLATES, pickTemplateId, illustrationCoverTemplateIds, photoCoverTemplateIds, hasPhotoCover, hasVisualCover, isCoverHeadlineSlide, isLongTemplate, pickLongerTemplateId, enforcePersonTemplate, biasPoolTowardTeach, teachBiasWeights, type SlideKind } from "./templates.js";
 import { makeVariation, parseVariation, pickShotScale, type Variation } from "./variations.js";
 import { renderSlide, postOutputDir, slideFileName } from "./composer.js";
-import { renderSlideshowShort, shortOutputPath, SILENT_BED_ID } from "./short.js";
+import { renderSlideshowShort, shortOutputPath } from "./short.js";
 import { approvedReadyIds, initManualQueue, loadManualPosting, saveManualPosting } from "../manual/queue.js";
 import { pruneLocalPostDir, pruneRemotePostMedia } from "./storage.js";
 import { shippedShotScaleUsage } from "./diversity.js";
@@ -50,9 +50,9 @@ import {
 import { ensureIllustrationManifest, illustrationIdsForTemplate, pickPerson } from "./illustrations.js";
 import { deleteStaleR2Crops, SCREENSHOT_R2_PREFIX, syncScreenshotsFromR2, uploadBuffer, uploadShort } from "../publish/r2.js";
 
-/** ~98% of title pages get a visual (SVG or photoreal person). ~45% of all new posts are person covers. */
-const COVER_VISUAL_RATE = 0.98;
-const COVER_PHOTO_RATE = 0.45;
+/** 95% of posts get a cover visual. Of those, 66% are real people and 34% are Remedy flat SVGs. */
+const COVER_VISUAL_RATE = 0.95;
+const COVER_PHOTO_RATE = 0.95 * 0.66;
 /** Reviewer rejects 3–5 page carousels. Every new post is 6–10 slides. */
 const LONG_SLIDE_RATE = 1;
 
@@ -64,8 +64,7 @@ const LONG_SLIDE_RATE = 1;
 const BLOCKED_SCREENSHOTS = new Set(["profile.png", "profile_original.png"]);
 
 function applyPrelaunchVariation(variation: Variation, hookText = ""): Variation {
-  if (!env.PRELAUNCH) return variation;
-  variation.prelaunch = true;
+  variation.prelaunch = env.PRELAUNCH;
   const option = pickBestCtaOption(hookText);
   variation.ctaLayout = option.layout;
   variation.ctaAtmosphere = option.atmosphere;
@@ -227,7 +226,11 @@ export interface GeneratedPost {
   status: string;
 }
 
-export async function generateBatch(count = env.POSTS_PER_DAY, variationsPerHook = 1): Promise<GeneratedPost[]> {
+export async function generateBatch(
+  count = env.POSTS_PER_DAY,
+  variationsPerHook = 1,
+  opts?: { hookTexts?: string[]; forceQueued?: boolean; skipTwins?: boolean },
+): Promise<GeneratedPost[]> {
   if (!env.GENERATE_ENABLED) throw new Error(GENERATE_PAUSED_MESSAGE);
   for (const rule of HARD_CONSTRAINTS) addRule(rule, 10);
   const ingestedSvgs = ensureIllustrationManifest();
@@ -248,7 +251,23 @@ export async function generateBatch(count = env.POSTS_PER_DAY, variationsPerHook
   const generated: GeneratedPost[] = [];
 
   const hookCount = Math.ceil(count / variationsPerHook);
-  const newHooks = await generateHooks(hookCount);
+  const requested = opts?.hookTexts?.map((t) => t.trim()).filter(Boolean);
+  let newHooks: Array<typeof hooksTable.$inferSelect>;
+  if (requested && requested.length > 0) {
+    const wanted = requested.slice(0, hookCount);
+    newHooks = [];
+    for (const text of wanted) {
+      const existing = db.select().from(hooksTable).all().find((h) => h.text.trim().toLowerCase() === text.toLowerCase());
+      if (existing) {
+        newHooks.push(existing);
+        continue;
+      }
+      const row = db.insert(hooksTable).values({ text, category: "callout", formulaId: null, source: "seed" }).returning().get();
+      if (row) newHooks.push(row);
+    }
+  } else {
+    newHooks = await generateHooks(hookCount);
+  }
   if (newHooks.length === 0) throw new Error("No hooks generated — check hook formulas are seeded (npm run db:seed).");
 
   // Learning cycle phase: diversity rounds hunt untested combos much harder.
@@ -393,7 +412,6 @@ export async function generateBatch(count = env.POSTS_PER_DAY, variationsPerHook
         template.slides.length,
         (i) => template.slides[i]?.kind,
       );
-      variation.shortBed = SILENT_BED_ID;
       variation.shotScale = pickShotScale({
         shipped: shippedShotScaleUsage(),
         weights: ratingsMap("shot_scale"),
@@ -424,7 +442,7 @@ export async function generateBatch(count = env.POSTS_PER_DAY, variationsPerHook
       const evolvedBonus = hook.source === "evolved" ? 15 : 0;
       const confidence = Math.max(0, Math.min(100, 50 + formulaScore * 10 + evolvedBonus));
 
-      const status = confidence >= env.AUTO_APPROVE_CONFIDENCE ? "approved" : "queued";
+      const status = opts?.forceQueued || confidence < env.AUTO_APPROVE_CONFIDENCE ? "queued" : "approved";
       const post = db
         .insert(posts)
         .values({
@@ -495,6 +513,14 @@ export async function generateBatch(count = env.POSTS_PER_DAY, variationsPerHook
     }
   }
 
+  if (generated.length > 0 && !opts?.skipTwins) {
+    const { ensureAccountTwins } = await import("../learning/experiments.js");
+    const twins = await ensureAccountTwins(generated.map((g) => g.postId));
+    if (twins.created || twins.failed.length) {
+      console.log(`Account-2 hook twins: ${twins.created} created, ${twins.failed.length} failed.`);
+    }
+  }
+
   return generated;
 }
 
@@ -533,7 +559,6 @@ export async function generateForcedIllustrationPosts(
     const hasScreenshots = template.slides.some((s) => s.usesScreenshot);
     const variation: Variation = makeVariation({ hasScreenshots, preferMusic: Boolean(template.preferMusic) });
     applyPrelaunchVariation(variation, hook.text);
-    variation.shortBed = SILENT_BED_ID;
     const ctaOption = pickBestCtaOption(hook.text);
     const pickedIds = illustrationIdsForTemplate(
       variation.seed,
@@ -625,6 +650,10 @@ export async function generateForcedIllustrationPosts(
     generated.push({ postId: post.id, hookText: hook.text, templateId, slideFiles, status });
     console.log(`Generated post #${post.id} [${templateId}] (queued): ${hook.text}`);
   }
+  if (generated.length > 0) {
+    const { ensureAccountTwins } = await import("../learning/experiments.js");
+    await ensureAccountTwins(generated.map((g) => g.postId));
+  }
   return generated;
 }
 
@@ -678,16 +707,15 @@ export async function generateCtaReviewPosts(): Promise<GeneratedPost[]> {
           frame: "plain",
           shotScale: "contained",
           tilt: 0,
-          prelaunch: true,
+          prelaunch: env.PRELAUNCH,
           ctaLayout: option.layout,
           ctaAtmosphere: option.atmosphere,
           ctaReview: true,
-          shortBed: SILENT_BED_ID,
         };
         db.update(posts)
           .set({
             variation,
-            caption: ensureComingSoonCaption(existing.caption),
+            caption: env.PRELAUNCH ? ensureComingSoonCaption(existing.caption) : ensureAppStoreCaption(existing.caption),
           })
           .where(eq(posts.id, existing.id))
           .run();
@@ -720,11 +748,10 @@ export async function generateCtaReviewPosts(): Promise<GeneratedPost[]> {
         frame: "plain",
         shotScale: "contained",
         tilt: 0,
-        prelaunch: true,
+        prelaunch: env.PRELAUNCH,
         ctaLayout: option.layout,
         ctaAtmosphere: option.atmosphere,
         ctaReview: true,
-        shortBed: SILENT_BED_ID,
       };
       const bodyShot = assignScreenshots(
         [{ idx: 1, headline: hook.text, sub: "" }],
@@ -736,7 +763,9 @@ export async function generateCtaReviewPosts(): Promise<GeneratedPost[]> {
         { headline: "This is what that looks like.", sub: "A session, not another playlist." },
         { headline: option.headline, sub: option.sub },
       ];
-      const caption = ensureComingSoonCaption(`${hook.text}\n\n${option.headline}`);
+      const caption = env.PRELAUNCH
+        ? ensureComingSoonCaption(`${hook.text}\n\n${option.headline}`)
+        : ensureAppStoreCaption(`${hook.text}\n\n${option.headline}`);
       const post = db
         .insert(posts)
         .values({
@@ -916,10 +945,10 @@ export async function ensurePostShort(postId: number, slidePaths: string[], uplo
   const post = db.select().from(posts).where(eq(posts.id, postId)).get();
   const variation = post ? parseVariation(post.variation) : undefined;
   const out = shortOutputPath(postOutputDir(postId));
-  const rendered = await renderSlideshowShort(slidePaths, out, postId, SILENT_BED_ID);
-  if (post && variation?.shortBed !== SILENT_BED_ID) {
+  const rendered = await renderSlideshowShort(slidePaths, out, postId, variation?.shortBed);
+  if (post && variation?.shortBed !== rendered.bed.id) {
     db.update(posts)
-      .set({ variation: { ...parseVariation(post.variation), shortBed: SILENT_BED_ID } })
+      .set({ variation: { ...parseVariation(post.variation), shortBed: rendered.bed.id } })
       .where(eq(posts.id, postId))
       .run();
   }
@@ -1000,6 +1029,58 @@ export async function applyBestCtasInPlace(): Promise<{ postIds: number[] }> {
     await rerenderPost(post.id);
     postIds.push(post.id);
     console.log(`In-place CTA #${post.id} [${option.label}]: ${option.headline}`);
+  }
+  return { postIds };
+}
+
+const LIVE_STORE_SUB = "Remedy: Back Pain Relief";
+
+/** Flip queued/approved (and CTA-review) posts off coming-soon. Keeps layouts. */
+export async function applyLiveStoreCtas(): Promise<{ postIds: number[] }> {
+  const db = getDb();
+  const rows = db
+    .select()
+    .from(posts)
+    .where(inArray(posts.status, ["queued", "approved"]))
+    .all();
+  const postIds: number[] = [];
+  for (const post of rows) {
+    const parsed = parseVariation(post.variation);
+    const hook = db.select().from(hooksTable).where(eq(hooksTable.id, post.hookId)).get();
+    const hookText = hook?.text ?? post.tiktokTitle;
+    const option = pickBestCtaOption(hookText);
+    const variation: Variation = {
+      ...parsed,
+      prelaunch: false,
+      ctaLayout: parsed.ctaLayout ?? option.layout,
+      ctaAtmosphere: parsed.ctaAtmosphere ?? option.atmosphere,
+    };
+    db.update(posts)
+      .set({
+        variation,
+        caption: ensureAppStoreCaption(post.caption),
+      })
+      .where(eq(posts.id, post.id))
+      .run();
+    const slideRows = db.select().from(slides).where(eq(slides.postId, post.id)).all();
+    const ctaRows = slideRows.filter((s) => s.kind === "cta");
+    if (ctaRows.length === 0) {
+      console.warn(`Skip #${post.id} — no CTA slide`);
+      continue;
+    }
+    for (const row of ctaRows) {
+      db.update(slides)
+        .set({
+          headline: row.headline.trim() || option.headline,
+          sub: LIVE_STORE_SUB,
+          screenshot: row.screenshot ?? resolveCtaScreenshot(option.screenshot),
+        })
+        .where(eq(slides.id, row.id))
+        .run();
+    }
+    await rerenderPost(post.id);
+    postIds.push(post.id);
+    console.log(`Live store CTA #${post.id}${parsed.ctaReview ? " (review)" : ""}`);
   }
   return { postIds };
 }

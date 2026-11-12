@@ -35,9 +35,8 @@ import {
   scheduleStretchReminders,
   cancelStretchReminders,
 } from '../../lib/notifications';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 import { hapticWarning, hapticSelection } from '../../lib/haptics';
 import { accountDeletionFailed, signedOut } from '../../lib/analytics/events/auth';
 import {
@@ -997,7 +996,7 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Profile</Text>
 
         {/* ── Identity ── */}
-        <View style={styles.card}>
+        <View style={styles.identity}>
           <View style={[styles.nameBox, editingName && styles.nameBoxEditing]}>
             {editingName ? (
               <TextInput
@@ -1029,6 +1028,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
           </View>
+          <View style={styles.nameRule} />
           {user.email ? <Text style={styles.email}>{user.email}</Text> : null}
           <TouchableOpacity
             style={[styles.planChip, planInfo.isNegative && styles.planChipNegative]}
@@ -1452,20 +1452,23 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 20,
-    letterSpacing: -0.3,
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 16,
+    letterSpacing: -0.1,
   },
 
-  // ── Header card ──
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 20,
+  identity: {
     marginBottom: 28,
-    ...shadows.low,
+  },
+  nameRule: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.secondary,
+    marginTop: 12,
+    marginBottom: 12,
   },
   nameBox: {
     marginBottom: 4,
@@ -1487,17 +1490,19 @@ const styles = StyleSheet.create({
   },
   name: {
     flex: 1,
-    fontSize: 22,
+    fontFamily: serifFont,
+    fontSize: 30,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   nameInput: {
-    fontSize: 22,
+    fontFamily: serifFont,
+    fontSize: 30,
     fontWeight: '700',
     color: colors.textPrimary,
     paddingVertical: 0,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   email: {
     fontSize: 15,
@@ -1526,20 +1531,19 @@ const styles = StyleSheet.create({
 
   // ── Section label ──
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
 
   // ── Settings / plan card ──
   settingsCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginBottom: 28,
-    ...shadows.low,
     overflow: 'hidden',
   },
   settingsRow: {
@@ -1588,7 +1592,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primaryMuted,
-    borderRadius: radius.card,
+    borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginBottom: 28,
@@ -1717,9 +1721,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.button,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: 16,
-    ...shadows.low,
   },
   signOutText: {
     fontSize: 16,

@@ -81,7 +81,7 @@ export const onboardingOptionSelected = defineEvent(
       is_multi_select: z.boolean(),
       is_deselect: z.boolean(),
       selection_count: z.number().int().nonnegative().optional(),
-      /** q8 days: true when the tapped value is the recommended center slot. */
+      /** q8 days: true when the chosen value is the recommended one. */
       is_recommended: z.boolean().optional(),
     })
     .strict(),

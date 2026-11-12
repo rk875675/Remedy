@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { getDb, hookFormulas, hooks, learnings, ugcCreators } from "./index.js";
-import { HOOK_FORMULAS, HOOK_RULES, RETIRED_HOOK_RULES, SEED_HOOKS, isUnsafeHook } from "./hook-bank.js";
+import { getDb, hookFormulas, hooks, learnings, posts, ugcCreators } from "./index.js";
+import { HOOK_FORMULAS, HOOK_RULES, RETIRED_HOOK_RULES, SEED_HOOKS, isUnsafeHook, matchContentPillar } from "./hook-bank.js";
 
 async function main() {
   const db = getDb();
@@ -53,12 +53,15 @@ async function main() {
   }
 
   const existingHooks = db.select().from(hooks).all();
-  const wantedHookTexts = new Set(SEED_HOOKS.map((h) => h.text.trim().toLowerCase()));
+  const referencedHookIds = new Set(db.select({ hookId: posts.hookId }).from(posts).all().map((p) => p.hookId));
+  const wantedSeeds = SEED_HOOKS.filter((h) => matchContentPillar(h.text) && !isUnsafeHook(h.text));
+  const wantedHookTexts = new Set(wantedSeeds.map((h) => h.text.trim().toLowerCase()));
   let hooksRetired = 0;
   for (const row of existingHooks) {
     if (row.source !== "seed" || row.status !== "candidate") continue;
+    if (referencedHookIds.has(row.id)) continue;
     const key = row.text.trim().toLowerCase();
-    if (wantedHookTexts.has(key) && !isUnsafeHook(row.text)) continue;
+    if (wantedHookTexts.has(key)) continue;
     db.delete(hooks).where(eq(hooks.id, row.id)).run();
     hooksRetired++;
   }
@@ -71,9 +74,9 @@ async function main() {
       .map((h) => h.text.trim().toLowerCase()),
   );
   let hooksInserted = 0;
-  for (const h of SEED_HOOKS) {
+  for (const h of wantedSeeds) {
     const key = h.text.trim().toLowerCase();
-    if (hookByText.has(key) || isUnsafeHook(h.text)) continue;
+    if (hookByText.has(key)) continue;
     db.insert(hooks)
       .values({
         text: h.text,

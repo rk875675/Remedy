@@ -25,7 +25,7 @@ export function PersonalizationHint({
   field,
   value,
   copy: copyOverride,
-  numberOfLines = 2,
+  numberOfLines,
   color,
 }: Props) {
   const copy = copyOverride ?? getBubbleCopy(field, value);

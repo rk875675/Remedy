@@ -11,8 +11,11 @@ import {
   isLowSignalHook,
   isUnsafeHook,
   pickDiverseHooks,
+  pickHooksAcrossPillars,
+  CONTENT_PILLARS,
   CONTROVERSIAL_CATEGORIES,
   contentPillarsPromptBlock,
+  factoryHooksForPillar,
   isHugeProblemStat,
   matchContentPillar,
 } from "@remedy-growth/db";
@@ -73,7 +76,7 @@ function fillFromFormulas(
     const text = fillHookTemplate(f.template);
     const key = text.trim().toLowerCase();
     const start = hookOpeningWord(text);
-    if (!uniqueAgainst(existing, text) || usedStarts.has(start) || isUnsafeHook(text) || isLowSignalHook(text)) continue;
+    if (!uniqueAgainst(existing, text) || usedStarts.has(start) || isUnsafeHook(text) || isLowSignalHook(text) || !matchContentPillar(text)) continue;
     existing.add(key);
     usedStarts.add(start);
     out.push({ text, category: f.category, formulaId: f.id, source: "generated" });
@@ -98,17 +101,18 @@ export async function generateHooks(n: number): Promise<Array<typeof hooks.$infe
     .from(hooks)
     .where(and(eq(hooks.status, "candidate"), inArray(hooks.source, ["seed", "evolved"])))
     .all()
-    .filter((h) => !isUnsafeHook(h.text));
+    .filter((h) => !isUnsafeHook(h.text) && matchContentPillar(h.text));
   const highSignal = unusedBank.filter((h) => !isLowSignalHook(h.text));
   const lowSignal = unusedBank.filter((h) => isLowSignalHook(h.text));
-  const evolvedFirst = pickDiverseHooks(
+  const evolvedFirst = pickHooksAcrossPillars(
     highSignal.filter((h) => h.source === "evolved"),
     n,
   );
+  const takenIds = new Set(evolvedFirst.map((h) => h.id));
   const taken = [
     ...evolvedFirst,
-    ...pickDiverseHooks(
-      highSignal.filter((h) => h.source === "seed"),
+    ...pickHooksAcrossPillars(
+      highSignal.filter((h) => h.source === "seed" && !takenIds.has(h.id)),
       n - evolvedFirst.length,
     ),
   ];
@@ -162,12 +166,49 @@ export async function generateHooks(n: number): Promise<Array<typeof hooks.$infe
   }
 
   const inserted: Array<typeof hooks.$inferSelect> = [...taken];
+  const gap = n - inserted.length;
+  if (gap > 0) {
+    const used = new Set(existingTexts);
+    for (const h of inserted) used.add(h.text.trim().toLowerCase());
+    const factoryTexts: string[] = [];
+    let guard = 0;
+    while (factoryTexts.length < gap && guard < 20) {
+      guard++;
+      let added = 0;
+      for (const p of CONTENT_PILLARS) {
+        if (factoryTexts.length >= gap) break;
+        const next = factoryHooksForPillar(p.id, 20, used)[0];
+        if (!next) continue;
+        used.add(next.trim().toLowerCase());
+        factoryTexts.push(next);
+        added++;
+      }
+      if (added === 0) break;
+    }
+    for (const text of factoryTexts) {
+      const row = db
+        .insert(hooks)
+        .values({ text, category: "callout", formulaId: null, source: "seed" })
+        .returning()
+        .get();
+      if (row) inserted.push(row);
+    }
+  }
   const need = n - inserted.length;
   if (need <= 0) return inserted.slice(0, n);
 
   const usedStarts = new Set(inserted.map((h) => hookOpeningWord(h.text)));
   const sampled = sampleFormulas(formulas, 2);
   const mechanismBlock = PRIMARY_MECHANISMS.map((m) => `- ${m.id}: ${m.why}`).join("\n");
+  const covered = new Set(
+    inserted
+      .map((h) => matchContentPillar(h.text)?.id)
+      .filter((id): id is (typeof CONTENT_PILLARS)[number]["id"] => Boolean(id)),
+  );
+  const missing = CONTENT_PILLARS.filter((p) => !covered.has(p.id));
+  const missingLine = missing.length
+    ? `Fill these missing pillars first: ${missing.map((p) => p.title).join(", ")}. Then mix.`
+    : "Mix the nine pillars. Do not write two of the same pillar until all nine appear.";
 
   const prompt = `You write FIRST SLIDES for TikTok photo carousels for ${BRAND.appName} (${BRAND.niche}).
 Audience: ${BRAND.audience}
@@ -178,11 +219,12 @@ Two jobs, in order:
 2. Retention — after that noun is on screen, make swiping away feel like a miss.
 
 Write the MEANING of these jobs. Do not copy the wording. Do not treat any phrase as a locked template:
-- Avatar filter: the first thing they read is themselves (desk / busy / back pain / sit-all-day / gym-back).
-- Most-of-group + a pillar problem: a group + one specific stuck thing from the content pillars (playlist vs plan, stretch-only, rest-and-wait, PT cost, never taken seriously, no program).
-- Numbered ways / mistakes / signs about back pain — the number is a container; the topic stays back pain.
-- Bare callout: the line IS the audience.
-- Belief autopsy: why a common back-pain belief exists or fails. The belief is in the line.
+- Avatar / constraint: someone with back pain. Simple words. Plain mental side. Stay-line: listen up / watch this / read this / hear this. Mix openings. Not a desk worker. Not clever.
+- Mistake correction: one specific object. Not "you're only stretching." Not "stop resting it and waiting." Do not stack foam rolling.
+- Activity + pain: named WHEN plus why/how. Vary the when.
+- Huge-and-untreated: short. One real number, the person with back pain, then no plan or no program. Vary the number. Never a lone stat.
+- Self-test: do-this plus the problem it solves. Never diagnose.
+- Reverse psychology: the pain stays if they keep the habit. Mix the opening. Name the pain. Do not start every line with "Don't want."
 
 "If you have oily skin, stop using this" → name the back-pain person, not a leftover "this".
 "Top 5 ways to clear acne" → numbered ways that stay on back pain / desk / sitting.
@@ -205,7 +247,7 @@ ${[...existingTexts].slice(-80).map((t) => `- ${t}`).join("\n")}
 
 We now have onboarding screenshots (where it hurts, how long, goals, equipment, your matched program, 4 in 5). A few hooks in the batch should open that door — tailored plan, not a YouTube playlist — so those screens have copy to match.
 
-Write ${need} NEW first-slide hooks. Each must sit in one content pillar. Prefer controversial (mistake / contrarian) and the jobs above.
+Write ${need} NEW first-slide hooks. Each MUST sit in one of the nine content pillars — unmatched lines are discarded. ${missingLine} Content pillars override any older hook preference above. Spread the batch across pillars. Do not write two of one pillar while another pillar is missing. Do not write a whole batch of stretch-vs-strength.
 
 HARD RULES:
 - 1–2 on-screen lines. Three lines is a miss. About 5–14 words. Fragments are fine.
@@ -240,7 +282,8 @@ Return JSON: {"hooks":[{"text":"...","category":"..."}]}`;
         hookWordCount(text) > 16 ||
         hookSlideLines(text) >= 3 ||
         isUnsafeHook(text) ||
-        isLowSignalHook(text)
+        isLowSignalHook(text) ||
+        !matchContentPillar(text)
       ) continue;
       existingTexts.add(text.toLowerCase());
       usedStarts.add(start);
@@ -382,9 +425,17 @@ export function inferHookShape(hookText: string, category?: string): string {
 export function hookPayoffContract(hookText: string, category?: string): string {
   const shape = inferHookShape(hookText, category);
   const named = hookNamedThing(hookText);
+  const pillar = matchContentPillar(hookText);
   const lines = [
     `HOOK PAYOFF — this carousel is ONE argument. Hook: "${hookText.trim()}". Shape: ${shape}.`,
-    "Every slide after slide 1 must continue THIS hook. If you hide the hook and the body could follow a different opener, rewrite it.",
+    pillar
+      ? `PILLAR ${pillar.title}: ${pillar.payoff} Stay in this pillar.`
+      : "This hook must sit in one content pillar. Pick the closest and stay there.",
+    pillar?.id === "never_feeling"
+      ? "SLIDE 2 IS ONLY THE WHY. State the gotcha and stop. Do not mention Remedy, the app, a download, a program, or a plan on slide 2. Those can show up on a later slide."
+      : "",
+    "Every slide after slide 1 must continue THIS hook, in time order inside one scene. If you hide the hook and the body could follow a different opener, rewrite it.",
+    "SCENARIO ORDER beats any pillar line that says slide 2 is \"that's you\". Slide 2 is the moment. Do not write \"that's you\", \"this is the\", \"never the fix\", \"stays quiet\", or \"your back needed\".",
     "Slide 2 must start the payoff (name the thing, begin the reveal, or state the consequence). Do not jump to generic Remedy lines (program vs playlist, video-guided, 5 weeks, daily check-ins) unless the hook itself was about a missing plan / YouTube / playlists.",
     "Screenshot, illustration, and exercise slides may show the app, but the HEADLINE must answer the hook — not describe the UI in isolation.",
     "The app is at most one late proof slide. Exercise stills teach the movement — they are not a second product tour.",
@@ -428,12 +479,12 @@ export function hookPayoffContract(hookText: string, category?: string): string 
     case "identity":
     case "constraint":
     case "relatable":
-      lines.push("CALLOUT: slide 2 is \"that's you\" for the exact situation in the hook. Later slides fix THAT situation, not a generic back-pain pitch.");
+      lines.push("CALLOUT: slide 2 is the exact moment from the hook, already happening. Later slides stay in that room and fix that moment.");
       break;
     default:
       lines.push("DEFAULT: treat the hook as a specific claim. Slide 2 unpacks that claim. Remaining slides prove or complete it.");
   }
-  return lines.join("\n");
+  return lines.filter(Boolean).join("\n");
 }
 
 function hookNamedThing(hookText: string): string | undefined {
@@ -540,16 +591,16 @@ export const PRELAUNCH_CTA = {
  * explicitly asks. Generate only picks from this pool via CTA_REVIEW_OPTIONS.
  */
 export const CTA_COPY_POOL = [
-  { headline: "Get out of bed without wincing", sub: "Coming soon on the App Store" },
-  { headline: "Stop praying it'll be gone tomorrow", sub: "Coming soon on the App Store" },
-  { headline: "Stop worrying every time you bend over", sub: "Coming soon on the App Store" },
-  { headline: "Stop thinking about your back all day", sub: "Coming soon on the App Store" },
-  { headline: "Stop bracing before you even stand", sub: "Coming soon on the App Store" },
-  { headline: "Stop hoping rest will fix it", sub: "Coming soon on the App Store" },
-  { headline: "Stop guessing what your back needs", sub: "Coming soon on the App Store" },
-  { headline: "Stop starting over every time it flares", sub: "Coming soon on the App Store" },
-  { headline: "The worry doesn't get the whole day", sub: "Coming soon on the App Store" },
-  { headline: "Stop living around your back pain", sub: "Coming soon on the App Store" },
+  { headline: "Get out of bed without wincing", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop praying it'll be gone tomorrow", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop worrying every time you bend over", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop thinking about your back all day", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop bracing before you even stand", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop hoping rest will fix it", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop guessing what your back needs", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop starting over every time it flares", sub: "Remedy: Back Pain Relief" },
+  { headline: "The worry doesn't get the whole day", sub: "Remedy: Back Pain Relief" },
+  { headline: "Stop living around your back pain", sub: "Remedy: Back Pain Relief" },
 ] as const;
 
 export function pickCtaCopy(seed: number): (typeof CTA_COPY_POOL)[number] {
@@ -660,53 +711,188 @@ export function pickBestCtaOption(hookText: string, seed = hookSeed(hookText)): 
   return CTA_REVIEW_OPTIONS[bestIdx]!;
 }
 
-const WHO_FOR_HOOK: Array<{ re: RegExp; who: string }> = [
-  { re: /\b(desk|office|chair|sit(?:ting)? all|sit(?:ting)? at)\b/i, who: "people who sit all day" },
-  { re: /\b(morning|wake|winc|get out of bed|stiff morning)\b/i, who: "people with morning back stiffness" },
-  { re: /\b(bend|bending|pick(?:ing)? up|reach)\b/i, who: "people who tense up before they bend" },
-  { re: /\b(youtube|tiktok|playlist|random (stretch|exercise))\b/i, who: "people stuck on random exercise videos" },
-  { re: /\b(stretch(?:ing|es)?|yoga)\b/i, who: "people who only stretch" },
-  { re: /\b(rest|couch|lie down|bed rest)\b/i, who: "people hoping rest will fix it" },
-  { re: /\b(flare|flares|comes back|keeps coming)\b/i, who: "people whose back pain keeps flaring" },
-  { re: /\b(gym|deadlift|lift(?:ing)?|squat)\b/i, who: "people who flare when they train" },
-  { re: /\b(posture|slouch)\b/i, who: "people told they have bad posture" },
-  { re: /\b(sciatica|down the leg|leg pain)\b/i, who: "people with pain down the leg" },
-  { re: /\b(driv(?:e|ing)|car|commute)\b/i, who: "drivers with lower back pain" },
-  { re: /\b(parent|kid|toddler|baby)\b/i, who: "parents with back pain" },
-  { re: /\b(sleep|mattress|overnight)\b/i, who: "people who wake up in pain" },
-  { re: /\b(pt is|\$150|\$1,?200|expensive as fuck)\b/i, who: "people who can't keep paying for PT" },
-  { re: /\b(ibuprofen|advil|10am)\b/i, who: "people who reach for ibuprofen by mid-morning" },
-  { re: /\b(3pm|afternoon slump)\b/i, who: "people whose back flares mid-afternoon" },
-  { re: /\bfoam\s*roll/i, who: "people who foam roll and still hurt" },
+const AUDIENCES: Array<{ key: string; re: RegExp; who: string; titles: string[] }> = [
+  {
+    key: "parents",
+    re: /\b(toddler|niece|nephew|grand ?kid|grandson|granddaughter|baby|buckl(?:e|ing)|new moms?)\b/i,
+    who: "parents with a bad back",
+    titles: [
+      "Parents with a bad back",
+      "For moms and dads with back pain",
+      "If you're a parent with a sore back",
+      "Little kids, bad back",
+    ],
+  },
+  {
+    key: "train",
+    re: /\b(deadlift|dumbbell|squat|gym)\b/i,
+    who: "lifters with a bad back",
+    titles: [
+      "For lifters with a bad back",
+      "Gym days, sore back",
+      "If training flares your back",
+      "Lifting with a sore back",
+    ],
+  },
+  {
+    key: "drive",
+    re: /\b(stuck in the car|won'?t let me out|get(?:ting)? out of the car|parking lot)\b/i,
+    who: "drivers with a bad back",
+    titles: [
+      "For drivers with a bad back",
+      "Too much time in the car",
+      "If driving hurts your back",
+      "Long drives, sore back",
+    ],
+  },
+  {
+    key: "carry",
+    re: /\b(grocer(?:y|ies)?|stairs|stair|toolbox|box(?:es)?|carrying|carry)\b/i,
+    who: "anyone who carries heavy stuff",
+    titles: [
+      "Carrying stuff with a bad back",
+      "For anyone who hauls things",
+      "If carrying wrecks your back",
+      "Heavy stuff, sore back",
+    ],
+  },
+  {
+    key: "commute",
+    re: /\b(commute|train|bus)\b/i,
+    who: "commuters with a bad back",
+    titles: ["For commuters with a bad back", "The ride to work hurts"],
+  },
+  {
+    key: "drive",
+    re: /\b(driv(?:e|ing)|pickup|truck|\bcar\b)\b/i,
+    who: "drivers with a bad back",
+    titles: [
+      "For drivers with a bad back",
+      "Too much time in the car",
+      "If driving hurts your back",
+      "Long drives, sore back",
+    ],
+  },
+  {
+    key: "sit",
+    re: /\b(desk|laptop|gaming|gamer|movie|coding|calls|sat|sit(?:ting)? all|sit(?:ting)? at|work(?:ing)? (?:in bed|from (?:home|bed)))\b/i,
+    who: "desk workers with a sore back",
+    titles: [
+      "Desk job, sore back",
+      "For desk workers with a bad back",
+      "If you sit all day",
+      "Stuck in a chair all day",
+      "For anyone who works sitting down",
+      "Office days, bad back",
+    ],
+  },
+  {
+    key: "chores",
+    re: /\b(rake|raking|yard|garden|kneel(?:ing)?|off my knees)\b/i,
+    who: "anyone whose chores flare their back",
+    titles: [
+      "Weekend chores, bad back",
+      "For anyone sore after housework",
+      "If chores flare your back",
+      "Housework with a bad back",
+    ],
+  },
+  {
+    key: "bend",
+    re: /\b(bend|bending|pick(?:ing)? up|shoes)\b/i,
+    who: "anyone whose back grabs when they bend",
+    titles: [
+      "If bending down grabs your back",
+      "For anyone who dreads bending over",
+      "Bending over, bad back",
+      "Your back when you bend down",
+    ],
+  },
+  {
+    key: "morning",
+    re: /\b(wake|waking|morning|get(?:ting)? out of bed|night shift)\b/i,
+    who: "anyone who wakes up stiff",
+    titles: [
+      "Waking up stiff",
+      "For anyone stiff in the morning",
+      "If mornings are the worst for your back",
+      "Stiff back when you wake up",
+    ],
+  },
+  {
+    key: "stand",
+    re: /\b(standing all|on (?:their|your) feet|stand(?:ing)?|counter|dishes|plates?|sink|nurses?)\b/i,
+    who: "anyone on their feet all day",
+    titles: [
+      "On your feet all day",
+      "For anyone who stands for work",
+      "Long day on your feet",
+      "Standing all day, sore back",
+    ],
+  },
+  {
+    key: "stretch",
+    re: /\b(stretch(?:ing|es)?|yoga)\b/i,
+    who: "anyone who stretches and still hurts",
+    titles: ["Stretching and still hurting", "If stretching didn't fix it", "Yoga didn't fix your back"],
+  },
+  {
+    key: "rest",
+    re: /\b(rest|couch|recliner|cream|brace|insoles?|floor)\b/i,
+    who: "anyone who rests and still hurts",
+    titles: [
+      "Rest didn't fix your back",
+      "For anyone who rested and still hurts",
+      "Time off, same pain",
+      "The couch didn't help",
+      "Still hurting after you rest",
+    ],
+  },
+  {
+    key: "videos",
+    re: /\b(youtube|tiktok|playlist)\b/i,
+    who: "anyone stuck on random exercise videos",
+    titles: ["Stuck on random exercise videos", "YouTube didn't fix your back"],
+  },
+  {
+    key: "flare",
+    re: /\b(flare|comes back|keeps coming|bad night)\b/i,
+    who: "anyone whose back pain keeps coming back",
+    titles: ["If your back pain keeps coming back", "Same back pain, again", "For anyone whose pain returns"],
+  },
 ];
+
+const FALLBACK_AUDIENCE = {
+  key: "fallback",
+  who: "anyone whose back pain keeps coming back",
+  titles: ["If your back pain keeps coming back", "Same back pain, again", "Back pain that won't stay gone"],
+};
+
+export function audienceFor(text: string): { key: string; who: string; titles: string[] } {
+  for (const row of AUDIENCES) {
+    if (row.re.test(text)) return row;
+  }
+  return FALLBACK_AUDIENCE;
+}
 
 const TITLE_WHO_CUE =
   /\b(desk|sit|sitting|morning|stiff|stretch|youtube|tiktok|playlist|bend|flare|gym|deadlift|posture|driver|parent|sleep|mattress|chronic|recurring|office|chair|train|leg|ibuprofen|foam|commute|pt|3pm)\b/i;
 
 export function inferAudienceWho(hookText: string): string {
-  for (const row of WHO_FOR_HOOK) {
-    if (row.re.test(hookText)) return row.who;
-  }
-  return "people with recurring back pain";
+  return audienceFor(hookText).who;
 }
 
-export function buildDistributionTitle(hookText: string, existing?: string): string {
-  const who = inferAudienceWho(hookText);
-  const topic = hookText.replace(/[.!?]+$/g, "").trim();
-  const source = existing && existing.trim().length >= 40
-    ? existing.replace(/[.!?]+$/g, "").trim()
-    : topic;
-  const hasWho =
-    TITLE_WHO_CUE.test(source) ||
-    /for (people|desk|anyone who)/i.test(source) ||
-    who.split(/\s+/).some((w) => w.length > 3 && source.toLowerCase().includes(w.toLowerCase()));
-  let title = hasWho ? source : `${source} — for ${who}`;
-  if (title.length > 88) {
-    const shortWho = who.replace(/^people (with|who) /, "");
-    const keep = Math.max(24, 88 - shortWho.length - 3);
-    title = `${topic.slice(0, keep).trim()} — ${shortWho}`;
-  }
-  return title.slice(0, 88);
+/** A title for this audience. Salt rotates the wording so a batch doesn't all match. */
+export function audienceTitle(text: string, salt = ""): string {
+  const titles = audienceFor(text).titles;
+  let h = 0;
+  const seed = `${salt}\n${text}`;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return titles[h % titles.length]!.slice(0, 88);
+}
+
+export function buildDistributionTitle(hookText: string, _existing?: string): string {
+  return audienceTitle(hookText);
 }
 
 export function buildDistributionCaption(hookText: string): string {
@@ -728,13 +914,9 @@ export function ensureDistributionMeta(
 ): { tiktokTitle: string; caption: string } {
   const topicWords = hookText.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
   let tiktokTitle = stripFalseFreeClaims(title).trim();
-  const titleHasTopic = topicWords.some((w) => tiktokTitle.toLowerCase().includes(w));
-  const titleHasWho = TITLE_WHO_CUE.test(tiktokTitle) || /for (people|desk|anyone who)/i.test(tiktokTitle);
-  if (!titleHasTopic || !titleHasWho || tiktokTitle.length < 36) {
-    tiktokTitle = buildDistributionTitle(hookText, tiktokTitle);
-  } else if (tiktokTitle.length > 88) {
-    tiktokTitle = tiktokTitle.slice(0, 88);
-  }
+  const nicheWho = /\b(nurses?|retirees?|uncles?|aunts?|gamers?|devs?|tradesm|grandparents?|weekend warriors?|walk-up|homeowners?|older drivers?)\b/i;
+  const allowed = new Set(audienceFor(hookText).titles);
+  if (!allowed.has(tiktokTitle) || nicheWho.test(tiktokTitle)) tiktokTitle = buildDistributionTitle(hookText);
 
   let body = stripFalseFreeClaims(caption)
     .replace(/https?:\/\/\S+/gi, "")
@@ -761,6 +943,8 @@ export function ensureDistributionMeta(
 export function ensureAppStoreCaption(caption: string): string {
   let next = stripFalseFreeClaims(caption)
     .replace(/https?:\/\/apps\.apple\.com\/\S+/gi, "")
+    .replace(/Remedy is coming soon on the App Store\.?/gi, "")
+    .replace(/coming soon (on|to) (the )?(app store|ios)\.?/gi, "")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -810,7 +994,6 @@ function withAppStoreCta(copy: CarouselCopy, hookText: string, template: Carouse
 
 function withLaunchCta(copy: CarouselCopy, template: CarouselTemplate, cta?: CtaReviewOption): CarouselCopy {
   const hook = copy.slides[0]?.headline ?? copy.tiktokTitle;
-  if (!env.PRELAUNCH) return withAppStoreCta(copy, hook, template);
   const picked = cta ?? pickBestCtaOption(hook);
   const meta = ensureDistributionMeta(hook, copy.tiktokTitle, copy.caption);
   return {
@@ -827,6 +1010,64 @@ function withLaunchCta(copy: CarouselCopy, template: CarouselTemplate, cta?: Cta
   };
 }
 
+const SLOGAN_PATTERNS: RegExp[] = [
+  /\b\w+ is the (trap|swap|fix|work|load|break|key|answer|missing piece|real problem)\b/i,
+  /^this is (the|how|why|what|where)\b/i,
+  /\bnever gave you\b/i,
+  /\bthe \w+ (is|was|could) not\b/i,
+  /\bis not\.?$/i,
+  /\bloses its hold\b/i,
+  /\b(running|wearing) out\.?$/i,
+  /that'?s you\b/i,
+  /\bstays quiet\b/i,
+  /\bnever the fix\b/i,
+  /\byour back needed\b/i,
+  /\bthis is the\b/i,
+];
+
+const CONCRETE_WORDS =
+  /\d|\b(seconds?|reps?|minutes?|mins?|morning|tonight|bed|chair|couch|car|desk|floor|wall|knees?|hips?|glutes?|core|spine|feet|hands?|elbows?|breathe|squeeze|hold|lift|press|bridge|hinge|tilt|roll|squat|plank|walk|stand up|sit up|lie|lying|sock|shoes|sink|stairs|laptop|phone)\b/i;
+
+/** A line shaped like a motivational poster ("X is the trap", "this is the ..."). Decks reject these outright. */
+export function isSloganLine(line: string): boolean {
+  return SLOGAN_PATTERNS.some((re) => re.test(line.trim()));
+}
+
+/** A line with nothing the viewer can picture: no number, time, place, object, or body part. */
+export function lacksConcreteDetail(line: string): boolean {
+  return !CONCRETE_WORDS.test(line);
+}
+
+/** A body line that reads like a slogan or gives the viewer nothing concrete to try or picture. */
+export function isVagueSlideLine(headline: string, sub = ""): boolean {
+  const text = `${headline} ${sub}`.trim();
+  if (!text) return true;
+  if (SLOGAN_PATTERNS.some((re) => re.test(headline.trim()) || re.test(sub.trim()))) return true;
+  return !CONCRETE_WORDS.test(text);
+}
+
+const CONTENT_KINDS = new Set<SlideKind>(["problem", "tip", "text_story", "full_text", "before_after", "proof", "stat", "illustration", "photo_person"]);
+
+/** Vague body slides out of the content slides (no hook, CTA, or screenshot slides). */
+export function vagueBodyCount(slides: Array<{ headline: string; sub: string }>, template: CarouselTemplate): { vague: number; body: number } {
+  let vague = 0;
+  let body = 0;
+  slides.forEach((s, i) => {
+    const kind = template.slides[i]?.kind;
+    if (i === 0 || !kind || !CONTENT_KINDS.has(kind)) return;
+    body++;
+    if (isVagueSlideLine(s.headline, s.sub)) vague++;
+  });
+  return { vague, body };
+}
+
+const VALUE_CONTRACT = `VALUE — this is what gets saves and shares. Every body slide must hand the viewer something they can DO, CHECK, or PICTURE tonight:
+- a concrete move or position (knees bent, feet flat, squeeze glutes, hinge at the hips), a count (10 reps, 30 seconds, 2 minutes), or a specific everyday moment (putting on socks, the car seat, the first step out of bed, 3pm at the desk).
+- Write like a friend texting what actually worked — plain spoken English, full thoughts, not ad copy.
+- BANNED slogan shapes: "X is the trap", "X is the swap", "This is the ___ that ___", "the ___ never gave you", "___ is not", "that's you", "never the fix", "stays quiet", "your back needed", mirrored two-word aphorisms. If a line could be a motivational poster, rewrite it as a specific instruction or a specific moment.
+- Order the body like a short scene: the moment, the thing they already tried, why that failed, the move with a count, then the app. Do not open the body with a thesis.
+- A viewer who only reads the slides (no app) should still learn one thing worth screenshotting.`;
+
 export async function generateCarouselCopy(
   hookText: string,
   template: CarouselTemplate,
@@ -840,7 +1081,7 @@ export async function generateCarouselCopy(
   const pillar = matchContentPillar(hookText);
   const pillarLine = pillar
     ? `This carousel is pillar "${pillar.title}". Thesis: ${pillar.thesis} Payoff: ${pillar.payoff} Stay in this pillar. Do not add a second huge-problem stat.`
-    : "Pick the single closest content pillar and stay there. Do not stack 80% + 619 million + #1 disability.";
+    : "This hook must sit in one of the nine content pillars. Pick the single closest and stay there. Do not stack 80% + 619 million + #1 disability.";
   const payoff = hookPayoffContract(hookText, hookCategory);
 
   const prompt = `You write TikTok photo-carousel copy for ${BRAND.appName}, a ${BRAND.niche} app.
@@ -862,6 +1103,8 @@ Template "${template.name}" slide roles, in order:
 ${slideRoles}
 
 ${payoff}
+
+${VALUE_CONTRACT}
 ${template.slides.length >= 6 ? `\nLONG CAROUSEL (${template.slides.length} slides): every extra slide must advance the same argument. Do not pad with generic app-feature screens that could follow any hook.` : ""}
 
 Write copy for EVERY slide in order (${template.slides.length} slides total).
@@ -877,16 +1120,31 @@ Write copy for EVERY slide in order (${template.slides.length} slides total).
 - "problem"/"before_after"/"proof" slides: punchy, specific to the hook, no fluff.
 - "cta" slide: continue the exact promise of the hook. Sub: max 8 words, e.g. "Get Remedy — link in bio." Never put a URL in the sub. Never say Remedy is free or a free app.
 Rules: headlines max 9 words, subs max 14 words, no emojis on slides. Headline and sub must never occupy the same vertical space. NEVER say Remedy is free. Never claim Remedy has a PT, used a PT, or that a PT designed / filmed / approved the product. Authority copy may say backed by physiological studies.
-Also write title + description. Both must do two jobs, in this order:
-1. Name the exact back-pain problem or situation in THIS video (from the hook — mornings, bending, stretching-only, flares, desk sitting, etc.).
-2. Name who TikTok should show it to, in plain words (desk workers, people with morning stiffness, people who only stretch, people whose pain keeps flaring). That person has to be in the first two sentences of the description and in the title.
-- tiktokTitle (55–88 chars): problem first, then who it is for. Not vague ("this helped my back"). Not a joke. Not the hook copied verbatim unless the hook already does both jobs.
+Also write title + description.
+- tiktokTitle is only who the post is for. One broad group, worded like a person wrote it, not the same "For people who..." shape every time. Name them a little more specifically than "people". Good: "Desk job, sore back", "For desk workers with a bad back", "Parents with a bad back", "Waking up stiff", "On your feet all day", "For drivers with a bad back", "If bending down grabs your back". Bad: a scene ("getting out of the car at the grocery store"), a job ("for nurses on a 12-hour shift"), or a tiny slice ("for uncles", "for retirees with a small dog"). Do not describe what happens in the video.
+- caption (the DESCRIPTION, 4–6 short sentences / about 80–140 words): sentence 1 names the situation; sentence 2 names that same person; then why the slides matter for them; end with a question they would answer. The person has to be in the first two sentences.
 - caption (the DESCRIPTION, 4–6 short sentences / about 80–140 words): sentence 1–2 name the problem as it appears on screen; sentence 2–3 name the person; then why the slides matter for that person; end with a question that person would answer. End the caption with "${BRAND.cta}". Never put an App Store URL or any other URL in the caption or on slides.
 Also hashtags (max 5, space-separated, include #backpain; never #deskjob).
 Return JSON: {"slides":[{"headline":"...","sub":"..."}],"caption":"...","tiktokTitle":"...","hashtags":"..."}`;
 
-  const result = await generateJson(prompt, CarouselCopySchema);
+  let result = await generateJson(prompt, CarouselCopySchema);
   if (result) {
+    const first = result.slides.map((s) => ({ headline: s.headline, sub: s.sub ?? "" }));
+    const score = vagueBodyCount(first, template);
+    if (score.body > 0 && score.vague * 2 > score.body) {
+      const flagged = first
+        .filter((s, i) => i > 0 && isVagueSlideLine(s.headline, s.sub))
+        .map((s) => `- "${s.headline}${s.sub ? ` / ${s.sub}` : ""}"`)
+        .join("\n");
+      const retry = await generateJson(
+        `${prompt}\n\nYOUR LAST DRAFT FAILED THE VALUE RULE. These lines were slogans or gave the viewer nothing concrete:\n${flagged}\nRewrite every body slide with a specific move, count, or everyday moment.`,
+        CarouselCopySchema,
+      );
+      if (retry) {
+        const again = retry.slides.map((s) => ({ headline: s.headline, sub: s.sub ?? "" }));
+        if (vagueBodyCount(again, template).vague < score.vague) result = retry;
+      }
+    }
     const normalized = result.slides.map((s) => ({ headline: s.headline, sub: s.sub ?? "" }));
     if (normalized.length >= template.slides.length) {
       return withLaunchCta({ ...result, slides: normalized.slice(0, template.slides.length) }, template, cta);

@@ -11,9 +11,12 @@ import { z } from 'zod';
 
 import {
   activityLevelSchema,
+  difficultySchema,
   equipmentSchema,
   feedbackCategorySchema,
   mainGoalSchema,
+  nextProgramChoiceSchema,
+  painChangeSchema,
   painDurationSchema,
   painLocationSchema,
   painTriggerSchema,
@@ -53,8 +56,8 @@ export const onboardingStepKey = z.enum([
   'welcome',
   'founder',
   'education',
+  'proof',
   'q0',
-  'safety',
   'q9',
   'recognize',
   'seen',
@@ -66,6 +69,7 @@ export const onboardingStepKey = z.enum([
   'q5',
   'q7',
   'q8',
+  'commit',
   'finalizing',
   'match',
 ]);
@@ -82,8 +86,12 @@ export const acquisitionSource = z.enum([
   'other',
 ]);
 
-/** q9 — has the user tried to fix this before. */
+/** Legacy q9 — has the user tried to fix this before. No longer asked. */
 export const priorAttempts = z.enum(['yes', 'no']);
+
+/** q9 — "Do you think Remedy can fix your back pain?" */
+export const appBelief = z.enum(['yes', 'maybe', 'no']);
+export type AppBelief = z.infer<typeof appBelief>;
 
 /** recognize — which stuck-pain patterns feel true. */
 export const recognizePattern = z.enum(['effort', 'return_loop', 'flinch', 'permanence']);
@@ -116,13 +124,13 @@ export const trainingCadence = z.enum([
 ]);
 
 /**
- * Safety-gate legal checkbox. Not an OptionCard value — tracked through the
- * same option_selected event so assent and the yes/no red-flag answer stay
- * one breakdown (`step_key` + `option_value`).
+ * Legal/health-data assent given by tapping "Agree & continue" on the proof
+ * interstitial. Not an OptionCard value — tracked through option_selected so it
+ * breaks down by `step_key` + `option_value` like every other choice.
  */
 export const legalAssent = z.literal('legal_assent');
 
-/** Every value an OptionCard (or the safety checkbox) can carry. */
+/** Every value an OptionCard (or the assent button) can carry. */
 export const optionValue = z.union([
   painLocation,
   painDuration,
@@ -133,6 +141,7 @@ export const optionValue = z.union([
   primaryGoal,
   acquisitionSource,
   priorAttempts,
+  appBelief,
   recognizePattern,
   sessionLength,
   trainingCadence,
@@ -214,6 +223,24 @@ export const programAssignmentFailureReason = z.enum([
   'incomplete_answers',
   'timeout',
   'unexpected_error',
+]);
+
+// --- Next program (program complete) ------------------------------------------
+
+export const nextProgramChoice = nextProgramChoiceSchema;
+export const painChange = painChangeSchema;
+export const checkinDifficulty = difficultySchema;
+
+/** user_programs.progression_level range (migration 087). */
+export const progressionLevel = z.number().int().min(-1).max(3);
+
+/** Mirrors StartNextProgramError in lib/nextProgram.ts. */
+export const nextProgramFailureReason = z.enum([
+  'already_started',
+  'not_entitled',
+  'rate_limited',
+  'network',
+  'failed',
 ]);
 
 export const planInterval = z.enum(['weekly', 'monthly', 'annual', 'none']);
@@ -346,6 +373,9 @@ export const reviewPromptSkipReason = z.enum([
   'native_module_missing',
   'unavailable',
 ]);
+
+/** Why the home share sheet went away without a send. */
+export const friendShareDismissReason = z.enum(['close', 'scrim', 'left']);
 
 export const progressChart = z.enum(['pain', 'activity']);
 

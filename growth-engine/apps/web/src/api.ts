@@ -59,6 +59,12 @@ export interface Post {
   analytics: AnalyticsRow[];
   totalViews?: number;
   totalEngagement?: number;
+  /** "1" = Remedy Recoveries (look A), "2" = Remedy Stories (look B twin). */
+  zernioSlot?: "1" | "2";
+  /** Set on a Stories twin: the Recoveries post it was built from. */
+  accountTwinOf?: number | null;
+  /** Set on a Recoveries post that has a Stories twin. */
+  accountTwinId?: number | null;
   /** Set when this post is one side of an open A/B experiment. */
   experiment?: ExperimentRef | null;
 }
@@ -274,24 +280,28 @@ export interface InsightsData {
   ratings?: AssetRating[];
 }
 
-export interface BrightbeanAccount {
+export interface ZernioAccount {
   id: string;
   platform: string;
   mapped: "tiktok" | "instagram" | "facebook" | "youtube";
   name: string;
   handle: string;
   status: string;
+  profileId: string;
+  keySlot: "1" | "2" | "3" | "4";
+  group?: "1" | "2";
 }
 
-export interface BrightbeanStatus {
+export interface ZernioStatus {
   configured: boolean;
   connected: boolean;
-  workspace: string;
-  permissions: string[];
-  accounts: BrightbeanAccount[];
-  tokenHint: string | null;
+  accounts: ZernioAccount[];
   youtubeConnected: boolean;
-  publisher: "brightbean" | "native";
+  refreshedAt: string | null;
+  publisher: "zernio" | "native";
+  keyCount: number;
+  keys: Array<{ slot: "1" | "2" | "3" | "4"; configured: boolean; accounts: number; error: string | null }>;
+  secondHandle?: string;
 }
 
 export interface Settings {
@@ -322,7 +332,7 @@ export interface Settings {
   snapshotOnly?: boolean;
   pendingCount?: number;
   tiktokAuthUrl?: string;
-  brightbean?: BrightbeanStatus;
+  zernio?: ZernioStatus;
   audience?: CycleState["audience"];
   prelaunch?: boolean;
   manualPosting?: { currentPostId: number | null; completedIds: number[] };
@@ -731,18 +741,10 @@ export const api = {
     }).then((r) => json<{ ok: boolean; error?: string }>(r)),
   tiktokDisconnect: () =>
     fetch("/api/tiktok/disconnect", { method: "POST" }).then((r) => json<{ ok: boolean }>(r)),
-  brightbeanConnect: (token: string) =>
-    fetch("/api/brightbean/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    }).then((r) => json<{ ok: boolean; error?: string; workspace?: string; accounts?: BrightbeanAccount[] }>(r)),
-  brightbeanRefresh: () =>
-    fetch("/api/brightbean/refresh", { method: "POST" }).then((r) =>
-      json<{ ok: boolean; error?: string; workspace?: string; accounts?: BrightbeanAccount[] }>(r),
+  zernioRefresh: () =>
+    fetch("/api/zernio/refresh", { method: "POST" }).then((r) =>
+      json<{ ok: boolean; error?: string; accounts?: ZernioAccount[] }>(r),
     ),
-  brightbeanDisconnect: () =>
-    fetch("/api/brightbean/disconnect", { method: "POST" }).then((r) => json<{ ok: boolean }>(r)),
 
   screenshots: () =>
     tryApi(
@@ -899,7 +901,227 @@ export const api = {
   rawUrl: (file: string) => `/api/assets/raw/${encodeURIComponent(file)}`,
   previewUrl: (file: string, skipTopPct: number, cropHPct: number) =>
     `/api/assets/preview/${encodeURIComponent(file)}?skipTopPct=${skipTopPct.toFixed(3)}&cropHPct=${cropHPct.toFixed(3)}`,
+  editorJobs: () => editorFetch<{ ok: boolean; jobs: EditorJobSummary[]; error?: string }>("/api/editor/jobs"),
+  editorJob: (id: string) =>
+    editorFetch<{ ok: boolean; job: EditorJob; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}`),
+  createEditorProject: (title: string) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>("/api/editor/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    }),
+  createEditorJob: (fileName: string, mimeType: string, byteSize: number, kind?: EditorClipKind) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; clipId?: string; partBytes?: number; error?: string }>("/api/editor/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName, mimeType, byteSize, ...(kind ? { kind } : {}) }),
+    }),
+  addEditorClip: (id: string, fileName: string, mimeType: string, byteSize: number, kind?: EditorClipKind) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; clipId?: string; partBytes?: number; error?: string }>(
+      `/api/editor/jobs/${encodeURIComponent(id)}/clips`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName, mimeType, byteSize, ...(kind ? { kind } : {}) }),
+      },
+    ),
+  uploadEditorPart: async (id: string, clipId: string, partNumber: number, body: Blob) => {
+    const res = await fetch(
+      `/api/editor/jobs/${encodeURIComponent(id)}/clips/${encodeURIComponent(clipId)}/parts/${partNumber}`,
+      {
+        method: "PUT",
+        body,
+        credentials: "include",
+        headers: { "Content-Type": "application/octet-stream" },
+      },
+    );
+    return readEditor<{ ok: boolean; etag?: string; error?: string }>(res);
+  },
+  completeEditorClip: (id: string, clipId: string, parts: Array<{ partNumber: number; etag: string }>) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(
+      `/api/editor/jobs/${encodeURIComponent(id)}/clips/${encodeURIComponent(clipId)}/complete`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parts }),
+      },
+    ),
+  dropEditorCut: (id: string, clipId: string, startSec: number) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}/cut/drop`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clipId, startSec }),
+    }),
+  fixEditorCut: (id: string, note: string) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}/cut/fix`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    }),
+  approveEditorCut: (id: string) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}/cut/approve`, {
+      method: "POST",
+    }),
+  saveEditorVideo: (
+    id: string,
+    title: string,
+    notes: string,
+    referenceUrl: string,
+    postTitle: string,
+    postCaption: string,
+    postHashtags: string,
+  ) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, notes, referenceUrl, postTitle, postCaption, postHashtags }),
+    }),
+  saveEditorClip: (id: string, clipId: string, name: string, kind: EditorClipKind) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(
+      `/api/editor/jobs/${encodeURIComponent(id)}/clips/${encodeURIComponent(clipId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, kind }),
+      },
+    ),
+  reorderEditorClips: (id: string, clipIds: string[]) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clipIds }),
+    }),
+  deleteEditorClip: (id: string, clipId: string) =>
+    editorFetch<{ ok: boolean; job?: EditorJob; error?: string }>(
+      `/api/editor/jobs/${encodeURIComponent(id)}/clips/${encodeURIComponent(clipId)}`,
+      { method: "DELETE" },
+    ),
+  deleteEditorJob: (id: string) =>
+    editorFetch<{ ok: boolean; error?: string }>(`/api/editor/jobs/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  formats: () =>
+    fetch("/api/formats", { credentials: "include" }).then((r) => json<{ items: FormatRef[] }>(r)),
+  addFormat: (url: string, note: string) =>
+    fetch("/api/formats", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, note }),
+    }).then((r) => json<{ ok: boolean; item?: FormatRef; error?: string }>(r)),
+  deleteFormat: (id: string) =>
+    fetch(`/api/formats/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" }).then((r) =>
+      json<{ ok: boolean; error?: string }>(r),
+    ),
+  memes: () => fetch("/api/memes", { credentials: "include" }).then((r) => json<{ items: MemeItem[] }>(r)),
+  rejectMeme: (id: string, reason: string) =>
+    fetch(`/api/memes/${encodeURIComponent(id)}/reject`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    }).then((r) => json<{ ok: boolean; item?: MemeItem; error?: string }>(r)),
+  restoreMeme: (id: string) =>
+    fetch(`/api/memes/${encodeURIComponent(id)}/restore`, {
+      method: "POST",
+      credentials: "include",
+    }).then((r) => json<{ ok: boolean; item?: MemeItem; error?: string }>(r)),
 };
+
+export interface FormatRef {
+  id: string;
+  url: string;
+  note: string;
+  createdAt: string;
+}
+
+export interface MemeItem {
+  id: string;
+  title: string;
+  caption: string;
+  description: string;
+  hashtags: string;
+  lines: string[];
+  musicCredit: string;
+  status: "review" | "rejected";
+  rejectedReason: string;
+  createdAt: string;
+}
+
+async function readEditor<T extends { ok?: boolean; error?: string }>(res: Response): Promise<T> {
+  const text = await res.text();
+  let data: T;
+  try {
+    data = JSON.parse(text) as T;
+  } catch {
+    return { ok: false, error: text.slice(0, 180) || `Request failed (${res.status})` } as T;
+  }
+  if (!res.ok) return { ...data, ok: false, error: data.error || `Request failed (${res.status})` };
+  return data;
+}
+
+function editorFetch<T extends { ok?: boolean; error?: string }>(url: string, init?: RequestInit): Promise<T> {
+  return fetch(url, { ...init, credentials: "include" }).then((res) => readEditor<T>(res));
+}
+
+export type EditorClipKind = "talking" | "screen" | "voice" | "other";
+
+export interface EditorJobSummary {
+  id: string;
+  title: string;
+  clipCount: number;
+  byteSize: number;
+  status: "uploading" | "uploaded" | "ready";
+  createdAt: string;
+  error: string | null;
+}
+
+export interface EditorClip {
+  id: string;
+  name: string;
+  kind: EditorClipKind;
+  fileName: string;
+  mimeType: string;
+  byteSize: number;
+  status: "uploading" | "uploaded";
+  error: string | null;
+  createdAt: string;
+  media: "audio" | "video";
+  fileUrl: string | null;
+}
+
+export interface EditorCutSpan {
+  clipId: string;
+  startSec: number;
+  endSec: number;
+  reason: string;
+}
+
+export interface EditorCut {
+  phase: "cutting" | "review" | "redo" | "approved";
+  summary: string;
+  fixNote?: string;
+  previewUrl?: string | null;
+  startedAt: string | null;
+  updatedAt: string;
+  redo: Array<{ clipId: string; note: string }>;
+  cuts: EditorCutSpan[];
+}
+
+export interface EditorJob {
+  id: string;
+  title: string;
+  notes: string;
+  referenceUrl: string;
+  postTitle: string;
+  postCaption: string;
+  postHashtags: string;
+  status: EditorJobSummary["status"];
+  byteSize: number;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  cut: EditorCut | null;
+  clips: EditorClip[];
+}
 
 export interface CropRequest {
   id: string;

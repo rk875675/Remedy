@@ -1,25 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Dimensions,
   Easing,
+  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
-import { onboardingHintShown, onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
-import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
+import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useAfterTransition } from '../../lib/useAfterTransition';
+import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
 import { sessionLength } from '../../lib/analytics/events/enums';
+import { hapticSelection } from '../../lib/haptics';
 import type { z } from 'zod';
 import { SESSIONS_PER_WEEK_VALUES, type SessionsPerWeekValue } from '../../constants/onboardingQuestions';
 import type { OnboardingAnswers } from '../../types/database';
@@ -68,84 +71,24 @@ function recommendedDays(
   return RECOMMENDATION[activity]?.[duration] ?? 4;
 }
 
-// ---------------------------------------------------------------------------
-// Display order — recommended always sits in the CENTER slot (index 2 of 5).
-// We compute a reordered array from the full sorted options list so that no
-// matter which value is recommended it is rendered at the middle position.
-//
-// Strategy:
-//   1. Collect options below R (descending) and above R (ascending).
-//   2. We have 2 left slots and 2 right slots to fill.
-//   3. Fill left slots from closest-below first; if below runs out, borrow from above.
-//   4. Fill right slots from closest-above first; if above runs out, borrow from below.
-//   Result: [left2, left1, R, right1, right2] — R always at index 2.
-// ---------------------------------------------------------------------------
-
-function centeredDisplayOrder(options: readonly DayOption[], recommended: DayOption): DayOption[] {
-  const below = options.filter((d) => d < recommended).sort((a, b) => b - a); // desc: closest first
-  const above = options.filter((d) => d > recommended).sort((a, b) => a - b); // asc: closest first
-
-  const left: DayOption[] = [];
-  const right: DayOption[] = [];
-
-  // Fill 2 left and 2 right slots, borrowing from the other side when one runs out.
-  const belowQ = [...below];
-  const aboveQ = [...above];
-
-  for (let i = 0; i < 2; i++) {
-    if (belowQ.length > 0) {
-      left.unshift(belowQ.shift()!);
-    } else {
-      // No more below — take from the front of the already-assigned right slots
-      // or the next above.
-      const extra = aboveQ.shift();
-      if (extra !== undefined) left.unshift(extra);
-    }
-  }
-  for (let i = 0; i < 2; i++) {
-    if (aboveQ.length > 0) {
-      right.push(aboveQ.shift()!);
-    } else {
-      const extra = belowQ.shift();
-      if (extra !== undefined) right.push(extra);
-    }
-  }
-
-  return [...left, recommended, ...right];
-}
-
-// ---------------------------------------------------------------------------
-// Bubble appearance — size + colour based on distance from recommended.
-// diff=0 is the tallest platform (recommended); larger diff = shorter + smaller.
-// ---------------------------------------------------------------------------
-
-type BubbleCfg = {
-  diameter: number;
-  bgColor: string;
-  textColor: string;
-  numSize: number;
-  labelSize: number;
-  /** Vertical offset from top of container — 0 = tallest (1st-place platform). */
-  podiumTop: number;
+// Days stay in numeric order (3 → 7). Size follows distance from the
+// recommendation so that day is the tall one. Only the selected day is in
+// color — the rest stay grey until you slide onto them.
+const RING = 8;
+const PAD_X = 2;
+const MIN_GAP = 6;
+const CHIP_W = 112;
+const CHIP_H = 28;
+const NOTCH_H = 7;
+const GAP_BELOW_CHIP = 10;
+const SIZE_BY_DIFF = [96, 64, 48, 40, 36] as const;
+const BOUNCE: Record<DayOption, { amp: number; half: number; high: boolean }> = {
+  3: { amp: 3, half: 2100, high: false },
+  4: { amp: 4, half: 1800, high: true },
+  5: { amp: 3, half: 2400, high: false },
+  6: { amp: 4, half: 2000, high: true },
+  7: { amp: 3, half: 2250, high: false },
 };
-
-const BUBBLE_CFG: Record<0 | 1 | 2 | 3, BubbleCfg> = {
-  0: { diameter: 90, bgColor: '#3E6B4E', textColor: '#FFFFFF', numSize: 28, labelSize: 12, podiumTop: 0 },
-  1: { diameter: 68, bgColor: '#5A8E6C', textColor: '#FFFFFF', numSize: 22, labelSize: 10, podiumTop: 26 },
-  2: { diameter: 50, bgColor: '#8DB89A', textColor: '#1E4D2F', numSize: 17, labelSize: 9,  podiumTop: 50 },
-  3: { diameter: 38, bgColor: '#B0CEBC', textColor: '#2A5440', numSize: 14, labelSize: 8,  podiumTop: 66 },
-};
-
-function bubbleCfg(day: DayOption, recommended: DayOption): BubbleCfg {
-  const diff = Math.min(Math.abs(day - recommended), 3) as 0 | 1 | 2 | 3;
-  return BUBBLE_CFG[diff];
-}
-
-// ---------------------------------------------------------------------------
-// Smooth sinusoidal float animation (Easing.inOut(Easing.sin) = cosine curve).
-// Starting at ±amplitude means the first frame is already at a natural rest
-// position — no initial jump or pop. Each bubble has distinct speed + phase.
-// ---------------------------------------------------------------------------
 
 function useFloatAnim(amplitude: number, halfPeriod: number, startHigh: boolean): Animated.Value {
   const anim = useRef(new Animated.Value(startHigh ? -amplitude : amplitude)).current;
@@ -171,102 +114,263 @@ function useFloatAnim(amplitude: number, halfPeriod: number, startHigh: boolean)
     );
     loop.start();
     return () => loop.stop();
-  }, [ready]);
+  }, [ready, anim, amplitude, halfPeriod, startHigh]);
 
   return anim;
 }
 
-// ---------------------------------------------------------------------------
-// DayBubble
-// ---------------------------------------------------------------------------
-
-interface BubbleProps {
+type PlacedBubble = {
   day: DayOption;
-  recommended: DayOption;
-  selected: boolean;
-  onPress: () => void;
-  floatY: Animated.Value;
+  diameter: number;
+  x: number;
+  ring: number;
+};
+
+function estimateRowWidth(): number {
+  // The screen pads 24pt each side. Undershoot so the first paint cannot
+  // hang a bubble off the edge; onLayout then uses the measured width.
+  return Math.max(0, Dimensions.get('window').width - 56);
 }
 
-function DayBubble({ day, recommended, selected, onPress, floatY }: BubbleProps) {
-  const cfg = bubbleCfg(day, recommended);
-  const { diameter } = cfg;
-  const isRec = day === recommended;
-  const ringSize = diameter + 10;
+function placeBubbles(rowWidth: number, recommended: DayOption): PlacedBubble[] {
+  if (rowWidth <= 0) return [];
+  const inner = Math.max(0, rowWidth - PAD_X * 2);
+  const minGaps = MIN_GAP * (DAY_OPTIONS.length - 1);
+  if (inner <= minGaps) return [];
+  const natural = DAY_OPTIONS.map(
+    (day) => SIZE_BY_DIFF[Math.min(Math.abs(day - recommended), SIZE_BY_DIFF.length - 1)],
+  );
+  const naturalSum = natural.reduce((sum, diameter) => sum + diameter + RING, 0);
+  const scale = Math.min(1, (inner - minGaps) / naturalSum);
+  const diameters = natural.map((diameter) => Math.round(diameter * scale));
+  const rings = diameters.map((diameter) => diameter + RING);
+  let sum = rings.reduce((total, ring) => total + ring, 0);
+  if (sum + minGaps > inner && sum > 0) {
+    const shrink = (inner - minGaps) / sum;
+    for (let i = 0; i < diameters.length; i++) {
+      diameters[i] = Math.floor(diameters[i] * shrink);
+      rings[i] = diameters[i] + RING;
+    }
+    sum = rings.reduce((total, ring) => total + ring, 0);
+  }
+  const gap = (inner - sum) / (DAY_OPTIONS.length - 1);
+  let x = PAD_X;
+  return DAY_OPTIONS.map((day, i) => {
+    const placed = { day, diameter: diameters[i], x, ring: rings[i] };
+    x += rings[i] + gap;
+    return placed;
+  });
+}
+
+function nearestDay(localX: number, placed: readonly PlacedBubble[]): DayOption | null {
+  if (placed.length === 0) return null;
+  let best = placed[0];
+  let bestDist = Infinity;
+  for (const item of placed) {
+    const dist = Math.abs(localX - (item.x + item.ring / 2));
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = item;
+    }
+  }
+  return best.day;
+}
+
+function DayBubble({
+  day,
+  selected,
+  diameter,
+}: {
+  day: DayOption;
+  selected: boolean;
+  diameter: number;
+}) {
+  const bounce = BOUNCE[day];
+  const floatY = useFloatAnim(bounce.amp, bounce.half, bounce.high);
+  const numSize = Math.round(diameter * (selected ? 0.36 : 0.42));
+  const labelSize = Math.max(11, Math.round(diameter * 0.15));
 
   return (
     <Animated.View
+      pointerEvents="none"
       style={[
-        styles.bubbleSlot,
+        styles.bubbleRing,
+        { transform: [{ translateY: floatY }] },
         {
-          marginTop: cfg.podiumTop,
-          opacity: selected ? 1 : 0.78,
-          transform: [{ translateY: floatY }, { scale: selected ? 1.08 : 1 }],
+          width: diameter + RING,
+          height: diameter + RING,
+          borderRadius: (diameter + RING) / 2,
+          borderColor: selected ? colors.primaryDeep : 'transparent',
+          backgroundColor: selected ? colors.primaryMuted : 'transparent',
         },
       ]}
     >
       <View
         style={[
-          styles.bubbleRing,
+          styles.bubbleFace,
           {
-            width: ringSize,
-            height: ringSize,
-            borderRadius: ringSize / 2,
-            borderColor: selected ? colors.primaryDeep : 'transparent',
-            backgroundColor: selected ? colors.primaryMuted : 'transparent',
+            width: diameter,
+            height: diameter,
+            borderRadius: diameter / 2,
+            backgroundColor: selected ? colors.primary : '#D4CDC7',
           },
+          selected && styles.bubbleSelected,
         ]}
       >
-        <TouchableOpacity
-          onPress={onPress}
-          activeOpacity={0.8}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={[
-            {
-              width: diameter,
-              height: diameter,
-              borderRadius: diameter / 2,
-              backgroundColor: selected ? colors.primaryDeep : cfg.bgColor,
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-            selected ? styles.bubbleSelected : isRec ? styles.bubbleRecommended : null,
-          ]}
+        <Text
+          allowFontScaling={false}
+          style={{
+            color: selected ? '#FFFFFF' : '#8C857E',
+            fontSize: numSize,
+            fontWeight: '700',
+            lineHeight: numSize + 2,
+            includeFontPadding: false,
+          }}
         >
+          {day}
+        </Text>
+        {selected ? (
           <Text
+            allowFontScaling={false}
             style={{
-              color: '#FFFFFF',
-              fontSize: cfg.numSize,
-              fontWeight: '700',
-              lineHeight: cfg.numSize + 2,
-              includeFontPadding: false,
-            }}
-          >
-            {day}
-          </Text>
-          <Text
-            style={{
-              color: selected ? 'rgba(255,255,255,0.92)' : cfg.textColor,
-              fontSize: cfg.labelSize,
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: labelSize,
               fontWeight: '600',
-              lineHeight: cfg.labelSize + 3,
+              lineHeight: labelSize + 2,
               includeFontPadding: false,
-              opacity: 0.92,
             }}
           >
             days
           </Text>
-        </TouchableOpacity>
+        ) : null}
       </View>
-
-      {selected ? (
-        <View style={styles.selectedCheck} />
-      ) : isRec ? (
-        <View style={[styles.recommendedDot, { backgroundColor: cfg.bgColor }]} />
-      ) : (
-        <View style={styles.markerSpacer} />
-      )}
     </Animated.View>
+  );
+}
+
+function DaySlider({
+  selected,
+  recommended,
+  onSelect,
+}: {
+  selected: DayOption | null;
+  recommended: DayOption;
+  onSelect: (day: DayOption) => void;
+}) {
+  const focus = selected ?? recommended;
+  const widthRef = useRef(estimateRowWidth());
+  const [rowWidth, setRowWidth] = useState(widthRef.current);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const placedRef = useRef<PlacedBubble[]>([]);
+  const dragged = useRef(false);
+
+  const placed = placeBubbles(rowWidth, recommended);
+  placedRef.current = placed;
+
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: () => {
+        dragged.current = false;
+      },
+      onPanResponderMove: (e, g) => {
+        if (Math.abs(g.dx) < 6 || Math.abs(g.dy) > Math.abs(g.dx)) return;
+        dragged.current = true;
+        const day = nearestDay(e.nativeEvent.locationX, placedRef.current);
+        if (day) onSelectRef.current(day);
+      },
+      onPanResponderRelease: (e, g) => {
+        if (dragged.current) return;
+        if (Math.abs(g.dx) > 8 || Math.abs(g.dy) > 8) return;
+        const day = nearestDay(e.nativeEvent.locationX, placedRef.current);
+        if (day) onSelectRef.current(day);
+      },
+    }),
+  ).current;
+
+  const maxRing = placed.reduce((max, item) => Math.max(max, item.ring), 0);
+  const bubbleTop = CHIP_H + NOTCH_H + GAP_BELOW_CHIP;
+  const rec = placed.find((item) => item.day === recommended);
+  const recCenter = rec ? rec.x + rec.ring / 2 : 0;
+  const chipLeft = Math.max(0, Math.min(rowWidth - CHIP_W, recCenter - CHIP_W / 2));
+
+  return (
+    <View>
+      <View
+        style={[styles.slider, maxRing > 0 && { minHeight: bubbleTop + maxRing + 14 }]}
+        accessibilityRole="adjustable"
+        accessibilityLabel="Days per week"
+        accessibilityHint="Slide sideways or tap a number"
+        accessibilityValue={{
+          min: DAY_OPTIONS[0],
+          max: DAY_OPTIONS[DAY_OPTIONS.length - 1],
+          now: focus,
+        }}
+        accessibilityActions={[
+          { name: 'increment', label: 'More days' },
+          { name: 'decrement', label: 'Fewer days' },
+        ]}
+        onAccessibilityAction={(event) => {
+          const index = DAY_OPTIONS.indexOf(focus);
+          const next =
+            event.nativeEvent.actionName === 'increment'
+              ? DAY_OPTIONS[index + 1]
+              : event.nativeEvent.actionName === 'decrement'
+                ? DAY_OPTIONS[index - 1]
+                : undefined;
+          if (next) onSelectRef.current(next);
+        }}
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && w !== widthRef.current) {
+            widthRef.current = w;
+            setRowWidth(w);
+          }
+        }}
+        {...pan.panHandlers}
+      >
+        {placed.length > 0 && rec && (
+          <>
+            <View pointerEvents="none" style={[styles.recChip, { left: chipLeft }]}>
+              <Text allowFontScaling={false} style={styles.recChipText}>
+                Recommended
+              </Text>
+            </View>
+            <View
+              pointerEvents="none"
+              style={[styles.recNotch, { left: recCenter - 6, top: CHIP_H - 1 }]}
+            />
+            {placed.map((item) => (
+              <View
+                key={item.day}
+                pointerEvents="none"
+                style={[
+                  styles.bubbleSlot,
+                  {
+                    left: item.x,
+                    width: item.ring,
+                    top: bubbleTop,
+                    height: maxRing,
+                    zIndex: item.day === focus ? 2 : 0,
+                  },
+                ]}
+              >
+                <DayBubble
+                  day={item.day}
+                  selected={item.day === focus}
+                  diameter={item.diameter}
+                />
+              </View>
+            ))}
+          </>
+        )}
+      </View>
+      <Text style={styles.sliderCaption}>Slide or tap a number</Text>
+    </View>
   );
 }
 
@@ -277,7 +381,7 @@ function DayBubble({ day, recommended, selected, onPress, floatY }: BubbleProps)
 export default function Q8Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { answers, setAnswer, clearAnswer, progress, setLocalAnswer } = useOnboarding();
+  const { answers, setAnswer, progress, setLocalAnswer } = useOnboarding();
   useTrackOnboardingStep('q8');
   const completeStep = useOnboardingStepCompletion();
 
@@ -291,88 +395,7 @@ export default function Q8Screen() {
     if (saved != null && (DAY_OPTIONS as number[]).includes(saved)) return saved as DayOption;
     return null;
   });
-  const daysDeselected = useRef(false);
-
-  // Compute display order with recommended at the center slot (index 2).
-  const displayOrder = centeredDisplayOrder(DAY_OPTIONS, suggested);
-
-  // Five independent float hooks — must be unconditional, one per option.
-  // Params give each bubble a distinct amplitude, speed, and starting direction.
-  const float3 = useFloatAnim(8,  2050, false);
-  const float4 = useFloatAnim(10, 1750, true);
-  const float5 = useFloatAnim(7,  2350, false);
-  const float6 = useFloatAnim(9,  1950, true);
-  const float7 = useFloatAnim(6,  2200, false);
-  const floatMap: Record<DayOption, Animated.Value> = {
-    3: float3, 4: float4, 5: float5, 6: float6, 7: float7,
-  };
-
-  // ---------------------------------------------------------------------------
-  // Hint pill — fades in after a minutes tap, sits above the day bubbles,
-  // then fades out on its own (or immediately when a day is tapped).
-  // ---------------------------------------------------------------------------
-  const hintOpacity = useRef(new Animated.Value(0)).current;
-  const hintTranslate = useRef(new Animated.Value(-8)).current;
-  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hintVisible = useRef(false);
-
-  function clearHintTimers() {
-    if (hintTimer.current) clearTimeout(hintTimer.current);
-    if (dismissTimer.current) clearTimeout(dismissTimer.current);
-    hintTimer.current = null;
-    dismissTimer.current = null;
-  }
-
-  function hideHint() {
-    clearHintTimers();
-    if (!hintVisible.current) return;
-    hintVisible.current = false;
-    Animated.parallel([
-      Animated.timing(hintOpacity, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.timing(hintTranslate, {
-        toValue: -6,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }
-
-  function showHint() {
-    clearHintTimers();
-    hintVisible.current = false;
-    hintOpacity.setValue(0);
-    hintTranslate.setValue(-8);
-    hintTimer.current = setTimeout(() => {
-      hintVisible.current = true;
-      onboardingHintShown({ step_key: 'q8', hint_key: 'q8_days' });
-      Animated.parallel([
-        Animated.timing(hintOpacity, {
-          toValue: 1,
-          duration: 260,
-          useNativeDriver: true,
-        }),
-        Animated.timing(hintTranslate, {
-          toValue: 0,
-          duration: 260,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-      dismissTimer.current = setTimeout(hideHint, 2200);
-    }, 450);
-  }
-
-  useEffect(
-    () => () => {
-      clearHintTimers();
-    },
-    [],
-  );
+  const selectedRef = useRef(selectedDays);
 
   function handleMinutes(opt: (typeof MINUTE_OPTIONS)[number]) {
     const isDeselect = minutes === opt.value;
@@ -390,37 +413,30 @@ export default function Q8Screen() {
       is_deselect: isDeselect,
       is_recommended: opt.value === RECOMMENDED_MINUTES,
     });
-    showHint();
   }
 
-  // Pre-select the recommended value so the program always has a sessions/week
-  // answer. Skipped once the user has explicitly deselected.
+  // Pre-select the recommended value so the program always has a sessions/week answer.
   useEffect(() => {
-    if (!daysDeselected.current && answers.sessions_per_week_preference == null) {
+    if (answers.sessions_per_week_preference == null) {
+      selectedRef.current = suggested;
       setSelectedDays(suggested);
       setAnswer('sessions_per_week_preference', suggested);
     }
   }, [suggested]);
 
-  function handleDaySelect(day: DayOption) {
-    hideHint();
-    const isDeselect = selectedDays === day;
+  function selectDay(day: DayOption) {
+    if (selectedRef.current === day) return;
+    selectedRef.current = day;
     onboardingOptionSelected({
       step_key: 'q8',
       option_value: (`days_${day}` as const),
       is_multi_select: false,
-      is_deselect: isDeselect,
+      is_deselect: false,
       is_recommended: day === suggested,
     });
-    if (isDeselect) {
-      daysDeselected.current = true;
-      setSelectedDays(null);
-      clearAnswer('sessions_per_week_preference');
-    } else {
-      daysDeselected.current = false;
-      setSelectedDays(day);
-      setAnswer('sessions_per_week_preference', day);
-    }
+    setSelectedDays(day);
+    setAnswer('sessions_per_week_preference', day);
+    hapticSelection();
   }
 
   return (
@@ -430,6 +446,7 @@ export default function Q8Screen() {
         { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
       ]}
     >
+      <WarmBackground />
       <PersonalizingLayout currentStep="q8">
         <ScrollView
           style={styles.scroll}
@@ -455,37 +472,15 @@ export default function Q8Screen() {
           </View>
 
           <View style={styles.daysBlock}>
-            <View style={styles.subheadingRow}>
+            <View style={styles.daysCluster}>
               <Text style={styles.subheading}>How many days per week?</Text>
-              <Text style={styles.subheadingRec}>{suggested} recommended</Text>
-            </View>
 
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.hintWrap,
-                { opacity: hintOpacity, transform: [{ translateY: hintTranslate }] },
-              ]}
-            >
-              <View style={styles.hintBubble}>
-                <Text style={styles.hintText}>Tap your days ↓</Text>
-              </View>
-            </Animated.View>
-
-          {/* Podium row — recommended is always at center via centeredDisplayOrder().
-              Fixed height so floating animation never shifts surrounding layout. */}
-          <View style={styles.podiumContainer}>
-            {displayOrder.map((day) => (
-              <DayBubble
-                key={day}
-                day={day}
+              <DaySlider
+                selected={selectedDays}
                 recommended={suggested}
-                selected={selectedDays === day}
-                onPress={() => handleDaySelect(day)}
-                floatY={floatMap[day]}
+                onSelect={selectDay}
               />
-            ))}
-          </View>
+            </View>
           </View>
         </ScrollView>
       </PersonalizingLayout>
@@ -493,7 +488,7 @@ export default function Q8Screen() {
       <ContinueButton
         onPress={() => {
           completeStep();
-          router.push('/(onboarding)/finalizing');
+          router.push('/(onboarding)/commit');
         }}
         disabled={answers.sessions_per_week_preference == null}
       />
@@ -525,92 +520,85 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   daysBlock: {
-    marginTop: 18,
+    flexGrow: 1,
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  daysCluster: {
     position: 'relative',
-    overflow: 'visible',
-  },
-  hintWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 28,
-    alignItems: 'center',
-    zIndex: 8,
-    elevation: 8,
-  },
-  hintBubble: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  hintText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  subheadingRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: 14,
   },
   subheading: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.2,
     color: colors.textPrimary,
+    marginBottom: 16,
   },
-  subheadingRec: {
+  slider: {
+    position: 'relative',
+  },
+  recChip: {
+    position: 'absolute',
+    top: 0,
+    width: CHIP_W,
+    height: CHIP_H,
+    borderRadius: CHIP_H / 2,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
+  },
+  recChipText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '500',
-    color: colors.primary,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  podiumContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    height: 168,
+  recNotch: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: NOTCH_H,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: colors.primary,
+    zIndex: 3,
+  },
+  sliderCaption: {
+    marginTop: 14,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   bubbleSlot: {
+    position: 'absolute',
     alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   bubbleRing: {
     borderWidth: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bubbleFace: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1C1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
   bubbleSelected: {
     shadowColor: colors.primaryDeep,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 7,
-  },
-  bubbleRecommended: {
-    shadowColor: '#3E6B4E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.28,
-    shadowRadius: 7,
-    elevation: 4,
-  },
-  recommendedDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginTop: 6,
-    opacity: 0.6,
-  },
-  selectedCheck: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    marginTop: 6,
-    backgroundColor: colors.primaryDeep,
-  },
-  markerSpacer: {
-    width: 7,
-    height: 7,
-    marginTop: 6,
+    elevation: 5,
   },
 });

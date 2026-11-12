@@ -5,7 +5,7 @@
  * company document of record. Version tracked in lib/legalAcceptance.ts.
  */
 
-export const TERMS_LAST_UPDATED = 'September 19, 2026';
+export const TERMS_LAST_UPDATED = 'October 15, 2026';
 export const TERMS_PUBLIC_URL = 'https://remedyrecoveries.com/terms';
 export const PRIVACY_PUBLIC_URL = 'https://remedyrecoveries.com/privacy';
 export const CONTACT_PUBLIC_URL = 'https://remedyrecoveries.com/contact';
@@ -105,7 +105,7 @@ export const TERMS_BLOCKS: LegalBlock[] = [
   { type: 'h2', text: '5. Eligibility and accounts' },
   {
     type: 'p',
-    text: 'You must be at least 16 years old to use the Service. By using the Service you confirm that you are 16 or older. You are responsible for maintaining the confidentiality of your account credentials and for all activity under your account. Notify us promptly of any unauthorized use.',
+    text: 'You must be at least 17 years old to use the Service. By using the Service you confirm that you are 17 or older. You are responsible for maintaining the confidentiality of your account credentials and for all activity under your account. Notify us promptly of any unauthorized use.',
   },
   { type: 'h2', text: '6. License' },
   {

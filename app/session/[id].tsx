@@ -15,6 +15,7 @@ import { useEvent, useEventListener } from 'expo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
+import { playDoneChime } from '../../lib/sessionChime';
 import { useSilentVideoPlayer } from '../../lib/videoPlayer';
 import { getCachedVideoUri, getVideoUri, prefetchVideo } from '../../lib/videoCache';
 import { invalidateTabRefresh } from '../../lib/tabRefresh';
@@ -37,7 +38,7 @@ import {
   sessionPreviewed,
   sessionStarted,
 } from '../../lib/analytics/events/coreLoop';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import {
@@ -51,6 +52,15 @@ import {
   incrementSessionsCompleted,
   maybeRequestReviewAfterSession,
 } from '../../lib/app-store-review';
+import { friendShareArmed } from '../../lib/analytics/events/engagement';
+import {
+  armFriendShareHome,
+  claimFriendSharePreview,
+  considerFriendShare,
+  friendSharePreviewAvailable,
+  isShareTestAccount,
+} from '../../lib/friendShare';
+import { firstNameFromDisplayName, resolveDisplayName } from '../../lib/greeting';
 import { orderedEquipmentForExercises } from '../../lib/equipment';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import type { movementPattern } from '../../lib/analytics/events/enums';
@@ -187,8 +197,8 @@ export default function SessionPlayerScreen() {
   } | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [exerciseIndex, setExerciseIndex] = useState(0);
-  const [painBefore, setPainBefore] = useState(5);
-  const [painAfter, setPainAfter] = useState(5);
+  const [painBefore, setPainBefore] = useState(() => 7 + Math.floor(Math.random() * 4));
+  const [painAfter, setPainAfter] = useState(() => 1 + Math.floor(Math.random() * 3));
   const [restSeconds, setRestSeconds] = useState(0);
   const [restTotal, setRestTotal] = useState(1);
   const [loaded, setLoaded] = useState(false);
@@ -207,6 +217,8 @@ export default function SessionPlayerScreen() {
   const [nextSession, setNextSession] = useState<UserPlanSession | null>(null);
   const [isProgramCompleted, setIsProgramCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const warmCopyRef = useRef<string | null>(null);
+  const shareOfferRef = useRef<{ preview: boolean } | null>(null);
 
   const player = useSilentVideoPlayer(null, (p) => {
     p.loop = false;
@@ -571,6 +583,8 @@ export default function SessionPlayerScreen() {
       countdownRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
+            // Any exercise with a duration, including ones added later.
+            playDoneChime();
             if (holdRepRef.current < holdReps) {
               holdRepRef.current += 1;
               setHoldRep(holdRepRef.current);
@@ -996,24 +1010,56 @@ export default function SessionPlayerScreen() {
     setPhase('complete');
   }
 
-  // Native App Store review sheet. Deliberately not fired from handleComplete:
-  // requesting it mid-navigation loses the sheet silently. Waiting for the
-  // summary's entrance animations to finish means it slides in over the user's
-  // result, which is the moment it has earned.
+  // Native App Store review sheet, then the friend-share card on the sessions
+  // where that sheet will not appear. Deliberately not fired from handleComplete:
+  // requesting the review mid-navigation loses the sheet silently. Waiting for
+  // the summary's entrance animations to finish means it slides in over the
+  // user's result, which is the moment it has earned.
   //
   // Pain is 1–10 with 10 the worst, so a lower "after" is an improvement.
   useEffect(() => {
     if (phase !== 'complete') return;
+    if (isShareTestAccount(user?.email)) {
+      shareOfferRef.current = { preview: false };
+    }
+    let cancelled = false;
     const task = InteractionManager.runAfterInteractions(() => {
-      void maybeRequestReviewAfterSession({
-        triggerKey: id,
-        painImproved: painAfter < painBefore,
-        sourceScreen: 'session',
-        planSessionId: id,
-        ...(sessionMeta ? { weekNumber: sessionMeta.week_number } : {}),
-      });
+      void (async () => {
+        const testing = isShareTestAccount(user?.email);
+        if (!testing) {
+          // One dev completion skips the review sheet and arms the home share
+          // sheet, so the next Back to Home can show it. Pain does not have to drop.
+          const preview = await friendSharePreviewAvailable();
+          if (cancelled) return;
+          if (preview) {
+            shareOfferRef.current = { preview: true };
+            return;
+          }
+        }
+        const review = await maybeRequestReviewAfterSession({
+          triggerKey: id,
+          painImproved: painAfter < painBefore,
+          sourceScreen: 'session',
+          planSessionId: id,
+          ...(sessionMeta ? { weekNumber: sessionMeta.week_number } : {}),
+        });
+        if (cancelled) return;
+        if (testing) {
+          shareOfferRef.current = { preview: false };
+          return;
+        }
+        const show = await considerFriendShare({
+          triggerKey: id,
+          painImproved: painAfter < painBefore,
+          reviewMayDisplay: review.mayDisplay,
+        });
+        if (!cancelled && show) shareOfferRef.current = { preview: false };
+      })();
     });
-    return () => task.cancel();
+    return () => {
+      cancelled = true;
+      task.cancel();
+    };
     // Intentionally keyed to the phase transition only: the pain values are
     // frozen by the time this screen renders, and re-running on them would
     // re-arm the task on every unrelated re-render.
@@ -1285,10 +1331,14 @@ export default function SessionPlayerScreen() {
   const durationMin = Math.round((Date.now() - sessionStartTime.current) / 60000);
   const completedCount = exercises.length - skippedExercises.size;
   const painDelta = painBefore - painAfter;
-  const warmCopy = WARM_COPY[Math.floor(Math.random() * WARM_COPY.length)];
+  if (warmCopyRef.current === null) {
+    warmCopyRef.current = WARM_COPY[Math.floor(Math.random() * WARM_COPY.length)] ?? '';
+  }
+  const warmCopy = warmCopyRef.current;
 
   return (
-    <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.centered, { flex: 1 }]}>
       <Animated.View
         style={[
           styles.completeIconWrap,
@@ -1380,16 +1430,47 @@ export default function SessionPlayerScreen() {
         onPress={() => {
           hapticPrimaryAction();
           if (isProgramCompleted) {
-            router.replace('/program-complete');
-          } else {
-            router.dismissTo('/(tabs)');
+            const offer = shareOfferRef.current;
+            shareOfferRef.current = null;
+            void (async () => {
+              if (offer && isShareTestAccount(user?.email)) {
+                const painImproved = painAfter < painBefore;
+                await armFriendShareHome({ painImproved });
+                friendShareArmed({
+                  source_screen: 'session',
+                  has_name: Boolean(firstNameFromDisplayName(resolveDisplayName(null, user))),
+                  pain_improved: painImproved,
+                });
+              }
+              router.replace('/program-complete');
+            })();
+            return;
           }
+          const offer = shareOfferRef.current;
+          shareOfferRef.current = null;
+          void (async () => {
+            if (offer) {
+              const painImproved = painAfter < painBefore;
+              const hasName = Boolean(
+                firstNameFromDisplayName(resolveDisplayName(null, user)),
+              );
+              if (offer.preview) await claimFriendSharePreview();
+              await armFriendShareHome({ painImproved });
+              friendShareArmed({
+                source_screen: 'session',
+                has_name: hasName,
+                pain_improved: painImproved,
+              });
+            }
+            router.dismissTo('/(tabs)');
+          })();
         }}
       >
         <Text style={styles.primaryButtonText}>
           {isProgramCompleted ? 'View Summary' : 'Back to Home'}
         </Text>
       </TouchableOpacity>
+    </View>
     </View>
   );
 }
@@ -1429,48 +1510,53 @@ function SessionPreviewScreen({
         <TouchableOpacity style={previewStyles.backButton} onPress={onBack}>
           <Text style={previewStyles.backButtonText}>✕</Text>
         </TouchableOpacity>
-        {sessionMeta && (
-          <View style={previewStyles.badge}>
-            <Text style={previewStyles.badgeText}>
-              W{sessionMeta.week_number} · S{sessionMeta.session_number}
-            </Text>
-          </View>
-        )}
       </View>
 
       <View style={previewStyles.body}>
-        <Text style={previewStyles.preLabel}>Session Preview</Text>
-        {sessionMeta && <Text style={previewStyles.title}>{sessionMeta.title}</Text>}
-
-        <View style={previewStyles.grid}>
-          <View style={previewStyles.gridTile}>
-            <Text style={previewStyles.gridValue}>{sessionMeta?.duration_minutes ?? '-'}</Text>
-            <Text style={previewStyles.gridLabel}>Minutes</Text>
-          </View>
-          <View style={previewStyles.gridTile}>
-            <Text style={previewStyles.gridValue}>{exerciseCount}</Text>
-            <Text style={previewStyles.gridLabel}>Exercises</Text>
-          </View>
-          <View style={[previewStyles.gridTile, previewStyles.gridTileWide]}>
-            <Text style={previewStyles.gridValueSmall}>{focusLabel || '-'}</Text>
-            <Text style={previewStyles.gridLabel}>Main Focus</Text>
-          </View>
-          <View style={[previewStyles.gridTile, previewStyles.gridTileWide]}>
-            <View style={previewStyles.equipmentList}>
-              {equipmentItems.map((item) => (
-                <Text key={item} style={previewStyles.equipmentItem}>
-                  {item}
-                </Text>
-              ))}
+        <View style={previewStyles.hero}>
+          <Text style={previewStyles.preLabel}>
+            {sessionMeta
+              ? `Week ${sessionMeta.week_number} · Session ${sessionMeta.session_number}`
+              : 'Session preview'}
+          </Text>
+          {sessionMeta ? <Text style={previewStyles.title}>{sessionMeta.title}</Text> : null}
+          <View style={previewStyles.chips}>
+            <View style={previewStyles.chip}>
+              <Text style={previewStyles.chipText}>{sessionMeta?.duration_minutes ?? '-'} min</Text>
             </View>
-            <Text style={previewStyles.gridLabel}>Equipment Needed</Text>
+            <View style={previewStyles.chip}>
+              <Text style={previewStyles.chipText}>
+                {exerciseCount} exercise{exerciseCount === 1 ? '' : 's'}
+              </Text>
+            </View>
+            {focusLabel ? (
+              <View style={previewStyles.chip}>
+                <Text style={previewStyles.chipText}>{focusLabel}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
+
+        {equipmentItems.length > 0 ? (
+          <View style={previewStyles.equip}>
+            <Text style={previewStyles.equipLabel}>What you'll need</Text>
+            <View style={previewStyles.equipRow}>
+              {equipmentItems.map((item) => (
+                <View key={item} style={previewStyles.equipChip}>
+                  <Text style={previewStyles.equipChipText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
       </View>
 
       <MedicalDisclaimer style={previewStyles.disclaimer} />
       <TouchableOpacity style={previewStyles.beginButton} onPress={() => { hapticPrimaryAction(); onBegin(); }} activeOpacity={0.85}>
         <Text style={previewStyles.beginButtonText}>Let's go</Text>
+        <View style={previewStyles.beginArrow}>
+          <Text style={previewStyles.beginArrowText}>→</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -1500,83 +1586,77 @@ const previewStyles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  badge: {
-    backgroundColor: colors.primaryMuted,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: radius.chip,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primaryDeep,
-    letterSpacing: 0.4,
-  },
   body: {
     flex: 1,
-    justifyContent: 'center',
+    marginTop: 20,
+  },
+  hero: {
+    backgroundColor: colors.primaryMuted,
+    borderRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 24,
   },
   preLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 28,
+    fontFamily: serifFont,
+    fontSize: 34,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 28,
-    lineHeight: 34,
+    marginBottom: 16,
+    lineHeight: 39,
+    letterSpacing: -0.6,
   },
-  grid: {
+  chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
-  gridTile: {
-    flexBasis: '47%',
-    flexGrow: 1,
+  chip: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    ...shadows.low,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(62, 107, 78, 0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  gridTileWide: {
-    flexBasis: '100%',
-  },
-  gridValue: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-    marginBottom: 4,
-  },
-  gridValueSmall: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  equipmentList: {
-    gap: 2,
-    marginBottom: 4,
-  },
-  equipmentItem: {
-    fontSize: 17,
+  chipText: {
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
-    lineHeight: 22,
   },
-  gridLabel: {
-    fontSize: 12,
+  equip: {
+    marginTop: 24,
+    paddingHorizontal: 4,
+  },
+  equipLabel: {
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: colors.textPrimary,
+    marginBottom: 10,
+  },
+  equipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  equipChip: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  equipChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   disclaimer: {
     marginBottom: 12,
@@ -1584,20 +1664,32 @@ const previewStyles = StyleSheet.create({
   },
   beginButton: {
     height: 56,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
+    borderRadius: 999,
+    backgroundColor: '#17261C',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    ...shadows.medium,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.25,
   },
   beginButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+  beginArrow: {
+    position: 'absolute',
+    right: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  beginArrowText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
   },
 });
 
@@ -1704,12 +1796,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   checkinTitle: {
-    fontSize: 22,
-    fontWeight: '600',
+    fontFamily: serifFont,
+    fontSize: 28,
+    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 28,
     textAlign: 'center',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
+    lineHeight: 34,
   },
   safetyNote: {
     fontSize: 12,
@@ -1790,7 +1884,7 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     height: 52,
-    borderRadius: radius.button,
+    borderRadius: 999,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1811,11 +1905,9 @@ const styles = StyleSheet.create({
 
   // Rest
   restLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
     marginBottom: 20,
   },
   restRingWrap: {
@@ -1856,26 +1948,27 @@ const styles = StyleSheet.create({
   },
   nextExCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
     marginBottom: 24,
-    ...shadows.low,
   },
   nextExLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    color: colors.primary,
     marginBottom: 4,
   },
   nextExName: {
-    fontSize: 18,
+    fontFamily: serifFont,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 2,
+    textAlign: 'center',
   },
   nextExDuration: {
     fontSize: 14,
@@ -2010,17 +2103,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseName: {
-    fontSize: 24,
+    fontFamily: serifFont,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
+    letterSpacing: -0.4,
+    lineHeight: 34,
   },
   setIndicator: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
     marginBottom: 6,
   },
   countdownText: {
@@ -2106,22 +2200,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   completeTitle: {
-    fontSize: 28,
+    fontFamily: serifFont,
+    fontSize: 32,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
   completeSummaryCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: 18,
     paddingHorizontal: 12,
     marginBottom: 20,
     width: '100%',
-    ...shadows.low,
   },
   completeStatItem: {
     flex: 1,
@@ -2138,8 +2236,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.2,
   },
   completeStatDividerVert: {
     width: 1,
@@ -2155,19 +2252,18 @@ const styles = StyleSheet.create({
   },
   nextSessionCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
     width: '100%',
-    ...shadows.low,
   },
   nextSessionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    color: colors.primary,
     marginBottom: 4,
   },
   nextSessionTitle: {

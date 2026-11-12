@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { AppLogo } from '../../components/brand/AppLogo';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import {
   useOnboarding,
   getResumeStep,
@@ -80,69 +81,60 @@ export default function WelcomeScreen() {
     router.push('/(onboarding)/founder');
   }
 
-  const logoScale = useRef(new Animated.Value(0.7)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const nameOpacity = useRef(new Animated.Value(0)).current;
-  const nameTranslate = useRef(new Animated.Value(10)).current;
+  const nameTranslate = useRef(new Animated.Value(24)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const subtitleTranslate = useRef(new Animated.Value(10)).current;
+  const subtitleTranslate = useRef(new Animated.Value(12)).current;
   const footerOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const fadeUp = (opacity: Animated.Value, translate: Animated.Value) =>
+    const fadeUp = (opacity: Animated.Value, translate: Animated.Value, duration: number) =>
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 320,
+          duration,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(translate, {
           toValue: 0,
-          duration: 320,
+          duration,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]);
 
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(logoScale, {
-          toValue: 1,
-          useNativeDriver: true,
-          speed: 12,
-          bounciness: 8,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 350,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.stagger(90, [
-        fadeUp(nameOpacity, nameTranslate),
-        fadeUp(subtitleOpacity, subtitleTranslate),
-        Animated.timing(footerOpacity, {
-          toValue: 1,
-          duration: 320,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]),
+    Animated.stagger(160, [
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      fadeUp(nameOpacity, nameTranslate, 700),
+      fadeUp(subtitleOpacity, subtitleTranslate, 500),
+      Animated.timing(footerOpacity, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
+      <WarmBackground />
+      <Animated.View style={[styles.logoWrap, { opacity: logoOpacity }]}>
+        <AppLogo size={40} />
+      </Animated.View>
+
       <View style={styles.content}>
-        <Animated.View
-          style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
-        >
-          <AppLogo size="md" />
-        </Animated.View>
         <Animated.Text
           style={[styles.appName, { opacity: nameOpacity, transform: [{ translateY: nameTranslate }] }]}
+          adjustsFontSizeToFit
+          numberOfLines={1}
         >
           Remedy
         </Animated.Text>
@@ -152,7 +144,7 @@ export default function WelcomeScreen() {
             { opacity: subtitleOpacity, transform: [{ translateY: subtitleTranslate }] },
           ]}
         >
-          A plan for your back.
+          Stop worrying about your back every time you move.
         </Animated.Text>
       </View>
 
@@ -185,31 +177,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
+    overflow: 'hidden',
+  },
+  logoWrap: {
+    alignSelf: 'flex-start',
   },
   content: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoWrap: {
-    marginBottom: 24,
+    justifyContent: 'flex-end',
+    paddingBottom: 48,
   },
   appName: {
-    fontSize: 42,
+    fontSize: 88,
+    lineHeight: 96,
     fontFamily: serifFont,
     fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 10,
-    letterSpacing: -0.5,
-    textAlign: 'center',
+    color: colors.primaryDeep,
+    letterSpacing: -3,
+    marginBottom: 12,
   },
   subtitle: {
-    fontSize: 18,
-    lineHeight: 26,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    maxWidth: 280,
+    fontSize: 24,
+    lineHeight: 32,
+    fontFamily: serifFont,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+    maxWidth: 320,
   },
   footer: {
     paddingBottom: 8,

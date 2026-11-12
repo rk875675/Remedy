@@ -11,11 +11,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart, BarChart } from 'react-native-gifted-charts';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 import { hapticSelection } from '../../lib/haptics';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -78,6 +78,127 @@ function activityBarLayout(barCount: number, chartWidth: number): {
     initialSpacing,
     fitsWithoutScroll: true,
   };
+}
+
+const PATH_H = 48;
+const PATH_MID = 22;
+const PATH_PAD = 16;
+
+// The program as a route: one stop per week on a gently rolling line.
+// Covered ground is solid, what's ahead is dashed, today is the warm stop.
+function ProgramPath({
+  weeks,
+  currentWeek,
+  complete,
+  finishLabel,
+}: {
+  weeks: number;
+  currentWeek: number;
+  complete: boolean;
+  finishLabel: string;
+}) {
+  const [width, setWidth] = useState(0);
+  const span = width - PATH_PAD * 2;
+  const stops = Array.from({ length: weeks }, (_, i) => {
+    const t = weeks > 1 ? i / (weeks - 1) : 0.5;
+    return {
+      x: PATH_PAD + span * t,
+      y: PATH_MID + Math.sin(t * Math.PI * 2) * 6,
+      reached: complete || i + 1 <= currentWeek,
+      current: !complete && i + 1 === currentWeek,
+    };
+  });
+  const currentIdx = complete ? weeks - 1 : currentWeek - 1;
+  const lastIdx = weeks - 1;
+
+  return (
+    <View
+      style={styles.pathWrap}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      accessibilityLabel={
+        complete ? 'Program complete' : `Week ${currentWeek} of ${weeks}`
+      }
+    >
+      {width > 0 ? (
+        <>
+          <Svg width={width} height={PATH_H}>
+            {stops.slice(0, -1).map((a, i) => {
+              const b = stops[i + 1]!;
+              const dx = (b.x - a.x) / 2;
+              const walked = b.reached;
+              return (
+                <Path
+                  key={`seg-${i}`}
+                  d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
+                  fill="none"
+                  strokeLinecap="round"
+                  stroke={walked ? colors.primary : colors.border}
+                  strokeWidth={walked ? 3 : 2}
+                  strokeDasharray={walked ? undefined : '1 7'}
+                />
+              );
+            })}
+            {stops.map((s, i) => {
+              if (s.current) {
+                return (
+                  <React.Fragment key={`stop-${i}`}>
+                    <Circle cx={s.x} cy={s.y} r={15} fill={colors.secondary} fillOpacity={0.14} />
+                    <Circle cx={s.x} cy={s.y} r={9} fill={colors.surface} stroke={colors.secondary} strokeWidth={2.5} />
+                    <Circle cx={s.x} cy={s.y} r={3.5} fill={colors.secondary} />
+                  </React.Fragment>
+                );
+              }
+              if (s.reached) {
+                const isEnd = complete && i === lastIdx;
+                return (
+                  <React.Fragment key={`stop-${i}`}>
+                    {isEnd ? (
+                      <Circle cx={s.x} cy={s.y} r={15} fill={colors.primary} fillOpacity={0.14} />
+                    ) : null}
+                    <Circle cx={s.x} cy={s.y} r={6.5} fill={colors.primary} />
+                    <Circle cx={s.x} cy={s.y} r={2} fill={colors.surface} />
+                  </React.Fragment>
+                );
+              }
+              return (
+                <Circle
+                  key={`stop-${i}`}
+                  cx={s.x}
+                  cy={s.y}
+                  r={5.5}
+                  fill={colors.background}
+                  stroke={colors.border}
+                  strokeWidth={2}
+                />
+              );
+            })}
+          </Svg>
+          <View style={styles.pathLabels}>
+            {currentIdx !== 0 ? (
+              <Text style={[styles.pathLabel, styles.pathLabelStart]}>Start</Text>
+            ) : null}
+            {currentIdx !== lastIdx ? (
+              <Text style={[styles.pathLabel, styles.pathLabelEnd]}>{finishLabel}</Text>
+            ) : null}
+            <Text
+              style={[
+                styles.pathLabel,
+                styles.pathLabelHere,
+                complete && styles.pathLabelDone,
+                currentIdx === 0
+                  ? styles.pathLabelStart
+                  : currentIdx === lastIdx
+                  ? styles.pathLabelEnd
+                  : { left: (stops[currentIdx]?.x ?? 0) - 45, width: 90, textAlign: 'center' as const },
+              ]}
+            >
+              {complete ? 'Finished' : "You're here"}
+            </Text>
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
 }
 
 const RANGE_DAYS: Record<PainRange | ActivityRange, number> = {
@@ -322,39 +443,36 @@ export default function ProgressScreen() {
         <Text style={styles.title}>Progress</Text>
 
         {userProgram && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Program Progress</Text>
-            <View style={styles.programProgressWeekRow}>
-              <View style={styles.programProgressCopy}>
-                <Text style={styles.progressWeek}>
-                  {isProgramComplete ? 'Complete' : `Week ${programWeek}`}
-                  {!isProgramComplete && (
-                    <Text style={styles.progressWeekDim}> of {durationWeeks}</Text>
-                  )}
-                </Text>
-                {estimatedEnd ? (
-                  <Text style={styles.estimatedEnd}>
-                    Estimated completion: {estimatedEnd}
-                  </Text>
-                ) : null}
-                {isProgramComplete ? (
-                  <Text style={styles.weeksToGo}>You finished your program!</Text>
-                ) : weeksRemaining > 0 ? (
-                  <Text style={styles.weeksToGo}>
-                    {weeksRemaining} week{weeksRemaining !== 1 ? 's' : ''} to go
-                  </Text>
-                ) : (
-                  <Text style={styles.weeksToGo}>Final week</Text>
-                )}
-              </View>
-              <MiniRing value={programWeek} total={durationWeeks} size={80} />
-            </View>
+          <View style={styles.programBlock}>
+            <Text style={styles.kicker}>Program</Text>
+            <Text style={styles.heroFigure}>
+              {isProgramComplete ? 'Complete' : `Week ${programWeek}`}
+              {!isProgramComplete && (
+                <Text style={styles.progressWeekDim}> of {durationWeeks}</Text>
+              )}
+            </Text>
+            <Text style={styles.weeksToGo}>
+              {isProgramComplete
+                ? 'You finished your program!'
+                : weeksRemaining > 0
+                ? `${weeksRemaining} week${weeksRemaining !== 1 ? 's' : ''} to go`
+                : 'Final week'}
+              {estimatedEnd ? (
+                <Text style={styles.estimatedEnd}>{`  ·  Est. finish ${estimatedEnd}`}</Text>
+              ) : null}
+            </Text>
+            <ProgramPath
+              weeks={durationWeeks}
+              currentWeek={programWeek}
+              complete={isProgramComplete}
+              finishLabel={`Week ${durationWeeks}`}
+            />
           </View>
         )}
 
         {userProgram && !isProgramComplete && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>This Week</Text>
+            <Text style={styles.cardTitle}>This week</Text>
             <View style={styles.programProgressWeekRow}>
               <View style={styles.programProgressCopy}>
                 <Text
@@ -418,7 +536,7 @@ export default function ProgressScreen() {
         {/* Pain Trend */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Pain Trend</Text>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Pain trend</Text>
             <View style={styles.rangeRow}>
               {(['2w', '1m', '3m'] as const).map((r) => (
                 <TouchableOpacity
@@ -573,25 +691,72 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 16,
+    letterSpacing: -0.1,
+  },
+  programBlock: {
+    marginBottom: 24,
+  },
+  pathWrap: {
+    marginTop: 18,
+    height: PATH_H + 20,
+  },
+  pathLabels: {
+    position: 'absolute',
+    top: PATH_H + 2,
+    left: 0,
+    right: 0,
+    height: 18,
+  },
+  pathLabel: {
+    position: 'absolute',
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  pathLabelStart: {
+    left: 0,
+  },
+  pathLabelEnd: {
+    right: 0,
+    textAlign: 'right',
+  },
+  pathLabelHere: {
+    color: colors.secondary,
+  },
+  pathLabelDone: {
+    color: colors.primary,
+  },
+  kicker: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  heroFigure: {
+    fontFamily: serifFont,
+    fontSize: 36,
+    lineHeight: 42,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 20,
-    letterSpacing: -0.3,
+    letterSpacing: -0.6,
+    marginBottom: 4,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 20,
     marginBottom: 16,
-    ...shadows.low,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   cardHeaderRow: {
@@ -607,7 +772,7 @@ const styles = StyleSheet.create({
   rangePill: {
     paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: radius.chip,
+    borderRadius: 999,
     borderWidth: 1.5,
     borderColor: colors.border,
   },

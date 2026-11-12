@@ -3,7 +3,7 @@
     "name": "Remedy",
     "slug": "remedy",
     "scheme": "remedy",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -27,7 +27,7 @@
       "usesAppleSignIn": true,
       "appleTeamId": "UB5Y6U28G5",
       "bundleIdentifier": "com.remedyappco.ios",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

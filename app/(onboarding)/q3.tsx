@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { PersonalizationHint } from '../../components/onboarding/PersonalizationHint';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
-import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
 import { useOnboardingStepCompletion } from '../../lib/analytics/onboardingSteps';
@@ -26,7 +25,6 @@ export default function Q3Screen() {
   const { answers, setAnswer } = useOnboarding();
   useTrackOnboardingStep('q3');
   const completeStep = useOnboardingStepCompletion();
-  const [nerveNoteOpen, setNerveNoteOpen] = useState(false);
   const [nerveNoteSeen, setNerveNoteSeen] = useState(
     () => (answers.pain_type ?? []).includes('nerve'),
   );
@@ -49,12 +47,12 @@ export default function Q3Screen() {
     });
     if (val === 'nerve' && !isDeselect && !nerveNoteSeen) {
       setNerveNoteSeen(true);
-      setNerveNoteOpen(true);
     }
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+      <WarmBackground />
       <PersonalizingLayout currentStep="q3" compact>
         <View style={styles.content}>
           <Text style={styles.heading}>What does it feel like?</Text>
@@ -66,7 +64,6 @@ export default function Q3Screen() {
                 label={opt.label}
                 image={PAIN_TYPE_IMAGES[opt.value]}
                 photoSize={80}
-                hintLift={opt.value === 'nerve' ? 14 : 6}
                 selected={selected.includes(opt.value)}
                 onPress={() => toggle(opt.value)}
                 hint={
@@ -75,7 +72,6 @@ export default function Q3Screen() {
                       field="pain_type"
                       value="nerve"
                       copy={NERVE_NOTE}
-                      numberOfLines={3}
                       color={colors.secondary}
                     />
                   ) : null
@@ -99,29 +95,6 @@ export default function Q3Screen() {
         }}
         disabled={selected.length === 0}
       />
-
-      <Modal
-        visible={nerveNoteOpen}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setNerveNoteOpen(false)}
-      >
-        <View style={styles.noteRoot}>
-          <Pressable style={styles.noteDim} onPress={() => setNerveNoteOpen(false)} />
-          <View style={styles.noteCard}>
-            <Text style={styles.noteTitle}>If pain travels or tingles</Text>
-            <Text style={styles.noteBody}>{NERVE_NOTE}</Text>
-            <Pressable
-              style={styles.noteButton}
-              onPress={() => setNerveNoteOpen(false)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.noteButtonText}>Got it</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -154,48 +127,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.textTertiary,
-  },
-  noteRoot: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  noteDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(28, 28, 30, 0.36)',
-  },
-  noteCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-    ...shadows.low,
-  },
-  noteTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.2,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  noteBody: {
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  noteButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.button,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  noteButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
 });

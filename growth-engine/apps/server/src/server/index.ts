@@ -12,7 +12,7 @@ import { BRAND, env, ASSETS_DIR, OUTPUT_DIR, WEB_DIST_DIR, platformConfigured, r
 import { buildInReviewShorts, generateBatch } from "../generation/index.js";
 import { completeManualPost, syncManualCurrent } from "../manual/queue.js";
 import { ctaLayoutLabel, parseVariation, shotScaleLabel } from "../generation/variations.js";
-import { resolveBed } from "../generation/short.js";
+import { shortBedLabel } from "../generation/short.js";
 import { llmRateStats } from "../generation/llm.js";
 import { publishPost, publishDue, handoffScheduled, publishDueVideoFollowUps, sendApprovedToDrafts } from "../publish/index.js";
 import { emailFromHeaders, resolveIdentity } from "../ugc/role.js";
@@ -43,12 +43,10 @@ import {
 import { assignSchedule, effectiveDailyCap, rampCap } from "../publish/scheduler.js";
 import { buildAuthUrl, disconnectTikTok, exchangeCode, tiktokConnected } from "../publish/tiktok.js";
 import {
-  brightbeanPublicStatus,
-  connectBrightbean,
-  disconnectBrightbean,
   publisherReady,
-  refreshBrightbeanAccounts,
-} from "../publish/brightbean.js";
+  refreshZernioAccounts,
+  zernioPublicStatus,
+} from "../publish/zernio.js";
 import { pullAnalytics } from "../analytics/pull.js";
 import { runDiagnosis } from "../learning/diagnosis.js";
 import { runDailyCycle } from "../cron/daily-cycle.js";
@@ -66,6 +64,8 @@ import {
 } from "../learning/experiments.js";
 import { getAssetUsage, getColdAssets } from "../generation/diversity.js";
 import { getCycleState, advanceRounds } from "../learning/rounds.js";
+import { startEditorWatch } from "../editor/cut.js";
+import { registerEditorRoutes } from "../editor/routes.js";
 import { publishDashboardSnapshot } from "../publish/snapshot.js";
 import { invalidateCropConfig, slideFileName } from "../generation/composer.js";
 import {
@@ -203,9 +203,10 @@ const OPERATOR_WRITE_PREFIXES = [
   "/api/rounds/",
   "/api/settings",
   "/api/manual",
-  "/api/brightbean/",
+  "/api/zernio/",
   "/api/tiktok/",
   "/api/assets/",
+  "/api/editor",
 ];
 
 app.use("/api/*", async (c, next) => {
@@ -254,16 +255,13 @@ function postWithSlides(post: typeof posts.$inferSelect) {
     .limit(8)
     .all();
   const variation = parseVariation(post.variation);
-  const bed = resolveBed(variation.shortBed);
   return {
     ...post,
     hookText: hook?.text ?? "",
     hookSource: hook?.source ?? "generated",
     experiment: experimentPartner(post.id),
     shortBed: variation.shortBed ?? null,
-    shortBedLabel: !variation.shortBed || variation.shortBed === "silent" || variation.shortBed === "none" || bed?.id === "silent"
-      ? "No sound"
-      : bed ? `${bed.title} (${bed.mood})` : variation.shortBed,
+    shortBedLabel: shortBedLabel(post.id, variation.shortBed),
     shotScale: variation.shotScale,
     shotScaleLabel: shotScaleLabel(variation.shotScale),
     ctaLayout: variation.ctaLayout ?? null,
@@ -531,12 +529,12 @@ app.get("/api/insights/signals", (c) => {
 // ---- Settings ----
 
 const SettingsBodySchema = z.record(z.unknown());
-const SECRET_SETTING_KEYS = new Set(["tiktok_tokens", "brightbean_token"]);
+const SECRET_SETTING_KEYS = new Set(["tiktok_tokens"]);
 
 function settingsPayload(): Record<string, unknown> {
   const db = getDb();
   const rows = db.select().from(settings).all();
-  const bb = brightbeanPublicStatus();
+  const zn = zernioPublicStatus();
   const out: Record<string, unknown> = {
     postsPerDay: env.POSTS_PER_DAY,
     generateAt: `4:30 AM ${env.CRON_TZ}`,
@@ -556,7 +554,7 @@ function settingsPayload(): Record<string, unknown> {
     tiktokPostMode: env.TIKTOK_POST_MODE,
     r2Configured: r2Configured(),
     tiktokAppConfigured: publisherReady("tiktok"),
-    tiktokConnected: bb.accounts.some((a) => a.mapped === "tiktok") || tiktokConnected(),
+    tiktokConnected: zn.accounts.some((a) => a.mapped === "tiktok") || tiktokConnected(),
     tiktokNativeConnected: tiktokConnected(),
     tiktokNativeAppConfigured: Boolean(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
     tiktokAuthUrl: env.TIKTOK_CLIENT_KEY ? buildAuthUrl() : "",
@@ -565,7 +563,7 @@ function settingsPayload(): Record<string, unknown> {
     youtubeConfigured: publisherReady("youtube"),
     geminiConfigured: Boolean(env.GEMINI_API_KEY),
     appStoreUrl: BRAND.appStoreUrl,
-    brightbean: bb,
+    zernio: zn,
     audience: rows.find((r) => r.key === "audience")?.value ?? null,
     prelaunch: env.PRELAUNCH,
     manualPosting: syncManualCurrent(),
@@ -594,36 +592,17 @@ app.put("/api/settings", async (c) => {
   return c.json({ ok: true });
 });
 
-const BrightbeanConnectSchema = z.object({ token: z.string().min(12) }).strict();
-
-app.post("/api/brightbean/connect", async (c) => {
-  const body = BrightbeanConnectSchema.safeParse(await c.req.json().catch(() => null));
-  if (!body.success) return c.json({ ok: false, error: "Body must be { token }" }, 400);
+// Zernio's API key lives only in ZERNIO_API_KEY (.env). Accounts are connected in the Zernio dashboard;
+// this route just re-reads which ones are connected.
+app.post("/api/zernio/refresh", async (c) => {
   try {
-    const cache = await connectBrightbean(body.data.token);
+    const cache = await refreshZernioAccounts();
     syncSnapshot();
-    return c.json({ ok: true, workspace: cache.workspaceName, accounts: cache.accounts });
+    return c.json({ ok: true, accounts: cache.accounts });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "BrightBean connect failed";
-    return c.json({ ok: false, error: message.replace(/bb_studio_[A-Za-z0-9_-]+/g, "bb_studio_[redacted]") }, 400);
+    const message = err instanceof Error ? err.message : "Zernio refresh failed";
+    return c.json({ ok: false, error: message.replace(/sk_[A-Za-z0-9_-]{16,}/g, "sk_[redacted]") }, 400);
   }
-});
-
-app.post("/api/brightbean/refresh", async (c) => {
-  try {
-    const cache = await refreshBrightbeanAccounts();
-    syncSnapshot();
-    return c.json({ ok: true, workspace: cache.workspaceName, accounts: cache.accounts });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "BrightBean refresh failed";
-    return c.json({ ok: false, error: message.replace(/bb_studio_[A-Za-z0-9_-]+/g, "bb_studio_[redacted]") }, 400);
-  }
-});
-
-app.post("/api/brightbean/disconnect", (c) => {
-  disconnectBrightbean();
-  syncSnapshot();
-  return c.json({ ok: true });
 });
 
 // ---- TikTok OAuth (one-time connect) ----
@@ -1301,6 +1280,8 @@ app.get("/api/shorts/:id", (c) => {
   });
 });
 
+registerEditorRoutes(app);
+
 app.get("/slides/*", (c) => {
   const rel = c.req.path.replace(/^\/slides\//, "");
   const abs = path.join(OUTPUT_DIR, "posts", rel);
@@ -1332,7 +1313,7 @@ if (!env.DISABLE_CRON) {
     },
     { timezone: env.CRON_TZ },
   );
-  // Publisher: hand future slots to BrightBean now; send anything already due.
+  // Publisher: hand future slots to Zernio now; send anything already due.
   cron.schedule(
     "*/15 * * * *",
     () => {
@@ -1349,10 +1330,12 @@ if (!env.DISABLE_CRON) {
   );
 }
 
+startEditorWatch();
+
 serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`Remedy Growth Engine running at http://localhost:${info.port}`);
   syncLibraryOverridesFromR2()
-    .then(() => refreshBrightbeanAccounts().catch(() => null))
+    .then(() => refreshZernioAccounts().catch(() => null))
     .then(() => handoffScheduled().catch((err) => console.error("startup handoff failed:", err)))
     .then(() => publishDue().catch((err) => console.error("startup publishDue failed:", err)))
     .then(() => syncSnapshot())

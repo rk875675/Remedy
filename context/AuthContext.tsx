@@ -6,6 +6,7 @@ import { clearPendingPromo } from '../lib/pendingPromo';
 import { clearCachedGateState } from '../lib/entitlements';
 import { flushLegalAcceptances } from '../lib/legalAcceptance';
 import { clearRememberedDisplayName } from '../lib/greeting';
+import { clearCheckinDraft } from '../lib/nextProgram';
 
 // Upper bound on the initial session restore before the app stops blocking on it. Long
 // enough that a slow-but-working network still restores the session before the splash
@@ -186,6 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Same leak for a stashed promo code: left behind, the NEXT account on this
     // device would redeem it (burning the slot on the wrong user).
     await clearPendingPromo();
+    // An unsent program check-in can hold free-text feedback.
+    await clearCheckinDraft();
     // AnalyticsBridge resets analytics identity off the session change below.
     setSession(null);
   }
@@ -216,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore — local state is cleared below regardless.
     }
     await clearPendingPurchase();
+    await clearCheckinDraft();
     if (deletedUserId) await clearCachedGateState(deletedUserId);
     // AnalyticsBridge resets analytics identity off the session change below.
     setSession(null);

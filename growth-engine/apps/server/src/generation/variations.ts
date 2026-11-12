@@ -67,6 +67,17 @@ export const VariationSchema = z
     videoFollowUpDone: z.boolean().optional(),
     /** Only platforms whose slideshow succeeded — never send the Short where the carousel failed. */
     videoFollowUpPlatforms: z.array(z.enum(["tiktok", "instagram", "facebook"])).optional(),
+    /**
+     * Which brand this post publishes to. "1" is the main accounts.
+     * "2" is the second-account hook twin. Unset publishes as main.
+     */
+    zernioSlot: z.enum(["1", "2"]).optional(),
+    /** Set on the original: the second-account post id. */
+    accountTwinId: z.number().int().optional(),
+    /** Set on the twin: the original post id. */
+    accountTwinOf: z.number().int().optional(),
+    /** Recurring person on this slideshow. Unset keeps the mixed-photo style. */
+    characterId: z.string().optional(),
   })
   .strict();
 

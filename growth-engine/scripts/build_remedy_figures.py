@@ -917,5 +917,4 @@ def upsert_manifest(written: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    rows = write_svgs()
-    upsert_manifest(rows)
+    raise SystemExit("Remedy original figures were removed. Do not regenerate custom/*.svg.")

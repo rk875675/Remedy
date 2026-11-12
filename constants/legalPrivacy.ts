@@ -7,7 +7,7 @@
 import type { LegalBlock } from './legalTerms';
 import { LEGAL_EMAIL } from './legalTerms';
 
-export const PRIVACY_LAST_UPDATED = 'September 10, 2026';
+export const PRIVACY_LAST_UPDATED = 'October 15, 2026';
 
 export const PRIVACY_BLOCKS: LegalBlock[] = [
   {
@@ -177,7 +177,7 @@ export const PRIVACY_BLOCKS: LegalBlock[] = [
   {
     type: 'p',
     parts: [
-      { text: 'The Service is intended for people 16 and older and requires a 16+ attestation. We do not knowingly collect personal information from anyone under 16, and never from children under 13. If you are a parent or guardian and believe your child has provided us information, contact ' },
+      { text: 'The Service is intended for people 17 and older and requires a 17+ attestation. We do not knowingly collect personal information from anyone under 17, and never from children under 13. If you are a parent or guardian and believe your child has provided us information, contact ' },
       { text: LEGAL_EMAIL, link: 'email' },
       { text: ' and we will delete it.' },
     ],

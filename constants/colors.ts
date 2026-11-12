@@ -31,7 +31,7 @@ export const colors = {
 
 /**
  * Serif used only for headings on emotional screens
- * (Welcome, Education, Session Complete, Program Complete).
+ * (Welcome, Education, Session Complete, Program Complete) and the Home hero title.
  * Never for UI chrome.
  */
 export const serifFont = 'Georgia';

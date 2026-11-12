@@ -2,7 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimitFixedWindow } from '../_shared/ratelimit.ts';
 import { answersSchema, applyProgramAnswersRequestSchema } from '../_shared/assignment/schema.ts';
-import { buildPlan, type Answers, type CatalogExercise } from '../_shared/assignment/engine.ts';
+import {
+  buildPlan,
+  clampProgressionLevel,
+  type Answers,
+  type CatalogExercise,
+} from '../_shared/assignment/engine.ts';
 import { loadAssignmentContext } from '../_shared/assignment/loadContext.ts';
 import {
   classifyAnswerDiff,
@@ -79,7 +84,9 @@ Deno.serve(async (req: Request) => {
         .maybeSingle(),
       supabase
         .from('user_programs')
-        .select('active_plan_id, current_week, current_session, applied_answers, pending_apply_week')
+        .select(
+          'active_plan_id, current_week, current_session, applied_answers, pending_apply_week, progression_level',
+        )
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
@@ -185,6 +192,7 @@ Deno.serve(async (req: Request) => {
           pain_trigger: baseline.pain_trigger,
           main_goal: baseline.main_goal,
         },
+        progressionLevel: clampProgressionLevel(upRow.progression_level),
         ctx,
       });
       if (!spw.ok) return json({ error: spw.error }, 500);
@@ -336,6 +344,7 @@ async function patchSessionsPerWeek(args: {
   oldSpw: number;
   newSpw: number;
   answers: AnswerSnapshot;
+  progressionLevel: number;
   ctx: Ctx;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const {
@@ -348,6 +357,7 @@ async function patchSessionsPerWeek(args: {
     oldSpw,
     newSpw,
     answers,
+    progressionLevel,
     ctx,
   } = args;
   if (newSpw === oldSpw) return { ok: true };
@@ -401,6 +411,7 @@ async function patchSessionsPerWeek(args: {
       template: ctx.template,
       replacements: ctx.replacements,
       startWeek: currentWeek,
+      progressionLevel,
     });
     const weeks = Array.from({ length: durationWeeks - currentWeek + 1 }, (_, i) => currentWeek + i);
     const slots = sessionSlotsToAdd(weeks, oldSpw, newSpw, currentWeek, currentSession);

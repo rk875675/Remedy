@@ -321,7 +321,7 @@ These govern every backend and client decision. When in doubt, default to these.
 - [ ] App Store Connect account set up?
 - [ ] Health law attorney review scheduled?
 - [x] Paywall placement — end of onboarding, after program match screen ✓
-- [ ] What happens when a user completes the full program? (Loop it? Unlock next level?)
+- [x] What happens when a user completes the full program? ✓ Two choices on the program-complete screen: **Build my next program** (a 6-question check-in — pain vs start, difficulty, focus, area, days/week, equipment — plus an optional note; the answers rebuild the program and move its progression level) or **Level up my current plan** (same answers, one progression level up: the weekly intensity target shifts one tier and strength/activation reps rise ~10%, capped at 15). A "worse" pain report never raises the level. Completed sessions stay in history.
 - [x] Video hosting — Cloudflare Stream for production, Supabase Storage for dev placeholders ✓
 - [x] Bundle ID — confirmed as `com.remedyappco.ios`
 

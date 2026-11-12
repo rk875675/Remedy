@@ -29,10 +29,38 @@ If a deploy just ran and the live site looks stale:
 
 ## Nav
 
-Review · Images · SVGs · Library · Studio · Engine · Settings
+Formats · Memes · Review · Edit · Images · SVGs · Library · Insights · Studio · UGC · Engine · Settings
+
+- **Memes** — `#memes`. Review, Parts, and Library. Parts (`#memes/parts`) browses backgrounds, reactions, lines, and music from `assets/memes/catalog.json`. Copy title, caption, and description, then Save to Photos. Reject moves a meme into Library. Videos live in R2 `growth/memes/`.
+
+- **Formats** — `#formats`. Phone inbox for TikTok/Reel links used as format references. Stored in R2 `growth/format-refs.json`. Operator only. Wallpaper-meme frame is `planMemeReel` in `apps/server/src/generation/meme.ts` (8s, 9:16, wallpaper, lower-half reaction, 2–4 line caption, music bed). Independent search and mixes are `findMemes` / `mixMemes` in `meme-mix.ts`, from original captions and owned slots in `assets/memes/`. CLI: `npm run cli -w apps/server -- meme`. The rest of this paragraph covers those wallpaper memes only. Format memes (library background + GIF + caption + the format's sound, built from `assets/memes/builds/*.json`) follow `.cursor/skills/meme-make/SKILL.md` and may use the format's sound and well-known Giphy GIFs at the user's direction. For wallpaper memes, do not download or reuse the reference clips, GIFs, or audio. Wallpapers in `assets/memes/wallpapers` are CC0 photos listed in `assets/memes/sources.json`. Reaction GIFs must be CC0 or another commercial license named in that file. `side-eye.gif` is the CC0 eye-roll. Do not add viral meme GIFs, TikTok clips, or movie stills. Music uses the CC beds already in `assets/audio/`.
+
+- **Edit** — founder videos at `#edit`. One video holds ordered clips (talking head, screen, voiceover). Originals upload in 8MB parts to R2 `growth/editor/`. No transcode on ingest. Finishing one as a Reel (captions, header, zooms) follows `.cursor/skills/edit/SKILL.md`.
 
 - **Images** — screenshots; Crop tab; Upload from Photos → local + R2 `growth/screenshots/`
 - **SVGs** — carousel illustrations
+
+## Posting cadence
+
+- `planSchedule` in `apps/server/src/publish/scheduler.ts`: each day draws 3–8 slideshows for YouTube @remedyrecoveries (`DAILY_POSTS_MIN/MAX`). Only one of those also goes to TikTok @remedy.recoveries. Stories does not get slideshows or other generated photo posts: twins are not scheduled, and `quietStoriesSlideshows` cancels any already queued on TikTok @remedy.stories or Instagram @remedy.stories. Facebook is paused, and YouTube @remedystories is paused. 8am–10pm Central, about 95+ min apart, no round minutes. TikTok @remedy.recoveries also gets that day's meme (2 posts). TikTok @remedy.stories gets the meme only. Instagram @remedy.stories does not get memes, slideshows, or Recoveries copies. Its grid is its own (`assets/ig/stories`, scheduled by `_ig-stories.ts`): closer photos, a warm grade, one small sans line, no wordmark and no white box. The boxed white caption exists only on the Stories A/B twin, which is an experiment record and is not posted.
+- Windows task "Remedy Growth Autopilot" runs `scripts/autopilot.ps1` daily at 6:40am (catches up after sleep): stats pull, `schedule 7`, hand off to Zernio, then meme catch-up/retry/cancel/views. Log: `growth-engine/logs/autopilot.log`.
+- Windows task "Remedy Meme Week" runs `scripts/meme-week.ps1` Sundays 8pm: one format meme a day per account group for the next 7 days, A/B on caption only. Never posts to the Remedy Recoveries Instagram, Instagram @remedy.stories, Facebook, or YouTube @remedystories. Details: `.cursor/skills/meme-make/SKILL.md`.
+- Dry run: `npm run cli -w apps/server -- schedule-preview 7`. Copy check: `copy-audit` (flags slogan / non-concrete body slides).
+- YouTube Shorts use the shipping beds in `assets/audio/` (the widely played Kevin MacLeod CC BY 4.0 tracks: Monkeys Spinning Monkeys, Electrodoodle, Sneaky Snitch, Fluffing a Duck, and the other beds marked `upbeat`). Credit is appended to the description. Legacy beds stay on disk only for posts that already name them. `shortBed: "none"` is the only way to post silent. Never upload a song that is not in this CC catalog.
+
+## Main Instagram is curated (Nov 1)
+
+`@remedyrecoveries` on Instagram is curated: only `_ig-main.ts` posts there, from a reviewed schedule. `ZERNIO_CURATED` (default `instagram:remedyrecoveries`) removes it from `accountsFor`, so the engine never auto-posts there. Those posts stay on @remedyrecoveries. They are not copied to Instagram @remedy.stories or to TikTok. Facebook and YouTube @remedystories are paused. Do not remove it from `ZERNIO_CURATED` unless the user asks.
+
+- The grid is one look: `src/generation/ig-static.ts` (one grade on every photo, Georgia line, small REMEDY mark, bone / forest / ink cards). Plan in `assets/ig/plan.json` (posting order); render with `npx tsx src/generation/_ig-statics.ts` → `output/ig/` (posts, `grid-preview.jpg`, `captions.txt`). Look at the grid preview before posting.
+- Voice (user feedback Nov 1: choppy lines read as AI): one natural sentence you would say out loud, one concrete detail, a little dry humor (Headspace calm, Duolingo setup and punchline). No two-beat fragments ("X. Your back Y."), no lists of three, no "not X but Y", no em dashes, no slogans. Captions follow the same rules.
+- Purpose (user, Nov 10): both Instagram grids exist to get views, and every post is about back pain. Each line calls out a feeling people with back pain recognize (hiding it, bracing, planning a bend, being slower, feeling too young for this). No neutral object or mood lines that would fit any account ("kettle on, leaning on the counter" is out; "leaning on the counter so it looks casual" is in).
+- Type-only cards are rare: about 1 in 12 posts, never two in a row. Photo posts carry the grid.
+- Photos: CC0 with an entry in `assets/ig/sources.json`, or generated into `assets/ig/photos/gen/` from a `shot` (objects and places, plus the founder). The only generated person allowed is the founder, Rahul (`assets/characters/rahul/` anchor + refs), in some carousels, not all (about 1 in 4). Every photo is used once; no two slides on the grid may look alike.
+- Look (user feedback Nov 1: grey, over-saturated and fake read as AI): bright, true-to-life phone color, no haze or film look. The grade only lifts dark photos; no saturation boost or contrast stretch. Founder carousels (travel, desk-day, lunch-walk, couch-desk, gym-confidence) are off the schedule until the user fixes his likeness; do not schedule founder posts without his OK. Founder shots always pass his real photos (`assets/characters/rahul/real/`) as refs and vary `hair`/`outfit`. Every generated photo, statics included, needs a `shot`. Leave plain wall or sky above his head (head below about 40% of the frame) so the Georgia line never touches him; `focus: "north"` on a slide buys a little more room.
+- Carousels (`assets/ig/carousels.json`): photo cover with swipe arrow, 4 stills, then one closing slide (a library `crop_*` app slide quoting only what the screen shows, or a rare share card). `_ig-statics.ts --prompts` prints briefs for missing photos, `--import <dir> [--force]` copies them in, `--only <id>` renders one.
+- Schedule: `assets/ig/schedule.json` (Central time; one static a day plus 1 to 2 carousels, odd minutes, slots vary day to day). `src/publish/_ig-main.ts --plan | --apply | --status | --cancel <id> | --page` schedules on Zernio (ids in `assets/ig/posted.json`; to swap renders, `--cancel` each id, then `--apply`, since the idempotency key hashes the rendered files) and rebuilds `apps/web/public/ig/` (https://slide.remedyrecoveries.com/ig/). On Windows run `npm run deploy` in a hidden window; wrangler flashes console windows otherwise.
+- `src/publish/_ig-curate.ts --plan | --apply` lists live/scheduled posts for the handle and removes Instagram legs still queued in Zernio (backs up to `output/ig-curate/`).
 
 ## Screenshots — library crops only (no shortcuts)
 
@@ -53,6 +81,138 @@ Do **not** edit CTA layouts, copy, atmospheres, or the four locked screenshots u
 - Locked shots only: `progress.png`, `img_0525.png`, `img_0539.png`, `img_0540.png` (`CTA_SHOT_LOCKED` in `screenshots.ts`).
 - Generate may **pick** among those 7. Do not add options, rewrite lines, swap in `crop_*` / other library shots, or restyle `ctaAtmosphereSvg`.
 - Do not run `cta-review` unless the user names that command or asks to remake CTA teasers.
+
+## References are starting points (Oct 31)
+
+A reference carousel tells us a format works for someone. It does not tell us the ceiling for ours. Copy the mechanics (one line per slide, a quantity in every label, four instances of one idea), then **test everything else**: people or no people, selfie or from behind, one face per slide, colour or grey, cover with or without labels, which feeling. Decks that only mirror the reference leave the results on the table.
+
+Locked (safety, product, identity):
+- Back-pain claims stay personal narrative; no outcome promises; never frame pushing through 10/10 pain.
+- The type system (`NATIVE_TYPE`), the locked last-slide CTA, library-only app crops.
+- The real-reference photo recipe below (it is what keeps photos from looking AI), and no readable fake text, logos or digits in a photo.
+
+Everything else is a default with a reason, and a deck may break it on purpose. Write the reason in the deck's `title`/`caption` work notes so the result can be read back against it.
+
+## Generated photos — the shots engine (Oct 31)
+
+**Required for every new deck** (`_character-batch.ts` fails a deck without `postId` that has no `shots`, or a photo missing from them). Every deck photo is specified in the deck JSON as a **shot**, compiled to an exact brief by `src/generation/shots.ts`, and generated from that brief verbatim. The spec is the creative work; the realism recipe is applied by the compiler every time and cannot be forgotten or half-remembered. The same spec gives the same brief on any machine, for any model.
+
+```json
+"shots": [{
+  "file": "q/ray-q1-a2.jpg", "aspect": "3:4",
+  "scene": "The open driver's door of an older pickup in a plain driveway, faded paint, mud on the wheel well.",
+  "person": "behind", "doing": "half out of the cab, one hand on the door frame, the other pressed flat to his lower back",
+  "light": "overcast-out", "textZone": "bottom", "sameRoomAs": "q/ray-q1-b.jpg", "wears": "…", "notes": "…"
+}]
+```
+
+- `person`: `none` | `hands` | `feet` | `behind` | `profile` | `mid` (whole figure, small plain face) | `face` (candid, arm-and-a-half away, face under a third of the frame). Anything but `none` puts `assets/characters/<id>/anchor.jpg` **first** in the references, then the character's real-skin reference, then the light reference. The anchor must be first whenever any body part shows: a hands shot made without it came out with the wrong skin tone once.
+- `light`: `window-side` | `dim-morning` | `overcast-out` | `low-sun` | `evening-lamp` | `car-day` | `fluorescent` | `garage-door`. Each maps to one fixed phrase and one real, non-AI photo in `assets/pins/refs/` for light and colour, and picks the indoor / outdoor / car "lived in" clause (an indoor clause outdoors put a phone charger on the patio once).
+- `textZone`: where the slide text will sit. Single photos `top`; split halves `middle`; quad top cells `bottom`, bottom cells `top`. The compiler phrases it as camera position and headroom, never as "keep a band empty": asked for a calm band, the model paints a flat plane with a hard edge.
+- `sameRoomAs`: another photo in the character folder, passed last as "same place, only the camera moved". Keeps rooms consistent across a deck on the first try.
+- Characters and their default clothes and skin references are in `CHARACTERS` in `shots.ts`. Add a character there before writing their first deck.
+- The spine the compiler always adds: "Candid documentary photo, Fujifilm, 35mm" · the light phrase · slight grain, a touch soft, slightly off-center, muted colors, not retouched, not a stock photo, not an ad · no readable text, labels, packaging words, logos or digits · the reference roles.
+
+Commands (run from `growth-engine/apps/server`):
+
+- `npx tsx src/generation/_shot-prompts.ts <deck.json|dir> [--missing] [--only <prefix>] [--json]` prints each shot's output name, aspect, ordered references with roles, and the full prompt. Paste them into the image tool unchanged, one call per shot, in that reference order, with `filename` = the printed name and `aspect_ratio` = the printed aspect.
+- `npx tsx src/generation/_shot-prompts.ts <deck.json|dir> --import <generated-dir> [--force]` copies the results into the character folder and checks size (≥700px short side) and aspect against the spec.
+- `_character-batch.ts --check` then fails on: a photo missing, wrong orientation for its slot, too small, or not matching its shot's aspect; and notes a photo with no `shots` entry, a deck with no person in any shot, or a quad deck with the person in fewer than a quarter of its cells.
+
+Look at every generated photo before importing. Reject and regenerate (same brief, or a sharper `scene`/`doing`) on: a flat band or hard horizontal edge, fused fingers, floating objects, readable text or digits, glossy skin, a prop that does not belong in that place. Need a new light reference? Download a free Unsplash/Pexels photo with a real camera in its EXIF into `refs/`; never an AI or studio stock shot.
+
+## Playbook: 80% exploit, 20% explore (Nov 10)
+
+Slideshow batches (Shorts, TikTok) are planned by `src/learning/playbook.ts`, not by a hand-written winner list. Memes are out of scope.
+
+- **Plan first:** `npx tsx src/learning/_playbook.ts` (report: each arm's YouTube/TikTok hit rate, median views, P(best), test status) and `--plan N [--seed S]` (writes `output/playbook/plan-<date>.json`). Build the batch from the plan.
+- **How it decides:** a hit is a post in the top quarter of its account over the last 45 days. Each arm (hookKind movement/situation/product/other, format, cropKind exercise/plan, length 4/5/6-7/8+) gets a Beta(1,3) posterior; YouTube weighs 0.75, TikTok 0.25; TikTok posts under 10 views and Stories twins are skipped. 80% of slots are Thompson draws over arms with at least 3 mature YouTube posts, so winners get most slots but keep being re-tested. 20% are explore slots, drawn from `assets/playbook/tests.json`; in an explore slot only the tested arms change, everything else is exploit. There is no format floor (dropped by the user Nov 10); format is a Thompson arm like the others and quad gets data through its tests. The hook caps (product-doubt and morning hooks at most 1 in 10) still apply on top.
+- **Explore-only rule exceptions (user-approved Nov 10):** `plan.arms.structure: "two-slide"` allows exactly two beats, cover then the app slide (locked CTA still appended). `plan.arms.cta: "pinned-comment"` with deck `"ctaIn": "pinned-comment"` allows zero app slides and no CTA slide; the YouTube Short gets the locked CTA headline plus the App Store link as its pinned first comment (`pinnedCtaComment`, Zernio `platformSpecificData.firstComment`). `_character-batch.ts` rejects both outside an explore slot.
+- **Every new deck JSON carries `plan`:** `{ "slot": "exploit" | "explore", "test"?: "<tests.json id>", "arms": { ... } }`. `_character-batch.ts` fails an explore deck whose test id or arms don't match `tests.json`, and notes a deck with no plan.
+- **Tests:** add ideas to `tests.json` (Zod-strict: id, hypothesis, source, arms, brief, minPosts, status open/paused/closed). A test is winning at P ≥ 0.8 of beating exploit after `minPosts`, losing at ≤ 0.2. Winning arms become ordinary arms the next plan can exploit; close losers. Never hard-code a winner into the copy rules.
+- **Also driven by results:** the Shorts bed (`pickShortBedByResults`, upbeat CC beds only) and the one-a-day TikTok pick in the scheduler (`pickTiktokIndex`, falls back to the spread pick).
+
+## Character decks (one person, one day)
+
+`variation.characterId` posts use `renderNativePhotoSlide` / `renderNativeScreenshotSlide` with photos in `assets/characters/<id>/`.
+
+- **Headline only.** Never a sub line under the header on a photo or app slide.
+- **People in the photos, by default.** Faces lift likes about 38% and comments about 32% on Instagram photos (Bakhshi et al., CHI 2014, 1.1M photos; the number of faces did not matter), and face-on-camera short video runs about 1.9x the median of faceless (thecontentlabs, 7,431 videos). Photo-dump composition guides land on about half the frames with the person: one face or mid shot, one from behind or walking, one looking away; the rest objects and places. So: roughly half of a deck's photos show the character (`person` ≠ `none`), at least one with the face visible, the camera different every time (selfie, mid, from behind, hands, feet, first-person, object, place). The old caps ("face at most twice per deck", "1 in 3 covers no-face") are gone; they were a reaction to fake-looking close skin, which the shots engine handles with the real-skin reference and the `face` framing instead.
+- **Vary the camera, not just the subject.** Never two mirror selfies in a deck, at most one mirror shot per batch, no two shots of the deck with the same framing.
+- **No generated full-body exercise frames.** The move is shown by the real app exercise video crop on the one app slide. A person lying on a mat or holding a bed frame between reps is fine; a demonstrated rep is not.
+- **The result slide is never a re-shot of the cover** (same pose, new clothes). Show the character doing the thing they got back (on the garage floor, at the raised bed) or a first-person / object shot.
+- **Faces come from the shots engine:** `person: "face"` or `"mid"` puts the anchor first and the real-skin reference second automatically. Close skin is still where generated photos look most fake, so the `face` framing keeps the face under a third of the frame and an arm and a half away; a filled-frame portrait is a deliberate test, not a default.
+- **Every photo goes through `phoneCapture`** (in `renderNativePhotoSlide`): soften, phone-style sharpen, mute color, lift blacks, sensor grain, JPEG recompress. Do not bypass it.
+- **Hook mix (slight lean, Oct 28 insights; nothing is a clear winner yet):** about 6 in 10 hooks name one physical trigger moment (bending to pick something up, standing up from the chair, the 3pm desk flare, a lift). At most 1 in 10 are morning / getting-out-of-bed hooks, and at most 1 in 10 are "if the chair/mattress/desk worked, why does it still hurt" product-doubt hooks; both sat at the bottom on TikTok. Keep the rest varied. Recheck with fresh analytics before leaning harder.
+- **Every deck JSON has a `hookB`:** same person and moment, a different sentence (different first three words, ≤12 words). It is the Remedy Stories A/B cover line.
+- **Stories = A/B twin of Recoveries, built automatically** (`createCharacterTwin` in `generation/character-deck.ts`): hookB on the cover, look B on every photo (handheld tilt, punch-in, warmer grade, boxed white captions; never mirrored), a different deck photo behind the app slide, and a different locked CTA option. Same story and photos underneath. The boxed caption is only this split test. The twin is kept as the experiment record and is not scheduled or posted. The Instagram @remedy.stories grid is a separate look (`ig-stories.ts`). `--no-twin` skips building it.
+- **Build decks with** `src/generation/_character-batch.ts <dir> [--check] [--approve]`. It validates the rules above (one app slide, no subs, banned wording, title length, duplicate hooks) before rendering.
+
+## Split-comparison decks (new format, Oct 29)
+
+Source: two Instagram carousels (jun_yuh "1 bad hour / you still have 23", minolee.mp4 "before $400K/month / came 400 daily vlogs nobody asked for"). The look is the easy part. What carries them:
+
+1. **One sentence across two halves.** The top half sets it up, the bottom half lands it. Neither half means anything alone, so the eye drops.
+2. **Same person, same place** in both halves of a slide. The contrast reads as a state, not a casting change.
+3. **A comparison with a real quantity** ("1 bad X / you still have N", "before X / came Y"). Verifiable arithmetic or a small unflattering number, never a slogan.
+4. **A repeated template that escalates**, then a thesis slide with a save/send ask.
+5. **Honest first person.** No "everything happens for a reason". The bad part is allowed to be bad.
+
+Three comparison devices (tag the deck's device in its `title`/`caption` work notes so results can be compared):
+
+- **Scale** (`1 bad X / you still have N`): units must be checkable (8-hour day, 5-day week, 4-week month, 7-day week, the 5-week program). Top = the bad unit, bottom = the rest.
+- **Hidden middle** (`before <visible win> / came <boring private grind>`): the top is what people see, the bottom is what it took. The grind is small and a bit embarrassing (floor, hallway, rug), with a number.
+- **Same moment, week 1 vs week 5** (`week 1: ... / week 5: ...`): one trigger moment, two states, a concrete count.
+
+Rules:
+
+- Deck JSON beat: `{ "top": "split/x-01-top.jpg", "bottom": "split/x-01-bottom.jpg", "headline": "top line / bottom line", "grade": "contrast" | "natural" }`. The cover's `hook` equals that headline, and the deck needs a `hookB` that also has ` / `.
+- Each half is **10 words or fewer**, lowercase, concrete. One sentence across the pair, never a sub line. Renders with `renderSplitSlide` (4:5, 1080×675 halves). `contrast` greys the top half and warms the bottom (scale and week-1-vs-5 decks); `natural` for hidden middle.
+- `hookB` for a split cover also has ` / `. Its top line must clearly differ from the hook's top line; each half is 12 words or fewer (the halves may share the result line).
+- Optional `topY` / `bottomY` (0–1) on a split beat set where the crop starts down a portrait photo. Use them when re-cutting existing 3:4 photos into the band: put faces in the top quarter of the band (the A look puts text across the middle, the B look hides whatever is behind its boxes).
+- Shape (5 beats + the auto-appended locked CTA): split cover, split, split, one app slide, one single-photo thesis (an object or place, no face, `textAt: "top"`). The app slide uses only an allowed app crop and quotes what the screen really shows (progress crop: "Week 4 of 5", "Missed a day? That is okay — nothing is lost"; home / session-preview crops: "19 min · 5 exercises", mat + dumbbell; cat-cow: 14 reps). `bg` reuses a no-face deck photo.
+- **Back-pain claims stay personal narrative.** No outcome promises, no stats, no "your back isn't broken". Never frame pushing through 10/10 pain.
+- Photos: shots engine (`shots` in the deck JSON), saved as `assets/characters/<id>/split/<id>-sN-top|bottom.jpg` and `<id>-thesis.jpg`. **Halves are `aspect: "16:9"`** (the split crop is 16:10, so 4:3 loses ~17% of the height and clips the objects that carry the story) with `textZone: "middle"`; thesis photos `3:4`, `textZone: "top"`.
+  - **Pairs:** make the good half first, then the bad half with `sameRoomAs` pointing at it. That kept room, sofa, toys and outlet identical on the first try. Same-moment decks (week 1 vs 5) repeat the exact camera position and change only light and one detail.
+  - **People:** the same-person-same-place rule means the character usually appears in both halves of at least one slide (from behind with a hand on the back / sat through the call). **Never a generated exercise frame** (the app crop shows the move). The grind is shown as mat, rug, sneaker, propped phone with a dark or blank screen.
+  - **Reject:** floating objects (a bottle with no surface was caught once), fused fingers or toes, readable fake text or digits, glossy styled-stock kitchens.
+- **Format mix is set by the playbook** (Nov 10; the old 40% split / 20% quad floor was dropped by the user because single photos lead on YouTube). `_character-batch.ts` prints the library shares for information only. Do not re-cut already scheduled or published posts beyond the pairs the user asked for.
+- **Re-cutting an already-scheduled A/B pair** (no new photos): `src/generation/_split-convert.ts`. Cover photo on top, result photo (the deck's last beat) on the bottom, headline `<original hook> / <result line>`, `grade: "contrast"`; the app slide moves up and the deck ends with the locked CTA (4 beats + CTA). Keeps time, title, caption, hooks rows and the experiment link. The B twin gets its own hookB top line, same result line. Modes: `--plan` (validate, no writes), `--preview` / `--review` (covers and source sheets, no writes), `--apply <A ids>` (backs up first, swaps Zernio media in place, refreshes R2, verifies time/caption/title), `--rollback <A ids>`. Skips posts that go live within 3 hours. Review the framing sheets before `--apply`.
+- A split-format deck made fresh goes to the review queue (`queued`) first; approve once the user has seen it. It needs its Stories twin (`createCharacterTwin`) like every character deck.
+- Preview any pair without touching the queue: `npx tsx src/generation/_preview-split.ts <top> <bottom> "top / bottom" [--look B] [--grade natural] [--hook]`.
+
+## Quad decks (new format, Oct 31)
+
+Sources: reidbranded "How to build a personal brand" (6 slides, 548 likes at 8K followers; objects and places, labels mid-cell) and barclayahmed's quad carousel (the creator in 2–4 of the 4 cells on every slide: selfie, mid-distance, action, objects; labels small at the outer edge of each cell; bold title on the seam). Every slide but the last is a **2x2 grid of four real phone photos, no gutter, one line centered across the middle seam**, and from slide 2 on **a short label per cell**. The last slide is one photo with the thesis. What carries it:
+
+1. **Four instances of one idea per slide.** The center line names the category; the four cells are the list. A list reads as a mosaic instead of bullets, and four photos per slide is the volume that reads as a real life, not a template.
+2. **Labels carry a quantity.** Ours carry a price, a count, a time, or a place.
+3. **Same type on every slide**, centered, white, soft shadow. Nothing else.
+4. **People in the cells.** The barclayahmed version is the people-heavy one and it is the one with faces; our first two quads (Ray, Linda) were objects only and the user asked where the people were. Default now: the character in about half the cells of a deck, at least one cell per cover with the face visible (`mid` or `face`), the others from behind / profile / hands, mixed with objects and places. A cover with four people cells or four object cells is a test, not a mistake.
+
+Rules:
+
+- Deck JSON beat: `{ "quad": ["q/x-01-a.jpg", "…b.jpg", "…c.jpg", "…d.jpg"], "headline": "…", "labels": ["…", "…", "…", "…"], "labelAt": "edge" | "center", "grade": "natural" | "contrast" }`. `labels` is optional (the cover usually has none); each label is **5 words or fewer** and should hold a number, price, time, or place. `labelAt` defaults to `edge` (top cells: top edge, bottom cells: bottom edge, horizontally centered, with an edge scrim in look A) so labels stay clear of faces; `center` suits all-object slides. The headline is **10 words or fewer** (it has to fit 3 centered lines at 74px). Renders with `renderQuadSlide` (cells 540x675). `contrast` greys all four cells; use it for the slide about what did not work or what it cost.
+- Cells are **4:5** (shots at `3:4`, the saliency crop frames them). Shots for top cells use `textZone: "bottom"` and bottom cells `textZone: "top"` so the seam headline lands on floor / wall, not on a face. People in cells: `behind`, `profile`, `hands`, `feet`, `mid`, `face`; keep faces out of the seam band (the compiler's framing does this when `textZone` is set).
+- Shape (4–5 beats + the auto-appended locked CTA): quad cover (hook, no labels), one or two labelled quads (what it cost / what I tried / what changed), one app slide, one single-photo thesis (`textAt: "top"`; the character doing the thing they got back works well here). **At most 3 quads per deck.** The app slide's `bg` reuses a no-face cell.
+- Preview without the queue: `npx tsx src/generation/_preview-quad.ts <a> <b> <c> <d> "headline" [--labels "one|two|three|four"] [--label-at center] [--grade contrast] [--hook]`.
+- Mix target: about 20% of character decks (see the split section for the full mix).
+
+## Deck quality system (Oct 31)
+
+The complaint that started this: decks felt low quality and unintentional. The fixes are in `composer.ts` and apply to every native deck slide (photo, split, quad, app); keep them.
+
+- **One type system.** `NATIVE_TYPE` in `composer.ts`: Segoe UI Bold (closest installed match to the iOS system font the reference carousels use), white, soft shadow plus a hairline, fixed size per role (hook 78, body 66, split 64/58, quad 74/62, label 44). Lines shrink only when they would need a 4th line. No thick TikTok outline, no Arial, no sub line, no counter, no wordmark. The Stories B look keeps its boxed text, in the same face.
+- **One position per role.** Photo slides: the line sits in a fixed band under the status bar (`textAt: "top"`, the default) so a deck lines up slide to slide; `upper` / `lower` only when a face is at the top. Split: centered on each half. Quad: centered on the seam, labels at the cell edges (`labelAt: "edge"`, default) or cell centers. App: line at the top, the screen plate anchored to the bottom edge.
+- **Photos keep their contrast.** `phoneCapture` is tuned light (80% downscale, real blacks, fine grain, q84). Do not bring back the muddy pass (62% downscale, lifted blacks, heavy grain, q74). The split `contrast` grade and the quad `contrast` grade share `greyGrade`.
+- **App slide is a product shot**, not a blurred card: light blur on the deck photo, the library crop on a tall rounded plate with a rim and a shadow that runs off the bottom edge like a phone held up. Short crops extend in their own background colour instead of being stretched or cut mid-text. **Avoid `crop_home.png`** (its "Good morning, Name" placeholder reads as fake; the batch prints a note).
+- **One feeling per deck.** Deck JSON has `"feeling": "anger" | "curiosity" | "mystery" | "sadness" | "relief" | "pride"`. Every line and photo in the deck pulls that way. Anger: what it cost, what did not work, who dismissed it. Sadness: what the back took (the floor with the kids, the trip, the sock). Curiosity / mystery: a number or object with no explanation on the cover, explained by slide 3. Relief / pride: a small verifiable win, never a promise. The batch prints the spread; vary it across a batch.
+- **Slide roles, one line each:** 1 the moment (hook), 2 what it cost or what was tried, 3 the turn (what changed, with a count), 4 the proof (the one app slide, quoting what the screen really shows), 5 the payoff (thesis line on the character doing the thing, or an object or place). Each slide looks different because its job is different; "vaguely similar templated slides lose attention by slide 3" is the clearest finding in the carousel studies.
+- **Re-render what's already scheduled after a renderer change** (bump `SLIDE_REV` first): `src/generation/_rerender-scheduled.ts --plan | --preview "<ids>" | --apply "<ids>"|all | --rollback "<ids>"`. It re-renders every scheduled character post (A and B) from its saved deck source with its own locked CTA option, swaps the Zernio media in place (time, title, caption unchanged), refreshes R2, verifies each post, backs up to `output/rerender/backup/<id>` first, and skips posts within 3 hours of going live or already done at this `SLIDE_REV`. Preview a spread and look at it before `--apply`; canary one far-out post before `all`. Quote id lists in PowerShell. It re-renders; it does not regenerate photos.
+- **Rebuild in place.** A deck JSON with `postId` re-renders that post's slides and short, and `_character-batch.ts` re-renders its Stories twin (`refreshCharacterTwin`) instead of making a second one. Queue files in `output/deck-queue/<batch>/` carry their `postId` after the first build; keep them, they are the source of the post.
+- **Review shows the pair.** Every Recoveries deck has a Stories B twin built from the same photos (boxed text, tilted photos, its own hookB, a different CTA option). Review labels them `Recoveries A · Stories twin #N` and `Stories B · boxed text · twin of #N` so they do not read as accidental doubles.
+- **Hook rules from the research** (`_character-batch.ts` enforces the hard ones): 6–10 words did best (25% of 6–10-word covers reached 2x their creator's usual vs 17% for 5 or fewer); a number helps, leading with the number most; no all-caps words (hard rule); statements over questions (soft note); lowercase, first person, one concrete anchor (number, time, object, place, body part). Body lines: no slogan shapes (hard rule, `isSloganLine`); a soft note when a line has nothing to picture.
+- **Research the rules came from** (re-check before leaning harder): topcarousels.com study of 7,394 Instagram carousels (hook length, numbers, caps, questions; reference/how-to/list formats lead; 8–12 slides on IG); reelsfarm.com TikTok slideshow hook study (numbered lists ahead, 1–5 word hooks ahead on TikTok specifically, how-to has the best save rate); aubrium.com 800 viral PT reels (curiosity gap, relatable, POV, negative hooks travel furthest; 5–8 words on screen; no relief promises); i-vory "info + emotion" hybrid (teach one thing and land it on a feeling the viewer has every day: 22.6% saves); thesecondbrain.io (design each slide for its job; 4:5; seamless or distinct, never vaguely similar); socialgrowthengineers.com on Stronger and BePresent (selfie or candid cover + app-feature slide, one repeatable format, reuse photos, volume).
 
 ## Slides
 

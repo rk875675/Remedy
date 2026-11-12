@@ -10,6 +10,7 @@
  * result feeds straight back into generation.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import {
@@ -20,11 +21,12 @@ import {
   analytics,
   experiments,
   type SignalDimension,
+  matchContentPillar,
 } from "@remedy-growth/db";
 import { asc, desc, eq, inArray, or } from "drizzle-orm";
 import { BRAND, configuredPlatforms, env, GENERATE_PAUSED_MESSAGE } from "../config.js";
 import { generateJson } from "../generation/llm.js";
-import { generateCarouselCopy } from "../generation/hooks.js";
+import { audienceTitle, ensureAppStoreCaption, ensureComingSoonCaption, generateCarouselCopy } from "../generation/hooks.js";
 import { TEMPLATES, isCoverHeadlineSlide, type SlideKind } from "../generation/templates.js";
 import { makeVariation, parseVariation, pickShotScale, VariationSchema, type Variation } from "../generation/variations.js";
 import { renderSlide, postOutputDir, slideFileName } from "../generation/composer.js";
@@ -68,20 +70,89 @@ export function leastTestedDimension(): TestableDimension {
   return best;
 }
 
-async function generateHookVariant(originalHook: string): Promise<string> {
+function normHook(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/** True when the cover line is a different sentence, not a punctuation tweak. */
+export function hooksClearlyDiffer(a: string, b: string): boolean {
+  const na = normHook(a);
+  const nb = normHook(b);
+  if (nb.length < 8 || na === nb) return false;
+  const words = (s: string) => s.split(" ").filter((w) => w.length > 2);
+  const wa = words(na);
+  const wb = words(nb);
+  if (wa.length === 0 || wb.length === 0) return false;
+  if (wa.slice(0, 3).join(" ") === wb.slice(0, 3).join(" ")) return false;
+  const setA = new Set(wa);
+  const shared = wb.filter((w) => setA.has(w)).length;
+  return shared / wb.length <= 0.8;
+}
+
+const HOOK_STOP = new Set(["about", "after", "again", "back", "before", "being", "could", "every", "from", "have", "just", "pain", "people", "still", "that", "their", "there", "these", "this", "what", "when", "with", "your"]);
+
+/** The new line has to name the same situation as the slides that do not change. */
+function stem(word: string): string {
+  return word.endsWith("s") && word.length > 4 ? word.slice(0, -1) : word;
+}
+
+export function staysOnSlides(hook: string, headlines: string[]): boolean {
+  const blob = normHook(headlines.join(" ")).split(" ").map(stem);
+  const words = normHook(hook).split(" ").map(stem).filter((w) => w.length > 3 && !HOOK_STOP.has(w));
+  if (words.length === 0) return false;
+  return words.some((w) => blob.some((b) => b.includes(w) || w.includes(b)));
+}
+
+export function captionForNewHook(caption: string, oldHook: string, newHook: string): string {
+  const newLead = newHook.replace(/[.!?]+$/g, "").trim();
+  let body = caption
+    .replace(/download remedy on the app store[^\n]*/gi, "")
+    .replace(/remedy is coming soon on the app store\.?/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const oldLead = oldHook.replace(/[.!?]+$/g, "").trim();
+  const firstWords = oldLead.split(/\s+/).slice(0, 4).join(" ");
+  if (firstWords.length > 8 && body.toLowerCase().startsWith(firstWords.toLowerCase())) {
+    body = body.replace(/^.+?[.!?]\s*/, "").trim();
+  }
+  const next = `${newLead}.\n\n${body}`.trim();
+  return env.PRELAUNCH ? ensureComingSoonCaption(next) : ensureAppStoreCaption(next);
+}
+
+export function titleForNewHook(_title: string, newHook: string): string {
+  return audienceTitle(newHook);
+}
+
+async function generateHookVariant(originalHook: string, banned: string[] = [], slideHeadlines: string[] = []): Promise<string> {
+  const pillar = matchContentPillar(originalHook);
+  const ban = banned.length
+    ? `Do not use these lines:\n${banned.map((b) => `- "${b}"`).join("\n")}\n`
+    : "";
+  const later = slideHeadlines.filter(Boolean).map((h) => `- ${h}`).join("\n");
   const prompt = `This TikTok carousel hook for ${BRAND.appName} (a ${BRAND.niche} app) is being A/B tested:
 "${originalHook}"
 
-Write ONE alternative hook that keeps the same core promise but changes the angle,
-framing, or emotional register. 1–2 on-screen lines (about 5–14 words).
+The other slides stay exactly as they are. The new hook is only a different first line for THIS carousel:
+${later || "- (same topic as the original hook)"}
+
+Write ONE alternative hook that keeps the same situation (same activity, same moment — if the original is about deadlifts, the new line is still about that pull).
+Change the sentence, the angle, or which detail you lead with. 1–2 on-screen lines (about 5–14 words).
 Keep the avatar or back-pain noun. No vague "this" / save / slide-N lines.
-Fragments are good. No emojis, no brand name. It must feel like a different hook, not a paraphrase.
-Return JSON: {"hook":"..."}`;
+${pillar ? `Stay in the "${pillar.title}" pillar. ${pillar.thesis}` : "The hook must match one of the nine content pillars."}
+Fragments are good. No emojis, no brand name.
+It must be a different sentence. Do not reuse the opening three words. Not a paraphrase. Do not switch to a different daily task.
+${ban}Return JSON: {"hook":"..."}`;
   const result = await generateJson(prompt, HookVariantSchema);
-  if (result) return result.hook;
-  // Offline fallback mutation.
-  if (originalHook.endsWith("?")) return originalHook.replace(/\?$/, ". Here's the fix.");
-  return `POV: ${originalHook.charAt(0).toLowerCase()}${originalHook.slice(1).replace(/[.?!]$/, "")}`;
+  const anchor = [originalHook, ...slideHeadlines];
+  if (!result) return originalHook;
+  const pillarOk = Boolean(matchContentPillar(result.hook));
+  const different = hooksClearlyDiffer(originalHook, result.hook);
+  const onSlides = staysOnSlides(result.hook, anchor);
+  // Account twins already name the slides. Pillar keywords miss good lines like "the bar yanks".
+  const onTopic = slideHeadlines.length > 0 ? onSlides : pillarOk;
+  if (different && onTopic) return result.hook;
+  console.log(`Hook rejected: "${result.hook}" (pillar ${pillarOk}, different ${different}, on-slides ${onSlides})`);
+  return originalHook;
 }
 
 interface SlideLine {
@@ -395,6 +466,215 @@ export async function createVariant(postId: number, dimensionArg?: TestableDimen
     dimension,
     detail: { a: detail.a, b: detail.b },
   };
+}
+
+/**
+ * Second-account copy of a queued or approved post.
+ * One change: the cover hook. Title and caption follow that hook.
+ * Other slides are copied so the carousel is not the same file on both accounts.
+ * The twin is a normal post (slides, title, caption, hashtags) in the same queue.
+ */
+export async function createAccountTwin(postId: number): Promise<CreateVariantResult> {
+  const db = getDb();
+  const post = db.select().from(posts).where(eq(posts.id, postId)).get();
+  if (!post) return { ok: false, error: `Post ${postId} not found` };
+  if (!["queued", "approved"].includes(post.status)) {
+    return { ok: false, error: `Post ${postId} is ${post.status}` };
+  }
+  const template = TEMPLATES[post.templateId];
+  if (!template) return { ok: false, error: `Unknown template ${post.templateId}` };
+  const baseVariation = parseVariation(post.variation, Boolean(template.preferMusic));
+  if (baseVariation.ctaReview) return { ok: false, error: "CTA review posts are not twinned" };
+  if (baseVariation.zernioSlot === "2" || baseVariation.accountTwinOf) {
+    return { ok: false, error: "Already a second-account post" };
+  }
+  if (baseVariation.accountTwinId) return { ok: false, error: `Already has twin #${baseVariation.accountTwinId}` };
+
+  const hook = db.select().from(hooks).where(eq(hooks.id, post.hookId)).get();
+  if (!hook) return { ok: false, error: "Hook not found for post" };
+  const slideRows = db.select().from(slides).where(eq(slides.postId, postId)).orderBy(asc(slides.idx)).all();
+  if (slideRows.length < 2) return { ok: false, error: "Need at least 2 slides" };
+  for (const row of slideRows) {
+    if (!fs.existsSync(row.filePath)) return { ok: false, error: `Missing slide file for post ${postId}` };
+  }
+
+  const laterHeadlines = slideRows.filter((_, i) => i !== 0).map((s) => s.headline);
+  const banned = [hook.text];
+  let newHookText = "";
+  const hookFits = (text: string) => hooksClearlyDiffer(hook.text, text) && staysOnSlides(text, [hook.text, ...laterHeadlines]);
+  for (let attempt = 0; attempt < 3 && !hookFits(newHookText); attempt++) {
+    const next = await generateHookVariant(hook.text, banned, laterHeadlines);
+    if (!hookFits(next)) banned.push(next);
+    else newHookText = next;
+  }
+  if (!hookFits(newHookText)) {
+    return { ok: false, error: "Could not write a clearly different hook that still matches the slides" };
+  }
+
+  const newHook = db
+    .insert(hooks)
+    .values({
+      text: newHookText,
+      category: hook.category,
+      formulaId: hook.formulaId,
+      source: "evolved",
+      parentHookId: hook.id,
+      status: "used",
+    })
+    .returning()
+    .get();
+  if (!newHook) return { ok: false, error: "Could not insert variant hook" };
+
+  const meta = {
+    tiktokTitle: titleForNewHook(post.tiktokTitle, newHookText),
+    caption: captionForNewHook(post.caption, hook.text, newHookText),
+  };
+  const coverAt = slideRows.findIndex((s, i) => isCoverHeadlineSlide(s.kind, i));
+  const coverIdx = coverAt === -1 ? 0 : coverAt;
+  const twinVariation: Variation = {
+    ...baseVariation,
+    zernioSlot: "2",
+    accountTwinOf: post.id,
+  };
+  delete twinVariation.accountTwinId;
+  delete twinVariation.videoFollowUpAt;
+  delete twinVariation.videoFollowUpDone;
+  delete twinVariation.videoFollowUpPlatforms;
+
+  const variantPost = db
+    .insert(posts)
+    .values({
+      hookId: newHook.id,
+      templateId: post.templateId,
+      variation: twinVariation,
+      caption: meta.caption,
+      tiktokTitle: meta.tiktokTitle,
+      hashtags: post.hashtags,
+      platforms: [],
+      status: post.status === "approved" ? "approved" : "queued",
+      confidence: post.confidence,
+      scheduledAt: null,
+    })
+    .returning()
+    .get();
+  if (!variantPost) return { ok: false, error: "Could not insert variant post" };
+
+  const outDir = postOutputDir(variantPost.id);
+  fs.mkdirSync(outDir, { recursive: true });
+  const slideFiles: string[] = [];
+  try {
+    for (const row of slideRows) {
+      const filePath = path.join(outDir, slideFileName(row.idx));
+      const isCover = row.idx === coverIdx;
+      if (isCover) {
+        await renderSlide(
+          {
+            kind: row.kind as SlideKind,
+            headline: newHookText,
+            sub: row.sub,
+            screenshot: row.screenshot,
+            index: row.idx,
+            total: slideRows.length,
+          },
+          twinVariation,
+          filePath,
+        );
+      } else {
+        fs.copyFileSync(row.filePath, filePath);
+      }
+      db.insert(slides)
+        .values({
+          postId: variantPost.id,
+          idx: row.idx,
+          kind: row.kind,
+          headline: isCover ? newHookText : row.headline,
+          sub: row.sub,
+          screenshot: row.screenshot,
+          filePath,
+        })
+        .run();
+      slideFiles.push(filePath);
+    }
+  } catch (err) {
+    db.delete(slides).where(eq(slides.postId, variantPost.id)).run();
+    db.delete(posts).where(eq(posts.id, variantPost.id)).run();
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  await ensurePostShort(variantPost.id, slideFiles, true).catch((err) => {
+    console.warn(`Twin short skipped for #${variantPost.id}:`, err instanceof Error ? err.message : err);
+  });
+
+  const existing = db
+    .select()
+    .from(experiments)
+    .where(or(eq(experiments.postAId, postId), eq(experiments.postBId, postId)))
+    .all()
+    .find((e) => e.status !== "cancelled");
+  let experimentId: number | undefined;
+  if (!existing) {
+    const experiment = db
+      .insert(experiments)
+      .values({
+        postAId: post.id,
+        postBId: variantPost.id,
+        dimension: "hook",
+        variableDetail: {
+          a: hook.text,
+          b: newHookText,
+          note: "Second account. Cover line only. Title and caption follow the new hook. Other slides stay.",
+        },
+        status: "pending",
+      })
+      .returning()
+      .get();
+    experimentId = experiment?.id;
+  }
+
+  db.update(posts)
+    .set({ variation: { ...baseVariation, zernioSlot: "1", accountTwinId: variantPost.id } })
+    .where(eq(posts.id, post.id))
+    .run();
+
+  console.log(`Account twin #${variantPost.id} of #${post.id}: "${hook.text}" -> "${newHookText}"`);
+  return {
+    ok: true,
+    experimentId,
+    variantPostId: variantPost.id,
+    dimension: "hook",
+    detail: { a: hook.text, b: newHookText },
+  };
+}
+
+/** One hook twin per queued/approved original that does not have one yet. */
+export async function ensureAccountTwins(onlyIds?: number[]): Promise<{
+  created: number;
+  skipped: number;
+  failed: Array<{ postId: number; error: string }>;
+}> {
+  const db = getDb();
+  const rows = db.select().from(posts).where(inArray(posts.status, ["queued", "approved"])).all();
+  let created = 0;
+  let skipped = 0;
+  const failed: Array<{ postId: number; error: string }> = [];
+  for (const post of rows) {
+    if (onlyIds && !onlyIds.includes(post.id)) continue;
+    const variation = parseVariation(post.variation);
+    if (variation.ctaReview || variation.zernioSlot === "2" || variation.accountTwinOf || variation.accountTwinId) {
+      skipped++;
+      continue;
+    }
+    const result = variation.characterId
+      ? await (await import("../generation/character-deck.js")).createCharacterTwin(post.id)
+      : await createAccountTwin(post.id);
+    if (result.ok) created++;
+    else if (result.error?.startsWith("Already")) skipped++;
+    else {
+      failed.push({ postId: post.id, error: result.error ?? "failed" });
+      console.warn(`Account twin #${post.id} failed: ${result.error}`);
+    }
+  }
+  return { created, skipped, failed };
 }
 
 interface PostScore {

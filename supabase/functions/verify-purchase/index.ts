@@ -3,6 +3,7 @@ import { z } from 'https://esm.sh/zod@3';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimitFixedWindow } from '../_shared/ratelimit.ts';
 import { verifyAppleTransaction } from '../_shared/apple.ts';
+import { claimTransactionBinding, isBindingConflict } from '../_shared/transactionBinding.ts';
 import { captureServerEvent, planInterval, revenueFields } from '../_shared/analytics.ts';
 
 // Apple JWS tokens are large; allow generous headroom.
@@ -109,19 +110,11 @@ Deno.serve(async (req: Request) => {
 
     // Anti-fraud: bind one Apple subscription to one account. Prefer Apple's verified
     // originalTransactionId; fall back to the client transactionId only if Apple didn't
-    // return one. Reject if this subscription is already linked to a different user so a
-    // shared signedTransaction can't unlock premium on multiple accounts.
+    // return one. Reject if this subscription is live on a different user so a shared
+    // signedTransaction can't unlock premium on multiple accounts.
     const boundTxId = appleResult.originalTransactionId ?? transactionId ?? null;
-    if (boundTxId) {
-      const { data: conflict } = await supabaseAdmin
-        .from('entitlements')
-        .select('user_id')
-        .eq('original_transaction_id', boundTxId)
-        .neq('user_id', user.id)
-        .maybeSingle();
-      if (conflict) {
-        return json({ success: false, error: 'transaction_already_linked' }, 409);
-      }
+    if (boundTxId && (await claimTransactionBinding(supabaseAdmin, boundTxId, user.id)) === 'conflict') {
+      return json({ success: false, error: 'transaction_already_linked' }, 409);
     }
 
     const now = new Date().toISOString();
@@ -198,6 +191,9 @@ Deno.serve(async (req: Request) => {
       .select()
       .single();
 
+    if (isBindingConflict(upsertError)) {
+      return json({ success: false, error: 'transaction_already_linked' }, 409);
+    }
     if (upsertError) return json({ success: false, error: upsertError.message }, 500);
 
     // idempotency_key is UNIQUE — replayed verifications are deduped, not double-granted.

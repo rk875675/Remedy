@@ -3,6 +3,7 @@ import { z } from 'https://esm.sh/zod@3';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimitFixedWindow } from '../_shared/ratelimit.ts';
 import { verifyAppleTransaction } from '../_shared/apple.ts';
+import { claimTransactionBinding, isBindingConflict } from '../_shared/transactionBinding.ts';
 import { captureServerEvent, planInterval } from '../_shared/analytics.ts';
 
 const MAX_JWS_LEN = 16384;
@@ -95,18 +96,10 @@ Deno.serve(async (req: Request) => {
 
     // Anti-fraud: one Apple subscription → one account. Use Apple's verified
     // originalTransactionId (fallback to the client value) and refuse to restore onto a
-    // second account.
+    // second account while it is live on the first.
     const boundTxId = appleResult.originalTransactionId ?? originalTransactionId ?? null;
-    if (boundTxId) {
-      const { data: conflict } = await supabaseAdmin
-        .from('entitlements')
-        .select('user_id')
-        .eq('original_transaction_id', boundTxId)
-        .neq('user_id', user.id)
-        .maybeSingle();
-      if (conflict) {
-        return json({ success: false, error: 'transaction_already_linked' }, 409);
-      }
+    if (boundTxId && (await claimTransactionBinding(supabaseAdmin, boundTxId, user.id)) === 'conflict') {
+      return json({ success: false, error: 'transaction_already_linked' }, 409);
     }
 
     const now = new Date().toISOString();
@@ -178,6 +171,9 @@ Deno.serve(async (req: Request) => {
       .select()
       .single();
 
+    if (isBindingConflict(upsertError)) {
+      return json({ success: false, error: 'transaction_already_linked' }, 409);
+    }
     if (upsertError) return json({ success: false, error: upsertError.message }, 500);
 
     // See verify-purchase: the unique violation on idempotency_key is the dedupe signal,

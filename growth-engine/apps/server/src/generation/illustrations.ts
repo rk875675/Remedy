@@ -2,8 +2,7 @@
  * File-based illustration library for carousel slides 1-3.
  *
  * Assets live in growth-engine/assets/illustrations/ (manifest.json).
- * Remedy-owned sources (`Remedy original`, `Remedy flat`) are preferred on new slides.
- * Third-party tiles are MIT / CC0 — see THIRD_PARTY_NOTICES.md.
+ * SVG slides use Remedy flat only. Remedy original, illlustrations.co, and Open Doodles were removed.
  *
  * Slides 1-3 pick thematically:
  *   slide 1 -> office / pain     (the hook: desk life, back flaring up)
@@ -24,8 +23,8 @@ export const ILLUSTRATIONS_DIR = path.join(ROOT_DIR, "assets", "illustrations");
 export type IllustrationTheme = "office" | "pain" | "recovery" | "lifestyle";
 export type IllustrationFit = "scene" | "figure" | "photo";
 
-/** Kits the picker may use on new SVG slides. Third-party stays in the library for reject/enable. */
-export const OWNED_SOURCES = ["Remedy original", "Remedy flat"] as const;
+/** The only SVG kit new slides may use. */
+export const OWNED_SOURCES = ["Remedy flat"] as const;
 export const PHOTO_SOURCE = "Remedy people";
 
 export interface IllustrationAsset {
@@ -93,9 +92,7 @@ export function illustrationMime(file: string): string {
 /** Scene tiles have their own canvas; figures are transparent ink drawings. */
 export function illustrationFit(asset: IllustrationAsset): IllustrationFit {
   if (isPhotoAsset(asset)) return "photo";
-  return asset.source === "illlustrations.co" || asset.source === "Remedy flat"
-    ? "scene"
-    : "figure";
+  return asset.source === "Remedy flat" ? "scene" : "figure";
 }
 
 export function enabledSvgIllustrations(): IllustrationAsset[] {
@@ -209,8 +206,9 @@ const SLIDE_THEMES: IllustrationTheme[][] = [
 function pickSourceForPost(seed: number): string {
   const pool = enabledSvgIllustrations();
   const sources = [...new Set(pool.map((a) => a.source))];
-  if (!sources.length) return "Remedy original";
+  if (!sources.length) return "Remedy flat";
   const owned = sources.filter((s) => (OWNED_SOURCES as readonly string[]).includes(s));
+  if (owned.includes("Remedy flat")) return "Remedy flat";
   if (owned.length) return owned[Math.abs(seed) % owned.length]!;
   return sources[Math.abs(seed) % sources.length]!;
 }
@@ -357,19 +355,18 @@ export function illustrationPreviewSvg(asset: IllustrationAsset, dark = false): 
 
 const FOLDER_SOURCE: Record<string, { source: string; license: string }> = {
   flat: { source: "Remedy flat", license: "owned" },
-  custom: { source: "Remedy original", license: "owned" },
-  illlustrations: { source: "illlustrations.co", license: "MIT" },
-  opendoodles: { source: "Open Doodles", license: "CC0" },
   people: { source: PHOTO_SOURCE, license: "owned" },
 };
 
 function inferThemes(stem: string): IllustrationTheme[] {
   const s = stem.toLowerCase();
   const themes = new Set<IllustrationTheme>();
-  if (/desk|office|laptop|chair|work|coding|freelancer|kitchen|fluorescent/.test(s)) themes.add("office");
-  if (/pain|stiff|slouch|flare|hurt|ache|bend|wince/.test(s)) themes.add("pain");
-  if (/walk|stretch|recover|morning-ok|standing-tall|standing-relief|floor-rest|progress|denim/.test(s)) themes.add("recovery");
-  if (/couch|bed|phone|commute|cook|laundry|stairs|walk|kitchen|car|gym|grocery|airport|restaurant|toddler|hood|booth/.test(s)) {
+  if (/desk|office|laptop|chair|work|coding|freelancer|kitchen|fluorescent|conference|backpack|bus-pole/.test(s)) themes.add("office");
+  if (/pain|stiff|slouch|flare|hurt|ache|bend|wince|lean|reach|trunk|wipe|lift|fold/.test(s)) themes.add("pain");
+  if (/walk|stretch|recover|morning-ok|standing-tall|standing-relief|floor-rest|progress|denim|stairs-easy|kitchen-ok|couch-upright|garden-kneel|floor-app/.test(s)) {
+    themes.add("recovery");
+  }
+  if (/couch|bed|phone|commute|cook|laundry|stairs|walk|kitchen|car|gym|grocery|airport|restaurant|toddler|hood|booth|airplane|stroller|garden|recycle|shoe|coat|trash|freezer|oven|window|spill|nightstand/.test(s)) {
     themes.add("lifestyle");
   }
   if (!themes.size) themes.add("lifestyle");
@@ -397,8 +394,7 @@ function listCatalogFiles(): string[] {
 }
 
 /**
- * Drop a file in flat/ custom/ illlustrations/ opendoodles/ — next generate
- * catalogs it so the new type enters pick / cold-test / ratings.
+ * Drop a file in flat/ or people/ — next generate catalogs it.
  */
 export function ensureIllustrationManifest(): { added: string[] } {
   const parsed = JSON.parse(fs.readFileSync(MANIFEST_PATH, "utf-8")) as Manifest;

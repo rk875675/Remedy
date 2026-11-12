@@ -1,8 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../../constants/colors';
-import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 import { HOME_INSIGHTS, getDailyInsightIndex } from '../../constants/homeInsights';
 
 /** One daily tip, keyed to the local calendar day. */
@@ -15,9 +13,9 @@ export function InsightPager() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.tag}>Tip</Text>
+      <Text style={styles.tag}>For today</Text>
       <Text style={styles.text}>{tip}</Text>
-      <Text style={styles.caption}>New one tomorrow</Text>
+      <Text style={styles.caption}>A new one tomorrow</Text>
     </View>
   );
 }
@@ -25,21 +23,23 @@ export function InsightPager() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 20,
-    ...shadows.low,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
     marginBottom: 16,
   },
   tag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 8,
   },
   text: {
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: '500',
     color: colors.textPrimary,
     lineHeight: 23,
   },

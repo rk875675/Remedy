@@ -15,14 +15,12 @@ and **must be completed by a human**. Do not launch worldwide with these open.
       true while every public surface stays wellness-only — no treat / cure /
       diagnose / prescribe / rehabilitate / "PT program" claims anywhere,
       including screenshots and the App Store description.
-- [ ] **Age rating: 16+** — matches the in-app 16+ attestation, Terms §5, and
-      Privacy children's section (all aligned to 16). 16 is at or above the
-      GDPR digital-consent age in every EU member state and above COPPA's 13.
-      Known residual risk (accepted): contracts with 16–17-year-olds are
-      voidable in many jurisdictions, so the arbitration clause and liability
-      release may not bind that age slice. If this ever becomes a concern,
-      change the attestation, Terms §5, and Privacy children's section to 18
-      together.
+- [x] **Age rating: 17+** — matches Apple's 17+ rating, the in-app 17+
+      attestation, Terms §5, and Privacy children's section (all aligned to 17
+      on Oct 15, 2026). Known residual risk (accepted): contracts with
+      17-year-olds are voidable in many jurisdictions. If this ever becomes a
+      concern, change the attestation, Terms §5, and Privacy children's section
+      to 18 together.
 - [ ] **Privacy nutrition labels** per `docs/ANALYTICS.md` §6.3: Health & Fitness
       data, linked to you, no tracking. Do not add data types we do not collect.
 - [ ] **No ATT prompt** (we have no IDFA/tracking — keep it that way).

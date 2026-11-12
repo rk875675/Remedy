@@ -6,15 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   LayoutAnimation,
-  Animated,
-  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
-import { colors } from '../../constants/colors';
+import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticSelection } from '../../lib/haptics';
@@ -22,9 +21,9 @@ import {
   scheduleStretchReminders,
   cancelStretchReminders,
   getNextStretchTime,
+  scheduleWorkoutReminders,
 } from '../../lib/notifications';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
-import { useAfterTransition } from '../../lib/useAfterTransition';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { InsightPager } from '../../components/home/InsightPager';
 import {
@@ -55,6 +54,8 @@ import {
 } from '../../lib/analytics/events/engagement';
 import { sessionStartTapped } from '../../lib/analytics/events/coreLoop';
 import type { homeEmptyStateReason } from '../../lib/analytics/events/enums';
+import { FriendShareSheet } from '../../components/session/FriendShareSheet';
+import { consumeFriendShareHome, type FriendShareHomePrompt } from '../../lib/friendShare';
 import { resolveDisplayName, useHomeGreetingParts } from '../../lib/greeting';
 import { prefetchSessionVideos } from '../../lib/prefetchSessionVideos';
 import { hasCompletedOrientation } from '../../lib/orientation';
@@ -211,41 +212,73 @@ function StretchReminderCard() {
   );
 }
 
-// Bouncing badge displayed on rest days to show when the next workout is scheduled.
-function NextWorkoutBadge({ dayIndex }: { dayIndex: number }) {
-  const float = useRef(new Animated.Value(0)).current;
-  const ready = useAfterTransition();
+// Ghost of the logo: chubby vertebrae, thin terracotta discs, a slight lean.
+// A left-to-right fade keeps it in the card instead of sitting on top of it.
+const VERTEBRAE = [
+  { x: 78, y: 4, w: 70, h: 48, rot: -7 },
+  { x: 70, y: 58, w: 74, h: 50, rot: -3 },
+  { x: 64, y: 114, w: 78, h: 52, rot: 2 },
+  { x: 56, y: 172, w: 82, h: 54, rot: 6 },
+  { x: 46, y: 232, w: 90, h: 60, rot: 11 },
+];
 
-  useEffect(() => {
-    if (!ready) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(float, {
-          toValue: -4,
-          duration: 1400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(float, {
-          toValue: 0,
-          duration: 1400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [float, ready]);
-
+function HeroOrnament() {
   return (
-    <Animated.View
-      style={[styles.nextWorkoutBadge, { transform: [{ translateY: float }] }]}
-    >
-      <Text style={styles.nextWorkoutBadgeText}>
-        Next workout: {DAY_NAMES_FULL[dayIndex]}
-      </Text>
-    </Animated.View>
+    <View pointerEvents="none" style={styles.ornament}>
+      <Svg width={220} height={310}>
+        <Defs>
+          <LinearGradient id="bone" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.1" />
+            <Stop offset="0.25" stopColor="#FFFFFF" stopOpacity="0.38" />
+            <Stop offset="0.6" stopColor="#FFFFFF" stopOpacity="0.78" />
+            <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0.96" />
+          </LinearGradient>
+          <LinearGradient id="disc" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={colors.secondary} stopOpacity="0.15" />
+            <Stop offset="0.3" stopColor={colors.secondary} stopOpacity="0.5" />
+            <Stop offset="1" stopColor={colors.secondary} stopOpacity="0.92" />
+          </LinearGradient>
+        </Defs>
+        {VERTEBRAE.map((v, i) => {
+          const pivotX = v.x + v.w / 2;
+          const pivotY = v.y + v.h / 2;
+          const turn = `rotate(${v.rot} ${pivotX} ${pivotY})`;
+          return (
+            <React.Fragment key={i}>
+              <Rect
+                x={v.x}
+                y={v.y}
+                width={v.w}
+                height={v.h}
+                rx={20}
+                fill="url(#bone)"
+                transform={turn}
+              />
+              {i < VERTEBRAE.length - 1 ? (
+                <Rect
+                  x={v.x + 14}
+                  y={v.y + v.h - 1}
+                  width={v.w - 28}
+                  height={5}
+                  rx={2}
+                  fill="url(#disc)"
+                  transform={turn}
+                />
+              ) : null}
+            </React.Fragment>
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
+
+function MetaChip({ glyph, label }: { glyph: string; label: string }) {
+  return (
+    <View style={styles.chip}>
+      <Text style={styles.chipGlyph}>{glyph}</Text>
+      <Text style={styles.chipText}>{label}</Text>
+    </View>
   );
 }
 
@@ -279,6 +312,7 @@ export default function HomeScreen() {
   );
   const [modalVisible, setModalVisible] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [sharePrompt, setSharePrompt] = useState<FriendShareHomePrompt | null>(null);
 
   const fetchData = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
@@ -394,7 +428,9 @@ export default function HomeScreen() {
     let days: number[] = [];
     try { if (storedDays) days = JSON.parse(storedDays) as number[]; } catch { /* ignore */ }
     let since = storedDaysSince;
+    let daysReset = false;
     if (days.length !== planSessionsPerWeek) {
+      daysReset = true;
       days = computeDefaultWorkoutDays(planSessionsPerWeek);
       since = localDateKey(new Date());
       await AsyncStorage.multiSet([
@@ -418,6 +454,11 @@ export default function HomeScreen() {
     }
     setReminderHour(hour);
     setReminderMinute(minute);
+    // A new days/week (next program, edited answers) resets the day set above; the
+    // scheduled reminders still point at the old days until they move with it.
+    if (daysReset && storedNotif === 'true') {
+      void scheduleWorkoutReminders(days, hour, minute).catch(() => {});
+    }
 
     const todayIsWorkout = isTodayWorkoutDay(days);
     setNextWorkoutDay(getNextWorkoutDay(days));
@@ -502,6 +543,19 @@ export default function HomeScreen() {
     useCallback(() => {
       fetchData();
     }, [fetchData]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let live = true;
+      void (async () => {
+        const pending = await consumeFriendShareHome();
+        if (live && pending) setSharePrompt(pending);
+      })();
+      return () => {
+        live = false;
+      };
+    }, []),
   );
 
   // Home with nothing to start is a dead end — the user opened the app to train
@@ -611,7 +665,7 @@ export default function HomeScreen() {
           <Text style={styles.sessionLabel}>Program Complete</Text>
           <Text style={styles.sessionTitle}>You finished your program!</Text>
           <Text style={styles.restTip}>
-            You completed your full program. View your summary or restart for another round.
+            You completed your full program. View your summary and pick what&apos;s next.
           </Text>
           <TouchableOpacity
             style={styles.startButton}
@@ -644,23 +698,24 @@ export default function HomeScreen() {
         </View>
       ) : todaySession ? (
         <View style={styles.sessionCard}>
-          <View style={styles.sessionCardHeader}>
-            <Text style={styles.sessionLabel}>Today's Session</Text>
-            <View style={styles.sessionWeekBadge}>
-              <Text style={styles.sessionWeekBadgeText}>
-                W{todaySession.week_number} · S{todaySession.session_number}
-              </Text>
-            </View>
-          </View>
-
+          <HeroOrnament />
+          <Text style={styles.sessionLabel}>Today's Session</Text>
           <Text style={styles.sessionTitle}>{todaySession.title}</Text>
           <Text style={styles.sessionPurpose}>
             {sessionPurposeLine(todaySession.phase, todaySession.week_number)}
           </Text>
 
-          <Text style={styles.sessionMetaLine}>
-            {todaySession.estimated_minutes} min · {todaySession.exercise_count} exercise{todaySession.exercise_count !== 1 ? 's' : ''}
-          </Text>
+          <View style={styles.chipRow}>
+            <MetaChip glyph="◷" label={`${todaySession.estimated_minutes} min`} />
+            <MetaChip
+              glyph="▬"
+              label={`${todaySession.exercise_count} exercise${todaySession.exercise_count !== 1 ? 's' : ''}`}
+            />
+            <MetaChip
+              glyph="○"
+              label={`W${todaySession.week_number} · S${todaySession.session_number}`}
+            />
+          </View>
 
           <TouchableOpacity
             style={styles.startButton}
@@ -676,18 +731,26 @@ export default function HomeScreen() {
             activeOpacity={0.85}
           >
             <Text style={styles.startButtonText}>Start Session</Text>
+            <View style={styles.startArrow}>
+              <Text style={styles.startArrowText}>→</Text>
+            </View>
           </TouchableOpacity>
         </View>
       ) : isDoneToday ? (
         <View style={styles.sessionCard}>
-          {nextWorkoutDay !== null && (
-            <NextWorkoutBadge dayIndex={nextWorkoutDay} />
-          )}
+          <HeroOrnament />
           <Text style={styles.sessionLabel}>All set</Text>
           <Text style={styles.sessionTitle}>You're good for today</Text>
           <Text style={styles.restTip}>
             Your session is done. Recovery is part of the program. Try a short walk or gentle stretching today.
           </Text>
+          {nextWorkoutDay !== null && (
+            <View style={styles.nextChip}>
+              <Text style={styles.nextChipText}>
+                Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}
+              </Text>
+            </View>
+          )}
           {nextSessionId && (
             <TouchableOpacity
               onPress={() => {
@@ -710,16 +773,21 @@ export default function HomeScreen() {
         </View>
       ) : (
         <View style={styles.sessionCard}>
-          {isRestDay && nextWorkoutDay !== null && (
-            <NextWorkoutBadge dayIndex={nextWorkoutDay} />
-          )}
-          <Text style={styles.sessionLabel}>{isRestDay ? 'Rest Day' : 'Up Next'}</Text>
-          <Text style={styles.sessionTitle}>{isRestDay ? 'Recovery Day' : 'Your next session'}</Text>
+          {isRestDay ? <HeroOrnament /> : null}
+          <Text style={styles.sessionLabel}>{isRestDay ? 'Rest day' : 'Up Next'}</Text>
+          <Text style={styles.sessionTitle}>{isRestDay ? 'Recovery day' : 'Your next session'}</Text>
           <Text style={styles.restTip}>
             {isRestDay
-              ? 'Recovery is part of the program. Try a short walk or gentle stretching today.'
+              ? 'Recovery is part of the program. A short walk or an easy stretch is enough today.'
               : 'Your next session is ready whenever you are.'}
           </Text>
+          {isRestDay && nextWorkoutDay !== null && (
+            <View style={styles.nextChip}>
+              <Text style={styles.nextChipText}>
+                Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}
+              </Text>
+            </View>
+          )}
           {nextSessionId && (
             <TouchableOpacity
               onPress={() => {
@@ -777,6 +845,14 @@ export default function HomeScreen() {
 
     </ScrollView>
 
+      {sharePrompt ? (
+        <FriendShareSheet
+          firstName={firstName}
+          painImproved={sharePrompt.painImproved}
+          onDismiss={() => setSharePrompt(null)}
+        />
+      ) : null}
+
       <WorkoutDaysModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -819,13 +895,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'baseline',
-    marginBottom: 24,
+    marginBottom: 18,
   },
   greeting: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    letterSpacing: -0.1,
   },
 
   // Stretch break countdown card
@@ -833,8 +909,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.primaryMuted,
-    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginBottom: 16,
@@ -845,9 +923,8 @@ const styles = StyleSheet.create({
   stretchCardLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
     marginBottom: 4,
   },
   stretchCardValue: {
@@ -871,70 +948,110 @@ const styles = StyleSheet.create({
   },
 
   // Session / rest day card — the hero; highest elevation on screen
+  // Tinted (not white) so it reads as a different material from the cards below.
   sessionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    backgroundColor: colors.primaryMuted,
+    borderRadius: 32,
     paddingHorizontal: 24,
     paddingTop: 28,
-    paddingBottom: 36,
-    ...shadows.high,
+    paddingBottom: 28,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  ornament: {
+    position: 'absolute',
+    top: -12,
+    right: -30,
+  },
+  nextChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     marginBottom: 16,
   },
-  sessionCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sessionWeekBadge: {
-    backgroundColor: colors.primaryMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.chip,
-  },
-  sessionWeekBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primaryDeep,
-    letterSpacing: 0.4,
+  nextChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   sessionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    letterSpacing: 0.2,
+    marginBottom: 10,
   },
   sessionTitle: {
-    fontSize: 24,
+    fontFamily: serifFont,
+    fontSize: 34,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 8,
-    lineHeight: 30,
+    marginBottom: 10,
+    lineHeight: 39,
+    letterSpacing: -0.6,
+    paddingRight: 24,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 22,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(62, 107, 78, 0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  chipGlyph: {
+    fontSize: 11,
+    color: colors.primary,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   sessionPurpose: {
     fontSize: 15,
     fontWeight: '500',
     color: colors.textSecondary,
     lineHeight: 22,
-    marginBottom: 12,
-  },
-  sessionMetaLine: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    lineHeight: 21,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   startButton: {
     height: 56,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
+    borderRadius: 999,
+    backgroundColor: '#17261C',
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.medium,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.25,
+    shadowColor: '#17261C',
+    shadowOpacity: 0.22,
+  },
+  startArrow: {
+    position: 'absolute',
+    right: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  startArrowText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
   },
   startButtonText: {
     fontSize: 17,
@@ -956,25 +1073,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.textSecondary,
   },
-  nextWorkoutBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    zIndex: 1,
-  },
-  nextWorkoutBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 0.2,
-  },
-
   // Skeletons
   skeletonHeader: {
     marginBottom: 24,

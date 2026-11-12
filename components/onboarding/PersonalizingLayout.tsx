@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 import { useOnboarding } from '../../context/OnboardingContext';
 import type { OnboardingAnswers } from '../../types/database';
 
@@ -8,7 +10,7 @@ type PersonalizingLayoutProps = {
   children: React.ReactNode;
   /**
    * The step key of the screen that owns this layout (e.g. 'q1', 'q6').
-   * The bars will only count fields whose data is collected on this step or
+   * The plan card will only reflect fields whose data is collected on this step or
    * earlier in the flow — so swiping back reveals a partially-filled state
    * that matches the screen being revealed, not the furthest-answered state.
    */
@@ -55,33 +57,37 @@ const FIELD_UNLOCKED_AT: Partial<Record<AnswerField, number>> = {
   sessions_per_week_preference: 7,   // q8
 };
 
-const bars: { label: string; fields: AnswerField[] }[] = [
-  { label: 'Your pain', fields: ['main_goal', 'pain_location'] },
-  { label: 'How active', fields: ['pain_duration', 'pain_type'] },
-  {
-    label: 'Your setup',
-    fields: ['activity_level', 'pain_trigger', 'equipment', 'sessions_per_week_preference'],
-  },
-];
+const PROGRESS_FIELDS = Object.keys(FIELD_UNLOCKED_AT) as AnswerField[];
 
-function segmentProgress(
-  answers: Partial<Record<AnswerField, unknown>>,
-  fields: AnswerField[],
-  currentStepIndex: number,
-): number {
-  // Denominator is always the total fields in this bar so each bar fills
-  // proportionally as new questions are asked and answered.
-  const answered = fields.filter((field) => {
-    // Don't count fields that haven't been asked yet on this screen.
-    const unlockedAt = FIELD_UNLOCKED_AT[field] ?? 0;
-    if (unlockedAt > currentStepIndex) return false;
+const FOCUS_LABEL: Record<OnboardingAnswers['pain_location'], string> = {
+  upper: 'Upper back',
+  lower: 'Lower back',
+  all: 'Whole back',
+};
 
-    const value = answers[field];
-    if (value == null) return false;
-    if (Array.isArray(value) && value.length === 0) return false;
-    return true;
-  }).length;
-  return answered / fields.length;
+// Mirrors assignment_rules v1 global.duration_weeks (migration 014, live DB).
+// Keep in sync if the rules change, or the card will disagree with the match screen.
+const WEEKS: Record<OnboardingAnswers['pain_duration'], number> = {
+  acute: 4,
+  subacute: 5,
+  chronic: 6,
+};
+
+// Coarse read of the engine's starting intensity: acute pain starts one tier lower
+// (starting_intensity_offset) and activity scales intensity (intensity_multiplier).
+function startLabel(
+  duration: OnboardingAnswers['pain_duration'],
+  activity: OnboardingAnswers['activity_level'] | undefined,
+): string {
+  if (duration === 'acute' || activity === 'sedentary') return 'Gentle';
+  if (activity === 'active' || activity === 'athlete') return 'Stronger';
+  return 'Steady';
+}
+
+function isAnswered(value: unknown): boolean {
+  if (value == null) return false;
+  if (Array.isArray(value) && value.length === 0) return false;
+  return true;
 }
 
 function AnimatedBarFill({ progress }: { progress: number }) {
@@ -115,25 +121,46 @@ export function PersonalizingLayout({ children, currentStep, compact = false }: 
   const { answers } = useOnboarding();
   const currentStepIndex = STEP_INDEX[currentStep];
 
+  // Only reflect answers collected on this step or earlier, so swiping back shows
+  // the card as it was on the screen being revealed.
+  const visible = <K extends AnswerField>(field: K) =>
+    (FIELD_UNLOCKED_AT[field] ?? 0) <= currentStepIndex && isAnswered(answers[field])
+      ? answers[field]
+      : undefined;
+
+  const location = visible('pain_location');
+  const duration = visible('pain_duration');
+  const activity = visible('activity_level');
+
+  const slots = [
+    { label: 'Focus', value: location ? FOCUS_LABEL[location] : null },
+    { label: 'Start', value: duration ? startLabel(duration, activity) : null },
+    { label: 'Length', value: duration ? `${WEEKS[duration]} weeks` : null },
+  ];
+
+  const progress =
+    PROGRESS_FIELDS.filter((field) => visible(field) !== undefined).length / PROGRESS_FIELDS.length;
+
   return (
     <View style={styles.container}>
-      <Text style={[styles.header, compact && styles.headerCompact]}>Building your plan</Text>
-
-      <View style={[styles.barsContainer, compact && styles.barsContainerCompact]}>
-        {bars.map((bar) => {
-          const progress = segmentProgress(answers, bar.fields, currentStepIndex);
-
-          return (
-            <View key={bar.label} style={styles.barRow}>
-              <Text style={[styles.barLabel, progress > 0 && styles.barLabelActive]}>
-                {bar.label}
+      <View style={[styles.card, compact && styles.cardCompact]}>
+        <Text style={styles.header}>Your plan</Text>
+        <View style={styles.slots}>
+          {slots.map((slot) => (
+            <View key={slot.label} style={styles.slot}>
+              <Text style={styles.slotLabel}>{slot.label}</Text>
+              <Text
+                style={[styles.slotValue, !slot.value && styles.slotValueEmpty]}
+                numberOfLines={1}
+              >
+                {slot.value ?? '—'}
               </Text>
-              <View style={styles.barTrack}>
-                <AnimatedBarFill progress={progress} />
-              </View>
             </View>
-          );
-        })}
+          ))}
+        </View>
+        <View style={styles.barTrack}>
+          <AnimatedBarFill progress={progress} />
+        </View>
       </View>
 
       {children}
@@ -145,44 +172,57 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    marginBottom: 28,
+    ...shadows.low,
+  },
+  cardCompact: {
+    marginBottom: 16,
+  },
   header: {
-    fontSize: 15,
+    fontSize: 11,
     fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 16,
+    color: colors.textTertiary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
-  headerCompact: {
-    marginBottom: 10,
+  slots: {
+    flexDirection: 'row',
+    marginBottom: 12,
   },
-  barsContainer: {
-    gap: 12,
-    marginBottom: 32,
+  slot: {
+    flex: 1,
+    gap: 2,
   },
-  barsContainerCompact: {
-    gap: 8,
-    marginBottom: 16,
-  },
-  barRow: {
-    gap: 6,
-  },
-  barLabel: {
-    fontSize: 13,
-    fontWeight: '500',
+  slotLabel: {
+    fontSize: 12,
     color: colors.textSecondary,
   },
-  barLabelActive: {
-    color: colors.textPrimary,
-    fontWeight: '600',
+  slotValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primaryDeep,
+    letterSpacing: -0.2,
+  },
+  slotValueEmpty: {
+    color: colors.textTertiary,
+    fontWeight: '500',
   },
   barTrack: {
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.borderLight,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 3,
+    borderRadius: 2,
   },
 });

@@ -10,6 +10,7 @@
  *                      every tap, including deselect)
  *   primaryAction    — ContinueButton, "Start session", "Skip rest", any
  *                      forward-navigation advance
+ *   heavy            — repeated pulses while a hold-to-confirm is held
  *   success          — single-beat success (minor wins)
  *   sessionComplete  — two-beat finish: Medium impact → 80ms → success
  *   celebration      — three-beat program-complete sequence
@@ -33,6 +34,11 @@ export function hapticSelection() {
 
 export function hapticPrimaryAction() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+}
+
+/** Repeated during a press-and-hold to make the hold feel physical. */
+export function hapticHeavy() {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 }
 
 export function hapticSuccess() {

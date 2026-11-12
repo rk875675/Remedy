@@ -3,12 +3,55 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+
+/
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/back-pain-app
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/how
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/pricing
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/faq
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/about
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/contact
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/desk
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/404
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/exercises/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/guides/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/privacy
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/terms
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/unsubscribe
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
 /styles.css
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=31536000, immutable
 
 /robots.txt
   Content-Type: text/plain; charset=utf-8
@@ -21,6 +64,13 @@
 
 /llms.txt
   Content-Type: text/plain; charset=utf-8
+
+/llms-full.txt
+  Content-Type: text/plain; charset=utf-8
+  X-Robots-Tag: noindex
+
+/site.webmanifest
+  Content-Type: application/manifest+json
 
 /index.md
   Content-Type: text/markdown; charset=utf-8
@@ -37,10 +87,267 @@
   X-Robots-Tag: noindex
   Link: <https://remedyrecoveries.com/how>; rel="canonical"
 
+/pricing.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/pricing>; rel="canonical"
+
+/faq.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/faq>; rel="canonical"
+
+/about.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/about>; rel="canonical"
+
+/exercises/index.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/>; rel="canonical"
+
+/exercises/cat-cow.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/cat-cow>; rel="canonical"
+
+/exercises/open-book-rotation.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/open-book-rotation>; rel="canonical"
+
+/exercises/thoracic-extension.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/thoracic-extension>; rel="canonical"
+
+/exercises/hip-flexor-stretch.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/hip-flexor-stretch>; rel="canonical"
+
+/exercises/mckenzie-press-up.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/mckenzie-press-up>; rel="canonical"
+
+/exercises/dead-bug.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/dead-bug>; rel="canonical"
+
+/exercises/bird-dog.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/bird-dog>; rel="canonical"
+
+/exercises/side-plank-knees.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/side-plank-knees>; rel="canonical"
+
+/exercises/side-plank.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/side-plank>; rel="canonical"
+
+/exercises/suitcase-carry.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/suitcase-carry>; rel="canonical"
+
+/exercises/glute-bridge.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/glute-bridge>; rel="canonical"
+
+/exercises/single-leg-glute-bridge.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/single-leg-glute-bridge>; rel="canonical"
+
+/exercises/barbell-hip-thrust.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/barbell-hip-thrust>; rel="canonical"
+
+/exercises/bodyweight-hip-hinge.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/bodyweight-hip-hinge>; rel="canonical"
+
+/exercises/banded-romanian-deadlift.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/banded-romanian-deadlift>; rel="canonical"
+
+/exercises/single-leg-romanian-deadlift.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/single-leg-romanian-deadlift>; rel="canonical"
+
+/exercises/dumbbell-romanian-deadlift.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/dumbbell-romanian-deadlift>; rel="canonical"
+
+/exercises/kettlebell-deadlift.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/kettlebell-deadlift>; rel="canonical"
+
+/exercises/bodyweight-squat.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/bodyweight-squat>; rel="canonical"
+
+/exercises/goblet-squat.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/goblet-squat>; rel="canonical"
+
+/exercises/split-squat.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/split-squat>; rel="canonical"
+
+/exercises/leg-press.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/leg-press>; rel="canonical"
+
+/exercises/banded-row.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/banded-row>; rel="canonical"
+
+/exercises/seated-cable-row.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/seated-cable-row>; rel="canonical"
+
+/exercises/back-extension.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/back-extension>; rel="canonical"
+
+/exercises/childs-pose.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/childs-pose>; rel="canonical"
+
+/exercises/figure-4-stretch.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/figure-4-stretch>; rel="canonical"
+
+/exercises/hamstring-stretch.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/exercises/hamstring-stretch>; rel="canonical"
+
+/guides/index.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/>; rel="canonical"
+
+/guides/lower-back-pain-exercises.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/lower-back-pain-exercises>; rel="canonical"
+
+/guides/stretches-for-lower-back-pain.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/stretches-for-lower-back-pain>; rel="canonical"
+
+/guides/core-exercises-for-back-pain.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/core-exercises-for-back-pain>; rel="canonical"
+
+/guides/upper-back-pain-exercises.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/upper-back-pain-exercises>; rel="canonical"
+
+/guides/is-walking-good-for-back-pain.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/is-walking-good-for-back-pain>; rel="canonical"
+
+/guides/when-to-see-a-doctor-for-back-pain.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain>; rel="canonical"
+
+/guides/best-back-pain-apps.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/best-back-pain-apps>; rel="canonical"
+
+/guides/morning-back-stiffness.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/morning-back-stiffness>; rel="canonical"
+
+/guides/sore-back-after-gym.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/sore-back-after-gym>; rel="canonical"
+
+/guides/back-exercises-no-equipment.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/back-exercises-no-equipment>; rel="canonical"
+
+/guides/how-long-to-stick-with-a-back-routine.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine>; rel="canonical"
+
+/guides/mental-side-of-a-sore-back.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex
+  Link: <https://remedyrecoveries.com/guides/mental-side-of-a-sore-back>; rel="canonical"
+
 /desk.md
   Content-Type: text/markdown; charset=utf-8
   X-Robots-Tag: noindex
   Link: <https://remedyrecoveries.com/desk>; rel="canonical"
 
 /README.md
+  X-Robots-Tag: noindex, nofollow
+
+/404
+  X-Robots-Tag: noindex
+
+/404.html
+  X-Robots-Tag: noindex
+
+/marketing
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/marketing.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/marketing.webmanifest
+  Content-Type: application/manifest+json
+  X-Robots-Tag: noindex, nofollow
+
+/marketing-sw.js
+  Content-Type: application/javascript; charset=utf-8
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+/promo-admin
+  X-Robots-Tag: noindex, nofollow
+
+/promo-admin.html
+  X-Robots-Tag: noindex, nofollow
+
+/wrangler.toml
   X-Robots-Tag: noindex, nofollow

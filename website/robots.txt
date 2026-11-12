@@ -4,6 +4,12 @@
 User-agent: *
 Allow: /
 Disallow: /promo-admin
+Disallow: /marketing
+Disallow: /marketing.html
+Disallow: /marketing.webmanifest
+Disallow: /marketing-sw.js
+Disallow: /api/marketing-state
+Disallow: /wrangler.toml
 Disallow: /README.md
 
 User-agent: GPTBot
@@ -34,4 +40,3 @@ User-agent: Bingbot
 Allow: /
 
 Sitemap: https://remedyrecoveries.com/sitemap.xml
-Sitemap: https://remedyrecoveries.com/sitemap.txt

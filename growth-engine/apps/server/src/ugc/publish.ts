@@ -5,20 +5,20 @@ import { and, eq, lte } from "drizzle-orm";
 import { OUTPUT_DIR, r2Configured, type Platform } from "../config.js";
 import { downloadBuffer } from "../publish/r2.js";
 import {
-  accountFor,
-  brightbeanConfigured,
-  publishCarouselToAccount,
+  accountsFor,
   publisherReady,
   uploadVideoFile,
-} from "../publish/brightbean.js";
-import type { PlatformPosts } from "../publish/index.js";
+  zernioConfigured,
+  type ZernioKeySlot,
+} from "../publish/zernio.js";
+import { publishEveryAccount, uploadPerSlot, type PlatformPosts } from "../publish/index.js";
 import { withShortsIfNeeded } from "./caption.js";
 import { creatorById } from "./store.js";
 
 const UGC_PLATFORMS: Platform[] = ["tiktok", "instagram", "facebook", "youtube"];
 
 function ugcTargets(): Platform[] {
-  return UGC_PLATFORMS.filter((p) => publisherReady(p) && Boolean(accountFor(p)));
+  return UGC_PLATFORMS.filter((p) => publisherReady(p));
 }
 
 async function ensureLocalFile(video: typeof ugcVideos.$inferSelect): Promise<string> {
@@ -39,11 +39,11 @@ export async function publishUgcVideo(uuid: string): Promise<{ ok: boolean; erro
   const video = db.select().from(ugcVideos).where(eq(ugcVideos.uuid, uuid)).get();
   if (!video) return { ok: false, error: "UGC video not found" };
   if (video.status === "published") return { ok: false, error: "Already published" };
-  if (!brightbeanConfigured()) return { ok: false, error: "Connect BrightBean in Settings to post UGC." };
+  if (!zernioConfigured()) return { ok: false, error: "Set ZERNIO_API_KEY in growth-engine/.env to post UGC." };
 
   const targets = ugcTargets();
   if (targets.length === 0) {
-    return { ok: false, error: "No BrightBean TikTok / Instagram / Facebook / YouTube account connected." };
+    return { ok: false, error: "No Zernio TikTok / Instagram / Facebook / YouTube account connected." };
   }
 
   let filePath: string;
@@ -55,13 +55,14 @@ export async function publishUgcVideo(uuid: string): Promise<{ ok: boolean; erro
     return { ok: false, error: message };
   }
 
-  let mediaId: string;
+  let mediaBySlot: Map<ZernioKeySlot, string[]>;
+  let uploadErrors: Map<ZernioKeySlot, string>;
   try {
-    mediaId = await uploadVideoFile(filePath, video.id, {
-      title: `Remedy UGC ${video.uuid}`,
-      tags: "remedy,ugc",
-      idempotencyKey: `remedy-ugc-${video.uuid}-video-v1`,
-    });
+    const slots = [...new Set(targets.flatMap((p) => accountsFor(p).map((a) => a.keySlot)))];
+    const uploaded = await uploadPerSlot(slots, (slot) => uploadVideoFile(filePath, slot).then((url) => [url]));
+    mediaBySlot = uploaded.urls;
+    uploadErrors = uploaded.errors;
+    if (mediaBySlot.size === 0) throw new Error([...uploadErrors.values()][0] ?? "Zernio video upload failed");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     db.update(ugcVideos).set({ status: "failed", error: message }).where(eq(ugcVideos.id, video.id)).run();
@@ -73,28 +74,19 @@ export async function publishUgcVideo(uuid: string): Promise<{ ok: boolean; erro
   const results: PlatformPosts = {};
 
   for (const platform of targets) {
-    try {
-      const r = await publishCarouselToAccount({
-        postId: video.id,
-        platform,
-        title,
-        caption,
-        mediaAssetIds: [mediaId],
-        mode: "live",
-        scheduledAt: video.scheduledAt,
-        idempotencyKey: `remedy-ugc-${video.uuid}-${platform}-v1`,
-      });
-      results[platform] = {
-        publishId: r.brightbeanPostId,
-        id: r.platformPostId,
-        status: r.status,
-        error: r.error,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      results[platform] = { status: "failed", error: message };
-      console.error(`UGC ${video.uuid} -> ${platform} failed: ${message}`);
-    }
+    results[platform] = await publishEveryAccount({
+      platform,
+      postId: video.id,
+      title,
+      caption,
+      mediaBySlot,
+      uploadErrors,
+      mediaKind: "video",
+      mode: "live",
+      scheduledAt: video.scheduledAt,
+      kind: "ugc",
+      idempotencyPrefix: `remedy-ugc-${video.uuid}`,
+    });
   }
 
   const anySuccess = Object.values(results).some((r) => r.status !== "failed");

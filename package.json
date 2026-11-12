@@ -1,6 +1,6 @@
 {
   "name": "remedy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -11,6 +11,7 @@
     "sync:brand": "python scripts/sync_brand_assets.py",
     "verify:p0": "tsx --test scripts/verify_p0_recovery.ts",
     "verify:program-answers": "tsx --test scripts/verify_program_answers.ts",
+    "verify:next-program": "tsx --test scripts/verify_next_program.ts",
     "eas:ios:development": "eas build --platform ios --profile development"
   },
   "dependencies": {

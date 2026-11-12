@@ -1,9 +1,13 @@
+import { handleEditor } from "../editor";
+
 const DASHBOARD_KEY = "growth/dashboard.json";
 const PENDING_KEY = "growth/pending.json";
 const UGC_LIBRARY_KEY = "growth/ugc-library.json";
 const TIKTOK_OAUTH_KEY = "growth/tiktok-oauth.json";
 const LIBRARY_OVERRIDES_KEY = "growth/library-overrides.json";
 const RATE_LIMIT_KEY = "growth/rate-limits.json";
+const FORMATS_KEY = "growth/format-refs.json";
+const MEMES_KEY = "growth/memes.json";
 
 interface R2Object {
   text(): Promise<string>;
@@ -487,6 +491,108 @@ async function pushPending(bucket: R2Bucket, action: PendingAction): Promise<voi
   await bucket.put(PENDING_KEY, JSON.stringify(current), { httpMetadata: { contentType: "application/json" } });
 }
 
+interface FormatRef {
+  id: string;
+  url: string;
+  note: string;
+  createdAt: string;
+}
+
+async function readFormats(bucket: R2Bucket): Promise<FormatRef[]> {
+  const obj = await bucket.get(FORMATS_KEY);
+  if (!obj) return [];
+  try {
+    const parsed = JSON.parse(await obj.text()) as { items?: unknown };
+    if (!parsed || !Array.isArray(parsed.items)) return [];
+    return parsed.items.filter((row): row is FormatRef => {
+      if (!row || typeof row !== "object") return false;
+      const item = row as FormatRef;
+      return typeof item.id === "string" && typeof item.url === "string" && typeof item.note === "string" && typeof item.createdAt === "string";
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function writeFormats(bucket: R2Bucket, items: FormatRef[]): Promise<void> {
+  await bucket.put(FORMATS_KEY, JSON.stringify({ items }), {
+    httpMetadata: { contentType: "application/json" },
+  });
+}
+
+interface MemeItem {
+  id: string;
+  title: string;
+  caption: string;
+  description: string;
+  hashtags: string;
+  lines: string[];
+  musicCredit: string;
+  status: "review" | "rejected";
+  rejectedReason: string;
+  createdAt: string;
+}
+
+function isMemeItem(row: unknown): row is MemeItem {
+  if (!row || typeof row !== "object") return false;
+  const item = row as MemeItem;
+  return (
+    typeof item.id === "string" &&
+    /^[a-z0-9-]{1,40}$/.test(item.id) &&
+    typeof item.title === "string" &&
+    typeof item.caption === "string" &&
+    typeof item.description === "string" &&
+    typeof item.hashtags === "string" &&
+    Array.isArray(item.lines) &&
+    item.lines.every((line) => typeof line === "string") &&
+    typeof item.musicCredit === "string" &&
+    (item.status === "review" || item.status === "rejected") &&
+    typeof item.rejectedReason === "string" &&
+    typeof item.createdAt === "string"
+  );
+}
+
+async function readMemes(bucket: R2Bucket): Promise<MemeItem[]> {
+  const obj = await bucket.get(MEMES_KEY);
+  if (!obj) return [];
+  try {
+    const parsed = JSON.parse(await obj.text()) as { items?: unknown };
+    if (!parsed || !Array.isArray(parsed.items)) return [];
+    return parsed.items.filter(isMemeItem);
+  } catch {
+    return [];
+  }
+}
+
+async function writeMemes(bucket: R2Bucket, items: MemeItem[]): Promise<void> {
+  await bucket.put(MEMES_KEY, JSON.stringify({ items }), {
+    httpMetadata: { contentType: "application/json" },
+  });
+}
+
+function formatFromBody(raw: unknown): { url: string; note: string } | { error: string } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { error: "Bad body" };
+  const rec = raw as Record<string, unknown>;
+  for (const key of Object.keys(rec)) {
+    if (key !== "url" && key !== "note") return { error: "Unexpected field" };
+  }
+  if (typeof rec.url !== "string" || !rec.url.trim()) return { error: "Paste a link" };
+  const trimmedUrl = rec.url.trim();
+  const url = /^[a-z][a-z0-9+.-]*:/i.test(trimmedUrl) ? trimmedUrl : `https://${trimmedUrl}`;
+  if (url.length > 500) return { error: "Link is too long" };
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { error: "That is not a link" };
+  }
+  if (parsed.protocol !== "https:") return { error: "Link has to start with https" };
+  if (rec.note != null && typeof rec.note !== "string") return { error: "Note has to be text" };
+  const note = typeof rec.note === "string" ? rec.note.trim() : "";
+  if (note.length > 200) return { error: "Note is too long" };
+  return { url: parsed.toString(), note };
+}
+
 async function dropPendingForUuid(bucket: R2Bucket, uuid: string): Promise<void> {
   const obj = await bucket.get(PENDING_KEY);
   if (!obj) return;
@@ -568,8 +674,80 @@ export const onRequest = async (context: { request: Request; env: Env; params: {
   }
 
   const me = resolveCloudIdentity(context.request, context.env);
+  if (parts[0] === "editor") {
+    return handleEditor(context.request, bucket, me.role);
+  }
   if (method === "GET" && parts[0] === "me") {
     return json({ email: me.email, role: me.role, creatorSlug: me.creatorSlug, engine: "cloud" });
+  }
+  if (parts[0] === "formats" && !parts[2]) {
+    if (me.role !== "operator") return json({ ok: false, error: "Not allowed" }, 403);
+    if (method === "GET" && !parts[1]) return json({ items: await readFormats(bucket) });
+    if (method === "POST" && !parts[1]) {
+      const blocked = await checkWriteLimit(bucket);
+      if (blocked) return json({ ok: false, error: blocked }, 429);
+      const parsed = formatFromBody(await context.request.json().catch(() => null));
+      if ("error" in parsed) return json({ ok: false, error: parsed.error }, 400);
+      const items = await readFormats(bucket);
+      const item: FormatRef = {
+        id: crypto.randomUUID(),
+        url: parsed.url,
+        note: parsed.note,
+        createdAt: new Date().toISOString(),
+      };
+      await writeFormats(bucket, [item, ...items].slice(0, 100));
+      return json({ ok: true, item });
+    }
+    if (method === "DELETE" && parts[1] && /^[0-9a-f-]{36}$/i.test(parts[1])) {
+      const blocked = await checkWriteLimit(bucket);
+      if (blocked) return json({ ok: false, error: blocked }, 429);
+      const items = await readFormats(bucket);
+      await writeFormats(bucket, items.filter((item) => item.id !== parts[1]));
+      return json({ ok: true });
+    }
+  }
+  if (parts[0] === "memes") {
+    if (me.role !== "operator") return json({ ok: false, error: "Not allowed" }, 403);
+    if (method === "GET" && !parts[1]) return json({ items: await readMemes(bucket) });
+    if (method === "GET" && parts[1] && parts[2] === "file" && !parts[3] && /^[a-z0-9-]{1,40}$/.test(parts[1])) {
+      const obj = await bucket.get(`growth/memes/${parts[1]}.mp4`);
+      if (!obj) return json({ ok: false, error: "Meme not found" }, 404);
+      const download = url.searchParams.get("download") === "1";
+      const name = `remedy-meme-${parts[1]}.mp4`;
+      return new Response(await obj.arrayBuffer(), {
+        headers: {
+          "Content-Type": obj.httpMetadata?.contentType ?? "video/mp4",
+          "Content-Disposition": download ? `attachment; filename="${name}"` : `inline; filename="${name}"`,
+          "Cache-Control": "private, max-age=60",
+        },
+      });
+    }
+    if (method === "POST" && parts[1] && (parts[2] === "reject" || parts[2] === "restore") && !parts[3] && /^[a-z0-9-]{1,40}$/.test(parts[1])) {
+      const blocked = await checkWriteLimit(bucket);
+      if (blocked) return json({ ok: false, error: blocked }, 429);
+      const items = await readMemes(bucket);
+      const item = items.find((row) => row.id === parts[1]);
+      if (!item) return json({ ok: false, error: "Meme not found" }, 404);
+      let reason = "";
+      if (parts[2] === "reject") {
+        const body = (await context.request.json().catch(() => null)) as { reason?: unknown } | null;
+        if (body && typeof body === "object" && !Array.isArray(body)) {
+          const keys = Object.keys(body);
+          if (keys.some((key) => key !== "reason")) return json({ ok: false, error: "Unexpected field" }, 400);
+          if (body.reason != null && typeof body.reason !== "string") return json({ ok: false, error: "Reason has to be text" }, 400);
+          reason = typeof body.reason === "string" ? body.reason.trim() : "";
+          if (reason.length > 200) return json({ ok: false, error: "Reason is too long" }, 400);
+        }
+      }
+      const next = items.map((row) =>
+        row.id === item.id
+          ? { ...row, status: parts[2] === "reject" ? "rejected" as const : "review" as const, rejectedReason: parts[2] === "reject" ? reason : "" }
+          : row,
+      );
+      await writeMemes(bucket, next);
+      return json({ ok: true, item: next.find((row) => row.id === item.id) });
+    }
+    return json({ ok: false, error: "Not found" }, 404);
   }
   if (method === "GET" && parts[0] === "ugc" && parts[1] === "insights") {
     const dash = await readDashboard(bucket);

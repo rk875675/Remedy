@@ -1,3 +1,4 @@
+import '../lib/fontScaleCap';
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { enableFreeze } from 'react-native-screens';
@@ -364,6 +365,7 @@ function RootNavigator() {
         <Stack.Screen name="weekly-ramp" options={{ gestureEnabled: false }} />
         <Stack.Screen name="orientation" />
         <Stack.Screen name="program-complete" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="next-program" options={{ gestureEnabled: false }} />
         <Stack.Screen name="auth-callback" options={{ gestureEnabled: false }} />
         <Stack.Screen name="reset-password" options={{ gestureEnabled: false }} />
       </Stack>

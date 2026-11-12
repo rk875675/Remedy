@@ -180,7 +180,7 @@ function resolveCursorCli(): string[] | null {
   return [env.CURSOR_AGENT_BIN];
 }
 
-function runCursorAgent(prompt: string, timeoutMs = 180_000): Promise<string | null> {
+function runCursorAgent(prompt: string, timeoutMs = 180_000, modelOverride?: string): Promise<string | null> {
   const gate = rateLimiter.acquire();
   if (!gate.ok) return Promise.resolve(null);
 
@@ -197,7 +197,7 @@ function runCursorAgent(prompt: string, timeoutMs = 180_000): Promise<string | n
       return;
     }
     const [cmd, ...baseArgs] = cli;
-    const model = pickModel();
+    const model = modelOverride || pickModel();
     const workDir = path.join(os.tmpdir(), "remedy-growth-agent");
     fs.mkdirSync(workDir, { recursive: true });
     const child = spawn(
@@ -253,6 +253,21 @@ async function runGemini(prompt: string): Promise<string | null> {
     console.warn("Gemini call failed:", err instanceof Error ? err.message : err);
     return null;
   }
+}
+
+/** Phase-1 cut judgment. Pinned to Cursor Grok so it does not spend other-model quota. */
+export async function generateEditorCutJson<T>(prompt: string, schema: z.ZodType<T>): Promise<T | null> {
+  const wrapped = `${prompt}\n\nIMPORTANT: Respond with ONLY the JSON object, no markdown fences, no commentary.`;
+  const raw = await runCursorAgent(wrapped, 120_000, "grok-4.7-xhigh-fast");
+  if (raw === null) return null;
+  const json = extractJson(raw);
+  if (json === null) return null;
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    console.warn("editor cut model failed schema:", parsed.error.message);
+    return null;
+  }
+  return parsed.data;
 }
 
 export async function generateJson<T>(prompt: string, schema: z.ZodType<T>): Promise<T | null> {

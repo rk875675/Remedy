@@ -30,17 +30,30 @@ import {
   shotThumbSrc,
   type StudioMe,
 } from "./api";
+import { EditView } from "./editor/EditView";
 import { UgcView } from "./ugc/UgcView";
+import { PinsView } from "./pins/PinsView";
+import { FormatsView } from "./formats/FormatsView";
+import { MemesView } from "./memes/MemesView";
+import { FORMAT_STUDIES } from "./memes/formatLibrary";
+import {
+  DEFAULT_PARTS_SHELF,
+  libraryShelfFromHash,
+  PARTS_SHELVES,
+  type PartsShelf,
+} from "./memes/PartsView";
 
 function appStoreUrl(settings?: Settings | null): string {
   return typeof settings?.appStoreUrl === "string" && settings.appStoreUrl ? settings.appStoreUrl : APP_STORE_URL;
 }
 
-type Tab = "review" | "library" | "insights" | "studio" | "engine" | "images" | "svgs" | "settings" | "ugc";
+type Tab = "formats" | "memes" | "review" | "edit" | "library" | "insights" | "studio" | "engine" | "images" | "svgs" | "settings" | "ugc";
+type MemesSub = "review" | "library";
 type ImagesSub = "all" | "ss" | "crop";
 type UgcSub = "sohan" | "ai";
 type InsightsSub = "overview" | "learning";
-const TABS: Tab[] = ["review", "library", "insights", "studio", "engine", "images", "svgs", "settings", "ugc"];
+const TABS: Tab[] = ["formats", "memes", "review", "edit", "library", "insights", "studio", "engine", "images", "svgs", "settings", "ugc"];
+const MEMES_SUBS: MemesSub[] = ["review", "library"];
 const CREATOR_TABS: Tab[] = ["insights", "library", "studio", "ugc"];
 const GREEN = "#33663f";
 const CREAM = "#f7f2e9";
@@ -71,15 +84,52 @@ function insightsSubFromHash(): InsightsSub {
   return parts[0] === "insights" && INSIGHTS_SUBS.includes(sub) ? sub : "overview";
 }
 
-function hashFor(tab: Tab, imagesSub: ImagesSub = "all", ugcSub: UgcSub = "sohan", insightsSub: InsightsSub = "overview"): string {
+function memesSubFromHash(): MemesSub {
+  const parts = window.location.hash.replace(/^#/, "").split("/");
+  if (parts[0] === "memes" && parts[1] === "parts") return "library";
+  const sub = parts[1] as MemesSub;
+  return parts[0] === "memes" && MEMES_SUBS.includes(sub) ? sub : "review";
+}
+
+const FORMAT_IDS = new Set(FORMAT_STUDIES.map((row) => row.id));
+
+function formatIdFromHash(): string | null {
+  const parts = window.location.hash.replace(/^#/, "").split("/");
+  if (parts[0] !== "memes" || parts[1] !== "library" || !parts[2]) return null;
+  const id = parts[2];
+  return FORMAT_IDS.has(id) ? id : null;
+}
+
+function hashFor(
+  tab: Tab,
+  imagesSub: ImagesSub = "all",
+  ugcSub: UgcSub = "sohan",
+  insightsSub: InsightsSub = "overview",
+  memesSub: MemesSub = "review",
+  libraryShelf: PartsShelf = DEFAULT_PARTS_SHELF,
+  formatId: string | null = null,
+): string {
   if (tab === "images" && imagesSub !== "all") return `#images/${imagesSub}`;
   if (tab === "ugc" && ugcSub !== "sohan") return `#ugc/${ugcSub}`;
   if (tab === "insights" && insightsSub !== "overview") return `#insights/${insightsSub}`;
+  if (tab === "memes" && memesSub === "library") {
+    if (formatId) return `#memes/library/${formatId}`;
+    if (libraryShelf !== DEFAULT_PARTS_SHELF) return `#memes/library/${libraryShelf}`;
+    return "#memes/library";
+  }
   return `#${tab}`;
 }
 
-function writeHash(tab: Tab, imagesSub: ImagesSub = "all", ugcSub: UgcSub = "sohan", insightsSub: InsightsSub = "overview"): void {
-  const next = hashFor(tab, imagesSub, ugcSub, insightsSub);
+function writeHash(
+  tab: Tab,
+  imagesSub: ImagesSub = "all",
+  ugcSub: UgcSub = "sohan",
+  insightsSub: InsightsSub = "overview",
+  memesSub: MemesSub = "review",
+  libraryShelf: PartsShelf = DEFAULT_PARTS_SHELF,
+  formatId: string | null = null,
+): void {
+  const next = hashFor(tab, imagesSub, ugcSub, insightsSub, memesSub, libraryShelf, formatId);
   if (window.location.hash !== next) history.replaceState(null, "", next);
 }
 
@@ -178,7 +228,7 @@ async function copyText(text: string): Promise<void> {
 const SITE_URL = "https://remedyrecoveries.com";
 
 function isComingSoonPost(post: Post): boolean {
-  return post.prelaunch === true || post.id === 56;
+  return post.prelaunch === true;
 }
 
 function captionForManual(post: Post): string {
@@ -487,6 +537,9 @@ export default function App() {
   const [imagesSub, setImagesSubState] = useState<ImagesSub>(imagesSubFromHash);
   const [ugcSub, setUgcSubState] = useState<UgcSub>(ugcSubFromHash);
   const [insightsSub, setInsightsSubState] = useState<InsightsSub>(insightsSubFromHash);
+  const [memesSub, setMemesSubState] = useState<MemesSub>(memesSubFromHash);
+  const [formatId, setFormatIdState] = useState<string | null>(formatIdFromHash);
+  const [libraryShelf, setLibraryShelfState] = useState<PartsShelf>(libraryShelfFromHash);
   const [me, setMe] = useState<StudioMe>({ email: "", role: "operator", creatorSlug: null });
   const [posts, setPosts] = useState<Post[]>([]);
   const [hooks, setHooks] = useState<Hook[]>([]);
@@ -567,9 +620,22 @@ export default function App() {
       setImagesSubState(imagesSubFromHash());
       setUgcSubState(ugcSubFromHash());
       setInsightsSubState(insightsSubFromHash());
+      setMemesSubState(memesSubFromHash());
+      setFormatIdState(formatIdFromHash());
+      setLibraryShelfState(libraryShelfFromHash());
     };
     window.addEventListener("hashchange", onHash);
-    if (window.location.hash) writeHash(tabFromHash(), imagesSubFromHash(), ugcSubFromHash(), insightsSubFromHash());
+    if (window.location.hash) {
+      writeHash(
+        tabFromHash(),
+        imagesSubFromHash(),
+        ugcSubFromHash(),
+        insightsSubFromHash(),
+        memesSubFromHash(),
+        libraryShelfFromHash(),
+        formatIdFromHash(),
+      );
+    }
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
@@ -580,7 +646,34 @@ export default function App() {
       next === "images" ? imagesSub : "all",
       next === "ugc" ? ugcSub : "sohan",
       next === "insights" ? insightsSub : "overview",
+      next === "memes" ? memesSub : "review",
+      next === "memes" && memesSub === "library" ? libraryShelf : DEFAULT_PARTS_SHELF,
+      next === "memes" && memesSub === "library" ? formatId : null,
     );
+  };
+
+  const setMemesSub = (next: MemesSub) => {
+    setMemesSubState(next);
+    writeHash(
+      "memes",
+      imagesSub,
+      ugcSub,
+      insightsSub,
+      next,
+      next === "library" ? libraryShelf : DEFAULT_PARTS_SHELF,
+      next === "library" ? formatId : null,
+    );
+  };
+
+  const setLibraryShelf = (next: PartsShelf) => {
+    setLibraryShelfState(next);
+    setFormatIdState(null);
+    writeHash("memes", imagesSub, ugcSub, insightsSub, "library", next, null);
+  };
+
+  const setFormatId = (next: string | null) => {
+    setFormatIdState(next);
+    writeHash("memes", imagesSub, ugcSub, insightsSub, "library", DEFAULT_PARTS_SHELF, next);
   };
 
   const setImagesSub = (next: ImagesSub) => {
@@ -608,7 +701,10 @@ export default function App() {
   };
 
   const allTabs: Array<[Tab, string]> = [
+    ["formats", "Formats"],
+    ["memes", "Memes"],
     ["review", `Review (${posts.filter((p) => p.status === "queued" && !p.ctaReview).length})`],
+    ["edit", "Edit"],
     ["images", "Images"],
     ["svgs", "SVGs"],
     ["library", "Library"],
@@ -668,7 +764,7 @@ export default function App() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-extrabold tracking-tight lg:hidden" style={{ color: GREEN }}>
-                {tab === "ugc" ? "UGC" : "Remedy Growth Engine"}
+                {tab === "ugc" ? "UGC" : tab === "edit" ? "Edit" : tab === "formats" ? "Formats" : tab === "memes" ? "Memes" : "Remedy Growth Engine"}
               </h1>
               <h2 className="hidden lg:block text-2xl font-extrabold tracking-tight" style={{ color: GREEN }}>
                 {tab === "ugc" ? "UGC" : tabs.find(([id]) => id === tab)?.[1] ?? "Studio"}
@@ -678,7 +774,15 @@ export default function App() {
                   ? me.role === "creator"
                     ? "Upload a video. It lands under Your videos."
                     : "Sohan or AI uploads land under Your videos."
-                  : `${mode === "live" ? "Live engine on this machine" : "Cloud studio"} · ${posts.length} posts · generate on PC, review anywhere`}
+                  : tab === "edit"
+                    ? "One video can hold several clips. Each file is stored as-is."
+                    : tab === "formats"
+                      ? "Paste format links from your phone."
+                      : tab === "memes"
+                        ? memesSub === "library"
+                          ? "Reference formats to study — scroll the feed, tap for parts."
+                          : "Wallpaper memes. Copy the title and caption, then save the video."
+                        : `${mode === "live" ? "Live engine on this machine" : "Cloud studio"} · ${posts.length} posts · generate on PC, review anywhere`}
               </p>
             </div>
             <span className="lg:hidden">
@@ -722,6 +826,19 @@ export default function App() {
               manualCompletedIds={settings?.manualPosting?.completedIds ?? []}
             />
           )}
+          {tab === "edit" && <EditView onMessage={setMessage} />}
+          {tab === "formats" && <FormatsView onMessage={setMessage} />}
+          {tab === "memes" && (
+            <MemesView
+              sub={memesSub}
+              formatId={formatId}
+              libraryShelf={libraryShelf}
+              onSub={setMemesSub}
+              onFormatId={setFormatId}
+              onLibraryShelf={setLibraryShelf}
+              onMessage={setMessage}
+            />
+          )}
           {tab === "ugc" && <UgcView me={me} sub={ugcSub} onSub={setUgcSub} onMessage={setMessage} />}
           {tab === "engine" && (
             <EngineView
@@ -743,12 +860,12 @@ export default function App() {
         </main>
       </div>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 border-t border-stone-200 flex text-[10px] pb-[env(safe-area-inset-bottom)]">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 border-t border-stone-200 flex text-[10px] overflow-x-auto pb-[env(safe-area-inset-bottom)]">
         {tabs.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex-1 py-3.5 font-semibold ${tab === id ? "text-white" : "text-stone-500"}`}
+            className={`shrink-0 px-3 py-3.5 font-semibold ${tab === id ? "text-white" : "text-stone-500"}`}
             style={tab === id ? { backgroundColor: GREEN } : undefined}
           >
             {id === "review" ? "Review" : id === "ugc" ? "UGC" : label}
@@ -801,7 +918,7 @@ function ReviewView({
   const approved = posts.filter((p) => p.status === "approved");
   const inReview = posts.filter((p) => (p.status === "queued" || p.status === "approved") && !p.ctaReview);
   const shorts = inReview;
-  const [reviewSub, setReviewSub] = useState<"queue" | "shorts" | "cta">("queue");
+  const [reviewSub, setReviewSub] = useState<"queue" | "shorts" | "cta" | "pins">("queue");
   const [busy, setBusy] = useState(false);
   const [abPromptId, setAbPromptId] = useState<number | null>(null);
   const [abDimension, setAbDimension] = useState<"auto" | TestableDimension>("auto");
@@ -857,7 +974,21 @@ function ReviewView({
 
   return (
     <div className="space-y-4">
-      {current ? (
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => setReviewSub(reviewSub === "pins" ? "queue" : "pins")}
+          className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${reviewSub === "pins" ? "text-white" : "bg-white border border-stone-200"}`}
+          style={reviewSub === "pins" ? { backgroundColor: GREEN } : undefined}
+        >
+          Pins
+        </button>
+      </div>
+      {reviewSub === "pins" ? (
+        <div className="lg:hidden">
+          <PinsView onCopied={onMessage} />
+        </div>
+      ) : current ? (
         <ManualPostKit
           post={current}
           remainingAfter={remainingAfterCurrent(posts, current.id, completedIds)}
@@ -871,6 +1002,8 @@ function ReviewView({
         </div>
       )}
       <div className="hidden lg:block space-y-4">
+      {reviewSub !== "pins" && (
+      <>
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {pipeline.map((step) => (
           <div key={step.id} className="bg-white rounded-xl p-2 text-center border border-stone-200">
@@ -911,12 +1044,15 @@ function ReviewView({
           Send now
         </button>
       </div>
+      </>
+      )}
       <div className="flex gap-1">
         {(
           [
             ["queue", `Queue (${queue.length})`],
             ["cta", `CTA (${ctaReview.length})`],
             ["shorts", `YouTube Shorts (${shorts.length})`],
+            ["pins", "Pins"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -930,13 +1066,13 @@ function ReviewView({
           </button>
         ))}
       </div>
-      {!live && (
+      {!live && reviewSub !== "pins" && (
         <p className="text-[11px] text-stone-500">
           Cloud studio: approve, reject, and library edits save immediately. Generate still runs on your PC. Auto-post is off.
         </p>
       )}
 
-      {abPromptId !== null && generateEnabled && (
+      {abPromptId !== null && generateEnabled && reviewSub !== "pins" && (
         <div className="bg-white rounded-2xl border-2 p-4 space-y-2" style={{ borderColor: GREEN }}>
           <p className="text-sm font-bold">Approved #{abPromptId} — create an A/B variant?</p>
           <p className="text-[11px] text-stone-500">
@@ -1002,7 +1138,7 @@ function ReviewView({
                         {post.ctaLayoutLabel ?? post.ctaLayout ?? "CTA"} · #{post.id}
                       </p>
                       <p className="text-sm font-bold leading-snug">{last?.headline || "Remedy"}</p>
-                      <p className="text-xs text-stone-500">{last?.sub || "Coming soon on the App Store"}</p>
+                      <p className="text-xs text-stone-500">{last?.sub || "Remedy: Back Pain Relief"}</p>
                     </div>
                   </button>
                 );
@@ -1040,6 +1176,8 @@ function ReviewView({
           )}
         </>
       )}
+
+      {reviewSub === "pins" && <PinsView onCopied={onMessage} />}
 
       {reviewSub === "shorts" && (
         <div className="space-y-3">
@@ -1137,6 +1275,8 @@ function PostCard({
           <Badge tone={post.confidence >= 65 ? "green" : "stone"}>conf {post.confidence.toFixed(0)}</Badge>
           {post.hookSource === "evolved" && <Badge tone="amber">evolved</Badge>}
           {post.experiment && <Badge tone="amber">A/B with #{post.experiment.partnerId}</Badge>}
+          {post.accountTwinOf != null && <Badge tone="green">Stories B · boxed text · twin of #{post.accountTwinOf}</Badge>}
+          {post.accountTwinId != null && <Badge tone="green">Recoveries A · Stories twin #{post.accountTwinId}</Badge>}
           {post.scheduledAt && <Badge>{new Date(post.scheduledAt).toLocaleString()}</Badge>}
         </div>
         <p className="font-bold mt-2 leading-snug">{post.hookText}</p>
@@ -1769,7 +1909,7 @@ function EngineView({
                 }
               }}
               className="flex-1 py-2.5 rounded-xl bg-stone-800 text-white text-sm font-bold disabled:opacity-40"
-              title={settings?.analyticsEnabled === true ? "Pull BrightBean metrics" : "Analytics is paused"}
+              title={settings?.analyticsEnabled === true ? "Pull Zernio metrics" : "Analytics is paused"}
             >
               Pull analytics
             </button>
@@ -1796,7 +1936,7 @@ function EngineView({
               "Review queue here — approve keepers, reject to teach the engine",
               "Approved posts get a schedule slot",
               "TikTok send is paused — nothing goes to TikTok until you turn it back on",
-              "BrightBean pulls follower counts + post metrics. Diagnosis waits 48h and compares same-era reach — one flop never bans a slide",
+              "Zernio pulls follower counts + post metrics. Diagnosis waits 48h and compares same-era reach — one flop never bans a slide",
             ].map((step, i) => (
               <li key={step} className="p-3.5 text-sm flex gap-3">
                 <span className="font-extrabold" style={{ color: GREEN }}>
@@ -2157,14 +2297,14 @@ function AudienceCard({ cycle }: { cycle: CycleState }) {
   return (
     <section className="bg-white rounded-2xl p-4 border border-stone-200 space-y-3">
       <div>
-        <h2 className="font-bold text-sm">Audience era (BrightBean)</h2>
+        <h2 className="font-bold text-sm">Audience era (Zernio)</h2>
         <p className="text-[11px] text-stone-500">
           Follower count is the denominator. A post freezes the count from its first measurement, so later growth cannot make early carousels look like failures.
         </p>
       </div>
       {platforms.length === 0 ? (
         <p className="text-xs text-stone-500">
-          Nothing pulled yet — hit Pull analytics on Engine. BrightBean is the analytics source even before the first post ships; that snapshot is the baseline.
+          Nothing pulled yet — hit Pull analytics on Engine. Zernio is the analytics source even before the first post ships; that snapshot is the baseline.
         </p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -3423,7 +3563,7 @@ function ImagesView({ sub, onSub }: { sub: ImagesSub; onSub: (next: ImagesSub) =
 }
 
 const SVG_THEMES = ["all", "office", "pain", "recovery", "lifestyle", "rejected"] as const;
-const SVG_SOURCES = ["all", "Remedy flat", "Remedy original", "illlustrations.co", "Open Doodles"] as const;
+const SVG_SOURCES = ["all", "Remedy flat"] as const;
 const SVG_KITS = ["svgs", "people"] as const;
 
 function isPeopleAsset(i: IllustrationAsset): boolean {
@@ -3490,8 +3630,8 @@ function SvgsView() {
         <h2 className="font-bold text-sm">Carousel visuals</h2>
         <p className="text-xs text-stone-500 mt-1">
           {kit === "people"
-            ? "Photoreal AI people. Same reject/enable as SVGs. Person posts are 6–10 slides: cover plus a later slide (2nd / 3rd / 4th / 5th or a combo) — never only the title, never every slide."
-            : "Licensed cover illustrations (MIT / CC0, ads-safe) plus Remedy-owned kits. Remedy flat is the Hinge-style scene set. Reject anything you don't like — it drops out of new slides."}
+            ? "Real people photos. About 66% of visual covers. Person posts are 6–10 slides: cover plus a later slide (2nd / 3rd / 4th / 5th or a combo) — never only the title, never every slide. Reject anything that looks fake."
+            : "Remedy flat scenes. About 34% of visual covers. 95% of new posts get a person or a flat on slide 1. Reject anything you don't like — it drops out of new slides."}
         </p>
         <div className="flex flex-wrap gap-2 mt-3">
           {SVG_KITS.map((k) => (
@@ -3637,14 +3777,13 @@ function SettingsView({
   pipeline: PipelineStep[];
 }) {
   const [code, setCode] = useState("");
-  const [bbToken, setBbToken] = useState("");
   const [connectMsg, setConnectMsg] = useState("");
   if (!settings) return <p className="text-sm text-stone-500 py-8 text-center">Loading…</p>;
 
-  const bb = settings.brightbean;
-  const publisher = bb?.publisher ?? "native";
+  const zn = settings.zernio;
+  const publisher = zn?.publisher ?? "native";
   const accountLine = (mapped: string) => {
-    const a = bb?.accounts.find((x) => x.mapped === mapped);
+    const a = zn?.accounts.find((x) => x.mapped === mapped);
     if (!a) return "not on this key";
     return a.status === "connected" ? (a.handle || a.name || "connected") : a.status;
   };
@@ -3659,17 +3798,17 @@ function SettingsView({
     ["Ramp cap", `${settings.rampCap} per platform`],
     ["Expire shorts", settings.expireShorts === true ? "48h after publish" : "off until you start posting"],
     ["Platforms", settings.platforms],
-    ["Publisher", publisher === "brightbean" ? "BrightBean" : "native APIs"],
+    ["Publisher", publisher === "zernio" ? "Zernio" : "native APIs"],
     ["Auto-send timer", settings.autoPublish ? "on" : "off"],
-    ["Send · TikTok", "live (silent carousel for now)"],
-    ["Send · IG / Facebook", "live carousel"],
-    ["Send · YouTube", "silent Short — add music when you post"],
+    ["Send · TikTok", "photo carousel only"],
+    ["Send · IG / Facebook", "photo carousel only"],
+    ["Send · YouTube", "slideshow Short only"],
     ["Text generation", String(settings.llmProvider)],
     ["R2 slides", settings.r2Configured ? "slides.remedyrecoveries.com" : "missing"],
-    ["TikTok account", publisher === "brightbean" ? accountLine("tiktok") : (settings.tiktokConnected ? "connected (native)" : "not set")],
-    ["Instagram", publisher === "brightbean" ? accountLine("instagram") : (settings.instagramConfigured ? "configured" : "not set")],
-    ["Facebook", publisher === "brightbean" ? accountLine("facebook") : (settings.facebookConfigured ? "configured" : "not set")],
-    ["YouTube", bb?.youtubeConnected || settings.youtubeConfigured ? `${accountLine("youtube")} — slideshow Short` : "not connected"],
+    ["TikTok account", publisher === "zernio" ? accountLine("tiktok") : (settings.tiktokConnected ? "connected (native)" : "not set")],
+    ["Instagram", publisher === "zernio" ? accountLine("instagram") : (settings.instagramConfigured ? "configured" : "not set")],
+    ["Facebook", publisher === "zernio" ? accountLine("facebook") : (settings.facebookConfigured ? "configured" : "not set")],
+    ["YouTube", zn?.youtubeConnected || settings.youtubeConfigured ? `${accountLine("youtube")} — slideshow Short` : "not connected"],
     ["TikTok inbox (later)", settings.tiktokNativeConnected ? "native connected" : "optional — music later"],
     ["Pending phone actions", String(settings.pendingCount ?? 0)],
     ["Library size", String(posts.length)],
@@ -3687,7 +3826,7 @@ function SettingsView({
       </div>
       <div className="bg-white rounded-2xl border border-stone-200 p-4 space-y-2">
         <h3 className="text-sm font-bold">Links for bios</h3>
-        <p className="text-xs text-stone-600">Until the app is for sale, bio link is the website only. No App Store URL in captions.</p>
+        <p className="text-xs text-stone-600">Captions stay “link in bio” — no App Store URL in the caption. Bio can be the website or the App Store listing.</p>
         <p className="text-xs text-stone-600 break-all">{SITE_URL}</p>
         <div className="flex gap-2">
           <button type="button" onClick={() => copyText(SITE_URL)} className="px-3 py-2 rounded-lg bg-stone-800 text-white text-xs font-semibold">
@@ -3697,7 +3836,7 @@ function SettingsView({
             Open
           </a>
         </div>
-        <p className="text-[11px] text-stone-400 pt-2">App Store (do not use yet): {appStoreUrl(settings)}</p>
+        <p className="text-[11px] text-stone-400 pt-2 break-all">App Store: {appStoreUrl(settings)}</p>
       </div>
       <div className="bg-white rounded-2xl border border-stone-200 p-4">
         <h3 className="text-sm font-bold mb-2">Hosts</h3>
@@ -3715,93 +3854,57 @@ function SettingsView({
           Pipeline now: {pipeline.map((s) => `${s.label} ${s.count}`).join(" · ")}.
         </p>
       </div>
-      <div className={`rounded-2xl border p-4 space-y-3 lg:col-span-2 ${bb?.connected ? "bg-white border-emerald-200" : "bg-white border-stone-200"}`}>
-        <h3 className="text-sm font-bold">BrightBean</h3>
+      <div className={`rounded-2xl border p-4 space-y-3 lg:col-span-2 ${zn?.connected ? "bg-white border-emerald-200" : "bg-white border-stone-200"}`}>
+        <h3 className="text-sm font-bold">Zernio</h3>
         <p className="text-xs text-stone-600">
-          Send now goes live on TikTok, Instagram, Facebook, and YouTube. YouTube is a slideshow Short with a free CC-BY bed.
-          TikTok catalog music can wait — no inbox draft step right now.
+          TikTok, Instagram, and Facebook get the photo carousel. YouTube is the only place that gets the slideshow video.
+          Each Zernio login has its own key in <code>.env</code>: <code>ZERNIO_API_KEY</code> through <code>ZERNIO_API_KEY_4</code>.
+          The original posts to the main accounts. Slideshows are not sent to handles containing “{zn?.secondHandle || "stories"}”. Keys are never shown or stored here.
         </p>
-        {bb?.configured ? (
+        {zn?.configured ? (
           <div className="space-y-2">
             <p className="text-xs text-stone-700">
-              {bb.workspace ? <span className="font-semibold">{bb.workspace}</span> : "Workspace"} · API key set
+              {zn.keyCount} key{zn.keyCount === 1 ? "" : "s"} set
+              {zn.refreshedAt ? ` · accounts checked ${new Date(zn.refreshedAt).toLocaleString()}` : ""}
             </p>
             <ul className="text-xs text-stone-600 space-y-1">
-              {(bb.accounts.length ? bb.accounts : []).map((a) => (
+              {(zn.keys ?? []).filter((k) => !k.configured).map((k) => (
+                <li key={k.slot}>key {k.slot}: empty</li>
+              ))}
+              {(zn.keys ?? []).filter((k) => k.configured && k.error).map((k) => (
+                <li key={`err-${k.slot}`}>key {k.slot}: {k.error}</li>
+              ))}
+              {zn.accounts.map((a) => (
                 <li key={a.id}>
-                  {a.mapped}: {a.handle || a.name} — {a.status}
+                  key {a.keySlot} · {a.group === "2" ? "second account" : "main"} · {a.mapped}: {a.handle ? `@${a.handle}` : a.name} — {a.status}
                 </li>
               ))}
-              {bb.accounts.length === 0 && <li>No accounts on this key yet — refresh after connecting channels in BrightBean.</li>}
+              {zn.accounts.length === 0 && <li>No accounts yet — connect channels in each Zernio dashboard, then refresh.</li>}
             </ul>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!live}
-                onClick={async () => {
-                  const res = await api.brightbeanRefresh();
-                  setConnectMsg(res.ok ? "Accounts refreshed" : (res.error ?? "Refresh failed — needs the PC engine"));
-                  if (res.ok) location.reload();
-                }}
-                className="px-3 py-2 rounded-lg bg-stone-100 text-xs font-semibold disabled:opacity-40"
-              >
-                Refresh accounts
-              </button>
-              <button
-                type="button"
-                disabled={!live}
-                onClick={async () => {
-                  if (!confirm("Disconnect BrightBean from this engine? Social accounts stay in BrightBean.")) return;
-                  await api.brightbeanDisconnect();
-                  setConnectMsg("Disconnected");
-                  location.reload();
-                }}
-                className="px-3 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-semibold disabled:opacity-40"
-              >
-                Disconnect
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={!live}
+              onClick={async () => {
+                const res = await api.zernioRefresh();
+                setConnectMsg(res.ok ? "Accounts refreshed" : (res.error ?? "Refresh failed — needs the PC engine"));
+                if (res.ok) location.reload();
+              }}
+              className="px-3 py-2 rounded-lg bg-stone-100 text-xs font-semibold disabled:opacity-40"
+            >
+              Refresh accounts
+            </button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <p className="text-xs text-stone-600">
-              In BrightBean: Organization Settings → API Keys → Issue new key. Tick create_posts, publish_directly, upload_media, view_analytics. Select all accounts. Paste the key here (PC engine only).
-            </p>
-            {live ? (
-              <div className="flex gap-2">
-                <input
-                  value={bbToken}
-                  onChange={(e) => setBbToken(e.target.value)}
-                  placeholder="bb_studio_…"
-                  className="flex-1 border border-stone-300 rounded-xl px-3 py-2 text-sm"
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const res = await api.brightbeanConnect(bbToken.trim());
-                    setConnectMsg(res.ok ? "Connected" : (res.error ?? "Failed"));
-                    if (res.ok) {
-                      setBbToken("");
-                      location.reload();
-                    }
-                  }}
-                  className="px-4 rounded-xl bg-emerald-600 text-white text-sm font-bold"
-                >
-                  Connect
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs text-stone-500">Open Settings on the PC engine to paste the key.</p>
-            )}
-          </div>
+          <p className="text-xs text-stone-600">
+            Not configured. Add <code>ZERNIO_API_KEY=…</code> (and <code>ZERNIO_API_KEY_2</code> through <code>ZERNIO_API_KEY_4</code> for more logins) to <code>growth-engine/.env</code> and restart the engine.
+          </p>
         )}
         {connectMsg && <p className="text-xs text-stone-500">{connectMsg}</p>}
       </div>
       {settings.tiktokNativeAppConfigured && settings.tiktokNativeConnected && (
         <div className="bg-white rounded-2xl border border-emerald-200 p-4 space-y-3">
           <h3 className="text-sm font-bold">TikTok inbox (music)</h3>
-          <p className="text-xs text-stone-600">Inbox drafts so you can add a sound in the TikTok app. BrightBean still posts IG/FB/YouTube.</p>
+          <p className="text-xs text-stone-600">Inbox drafts so you can add a sound in the TikTok app. Zernio still posts IG/FB/YouTube.</p>
           <button
             onClick={async () => {
               if (!confirm("Disconnect native TikTok?")) return;
@@ -3818,7 +3921,7 @@ function SettingsView({
       {settings.tiktokNativeAppConfigured && !settings.tiktokNativeConnected && (
         <div className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
           <h3 className="text-sm font-bold">TikTok inbox (music)</h3>
-          <p className="text-xs text-stone-600">Reconnect to drop carousels in your TikTok inbox so you can add a sound. Without this, TikTok is a BrightBean draft (no catalog track).</p>
+          <p className="text-xs text-stone-600">Reconnect to drop carousels in your TikTok inbox so you can add a sound. Without this, TikTok posts go out live through Zernio (TikTok adds a recommended sound, no catalog pick).</p>
           <button
             onClick={async () => {
               if (typeof settings.tiktokAuthUrl === "string" && settings.tiktokAuthUrl) {

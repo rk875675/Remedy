@@ -52,6 +52,52 @@ export const applyProgramAnswersRequestSchema = z
   })
   .strict();
 
+// start-next-program. Mirrors programCheckinInputSchema in lib/schemas.ts.
+export const painChangeSchema = z.enum(['much_better', 'better', 'same', 'worse']);
+export const difficultySchema = z.enum(['too_easy', 'just_right', 'too_hard']);
+export const NEXT_PROGRAM_FEEDBACK_MAX = 1000;
+
+export const programCheckinSchema = z
+  .object({
+    pain_change: painChangeSchema,
+    difficulty: difficultySchema,
+    main_goal: mainGoalSchema.max(4),
+    pain_location: painLocationSchema,
+    sessions_per_week: z.number().int().min(3).max(7),
+    equipment: equipmentSchema,
+    feedback: z.string().max(NEXT_PROGRAM_FEEDBACK_MAX).optional(),
+  })
+  .strict();
+
+export const startNextProgramRequestSchema = z.discriminatedUnion('choice', [
+  z
+    .object({
+      choice: z.literal('continue'),
+      expected_plan_id: z.string().uuid(),
+      idempotency_key: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      choice: z.literal('rebuild'),
+      expected_plan_id: z.string().uuid(),
+      idempotency_key: z.string().uuid(),
+      checkin: programCheckinSchema,
+    })
+    .strict(),
+]);
+
+// start_next_program RPC (migration 087). plan_id is null only when a replayed
+// check-in's plan was since pruned.
+export const startNextProgramRpcResultSchema = z
+  .object({
+    plan_id: z.string().uuid().nullable(),
+    from_level: z.number().int(),
+    to_level: z.number().int(),
+    replayed: z.boolean(),
+  })
+  .strict();
+
 export const applyProgramAnswersResultSchema = z
   .object({
     saved: z.literal(true),

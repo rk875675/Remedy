@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
@@ -47,6 +48,7 @@ export default function Q2Screen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+      <WarmBackground />
       <PersonalizingLayout currentStep="q2" compact>
         <View style={styles.content}>
           <Text style={styles.heading}>How long have you had it?</Text>
@@ -56,7 +58,6 @@ export default function Q2Screen() {
                 key={opt.id}
                 label={opt.label}
                 minHeight={76}
-                hintLift={9}
                 selected={selectedId === opt.id}
                 onPress={() => handleSelect(opt)}
                 hint={

@@ -1,8 +1,9 @@
 import { getDb, posts } from "@remedy-growth/db";
 import { and, eq, isNull, gte, sql } from "drizzle-orm";
-import { env, configuredPlatforms, PLATFORM_DAILY_CAPS } from "../config.js";
-import { getKnowledgeContext } from "../learning/knowledge.js";
+import { env, configuredPlatforms, PLATFORM_DAILY_CAPS, type Platform } from "../config.js";
+import { parseVariation } from "../generation/variations.js";
 import { experimentPartner } from "../learning/experiments.js";
+import { pickTiktokIndex } from "../learning/playbook.js";
 
 /** A/B pair posts go out 24-48h apart — far enough to not look like spam, close enough to compare. */
 const AB_MIN_GAP_MS = 24 * 3_600_000;
@@ -28,59 +29,89 @@ function dayKey(d: Date): number {
 
 function atLocal(forDate: Date, hour: number, minute: number): Date {
   const d = new Date(forDate);
-  d.setHours(hour, minute, Math.floor(Math.random() * 40), 0);
+  d.setHours(hour, minute, Math.floor(Math.random() * 50), 0);
   return d;
 }
 
+function daySeed(forDate: Date, salt: number): number {
+  return (Math.imul(dayKey(forDate), 2654435761 | 0) ^ salt) >>> 0;
+}
+
+function seededInt(forDate: Date, salt: number, min: number, max: number): number {
+  const lo = Math.min(min, max);
+  const hi = Math.max(min, max);
+  return lo + Math.floor(mulberry32(daySeed(forDate, salt))() * (hi - lo + 1));
+}
+
+/** Today's post count per account (TikTok + YouTube). Same answer all day, different each day. */
+export function dailyTarget(forDate = new Date()): number {
+  return seededInt(forDate, 0x51ed, env.DAILY_POSTS_MIN, env.DAILY_POSTS_MAX);
+}
+
+/** How many of today's posts also go to the Instagram / Facebook feeds. Slideshows no longer use this: one post a day keeps TikTok and Instagram, and Facebook is paused. */
+export function feedTarget(forDate = new Date()): number {
+  return seededInt(forDate, 0xfeed, env.FEED_POSTS_MIN, env.FEED_POSTS_MAX);
+}
+
 /**
- * Pick `count` local times inside a day-shifted window. Times change every
- * day and keep a minimum gap so the account never posts on a clockwork pattern.
+ * Pick `count` local times inside a day-shifted window. Gaps between posts
+ * are random but never under the minimum, so the day never looks clockwork.
  */
 export function computeSlots(count: number, forDate = new Date()): Date[] {
   if (count <= 0) return [];
-  const rng = mulberry32((dayKey(forDate) * 2654435761) >>> 0);
-  // Slide the window a bit each day (e.g. 8–21 one day, 10–20 the next).
-  const startHour = WINDOW.earliest + Math.floor(rng() * 3); // 8–10
-  const endHour = WINDOW.latest - Math.floor(rng() * 3); // 20–22
+  const rng = mulberry32(daySeed(forDate, 0));
+  // Busy days use the full 8am–10pm window so the gaps stay wide.
+  const wide = count >= 6;
+  const startHour = wide ? WINDOW.earliest : WINDOW.earliest + Math.floor(rng() * 3);
+  const endHour = wide ? WINDOW.latest : WINDOW.latest - Math.floor(rng() * 3);
   const startMin = startHour * 60 + Math.floor(rng() * 40);
   const endMin = endHour * 60 - 20;
   const span = Math.max(90, endMin - startMin);
-  const minGap = count <= 2 ? 150 : count <= 5 ? 90 : 55;
+  const desiredGap = count <= 3 ? 150 : count <= 5 ? 110 : 95;
+  const minGap = Math.min(desiredGap, Math.floor((span / count) * 0.9));
 
-  const knowledge = getKnowledgeContext();
-  const preferred = knowledge.bestHours.filter((h) => h >= startHour && h < endHour);
+  // Spread the leftover time randomly across the gaps.
+  const slack = Math.max(0, span - (count - 1) * minGap);
+  const weights = Array.from({ length: count + 1 }, () => 0.2 + rng());
+  const total = weights.reduce((a, b) => a + b, 0);
   const picks: number[] = [];
-
-  const tryAdd = (minuteOfDay: number): boolean => {
-    const clamped = Math.min(endMin, Math.max(startMin, minuteOfDay));
-    if (picks.some((p) => Math.abs(p - clamped) < minGap)) return false;
-    picks.push(clamped);
-    return true;
-  };
-
-  // Soft bias toward learned hours, then fill with random times.
-  for (const hour of preferred) {
-    if (picks.length >= count) break;
-    const jitter = Math.floor(rng() * 70) - 20;
-    tryAdd(hour * 60 + jitter);
-  }
-  let guard = 0;
-  while (picks.length < count && guard++ < 80) {
-    tryAdd(startMin + Math.floor(rng() * span));
-  }
-  // Last resort: even spread with leftover jitter so we still return `count`.
-  if (picks.length < count) {
-    for (let i = 0; i < count; i++) {
-      const t = startMin + Math.round((span * (i + 0.3 + rng() * 0.4)) / Math.max(count, 1));
-      if (!picks.some((p) => Math.abs(p - t) < minGap)) picks.push(t);
-      if (picks.length >= count) break;
-    }
+  let t = startMin + (slack * weights[0]!) / total;
+  for (let i = 0; i < count; i++) {
+    if (i > 0) t += minGap + (slack * weights[i]!) / total;
+    const m = Math.min(endMin, Math.round(t));
+    picks.push(m % 5 === 0 ? m + 1 + Math.floor(rng() * 3) : m);
   }
 
-  return picks
-    .slice(0, count)
-    .sort((a, b) => a - b)
-    .map((m) => atLocal(forDate, Math.floor(m / 60), m % 60));
+  return picks.map((m) => atLocal(forDate, Math.floor(m / 60), m % 60));
+}
+
+/** `k` indices out of `n`, one from each even chunk, so feed posts spread across the day. */
+function spreadPick(n: number, k: number, rng: () => number): Set<number> {
+  if (k >= n) return new Set(Array.from({ length: n }, (_, i) => i));
+  const picked = new Set<number>();
+  for (let i = 0; i < k; i++) {
+    const lo = Math.floor((i * n) / k);
+    const hi = Math.floor(((i + 1) * n) / k);
+    picked.add(lo + Math.floor(rng() * Math.max(1, hi - lo)));
+  }
+  return picked;
+}
+
+/** The day's one TikTok deck: the playbook's TikTok draw when the decks have sources, else a spread pick. */
+function tiktokPick(postIds: number[], day: Date): Set<number> {
+  const rng = mulberry32(daySeed(day, 0xf1ed));
+  const best = postIds.length ? pickTiktokIndex(postIds, Math.floor(rng() * 2 ** 31)) : null;
+  return best === null ? spreadPick(postIds.length, 1, rng) : new Set([best]);
+}
+
+const PLATFORM_SALT: Record<Platform, number> = { tiktok: 0, instagram: 11, facebook: 23, youtube: 37 };
+
+/** Each platform goes out a few minutes after TikTok, never on the same minute. */
+export function platformScheduledAt(iso: string | null, postId: number, platform: Platform): string | null {
+  if (!iso || platform === "tiktok") return iso;
+  const rng = mulberry32(Math.imul(postId, 977) + PLATFORM_SALT[platform]);
+  const offsetMs = (4 + Math.floor(rng() * 22)) * 60_000 + Math.floor(rng() * 50) * 1000;
+  return new Date(Date.parse(iso) + offsetMs).toISOString();
 }
 
 /**
@@ -117,25 +148,35 @@ export function rampCap(today = new Date()): number {
   return Math.min(cap || env.POSTS_PER_DAY, env.POSTS_PER_DAY);
 }
 
-/** The tightest daily cap: ramp, then platform hard caps, then POSTS_PER_DAY. */
-export function effectiveDailyCap(): number {
+/** The tightest cap for a day: that day's random target, ramp, platform hard caps, POSTS_PER_DAY. */
+export function effectiveDailyCap(forDate = new Date()): number {
   const platforms = configuredPlatforms();
   const platformCap = platforms.length ? Math.min(...platforms.map((p) => PLATFORM_DAILY_CAPS[p])) : env.POSTS_PER_DAY;
-  return Math.min(env.POSTS_PER_DAY, platformCap, rampCap());
+  return Math.min(env.POSTS_PER_DAY, platformCap, rampCap(forDate), dailyTarget(forDate));
+}
+
+export interface ScheduleAssignment {
+  postId: number;
+  scheduledAt: string;
+  platforms: Platform[];
+}
+
+function isTwin(variation: unknown): boolean {
+  return parseVariation(variation).zernioSlot === "2";
 }
 
 /**
- * Assign scheduled times to approved-but-unscheduled posts, respecting the
- * per-platform daily caps (counting posts already scheduled/published today).
+ * Plan times for approved-but-unscheduled posts across the next `days` days.
+ * Each day gets its own random count and its own Instagram/Facebook picks,
+ * counting posts already scheduled or sent that day. Writes nothing.
  */
-export function assignSchedule(): number {
-  if (!env.AUTO_ASSIGN_SCHEDULE) return 0;
+export function planSchedule(days = 1, now = new Date()): ScheduleAssignment[] {
   const db = getDb();
-  const todayStart = new Date();
+  const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  const usedToday = db
-    .select({ count: sql<number>`count(*)` })
+  const booked = db
+    .select()
     .from(posts)
     .where(
       and(
@@ -143,49 +184,107 @@ export function assignSchedule(): number {
         gte(sql`COALESCE(${posts.scheduledAt}, ${posts.publishedAt})`, todayStart.toISOString()),
       ),
     )
-    .get();
+    .all()
+    .filter((p) => !isTwin(p.variation));
 
-  const cap = effectiveDailyCap();
-  const remaining = Math.max(0, cap - (usedToday?.count ?? 0));
-  if (remaining === 0) return 0;
-
-  const unscheduled = db
+  const queue = db
     .select()
     .from(posts)
     .where(and(eq(posts.status, "approved"), isNull(posts.scheduledAt)))
-    .limit(remaining)
-    .all();
-  if (unscheduled.length === 0) return 0;
+    .all()
+    .filter((p) => !isTwin(p.variation));
 
-  const now = new Date();
-  const slots = computeSlots(unscheduled.length).filter((s) => s.getTime() > now.getTime());
-  // If we're late in the day and slots have passed, push remaining posts to tomorrow.
-  while (slots.length < unscheduled.length) {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const extra = computeSlots(unscheduled.length - slots.length, tomorrow);
-    slots.push(...extra);
-  }
+  const out: ScheduleAssignment[] = [];
+  let next = 0;
+  for (let d = 0; d < days && next < queue.length; d++) {
+    const day = new Date(todayStart);
+    day.setDate(day.getDate() + d);
+    const dayEnd = new Date(day);
+    dayEnd.setDate(dayEnd.getDate() + 1);
 
-  unscheduled.forEach((post, i) => {
-    let slot = slots[i]!;
+    const onDay = booked.filter((p) => {
+      const t = Date.parse(p.scheduledAt ?? p.publishedAt ?? "");
+      return t >= day.getTime() && t < dayEnd.getTime();
+    });
+    const plannedOnDay = out.filter((a) => {
+      const t = Date.parse(a.scheduledAt);
+      return t >= day.getTime() && t < dayEnd.getTime();
+    });
+    const cap = effectiveDailyCap(day);
+    const used = onDay.length + plannedOnDay.length;
+    if (used >= cap) continue;
 
-    // A/B experiment posts anchor to their partner: partner time + 24-36h.
-    const partner = experimentPartner(post.id);
-    if (partner) {
-      const partnerRow = db.select().from(posts).where(eq(posts.id, partner.partnerId)).get();
-      const anchor = partnerRow?.publishedAt ?? partnerRow?.scheduledAt;
-      if (anchor) {
-        const anchorTime = new Date(anchor).getTime();
-        const abTime = anchorTime + AB_MIN_GAP_MS + Math.floor(Math.random() * AB_MAX_EXTRA_MS);
-        slot = new Date(Math.max(abTime, now.getTime() + 60_000));
+    const takenTimes = [
+      ...onDay.map((p) => Date.parse(p.scheduledAt ?? p.publishedAt ?? "")),
+      ...plannedOnDay.map((a) => Date.parse(a.scheduledAt)),
+    ];
+    const free = computeSlots(cap, day)
+      .filter((s) => s.getTime() > now.getTime() + 10 * 60_000)
+      .filter((s) => !takenTimes.some((t) => Math.abs(t - s.getTime()) < 45 * 60_000))
+      .slice(0, cap - used);
+    if (free.length === 0) continue;
+
+    const batch = queue.slice(next, next + free.length);
+    next += batch.length;
+    const socialUsed =
+      onDay.some((p) => ((p.platforms ?? []) as Platform[]).includes("tiktok")) ||
+      plannedOnDay.some((a) => a.platforms.includes("tiktok"));
+    const socialPicks = socialUsed ? new Set<number>() : tiktokPick(batch.map((p) => p.id), day);
+
+    batch.forEach((post, i) => {
+      let slot = free[i]!;
+      // A/B experiment posts anchor to their partner: partner time + 24-36h.
+      const partner = experimentPartner(post.id);
+      if (partner) {
+        const partnerRow = db.select().from(posts).where(eq(posts.id, partner.partnerId)).get();
+        const anchor = partnerRow?.publishedAt ?? partnerRow?.scheduledAt;
+        if (anchor) {
+          const abTime = new Date(anchor).getTime() + AB_MIN_GAP_MS + Math.floor(Math.random() * AB_MAX_EXTRA_MS);
+          slot = new Date(Math.max(abTime, now.getTime() + 60_000));
+        }
       }
-    }
+      const listed = (post.platforms ?? []) as Platform[];
+      const platforms = listed.filter((p) => {
+        if (p === "facebook") return false;
+        if ((p === "tiktok" || p === "instagram") && !socialPicks.has(i)) return false;
+        return true;
+      });
+      out.push({ postId: post.id, scheduledAt: slot.toISOString(), platforms });
+    });
+  }
+  return out;
+}
 
+/**
+ * Assign scheduled times to approved-but-unscheduled posts for the next `days`
+ * days. Posts that skip the feeds lose Instagram/Facebook from their platforms.
+ */
+export function assignSchedule(days = 1): number {
+  if (!env.AUTO_ASSIGN_SCHEDULE) return 0;
+  const db = getDb();
+  const plan = planSchedule(days);
+  for (const a of plan) {
     db.update(posts)
-      .set({ scheduledAt: slot.toISOString() })
-      .where(eq(posts.id, post.id))
+      .set({ scheduledAt: a.scheduledAt, platforms: a.platforms })
+      .where(eq(posts.id, a.postId))
       .run();
-  });
-  return unscheduled.length;
+  }
+  syncAccountTwinTimes();
+  return plan.length;
+}
+
+/**
+ * Stories does not receive slideshows. Twins stay in the database for the
+ * experiment record, with no time and no platforms, so nothing hands them to Zernio.
+ */
+function syncAccountTwinTimes(): void {
+  const db = getDb();
+  const approved = db.select().from(posts).where(eq(posts.status, "approved")).all();
+  for (const post of approved) {
+    const variation = parseVariation(post.variation);
+    if (variation.zernioSlot !== "2" || !variation.accountTwinOf) continue;
+    const platforms = (post.platforms ?? []) as Platform[];
+    if (!post.scheduledAt && platforms.length === 0) continue;
+    db.update(posts).set({ scheduledAt: null, platforms: [] }).where(eq(posts.id, post.id)).run();
+  }
 }

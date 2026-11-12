@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
@@ -74,11 +75,12 @@ export default function Q0Screen() {
   function handleContinue() {
     if (!source) return;
     completeStep();
-    router.push('/(onboarding)/safety');
+    router.push('/(onboarding)/q9');
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+      <WarmBackground />
       <View style={styles.content}>
         <Text style={styles.heading}>Where did you hear about us?</Text>
         <View style={styles.options}>

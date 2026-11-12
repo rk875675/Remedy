@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Alert, ScrollView, ActivityIndicator } from 're
 import { useRouter, useLocalSearchParams, useNavigation, Stack } from 'expo-router';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { AnimatedTagline } from '../../components/onboarding/AnimatedTagline';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { useOnboarding, type OnboardingProgress } from '../../context/OnboardingContext';
@@ -830,6 +831,7 @@ export default function MatchScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 8 }]}>
+      <WarmBackground />
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={styles.body}>
         <ScrollView

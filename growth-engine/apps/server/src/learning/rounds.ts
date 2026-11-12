@@ -437,7 +437,7 @@ export function getCycleState(): CycleState {
         : `Full pace: ${dailyCap}/day. Diversity is ${diversity} posts (~${Math.ceil(diversity / dailyCap)} days). A/B is ${ab} experiments.`,
       "Diversity round: generation targets untested templates, screenshots, SVGs, screenshot sizes, and color/style combos. Ships until the target is hit.",
       "A/B phase: the best posts get one-change variants, posted 24-48h apart. A pair is judged only after both are 48h old, on views-per-follower — not raw views.",
-      "Analytics come from BrightBean. A post is never judged until it is live and 48h old. Winners/duds need a top/bottom-quartile gap vs the same follower era (early 40-follower posts are never compared to later 4,000-follower posts). Mid-pack is 'typical' — luck, not a rule.",
+      "Analytics come from Zernio. A post is never judged until it is live and 48h old. Winners/duds need a top/bottom-quartile gap vs the same follower era (early 40-follower posts are never compared to later 4,000-follower posts). Mid-pack is 'typical' — luck, not a rule.",
       "Each template, hook style, and screenshot has a 0–100 rating starting at 50. One post moves it a few points either way — never enough to crown or cripple it. Hard rules still need 3 agreeing same-era posts. Your manual rejects teach immediately.",
     ],
   };

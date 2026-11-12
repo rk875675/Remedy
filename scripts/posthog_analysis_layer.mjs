@@ -12,6 +12,8 @@
 //   node scripts/posthog_analysis_layer.mjs           # dry run: list what would change
 //   node scripts/posthog_analysis_layer.mjs --apply   # create/update, then verify
 //   node scripts/posthog_analysis_layer.mjs --verify  # only re-run every saved query
+//   node scripts/posthog_analysis_layer.mjs --pain-windows-only
+//       # upsert the three tenure pain tables onto 3. In-App, then run those queries
 //
 // Needs POSTHOG_PERSONAL_API_KEY in .env.local with insight/dashboard/cohort/annotation
 // write scope. It does NOT need project:write (see scripts/configure_posthog_project.mjs).
@@ -46,6 +48,7 @@ const H = { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 const APPLY = process.argv.includes('--apply');
 const VERIFY_ONLY = process.argv.includes('--verify');
 const TILES_ONLY = process.argv.includes('--tiles-only');
+const PAIN_WINDOWS_ONLY = process.argv.includes('--pain-windows-only');
 
 /**
  * The instrumentation cutover. Project 470505 holds ~1,900 events from the *old* ad-hoc
@@ -89,11 +92,12 @@ const SQL_EXCLUDE_INTERSTITIALS = ONBOARDING_INTERSTITIALS.length
 /** Exact on-screen headings. Bars stay `q5`; this is what you see after opening the tile. */
 const ONBOARDING_STEP_QUESTIONS = {
   welcome: 'Welcome',
-  founder: 'Why we built Remedy',
+  founder: 'Your back is stronger than it feels',
   education: 'The good news',
+  proof: 'Why Remedy works (+ Agree & continue)',
   q0: 'Where did you hear about us?',
-  safety: 'Do any of these apply to you?',
-  q9: 'Have you tried to fix your back pain before?',
+  safety: 'Do any of these apply to you? (removed)',
+  q9: 'Do you believe Remedy can fix your back pain?',
   q6: "What's your main goal?",
   q1: 'Where is your back pain?',
   q2: 'How long have you had it?',
@@ -106,6 +110,7 @@ const ONBOARDING_STEP_QUESTIONS = {
   q5: 'What makes your pain worse?',
   q7: 'What equipment do you have access to?',
   q8: 'How much time do you have each day?',
+  commit: 'Hold to commit',
   finalizing: 'Building your plan',
   match: 'Your plan preview',
 };
@@ -121,9 +126,10 @@ const SCREEN_LABELS = {
   '/(onboarding)': 'Onboarding — Welcome',
   '/(onboarding)/founder': 'Onboarding — Founder',
   '/(onboarding)/education': 'Onboarding — Education',
+  '/(onboarding)/proof': 'Onboarding — Why Remedy works',
   '/(onboarding)/q0': 'Onboarding — Hear about us',
-  '/(onboarding)/safety': 'Onboarding — Safety',
-  '/(onboarding)/q9': 'Onboarding — Tried before',
+  '/(onboarding)/safety': 'Onboarding — Safety (removed)',
+  '/(onboarding)/q9': 'Onboarding — Belief',
   '/(onboarding)/q6': 'Onboarding — Goal',
   '/(onboarding)/q1': 'Onboarding — Pain location',
   '/(onboarding)/q2': 'Onboarding — Duration',
@@ -136,6 +142,7 @@ const SCREEN_LABELS = {
   '/(onboarding)/q5': 'Onboarding — Triggers',
   '/(onboarding)/q7': 'Onboarding — Equipment',
   '/(onboarding)/q8': 'Onboarding — Time budget',
+  '/(onboarding)/commit': 'Onboarding — Hold to commit',
   '/(onboarding)/finalizing': 'Onboarding — Building plan',
   '/(onboarding)/match': 'Onboarding — Plan preview',
   '/(auth)/sign-in': 'Sign in',
@@ -152,6 +159,7 @@ const SCREEN_LABELS = {
   '/weekly-ramp': 'Weekly ramp',
   '/orientation': 'Orientation',
   '/program-complete': 'Program complete',
+  '/next-program': 'Next program',
   '/onboarding-answers': 'Saved answers',
   '/feedback': 'Feedback',
   unknown: 'Unknown',
@@ -176,6 +184,9 @@ const OBSOLETE_INSIGHT_NAMES = [
   'Retention',
   'Weekly active users (WAUs)',
   'Daily active users (DAUs)',
+  // Safety screen removed; consent moved to proof ("Agree & continue").
+  'Safety — red-flag answers',
+  'Safety — clinician-first exits',
 ];
 
 const ALERTS = [
@@ -438,9 +449,14 @@ const byPersonProp = (prop) => ({ breakdownFilter: { breakdown: prop, breakdown_
 const BAR = 'ActionsBarValue';
 
 const FULL_PATH_STEPS = [
-  'welcome', 'founder', 'education', 'q0', 'safety', 'q9', 'recognize', 'seen',
-  'q6', 'q1', 'q2', 'q3', 'q4', 'q5', 'q7', 'q8', 'finalizing', 'match',
+  'welcome', 'founder', 'education', 'proof', 'q0', 'q9', 'recognize', 'seen',
+  'q6', 'q1', 'q2', 'q3', 'q4', 'q5', 'q7', 'q8', 'commit', 'finalizing', 'match',
 ];
+
+// step_index shifts whenever a step is added or removed, so tables group by step_key
+// and order by the step's position in the current enum. Removed steps (index 0) drop out.
+const { stepKeys: CURRENT_STEP_KEYS } = loadOnboardingFlow();
+const HOGQL_STEP_ORDER = `indexOf([${CURRENT_STEP_KEYS.map((k) => `'${k}'`).join(', ')}], toString(properties.step_key))`;
 
 const stepViewed = (key) => ev('onboarding_step_viewed', {
   custom_name: ONBOARDING_STEP_QUESTIONS[key] ?? key,
@@ -463,6 +479,58 @@ const completedMix = (prop) => trends(
   [ev('onboarding_completed', { math: 'dau' })],
   { ...byEventProp(prop), display: BAR },
 );
+
+/**
+ * Completed sessions tagged into cumulative tenure windows.
+ * Day 0 is that person's first session_completed on or after the cutover.
+ * First week is day 0–7, first month 0–30, first year 0–365, lifetime is all.
+ */
+const painTenureCte = () => `
+WITH completed AS (
+  SELECT
+    person_id,
+    timestamp,
+    toFloat(properties.pain_before) AS pain_before,
+    toFloat(properties.pain_after) AS pain_after,
+    toFloat(properties.pain_delta) AS pain_delta
+  FROM events
+  WHERE event = 'session_completed'
+    AND timestamp >= '${CUTOVER}'
+    AND timestamp < now() + INTERVAL 1 DAY
+    AND isNotNull(properties.pain_before)
+    AND isNotNull(properties.pain_after)
+    ${SQL_EXCLUDE_INTERNAL}
+),
+bounds AS (
+  SELECT
+    person_id,
+    min(timestamp) AS first_ts,
+    argMin(pain_before, timestamp) AS first_pain_before
+  FROM completed
+  GROUP BY person_id
+),
+tagged AS (
+  SELECT
+    c.person_id AS person_id,
+    c.timestamp AS timestamp,
+    c.pain_before AS pain_before,
+    c.pain_after AS pain_after,
+    c.pain_delta AS pain_delta,
+    b.first_pain_before AS first_pain_before,
+    dateDiff('day', b.first_ts, c.timestamp) AS day_n,
+    arrayJoin(['First week', 'First month', 'First year', 'Lifetime']) AS window_label
+  FROM completed AS c
+  INNER JOIN bounds AS b ON c.person_id = b.person_id
+)`;
+
+const PAIN_WINDOW_WHERE = `
+WHERE (window_label = 'First week' AND day_n <= 7)
+  OR (window_label = 'First month' AND day_n <= 30)
+  OR (window_label = 'First year' AND day_n <= 365)
+  OR window_label = 'Lifetime'`;
+
+const PAIN_WINDOW_ORDER = `
+ORDER BY multiIf(window_label = 'First week', 1, window_label = 'First month', 2, window_label = 'First year', 3, 4)`;
 
 // --- dashboards and their insights ------------------------------------------
 //
@@ -598,7 +666,7 @@ ORDER BY week`),
     formerNames: ['Remedy — Acquisition'],
     name: '1. Onboarding',
     description:
-      'How people start: every screen, every answer, the safety gate, and signup. ' +
+      'How people start: every screen, every answer, the consent step, and signup. ' +
       'Not whether they come back (2. Users & Retention) and not money (4. Revenue).',
     insights: [
       {
@@ -622,8 +690,8 @@ ORDER BY week`),
         name: 'Full path — every onboarding screen',
         description:
           'Same event (step viewed) once per screen, in current order. Includes story ' +
-          'screens the question table hides (founder, education, seen, finalizing). ' +
-          'Use this to see if new copy / the safety gate / the mindset block is where people leave.',
+          'screens the question table hides (founder, education, proof, seen, commit, finalizing). ' +
+          'Use this to see if new copy / the Agree & continue step / the mindset block is where people leave.',
         fullWidth: true,
         showDescription: true,
         query: funnel(FULL_PATH_STEPS.map(stepViewed)),
@@ -642,11 +710,12 @@ ORDER BY week`),
       {
         name: 'F2 — Onboarding drop-off by step',
         description:
-          'Question screens only (safety + q0/q9/recognize + q1–q8). Interstitials are ' +
-          'in Full path. median_seconds separates a hard question from a boring one.',
+          'Question screens only (q0/q9/recognize + q1–q8). Interstitials are ' +
+          'in Full path. median_seconds separates a hard question from a boring one. ' +
+          'Grouped by step_key (step_index shifted when steps were added/removed).',
         query: sql(`SELECT
-  toInt(properties.step_index) AS step_index,
-  any(toString(properties.step_key)) AS step_key,
+  ${HOGQL_STEP_ORDER} AS step_order,
+  toString(properties.step_key) AS step_key,
   any(${hogqlStepQuestion()}) AS question,
   uniqIf(person_id, event = 'onboarding_step_viewed') AS viewed,
   uniqIf(person_id, event = 'onboarding_step_completed') AS completed,
@@ -657,10 +726,11 @@ ORDER BY week`),
 FROM events
 WHERE event IN ('onboarding_step_viewed', 'onboarding_step_completed')
   AND timestamp >= '${CUTOVER}'
+  AND ${HOGQL_STEP_ORDER} > 0
   ${SQL_EXCLUDE_INTERSTITIALS}
   ${SQL_EXCLUDE_INTERNAL}
-GROUP BY step_index
-ORDER BY step_index`),
+GROUP BY step_order, step_key
+ORDER BY step_order`),
       },
       {
         name: 'Onboarding — exits by step',
@@ -688,35 +758,28 @@ ORDER BY exits DESC`),
         ),
       },
       {
-        name: 'Safety — red-flag answers',
+        name: 'Consent — saw "Why Remedy works" vs tapped Agree & continue',
         description:
-          'Yes = they said a contraindication applies. A high Yes share means the list is ' +
-          'matching (or scaring) a lot of people. Pair with clinician-first exits and F2 safety row.',
+          'Unique people who viewed the proof screen vs who agreed (Terms/Privacy + health-data ' +
+          'consent). The gap is people who left at the consent step.',
         showDescription: true,
         query: trends(
-          [optionMix('safety', ['yes', 'no'])],
-          { ...byEventProp('option_value'), display: BAR },
-        ),
-      },
-      {
-        name: 'Safety — clinician-first exits',
-        description:
-          'Tapped "I\'ll check with a clinician first" after saying Yes. These people self-selected ' +
-          'out of the product. If this is far below Yes answers, most red-flag users are continuing anyway.',
-        showDescription: true,
-        query: trends(
-          [ev('onboarding_clinician_exit_confirmed', { math: 'dau' })],
+          [
+            ev('onboarding_step_viewed', { math: 'dau', custom_name: 'Viewed', ...eventPropEq('step_key', 'proof') }),
+            { ...optionMix('proof', ['legal_assent']), custom_name: 'Agreed' },
+          ],
           { display: BAR },
         ),
       },
       {
-        name: 'Tried before (q9)',
+        name: 'Belief — can Remedy fix it? (q9)',
+        formerNames: ['Tried before (q9)'],
         description:
-          'First-timers vs people who have already tried to fix their back. Recognize and ' +
-          'the seen interstitial change copy off this answer.',
+          'Yes / maybe / no to "Do you believe Remedy can fix your back pain?". Break conversion ' +
+          'down by person property app_belief to see whether skeptics buy.',
         showDescription: true,
         query: trends(
-          [optionMix('q9', ['yes', 'no'])],
+          [optionMix('q9', ['yes', 'maybe', 'no'])],
           { ...byEventProp('option_value'), display: BAR },
         ),
       },
@@ -1055,6 +1118,87 @@ ORDER BY week`),
         query: trends([ev('session_completed', { math: 'avg', math_property: 'pain_delta' })]),
       },
       {
+        name: 'Pain change per session — week, month, year, lifetime',
+        description:
+          'Avg pain_delta on session_completed, by days since that person\'s first completed ' +
+          'session. avg_change is after minus before (negative means pain fell). avg_decrease ' +
+          'is that drop as a positive number. Windows: day 0-7, 0-30, 0-365, and lifetime. ' +
+          'Longer windows include the shorter ones.',
+        fullWidth: true,
+        showDescription: true,
+        query: sql(`${painTenureCte()}
+SELECT
+  window_label AS window,
+  round(avg(pain_delta), 2) AS avg_change,
+  round(avg(-pain_delta), 2) AS avg_decrease,
+  count() AS sessions,
+  uniq(person_id) AS people
+FROM tagged
+${PAIN_WINDOW_WHERE}
+GROUP BY window_label
+${PAIN_WINDOW_ORDER}`),
+      },
+      {
+        name: 'Starting pain change — week, month, year, lifetime',
+        description:
+          'How pain_before moves off the first completed session. avg_starting_score is the ' +
+          'mean of those first scores. avg_starting_change is mean pain_before in the window ' +
+          'minus that first score (negative means they arrive in less pain). ' +
+          'avg_starting_decrease is the positive drop. Same day windows. The first session ' +
+          'contributes a change of 0.',
+        fullWidth: true,
+        showDescription: true,
+        query: sql(`${painTenureCte()}
+SELECT
+  window_label AS window,
+  round(avg(first_pain_before), 2) AS avg_starting_score,
+  round(avg(avg_before - first_pain_before), 2) AS avg_starting_change,
+  round(avg(first_pain_before - avg_before), 2) AS avg_starting_decrease,
+  sum(sessions) AS sessions,
+  count() AS people
+FROM (
+  SELECT
+    person_id,
+    window_label,
+    any(first_pain_before) AS first_pain_before,
+    avg(pain_before) AS avg_before,
+    count() AS sessions
+  FROM tagged
+  ${PAIN_WINDOW_WHERE}
+  GROUP BY person_id, window_label
+)
+GROUP BY window_label
+${PAIN_WINDOW_ORDER}`),
+      },
+      {
+        name: 'Pain change from baseline — week, month, year, lifetime',
+        description:
+          'Net change per person, then averaged: latest pain_after in the window minus ' +
+          'pain_before on their first completed session. Not the average of each session\'s ' +
+          'pain_delta. avg_change is after minus before. avg_decrease is the drop as a ' +
+          'positive number. Same day windows. Use this for ad and onboarding claims.',
+        fullWidth: true,
+        showDescription: true,
+        query: sql(`${painTenureCte()}
+SELECT
+  window_label AS window,
+  round(avg(last_after - first_pain_before), 2) AS avg_change,
+  round(avg(first_pain_before - last_after), 2) AS avg_decrease,
+  count() AS people
+FROM (
+  SELECT
+    person_id,
+    window_label,
+    any(first_pain_before) AS first_pain_before,
+    argMax(pain_after, timestamp) AS last_after
+  FROM tagged
+  ${PAIN_WINDOW_WHERE}
+  GROUP BY person_id, window_label
+)
+GROUP BY window_label
+${PAIN_WINDOW_ORDER}`),
+      },
+      {
         name: 'Time in app per user per week',
         description:
           'Same pairing as the daily tile, rolled to the week. This is the stickiness ' +
@@ -1292,7 +1436,7 @@ LIMIT 20`),
         name: 'Feature usage',
         description:
           'Non-workout actions: progress chart, home nudge, saved answers, reminders, ' +
-          'review, legal. Proves whether secondary surfaces are touched at all.',
+          'review, legal, friend share. Proves whether secondary surfaces are touched at all.',
         query: trends([
           ev('progress_range_changed', { math: 'total' }),
           ev('home_nudge_tapped', { math: 'total' }),
@@ -1302,7 +1446,50 @@ LIMIT 20`),
           ev('review_manual_tapped', { math: 'total' }),
           ev('legal_document_viewed', { math: 'total' }),
           ev('feedback_submitted', { math: 'total' }),
+          ev('friend_share_offered', { math: 'total' }),
+          ev('friend_share_completed', { math: 'total' }),
         ]),
+      },
+      {
+        name: 'Share tap rate — saw sheet → tapped Share',
+        description:
+          'Of the people who saw the friend-share sheet, the percent who tapped Share. ' +
+          'Unique people, in order, within an hour. Tapping Share opens the system sheet. ' +
+          'It is not the same as a completed send.',
+        query: funnel(
+          [ev('friend_share_offered'), ev('friend_share_started')],
+          { funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: 'hour' } },
+        ),
+      },
+      {
+        name: 'Friend share funnel',
+        description:
+          'Back to Home armed the sheet, Home showed it, Share was tapped, the send ' +
+          'completed. The name and the message body are never on these events.',
+        query: funnel(
+          [
+            ev('friend_share_armed'),
+            ev('friend_share_offered'),
+            ev('friend_share_started'),
+            ev('friend_share_completed'),
+          ],
+          { funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: 'hour' } },
+        ),
+      },
+      {
+        name: 'Friend share dismissed by reason',
+        description:
+          'The sheet went away without a send. close is the X, scrim is a tap outside, ' +
+          'left is Home going away while it was still up.',
+        query: trends(
+          [ev('friend_share_dismissed', { math: 'total' })],
+          { ...byEventProp('reason'), display: BAR },
+        ),
+      },
+      {
+        name: 'Friend share cancelled',
+        description: 'The system share sheet opened and closed without a send. The Remedy sheet stays up.',
+        query: trends([ev('friend_share_cancelled', { math: 'total' })], { interval: 'week' }),
       },
     ],
   },
@@ -1466,6 +1653,149 @@ LIMIT 20`),
       },
     ],
   },
+  {
+    name: '6. Next Program',
+    description:
+      'What happens after a program is finished: level up vs rebuild, what the check-in ' +
+      'says, and whether people keep training on the next program. ' +
+      `Scoped to on-or-after ${CUTOVER}.`,
+    insights: [
+      {
+        name: 'Finished → chose → next program started',
+        description:
+          'program_completed (summary screen) → next_program_chosen → next_program_started. ' +
+          'The gap between step 1 and 2 is people who finished and walked away.',
+        query: funnel(
+          [ev('program_completed'), ev('next_program_chosen'), ev('next_program_started')],
+          { funnelsFilter: { funnelWindowInterval: 14, funnelWindowIntervalUnit: 'day' } },
+        ),
+      },
+      {
+        name: 'Next-program retention (weekly) — keeps training after starting program 2+',
+        description:
+          'Cohort on next_program_started, return on session_completed. The retention ' +
+          'payoff of the whole feature.',
+        query: {
+          kind: 'RetentionQuery',
+          retentionFilter: {
+            targetEntity: { id: 'next_program_started', name: 'next_program_started', type: 'events' },
+            returningEntity: { id: 'session_completed', name: 'session_completed', type: 'events' },
+            period: 'Week', totalIntervals: 8, retentionType: 'retention_first_time',
+          },
+          dateRange: { date_from: CUTOVER },
+          filterTestAccounts: T,
+        },
+      },
+      {
+        name: 'Next-program retention by choice (level up vs rebuild)',
+        description: 'Same curve split by choice — does the check-in path hold people better?',
+        query: {
+          kind: 'RetentionQuery',
+          retentionFilter: {
+            targetEntity: { id: 'next_program_started', name: 'next_program_started', type: 'events' },
+            returningEntity: { id: 'session_completed', name: 'session_completed', type: 'events' },
+            period: 'Week', totalIntervals: 8, retentionType: 'retention_first_time',
+          },
+          breakdownFilter: { breakdown: 'choice', breakdown_type: 'event' },
+          dateRange: { date_from: CUTOVER },
+          filterTestAccounts: T,
+        },
+      },
+      {
+        name: 'Post-completion retention (weekly) — everyone who finished',
+        description:
+          'Cohort on program_completed, return on session_completed, whether or not they ' +
+          'started a next program. Compare with the next-program curve.',
+        query: {
+          kind: 'RetentionQuery',
+          retentionFilter: {
+            targetEntity: { id: 'program_completed', name: 'program_completed', type: 'events' },
+            returningEntity: { id: 'session_completed', name: 'session_completed', type: 'events' },
+            period: 'Week', totalIntervals: 8, retentionType: 'retention_first_time',
+          },
+          dateRange: { date_from: CUTOVER },
+          filterTestAccounts: T,
+        },
+      },
+      {
+        name: 'Choice mix — level up vs rebuild',
+        query: trends([ev('next_program_started', { math: 'total' })], { ...byEventProp('choice'), display: BAR }),
+      },
+      {
+        name: 'Check-in — how did the workouts feel?',
+        query: trends(
+          [ev('next_program_started', { math: 'total', ...eventPropEq('choice', 'rebuild') })],
+          { ...byEventProp('difficulty'), display: BAR },
+        ),
+      },
+      {
+        name: 'Check-in — back vs when they started',
+        description: '"worse" never raises the level; watch this for program-quality problems.',
+        query: trends(
+          [ev('next_program_started', { math: 'total', ...eventPropEq('choice', 'rebuild') })],
+          { ...byEventProp('pain_change'), display: BAR },
+        ),
+      },
+      {
+        name: 'Check-in — new primary focus',
+        query: trends(
+          [ev('next_program_started', { math: 'total', ...eventPropEq('choice', 'rebuild') })],
+          { ...byEventProp('primary_goal'), display: BAR },
+        ),
+      },
+      {
+        name: 'Progression level moves (from → to)',
+        query: sql(`SELECT toString(properties.choice) AS choice,
+  concat(toString(properties.from_level), ' → ', toString(properties.to_level)) AS level_move,
+  count() AS programs
+FROM events
+WHERE event = 'next_program_started' AND timestamp >= '${CUTOVER}'
+  AND properties.replayed != 'true'
+  ${SQL_EXCLUDE_INTERNAL}
+GROUP BY choice, level_move
+ORDER BY programs DESC`),
+      },
+      {
+        name: 'Check-in — share who left written feedback',
+        description: 'Length only; the note itself lives in program_checkins, never in PostHog.',
+        query: sql(`SELECT count() AS rebuilds,
+  countIf(toInt(properties.feedback_length) > 0) AS with_note,
+  round(with_note / nullIf(rebuilds, 0), 3) AS note_rate,
+  round(avgIf(toInt(properties.feedback_length), toInt(properties.feedback_length) > 0)) AS avg_note_chars
+FROM events
+WHERE event = 'next_program_started' AND timestamp >= '${CUTOVER}'
+  AND properties.choice = 'rebuild'
+  ${SQL_EXCLUDE_INTERNAL}`),
+      },
+      {
+        name: 'Time from finishing to starting the next program (hours)',
+        query: sql(`SELECT count() AS people,
+  round(quantile(0.5)(hours), 1) AS median_hours,
+  round(quantile(0.9)(hours), 1) AS p90_hours
+FROM (
+  SELECT person_id,
+    dateDiff('minute', minIf(timestamp, event = 'program_completed'), minIf(timestamp, event = 'next_program_started')) / 60 AS hours
+  FROM events
+  WHERE event IN ('program_completed', 'next_program_started') AND timestamp >= '${CUTOVER}'
+    ${SQL_EXCLUDE_INTERNAL}
+  GROUP BY person_id
+  HAVING countIf(event = 'next_program_started') > 0 AND countIf(event = 'program_completed') > 0 AND hours >= 0
+)`),
+      },
+      {
+        name: 'Rebuild check-ins resumed from a saved draft',
+        query: trends(
+          [ev('next_program_chosen', { math: 'total', ...eventPropEq('choice', 'rebuild') })],
+          { ...byEventProp('has_draft'), display: BAR },
+        ),
+      },
+      {
+        name: 'Next program failed by reason',
+        description: 'already_started is benign (another device / resubmit); network and failed are ours.',
+        query: trends([ev('next_program_failed', { math: 'total' })], { ...byEventProp('reason'), display: BAR }),
+      },
+    ],
+  },
 ];
 
 // --- preflight: the taxonomy must actually contain what we charted ----------
@@ -1556,6 +1886,58 @@ if (TILES_ONLY) {
     });
     await syncDashboardTiles(dash.id, d.insights);
     console.log(`tiles ordered: ${d.name} (${d.insights.length})`);
+  }
+  process.exit(0);
+}
+
+if (PAIN_WINDOWS_ONLY) {
+  const names = [
+    'Pain change per session — week, month, year, lifetime',
+    'Starting pain change — week, month, year, lifetime',
+    'Pain change from baseline — week, month, year, lifetime',
+  ];
+  const dashSpec = DASHBOARDS.find((d) => d.name === '3. In-App');
+  const wanted = dashSpec.insights.filter((i) => names.includes(i.name));
+  if (wanted.length !== names.length) {
+    console.error('pain window insights missing from the In-App dashboard spec');
+    process.exit(1);
+  }
+  const existingDashboards = await listAll('dashboards');
+  const dash = findExistingDashboard(existingDashboards, dashSpec);
+  if (!dash) {
+    console.error('dashboard missing: 3. In-App');
+    process.exit(1);
+  }
+  const existingInsights = await listAll('insights');
+  for (const i of wanted) {
+    const body = {
+      name: i.name,
+      description: i.description,
+      query: i.query,
+      tags: TAGS,
+      dashboards: [dash.id],
+    };
+    const found = findExistingInsight(existingInsights, i);
+    if (found) {
+      await api(`/insights/${found.id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+      console.log(`updated ${i.name}  id ${found.id}`);
+    } else {
+      const made = await api('/insights/', { method: 'POST', body: JSON.stringify(body) });
+      console.log(`created ${i.name}  id ${made.id}  short ${made.short_id}`);
+    }
+    const res = await fetch(`${API}/query/`, {
+      method: 'POST',
+      headers: H,
+      body: JSON.stringify({ query: i.query }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      console.error(`FAIL runs: ${i.name}  HTTP ${res.status} ${text.slice(0, 240)}`);
+      process.exit(1);
+    }
+    const json = JSON.parse(text);
+    const rows = json.results?.length ?? json.result?.length ?? 0;
+    console.log(`runs ${i.name}  ${rows} row(s)`);
   }
   process.exit(0);
 }

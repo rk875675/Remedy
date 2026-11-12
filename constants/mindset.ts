@@ -34,7 +34,7 @@ const RECOGNIZE_OPTIONS_YES: RecognizeOption[] = [
   },
   {
     value: 'return_loop',
-    label: 'A good week of progress disappears after one bad movement',
+    label: 'A good week disappears after one bad movement',
     hint: 'One wrong move and you start over.',
   },
   {

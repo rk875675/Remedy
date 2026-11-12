@@ -3,5 +3,5 @@
   "compilerOptions": {
     "strict": true
   },
-  "exclude": ["supabase/functions", "scripts/verify_progression.ts"]
+  "exclude": ["supabase/functions", "scripts/verify_progression.ts", "scripts/verify_next_program.ts"]
 }

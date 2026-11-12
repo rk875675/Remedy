@@ -100,7 +100,7 @@ export const analytics = sqliteTable("analytics", {
   fetchedAt: text("fetched_at").notNull().default(now),
 });
 
-/** BrightBean channel snapshots — follower count over time, used as the era denominator. */
+/** Zernio channel snapshots — follower count over time, used as the era denominator. */
 export const accountSnapshots = sqliteTable("account_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   platform: text("platform").notNull(),

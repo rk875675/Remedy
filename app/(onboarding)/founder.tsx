@@ -1,43 +1,57 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { WarmBackground } from '../../components/onboarding/WarmBackground';
 import { useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors, serifFont } from '../../constants/colors';
-import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
 
-const slide = {
-  eyebrow: 'WHY WE BUILT REMEDY',
-  title: 'Back pain is everywhere.',
-  statValue: '4 in 5',
-  statLabel: 'people will experience back pain in their lifetime',
-};
+// Reassurance reframe. The source line must keep naming the published review:
+// "most back pain has no specific structural cause" is population-level research,
+// never Remedy data (FTC substantiation / App Store 1.4.1).
+const LINES = [
+  "Most back pain isn't an injury or disease you'd see on a scan.",
+  "Usually it's a strong back that's gotten stiff, guarded, and out of practice.",
+];
 
 export default function FounderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   useTrackOnboardingStep('founder');
 
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 450,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [fade]);
+
   return (
     <>
       <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
-        <View style={styles.content}>
-          <Text style={styles.eyebrow}>{slide.eyebrow}</Text>
-          <Text style={styles.title}>{slide.title}</Text>
-
-          <View style={styles.badgeWrap}>
-            <View style={styles.badgeHalo} />
-            <View style={styles.badge}>
-              <Text style={styles.badgeValue}>{slide.statValue}</Text>
-            </View>
-          </View>
-          <Text style={styles.badgeLabel}>{slide.statLabel}</Text>
-        </View>
+        <WarmBackground />
+        <Animated.View style={[styles.content, { opacity: fade }]}>
+          <Text style={styles.title}>Your back is stronger than it feels.</Text>
+          {LINES.map((line) => (
+            <Text key={line} style={styles.body}>
+              {line}
+            </Text>
+          ))}
+          <Text style={styles.promise}>
+            And that kind of back pain gets better with the right movement.
+          </Text>
+        </Animated.View>
 
         <View style={styles.footer}>
+          <Text style={styles.source}>
+            Source: Maher, Underwood & Buchbinder, “Non-specific low back pain,” The Lancet, 2017.
+          </Text>
           <ContinueButton label="Continue" onPress={() => router.push('/(onboarding)/education')} />
         </View>
       </View>
@@ -49,73 +63,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
+    overflow: 'hidden',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 1.5,
-    marginBottom: 10,
   },
   title: {
-    fontSize: 28,
+    fontSize: 38,
+    lineHeight: 44,
     fontFamily: serifFont,
     fontWeight: '700',
+    color: colors.primaryDeep,
+    letterSpacing: -0.8,
+    marginBottom: 28,
+  },
+  body: {
+    fontSize: 19,
+    lineHeight: 28,
     color: colors.textPrimary,
-    textAlign: 'center',
-    lineHeight: 36,
-    letterSpacing: -0.3,
-    marginBottom: 44,
+    letterSpacing: -0.2,
+    marginBottom: 16,
   },
-  badgeWrap: {
-    width: 132,
-    height: 132,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeHalo: {
-    position: 'absolute',
-    width: 132,
-    height: 132,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primaryMuted,
-  },
-  badge: {
-    width: 104,
-    height: 104,
-    borderRadius: radius.circle,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.medium,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.25,
-  },
-  badgeValue: {
-    fontSize: 22,
+  promise: {
+    fontSize: 19,
+    lineHeight: 28,
     fontFamily: serifFont,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-  },
-  badgeLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: -0.1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 23,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    maxWidth: 280,
+    fontStyle: 'italic',
+    color: colors.secondary,
+    marginTop: 8,
   },
   footer: {
-    gap: 16,
+    gap: 14,
+  },
+  source: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.textTertiary,
+    textAlign: 'center',
   },
 });
