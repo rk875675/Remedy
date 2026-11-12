@@ -7,7 +7,7 @@ then run:
 
 Outputs:
   - assets/icon.png
-  - assets/splash-icon.png
+  - assets/splash-icon.png  (plain background colour)
   - assets/favicon.png
   - assets/android-icon-background.png
   - assets/android-icon-foreground.png
@@ -48,21 +48,11 @@ def sample_background_color(img_rgb: Image.Image) -> tuple[int, int, int]:
     quantized = (greens // 2) * 2
     stacked = quantized.reshape(-1, 3)
     unique, counts = np.unique(stacked, axis=0, return_counts=True)
-    return tuple(int(v) for v in unique[counts.argmax()])
-
-
-def flatten_background(img: Image.Image, bg_rgb: tuple[int, int, int]) -> Image.Image:
-    """Replace noisy green fill with a solid color so splash letterboxing matches."""
-    arr = np.array(img.convert("RGBA"))
-    rgb = arr[..., :3].astype(int)
-    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
-    is_white = (r > 180) & (g > 180) & (b > 180)
-    is_orange = (r > 140) & (r > g + 15) & (r > b)
-    is_green_bg = (g >= r) & (g >= b) & (g < 170) & ~is_white & ~is_orange
-    arr[is_green_bg, 0] = bg_rgb[0]
-    arr[is_green_bg, 1] = bg_rgb[1]
-    arr[is_green_bg, 2] = bg_rgb[2]
-    return Image.fromarray(arr, "RGBA")
+    bucket = unique[counts.argmax()]
+    # Report the exact colour, not the rounded bucket, so it matches the app palette.
+    in_bucket = greens[(quantized == bucket).all(axis=1)]
+    exact, exact_counts = np.unique(in_bucket, axis=0, return_counts=True)
+    return tuple(int(v) for v in exact[exact_counts.argmax()])
 
 
 def make_foreground(img_rgb: Image.Image, bg_rgb: tuple[int, int, int], tolerance: int = 22) -> Image.Image:
@@ -163,8 +153,11 @@ def main() -> None:
     src.resize((48, 48), Image.LANCZOS).save(favicon_path, "PNG")
     print(f"Saved -> {favicon_path}")
 
+    # The launch screen is the plain brand colour: the logo is a cropped portrait
+    # that would sit cut off mid-screen, and the in-app splash (SplashOverlay)
+    # starts on plain green before the armadillo rolls in.
     splash_path = ASSETS_DIR / "splash-icon.png"
-    flatten_background(src.resize((512, 512), Image.LANCZOS), bg_rgb).save(splash_path, "PNG")
+    Image.new("RGB", (512, 512), bg_rgb).save(splash_path, "PNG")
     print(f"Saved -> {splash_path}")
 
     write_meta(bg_hex)

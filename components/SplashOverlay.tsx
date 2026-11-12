@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { petImage } from '../constants/petImages';
+import { brand } from '../lib/brand';
 
 const LOGO_SIZE = 176;
 
@@ -17,7 +18,8 @@ interface SplashOverlayProps {
   onDone: () => void;
 }
 
-const BG = '#33663f';
+/** Same colour as the native launch screen, so the handoff is invisible. */
+const BG = brand.backgroundColor;
 const EXIT_DURATION = 520;
 const BREATHE_DURATION = 2800;
 /** Minimum ms the splash is visible, even if the app loads instantly. */
