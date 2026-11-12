@@ -72,7 +72,7 @@ export default function Q9Screen() {
       <WarmBackground />
       <View style={styles.content}>
         <View style={styles.say}>
-          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} entrance="spin" />
+          <PetSays line={say.line} mood={say.mood} stage={stage} size={56} entrance="peek" />
         </View>
         <Text style={styles.heading}>Do you believe Remedy can fix your back pain?</Text>
         <View style={styles.options}>

@@ -857,7 +857,7 @@ export default function MatchScreen() {
           bounces={false}
         >
           <View style={styles.petSays}>
-            <PetSays line={petPresent.line} mood={petPresent.mood} stage={petStage} entrance="roll" />
+            <PetSays line={petPresent.line} mood={petPresent.mood} stage={petStage} entrance="drop" />
           </View>
 
           <Text style={styles.eyebrow}>{retaking ? 'YOUR UPDATED PROGRAM' : isReconvert ? 'RESUME YOUR PROGRAM' : 'YOUR PROGRAM'}</Text>

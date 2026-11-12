@@ -32,7 +32,7 @@ export default function SeenScreen() {
             line={PET_PRESENTS.seen.line}
             mood={PET_PRESENTS.seen.mood}
             stage={stage}
-            entrance="roll"
+            entrance="peek"
           />
         </View>
         <View style={styles.content}>

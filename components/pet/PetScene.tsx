@@ -15,6 +15,7 @@ import { PET_HOME_TRICK_LINES, fillPetLine } from '../../constants/petOnboarding
 import { hapticSelection } from '../../lib/haptics';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { useReduceMotion } from '../../lib/useReduceMotion';
+import { Dust, DUST_PALE, easedTimeAt, type DustHandle } from './Dust';
 import { Pet } from './Pet';
 
 type PetSceneProps = {
@@ -62,6 +63,7 @@ export function PetScene({
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const running = useRef<Animated.CompositeAnimation | null>(null);
   const lineIndex = useRef(Math.floor(Math.random() * PET_HOME_TRICK_LINES.length));
+  const dust = useRef<DustHandle>(null);
 
   // Curled up, the pet is drawn at 0.72 of its box, sitting on the bottom edge.
   const rollTravel = width * 0.36;
@@ -118,6 +120,22 @@ export function PetScene({
     }
     busy.current = true;
     setCurled(true);
+    // A puff of dust each time the ball passes one of these spots (in units of the travel).
+    const ease = Easing.inOut(Easing.cubic);
+    const at = (start: number, ms: number, from: number, to: number, spot: number) => ({
+      x: spot * rollTravel,
+      delay: start + ms * easedTimeAt(ease, (spot - from) / (to - from)),
+      size: 13,
+    });
+    dust.current?.play([
+      at(240, 520, 0, 1, 0.3),
+      at(240, 520, 0, 1, 0.7),
+      at(760, 900, 1, -1, 0.45),
+      at(760, 900, 1, -1, -0.1),
+      at(760, 900, 1, -1, -0.6),
+      at(1660, 560, -1, 0, -0.65),
+      at(1660, 560, -1, 0, -0.25),
+    ]);
     const leg = (toValue: number, duration: number) =>
       Animated.timing(roll, {
         toValue,
@@ -160,6 +178,13 @@ export function PetScene({
     roll.setValue(-1.75);
     setCurled(true);
     setReady(true);
+    dust.current?.play(
+      [-1.05, -0.7, -0.4, -0.15].map((spot) => ({
+        x: spot * rollTravel,
+        delay: 1000 * easedTimeAt(Easing.out(Easing.cubic), (spot + 1.75) / 1.75) + 40,
+        size: 13,
+      })),
+    );
     const anim = Animated.timing(roll, {
       toValue: 0,
       duration: 1000,
@@ -184,7 +209,7 @@ export function PetScene({
       timer = setTimeout(() => {
         if (!busy.current) {
           const pick = Math.random();
-          if (pick < 0.16) {
+          if (pick < 0.1) {
             doRoll(false);
           } else if (pick < 0.58) {
             fidget = Animated.sequence([
@@ -230,6 +255,10 @@ export function PetScene({
       />
 
       <View style={{ height: petAreaHeight }} pointerEvents="box-none">
+        {/* Dust kicked up on the hill; x is measured from the centre of the scene. */}
+        <View pointerEvents="none" style={[styles.dustOrigin, { left: width / 2 }]}>
+          <Dust ref={dust} color={DUST_PALE} />
+        </View>
         {pet && ready ? (
           // Centred on the hill's crest. Only the ears reach the header's height, and
           // they sit near the centre, clear of the left-hand name column.
@@ -408,6 +437,12 @@ const styles = StyleSheet.create({
   pillSlot: {
     marginTop: 10,
     alignItems: 'center',
+  },
+  dustOrigin: {
+    position: 'absolute',
+    bottom: 2,
+    width: 1,
+    height: 24,
   },
   // What the pet says after its roll: top right, pointing down at it.
   says: {

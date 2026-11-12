@@ -88,7 +88,7 @@ export default function CommitScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
         <WarmBackground />
         <View style={styles.petSays}>
-          <PetSays line={petPresent.line} mood={petMood} stage={stage} entrance="spin" />
+          <PetSays line={petPresent.line} mood={petMood} stage={stage} />
         </View>
         <View style={styles.content}>
           <Text style={styles.title}>I'm done working around my back.</Text>

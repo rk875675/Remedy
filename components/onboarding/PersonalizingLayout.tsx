@@ -4,7 +4,7 @@ import { colors } from '../../constants/colors';
 import type { PetMood } from '../../constants/petImages';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
-import { PetSays } from '../pet/PetSays';
+import { PetSays, type PetEntrance } from '../pet/PetSays';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useOnboardingPet } from '../../lib/useOnboardingPet';
 import type { OnboardingAnswers } from '../../types/database';
@@ -29,6 +29,24 @@ type PersonalizingLayoutProps = {
  */
 const PERSONALIZING_STEPS = ['q6', 'q1', 'q2', 'q3', 'q4', 'q5', 'q7', 'q8'] as const;
 type PersonalizingStep = (typeof PERSONALIZING_STEPS)[number];
+
+/**
+ * How the pet arrives on each question. Mostly the quiet pop; a drop, a peek and
+ * a roll are spread out so no two neighbouring questions open the same way and
+ * nothing repeats often enough to wear thin.
+ */
+const STEP_ARRIVAL: Readonly<
+  Record<PersonalizingStep, { entrance: PetEntrance; side: 'left' | 'right' }>
+> = {
+  q6: { entrance: 'drop', side: 'left' },
+  q1: { entrance: 'pop', side: 'left' },
+  q2: { entrance: 'pop', side: 'right' },
+  q3: { entrance: 'pop', side: 'left' },
+  q4: { entrance: 'peek', side: 'right' },
+  q5: { entrance: 'pop', side: 'left' },
+  q7: { entrance: 'roll', side: 'left' },
+  q8: { entrance: 'pop', side: 'right' },
+};
 
 const STEP_INDEX: Readonly<Record<PersonalizingStep, number>> = {
   q6: 0,
@@ -161,7 +179,8 @@ export function PersonalizingLayout({
             mood={say.mood}
             stage={stage}
             size={56}
-            entrance={(['roll', 'drop', 'spin'] as const)[currentStepIndex % 3]}
+            entrance={STEP_ARRIVAL[currentStep].entrance}
+            side={STEP_ARRIVAL[currentStep].side}
           />
         </View>
       ) : null}
