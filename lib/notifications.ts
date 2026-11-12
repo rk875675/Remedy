@@ -9,6 +9,8 @@ import {
   notificationPermissionRequested,
 } from './analytics/events/engagement';
 import type { notificationPurpose } from './analytics/events/enums';
+import { getRememberedPetName } from './petNameCache';
+import { PET_STRETCH_REMINDER, PET_WORKOUT_REMINDER, petLine } from '../constants/petLines';
 
 type NotificationPurpose = z.infer<typeof notificationPurpose>;
 
@@ -105,14 +107,15 @@ export async function scheduleWorkoutReminders(
   await cancelWorkoutReminders();
   if (selectedDays.length === 0) return;
 
+  const petName = await getRememberedPetName();
   const ids: string[] = [];
   for (const dayIndex of selectedDays) {
     const identifier = `${WORKOUT_REMINDER_PREFIX}${dayIndex}`;
     await Notifications.scheduleNotificationAsync({
       identifier,
       content: {
-        title: 'Time for your workout',
-        body: "Today's exercises are ready. Open Remedy and get it done.",
+        title: petLine(PET_WORKOUT_REMINDER.title, petName),
+        body: PET_WORKOUT_REMINDER.body,
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
@@ -156,9 +159,6 @@ export async function cancelReminders(): Promise<void> {
 // Stretch reminders
 // ---------------------------------------------------------------------------
 
-const STRETCH_TITLE = 'Stretch break';
-const STRETCH_BODY = 'Get up and move. Take a short walk or do a quick stretch.';
-
 // Builds the list of future slot times for today + tomorrow that fall within
 // the active hours window, spaced by the configured interval.
 function buildStretchSlots(
@@ -201,6 +201,7 @@ export async function scheduleStretchReminders(
   await cancelStretchReminders();
 
   const slots = buildStretchSlots(intervalMinutes, startHour, endHour);
+  const petName = await getRememberedPetName();
   const ids: string[] = [];
 
   for (const slot of slots) {
@@ -208,8 +209,8 @@ export async function scheduleStretchReminders(
     await Notifications.scheduleNotificationAsync({
       identifier,
       content: {
-        title: STRETCH_TITLE,
-        body: STRETCH_BODY,
+        title: PET_STRETCH_REMINDER.title,
+        body: petLine(PET_STRETCH_REMINDER.body, petName),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,

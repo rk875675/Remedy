@@ -47,6 +47,7 @@ import {
 import {
   dailyReminderDisabled,
   displayNameUpdated,
+  petNamed,
   progressReset,
   stretchRemindersDisabled,
   stretchRemindersEnabled,
@@ -57,6 +58,10 @@ import { isManualWriteReviewAvailable, openWriteReviewPage } from '../../lib/app
 import { extractInvokeError } from '../../lib/functionsError';
 import { rememberDisplayName, resolveDisplayName } from '../../lib/greeting';
 import { invalidateTabRefresh } from '../../lib/tabRefresh';
+import { PetBadge } from '../../components/pet/PetBadge';
+import { fetchPetState, setPetName } from '../../lib/petApi';
+import type { PetState } from '../../lib/pet';
+import { PET_NAME_INVALID, PET_NAME_MAX_LENGTH, PET_NAME_PLACEHOLDER } from '../../constants/petLines';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { WorkoutDaysModal } from '../../components/progress/WorkoutDaysModal';
 import { PromoCodeSheet } from '../../components/PromoCodeSheet';
@@ -472,6 +477,13 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
+  // Pet (best-effort: null hides every pet element)
+  const [pet, setPet] = useState<PetState | null>(null);
+  const [editingPet, setEditingPet] = useState(false);
+  const [petInput, setPetInput] = useState('');
+  const [petSaving, setPetSaving] = useState(false);
+  const [petError, setPetError] = useState<string | null>(null);
+
   // Restore state
   const [restoring, setRestoring] = useState(false);
   const [openingPaywall, setOpeningPaywall] = useState(false);
@@ -490,6 +502,10 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
     if (!user) return;
+
+    void fetchPetState().then((p) => {
+      if (p) setPet(p);
+    });
 
     (async () => {
       const [
@@ -616,6 +632,40 @@ export default function ProfileScreen() {
     // The name is user-entered text and never leaves the device — only the fact
     // that one is now set.
     displayNameUpdated({ has_name: true });
+  }
+
+  function startEditingPet() {
+    hapticSelection();
+    setPetInput(pet?.name ?? '');
+    setPetError(null);
+    setEditingPet(true);
+  }
+
+  function cancelEditingPet() {
+    setEditingPet(false);
+    setPetError(null);
+  }
+
+  async function savePet() {
+    if (!pet || petSaving) return;
+    const trimmed = petInput.trim();
+    if (!trimmed) return;
+    if (trimmed === (pet.name ?? '')) {
+      cancelEditingPet();
+      return;
+    }
+    setPetSaving(true);
+    setPetError(null);
+    const hadName = Boolean(pet.name);
+    const result = await setPetName(trimmed);
+    setPetSaving(false);
+    if (result.ok) {
+      setPet(result.state);
+      setEditingPet(false);
+      petNamed({ source_screen: 'profile', renamed: hadName });
+    } else {
+      setPetError(result.reason === 'invalid' ? PET_NAME_INVALID : 'Could not save. Try again.');
+    }
   }
 
   // Plan card — prefer the personalized snapshot name over the legacy program name.
@@ -996,7 +1046,12 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Profile</Text>
 
         {/* ── Identity ── */}
-        <View style={styles.identity}>
+        <View style={[styles.identity, pet && styles.identityWithPet]}>
+          {pet && (
+            <View style={styles.identityPet}>
+              <PetBadge stage={pet.stage} mood="idle" size={84} />
+            </View>
+          )}
           <View style={[styles.nameBox, editingName && styles.nameBoxEditing]}>
             {editingName ? (
               <TextInput
@@ -1056,6 +1111,68 @@ export default function ProfileScreen() {
         {/* ── Program ── */}
         <Text style={styles.sectionLabel}>Program</Text>
         <View style={styles.settingsCard}>
+          {pet && (
+            <>
+              {editingPet ? (
+                <View style={styles.petEditRow}>
+                  <View style={[styles.nameBox, styles.nameBoxEditing]}>
+                    <TextInput
+                      style={styles.petInput}
+                      value={petInput}
+                      onChangeText={setPetInput}
+                      onSubmitEditing={() => { void savePet(); }}
+                      returnKeyType="done"
+                      placeholder={PET_NAME_PLACEHOLDER}
+                      placeholderTextColor={colors.textTertiary}
+                      maxLength={PET_NAME_MAX_LENGTH}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      editable={!petSaving}
+                      autoFocus
+                    />
+                  </View>
+                  {petError ? <Text style={styles.petError}>{petError}</Text> : null}
+                  <View style={styles.petEditActions}>
+                    <TouchableOpacity
+                      style={styles.compactChip}
+                      onPress={cancelEditingPet}
+                      activeOpacity={0.7}
+                      disabled={petSaving}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel"
+                    >
+                      <Text style={styles.compactChipText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.compactChip, styles.compactChipSelected]}
+                      onPress={() => { void savePet(); }}
+                      activeOpacity={0.7}
+                      disabled={petSaving || !petInput.trim()}
+                      accessibilityRole="button"
+                      accessibilityLabel="Save"
+                    >
+                      <Text style={[styles.compactChipText, styles.compactChipTextSelected]}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.chevronRow}
+                  onPress={startEditingPet}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Rename your armadillo"
+                >
+                  <View style={styles.chevronRowTextCol}>
+                    <Text style={styles.editProgramLabel}>Your armadillo</Text>
+                    <Text style={styles.chevronRowCaption}>{pet.name ?? 'Name it'}</Text>
+                  </View>
+                  <Text style={styles.editProgramChevron}>›</Text>
+                </TouchableOpacity>
+              )}
+              <View style={styles.divider} />
+            </>
+          )}
           <TouchableOpacity
             style={styles.chevronRow}
             onPress={() => router.push('/onboarding-answers')}
@@ -1461,6 +1578,34 @@ const styles = StyleSheet.create({
 
   identity: {
     marginBottom: 28,
+  },
+  identityWithPet: {
+    paddingRight: 96,
+    minHeight: 84,
+  },
+  identityPet: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+  },
+  petEditRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  petInput: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  petError: {
+    fontSize: 13,
+    color: colors.secondary,
+  },
+  petEditActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   nameRule: {
     width: 28,

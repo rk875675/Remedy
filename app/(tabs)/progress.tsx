@@ -21,6 +21,10 @@ import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { MiniRing } from '../../components/ui/MiniRing';
 import { progressRangeChanged } from '../../lib/analytics/events/engagement';
+import { PetStageStrip } from '../../components/pet/PetStageStrip';
+import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
+import { fetchPetState } from '../../lib/petApi';
+import { PET_FALLBACK_NAME } from '../../constants/petLines';
 import type { UserProgram } from '../../types/database';
 import {
   computePainChart,
@@ -224,6 +228,7 @@ export default function ProgressScreen() {
   const [activityRange, setActivityRange] = useState<ActivityRange>('1m');
   const [workoutDays, setWorkoutDays] = useState<number[]>([]);
   const [daysSince, setDaysSince] = useState<string | null>(null);
+  const [pet, setPet] = useState<PetState | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -300,6 +305,9 @@ export default function ProgressScreen() {
     }
 
     beginTabRefresh('progress');
+    void fetchPetState().then((p) => {
+      if (p) setPet(p);
+    });
     const since = historyWindowStartISO(PROGRESS_HISTORY_DAYS);
     try {
 
@@ -467,6 +475,19 @@ export default function ProgressScreen() {
               complete={isProgramComplete}
               finishLabel={`Week ${durationWeeks}`}
             />
+          </View>
+        )}
+
+        {pet && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{pet.name ?? PET_FALLBACK_NAME}</Text>
+            <PetStageStrip stage={pet.stage} size={52} />
+            <Text style={styles.petGrowthText}>{petGrowthCopy(pet)}</Text>
+            {pet.stage < 5 && (
+              <View style={styles.petBarTrack}>
+                <View style={[styles.petBarFill, { width: `${Math.round(stageProgress(pet) * 100)}%` }]} />
+              </View>
+            )}
           </View>
         )}
 
@@ -913,6 +934,24 @@ const styles = StyleSheet.create({
   },
   showingUpDayLabelDone: {
     color: '#FFFFFF',
+  },
+  petGrowthText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+    marginTop: 12,
+  },
+  petBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.borderLight,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  petBarFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
   },
   skeletonBlock: {
     marginBottom: 16,

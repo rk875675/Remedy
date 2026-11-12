@@ -78,6 +78,7 @@ Application Installed
   → /(onboarding)/q5           pain triggers         (multi)
   → /(onboarding)/q7           equipment tier + safety disclaimer modal
   → /(onboarding)/q8           time budget + cadence → sessions_per_week_preference
+  → /(onboarding)/pet          meet and name the pet (skipped on a retake)
   → /(onboarding)/commit       "Hold to commit" interstitial
   → /(onboarding)/finalizing   animated "building your plan"
   → /(onboarding)/match        server-computed plan preview  →  Superwall paywall
@@ -341,7 +342,7 @@ must stay identical.
 `/(onboarding)/q9`, `/(onboarding)/q6`, `/(onboarding)/q1`, `/(onboarding)/q2`,
 `/(onboarding)/recognize`, `/(onboarding)/seen`,
 `/(onboarding)/q3`, `/(onboarding)/q4`, `/(onboarding)/q5`, `/(onboarding)/q7`,
-`/(onboarding)/q8`, `/(onboarding)/commit`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
+`/(onboarding)/q8`, `/(onboarding)/pet`, `/(onboarding)/commit`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
 `/(auth)/sign-in`, `/(auth)/email`, `/(legal)/terms`, `/(legal)/privacy`, `/(tabs)`,
 `/(tabs)/progress`, `/(tabs)/profile`, `/session/[id]`, `/building-plan`, `/weekly-ramp`,
 `/orientation`, `/program-complete`, `/next-program`, `/onboarding-answers`, `/auth-callback`,
@@ -631,6 +632,8 @@ wrongly implies the user agreed with the suggestion — `followed_suggestion` ca
 | `friend_share_started` | Share tapped and the system sheet opened | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`) | Does not mean they sent it. |
 | `friend_share_completed` | System share sheet returned a send | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`) | The message body is never sent. |
 | `friend_share_cancelled` | System share sheet closed without a send | `components/session/FriendShareSheet.tsx` | `source_screen` str (`home`) | The Remedy sheet stays up. |
+| `pet_named` | Pet name saved | `app/building-plan.tsx` (name typed in onboarding), `components/pet/PetNameSheet.tsx` on Home, `app/(tabs)/profile.tsx` rename | `source_screen` str (`building_plan` \| `home` \| `profile`), `renamed` bool | **The name itself is never sent.** `renamed` is true when the pet already had a name that this save replaced. |
+| `pet_grew` | Pet reached a new stage, on the screen that shows the growth moment | Session-complete screen or weekly ramp screen | `source_screen` str (`session` \| `weekly_ramp`), `stage` int (2–5), `total_sessions` int (≥0) | Fires once per growth moment. Stage 1 is the starting stage, so it never fires. |
 
 #### 3.10.1 Reading the review-prompt funnel
 
