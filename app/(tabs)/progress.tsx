@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Image,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,6 +29,7 @@ import { PetStageStrip } from '../../components/pet/PetStageStrip';
 import { PET_STAGE_SCALE, petImage, type PetStage } from '../../constants/petImages';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
+import { useReduceMotion } from '../../lib/useReduceMotion';
 import { PET_FALLBACK_NAME } from '../../constants/petLines';
 import type { UserProgram } from '../../types/database';
 import {
@@ -114,6 +117,7 @@ function ProgramPath({
   pet: PetState | null;
 }) {
   const [width, setWidth] = useState(0);
+  const reduceMotion = useReduceMotion();
   const span = width - PATH_PAD * 2;
   const stops = Array.from({ length: weeks }, (_, i) => {
     const t = weeks > 1 ? i / (weeks - 1) : 0.5;
@@ -131,6 +135,99 @@ function ProgramPath({
       ? stops[currentIdx]
       : undefined;
 
+  // The walk: each time the tab is opened the covered route draws itself and
+  // the pet hops along it, week by week, to where it is now. `walk` runs 0..1
+  // over the covered segments; it is JS-driven because SVG props are.
+  const segments = Math.max(0, currentIdx);
+  const walk = useRef(new Animated.Value(0)).current;
+  const land = useRef(new Animated.Value(0)).current;
+  const [focusRun, setFocusRun] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setFocusRun((n) => n + 1);
+    }, []),
+  );
+  useEffect(() => {
+    if (width <= 0 || reduceMotion === null) return;
+    land.setValue(0);
+    if (reduceMotion || segments === 0) {
+      walk.setValue(1);
+      return;
+    }
+    walk.setValue(0);
+    const anim = Animated.sequence([
+      Animated.delay(250),
+      Animated.timing(walk, {
+        toValue: 1,
+        duration: Math.min(2200, 520 * segments + 300),
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: false,
+      }),
+    ]);
+    anim.start(({ finished }) => {
+      if (!finished || !here) return;
+      // Arriving: a little squash and spring (inner view, native driven).
+      Animated.sequence([
+        Animated.timing(land, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.spring(land, { toValue: 0, speed: 16, bounciness: 14, useNativeDriver: true }),
+      ]).start();
+    });
+    return () => anim.stop();
+    // `here` only matters for the landing; the walk restarts on layout, tab focus and week change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width, reduceMotion, segments, focusRun, currentWeek, complete]);
+
+  const walkLook = useMemo(() => {
+    const pts = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const dx = (b.x - a.x) / 2;
+      return (u: number) => {
+        const m = 1 - u;
+        const x = m ** 3 * a.x + 3 * m * m * u * (a.x + dx) + 3 * m * u * u * (b.x - dx) + u ** 3 * b.x;
+        const y = m ** 3 * a.y + 3 * m * m * u * a.y + 3 * m * u * u * b.y + u ** 3 * b.y;
+        return { x, y };
+      };
+    };
+    const reveal = Array.from({ length: segments }, (_, i) => {
+      const a = stops[i];
+      const b = stops[i + 1];
+      const len = a && b ? Math.hypot(b.x - a.x, b.y - a.y) * 1.12 + 4 : 0;
+      const drawn = walk.interpolate({
+        inputRange: [i / segments, (i + 1) / segments],
+        outputRange: [len, 0],
+        extrapolate: 'clamp',
+      });
+      return { len, drawn };
+    });
+    // The pet's route, sampled along the curves with a little hop each week.
+    const inputRange: number[] = [];
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const per = 10;
+    for (let i = 0; i < segments; i++) {
+      const a = stops[i];
+      const b = stops[i + 1];
+      if (!a || !b) continue;
+      const at = pts(a, b);
+      for (let k = 0; k <= per; k++) {
+        if (i > 0 && k === 0) continue;
+        const u = k / per;
+        const p = at(u);
+        inputRange.push((i + u) / segments);
+        xs.push(p.x - b.x);
+        ys.push(p.y - b.y - Math.sin(u * Math.PI) * 9);
+      }
+    }
+    const route =
+      inputRange.length > 1
+        ? {
+            x: walk.interpolate({ inputRange, outputRange: xs }),
+            y: walk.interpolate({ inputRange, outputRange: ys }),
+          }
+        : null;
+    return { reveal, route };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walk, segments, width, weeks]);
+
   return (
     <View
       style={styles.pathWrap}
@@ -146,6 +243,21 @@ function ProgramPath({
                 const b = stops[i + 1]!;
                 const dx = (b.x - a.x) / 2;
                 const walked = b.reached;
+                const drawing = walkLook.reveal[i];
+                if (walked && drawing) {
+                  return (
+                    <AnimatedPath
+                      key={`seg-${i}`}
+                      d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
+                      fill="none"
+                      strokeLinecap="round"
+                      stroke={PATH_LINE}
+                      strokeWidth={3}
+                      strokeDasharray={[drawing.len, drawing.len]}
+                      strokeDashoffset={drawing.drawn}
+                    />
+                  );
+                }
                 return (
                   <Path
                     key={`seg-${i}`}
@@ -225,18 +337,42 @@ function ProgramPath({
         </View>
       ) : null}
       {width > 0 && pet && here ? (
-        <NodePet x={here.x} y={here.y} stage={pet.stage} />
+        <NodePet x={here.x} y={here.y} stage={pet.stage} route={walkLook.route} land={land} />
       ) : null}
     </View>
   );
 }
 
-function NodePet({ x, y, stage }: { x: number; y: number; stage: PetStage }) {
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+function NodePet({
+  x,
+  y,
+  stage,
+  route,
+  land,
+}: {
+  x: number;
+  y: number;
+  stage: PetStage;
+  route: { x: Animated.AnimatedInterpolation<number>; y: Animated.AnimatedInterpolation<number> } | null;
+  land: Animated.Value;
+}) {
   const drawn = PET_ON_NODE * PET_STAGE_SCALE[stage];
   const shadowW = drawn * 0.55;
   const shadowH = Math.max(4, drawn * 0.08);
+  const squash = useMemo(
+    () => ({
+      transform: [
+        { translateY: land.interpolate({ inputRange: [0, 1], outputRange: [0, drawn * 0.1] }) },
+        { scaleX: land.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
+        { scaleY: land.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }) },
+      ],
+    }),
+    [land, drawn],
+  );
   return (
-    <View
+    <Animated.View
       pointerEvents="none"
       style={{
         position: 'absolute',
@@ -245,6 +381,7 @@ function NodePet({ x, y, stage }: { x: number; y: number; stage: PetStage }) {
         width: drawn,
         height: drawn + shadowH / 2,
         overflow: 'visible',
+        transform: route ? [{ translateX: route.x }, { translateY: route.y }] : [],
       }}
     >
       <View
@@ -258,13 +395,15 @@ function NodePet({ x, y, stage }: { x: number; y: number; stage: PetStage }) {
           backgroundColor: 'rgba(0, 0, 0, 0.2)',
         }}
       />
-      <Image
-        source={petImage(stage, 'idle')}
-        resizeMode="contain"
-        accessible={false}
-        style={{ position: 'absolute', top: 0, left: 0, width: drawn, height: drawn }}
-      />
-    </View>
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, width: drawn, height: drawn }, squash]}>
+        <Image
+          source={petImage(stage, 'idle')}
+          resizeMode="contain"
+          accessible={false}
+          style={{ width: drawn, height: drawn }}
+        />
+      </Animated.View>
+    </Animated.View>
   );
 }
 

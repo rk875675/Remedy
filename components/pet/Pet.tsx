@@ -49,6 +49,21 @@ function settleSquash(value: Animated.Value): Animated.CompositeAnimation {
   });
 }
 
+/**
+ * Poses to pass through, ending on `to`. The ball is stage 1: opening it goes
+ * via the peeking stage and the sitting stage, and curling up is the same
+ * walk backwards. Any other change is a single step.
+ */
+function buildPath(from: Pose, to: Pose): Pose[] {
+  const through: PetStage[] = [];
+  if (from.stage === 1 && to.stage > 1) {
+    for (const s of [2, 3] as const) if (s < to.stage) through.push(s);
+  } else if (to.stage === 1 && from.stage > 1) {
+    for (const s of [3, 2] as const) if (s < from.stage) through.push(s);
+  }
+  return [...through.map((s): Pose => ({ stage: s, mood: 'idle' })), to];
+}
+
 export function Pet({
   stage,
   mood,
@@ -67,6 +82,12 @@ export function Pet({
   const poseToken = useRef(0);
   const swapping = useRef(false);
   const swapAnim = useRef<Animated.CompositeAnimation | null>(null);
+  // The pose being drawn. It lags the props while a ball unfurls or curls up
+  // through the stages in between.
+  const [shown, setShown] = useState<Pose>({ stage, mood });
+  const shownRef = useRef<Pose>({ stage, mood });
+  const queue = useRef<Pose[]>([]);
+  const opening = useRef(false);
   const motionAnim = useRef<Animated.CompositeAnimation | null>(null);
   const motionKind = useRef<MotionKind | null>(null);
 
@@ -169,12 +190,22 @@ export function Pet({
 
     if (sameImage || swapping.current) {
       swapping.current = false;
+      queue.current = [];
+      shownRef.current = { stage, mood };
+      setShown({ stage, mood });
       fade.setValue(1);
       setPrevious(null);
       if (prevPose.mood === mood) startHops();
       return;
     }
 
+    // Leaving or entering the ball goes through the stages in between.
+    const path = buildPath(prevPose, { stage, mood });
+    const first = path[0] ?? { stage, mood };
+    queue.current = path.slice(1);
+    opening.current = prevPose.stage === 1 && stage > 1;
+    shownRef.current = first;
+    setShown(first);
     swapping.current = true;
     fade.setValue(0);
     setPrevious(prevPose);
@@ -185,18 +216,41 @@ export function Pet({
     const token = poseToken.current;
     let live = true;
     // Squash down, crossfade at the bottom, spring up taller than rest, settle.
-    const anim = Animated.sequence([
-      timing(body.squash, 0.85, 110, fall),
+    // Steps on the way are gentler; the last one is the full move.
+    const isLast = queue.current.length === 0;
+    const power = isLast ? 1 : 0.6;
+    const swap = Animated.sequence([
+      timing(body.squash, 0.85 * power, 110, fall),
       Animated.parallel([
-        timing(fade, 1, 90, rise),
-        Animated.sequence([timing(body.squash, -0.55, 130, rise), settleSquash(body.squash)]),
+        timing(fade, 1, 100, rise),
+        Animated.sequence([timing(body.squash, -0.55 * power, 130, rise), settleSquash(body.squash)]),
       ]),
     ]);
+    // The ball shakes with effort, harder each time, before it gives way.
+    const wobble = Animated.sequence([
+      timing(body.tilt, 0.4, 90, rise),
+      timing(body.tilt, -0.6, 110, rise),
+      timing(body.tilt, 0.8, 110, rise),
+      timing(body.tilt, -1, 110, rise),
+      Animated.parallel([timing(body.tilt, 0, 90, rise), timing(body.squash, 0.5, 90, fall)]),
+    ]);
+    const anim = opening.current ? Animated.sequence([wobble, swap]) : swap;
+    opening.current = false;
     swapAnim.current = anim;
     anim.start(({ finished }) => {
       if (!live || poseToken.current !== token) return;
       if (swapAnim.current === anim) swapAnim.current = null;
       if (!finished || !mounted.current) return;
+      const next = queue.current.shift();
+      if (next) {
+        // The next stage on the way: the one just drawn becomes the outgoing pose.
+        const drawnNow = shownRef.current;
+        shownRef.current = next;
+        fade.setValue(0);
+        setShown(next);
+        setPrevious({ ...drawnNow });
+        return;
+      }
       swapping.current = false;
       setPrevious(null);
       startHops();
@@ -256,6 +310,9 @@ export function Pet({
     restBody(body);
     fade.setValue(1);
     swapping.current = false;
+    queue.current = [];
+    shownRef.current = lastPose.current;
+    setShown(lastPose.current);
     setPrevious(null);
   }, [reduceMotion, body, fade]);
 
@@ -267,6 +324,9 @@ export function Pet({
       restBody(body);
       if (wasSwapping) {
         swapping.current = false;
+        queue.current = [];
+        shownRef.current = lastPose.current;
+        setShown(lastPose.current);
         fade.setValue(1);
         if (mounted.current) setPrevious(null);
       }
@@ -318,7 +378,7 @@ export function Pet({
         <Animated.View style={[bodyStyles.mover, StyleSheet.absoluteFill]}>
           <Animated.View style={[bodyStyles.squash, StyleSheet.absoluteFill]}>
             {previous ? <PoseImage pose={previous} size={size} opacity={prevOpacity} /> : null}
-            <PoseImage pose={{ stage, mood }} size={size} opacity={fade} />
+            <PoseImage pose={shown} size={size} opacity={fade} />
           </Animated.View>
         </Animated.View>
       </Animated.View>

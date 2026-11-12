@@ -73,7 +73,8 @@ const ROLL_BACK_MS = 150;
 const ROLL_PAST = 1.04;
 const DROP_MS = 300;
 const DROP_FROM = -220;
-const POSE_WAIT_MS = 260;
+// The unfurl from the ball (see Pet.tsx) takes about this long.
+const POSE_WAIT_MS = 1300;
 const TALK_MS = 260;
 const outCubic = Easing.out(Easing.cubic);
 
