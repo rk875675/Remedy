@@ -581,6 +581,8 @@ export default function HomeScreen() {
   });
   const petScene = (
     <View style={styles.petScene}>
+      {/* Keeps the pull-down area green instead of showing the page background. */}
+      <View pointerEvents="none" style={styles.petSceneOverscroll} />
       <PetScene
         topInset={insets.top}
         greeting={greeting}
@@ -846,6 +848,14 @@ const styles = StyleSheet.create({
   petScene: {
     marginHorizontal: -24,
     marginBottom: 20,
+  },
+  petSceneOverscroll: {
+    position: 'absolute',
+    top: -600,
+    left: 0,
+    right: 0,
+    height: 600,
+    backgroundColor: colors.primary,
   },
 
   // Stretch break countdown card

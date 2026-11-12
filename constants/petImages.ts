@@ -59,10 +59,10 @@ const POSE_FALLBACKS: Partial<Record<PetStage, Partial<Record<PetMood, PetMood>>
 
 /** Fraction of its box each stage fills, so the pet visibly grows. */
 export const PET_STAGE_SCALE: Record<PetStage, number> = {
-  1: 0.62,
-  2: 0.72,
-  3: 0.82,
-  4: 0.9,
+  1: 0.72,
+  2: 0.8,
+  3: 0.88,
+  4: 0.94,
   5: 1,
 };
 

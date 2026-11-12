@@ -16,6 +16,8 @@ type PetSceneProps = {
 };
 
 const TRACK_WIDTH = 180;
+/** Space at the bottom of the panel kept for the growth pill; the pet stands just above it. */
+const PILL_ZONE = 58;
 
 /** Home hero: forest-green panel with the pet standing on a soft hill. */
 export function PetScene({
@@ -27,8 +29,9 @@ export function PetScene({
   mood,
 }: PetSceneProps) {
   const { width, height } = useWindowDimensions();
-  const panelHeight = Math.min(380, Math.max(300, Math.round(height * 0.4)));
-  const petSize = Math.round(panelHeight * 0.58);
+  const panelHeight = Math.min(330, Math.max(270, Math.round(height * 0.36)));
+  // The pet fills everything above the pill; its ears may reach up beside the name.
+  const petSize = Math.round((panelHeight - PILL_ZONE) * 0.94);
   // The hill is the top of a large circle. A wide box with a big corner radius
   // would not work: the radius is clamped to half the shorter side, leaving a flat band.
   const hillSize = width * 1.8;
@@ -50,6 +53,13 @@ export function PetScene({
         ]}
       />
 
+      {pet ? (
+        <View pointerEvents="box-none" style={[styles.petSlot, { bottom: PILL_ZONE }]}>
+          <Pet stage={pet.stage} mood={mood} size={petSize} accessibilityLabel={petName} />
+        </View>
+      ) : null}
+
+      {/* After the pet so the text stays readable and tappable where they meet. */}
       <View style={[styles.header, { paddingTop: topInset + 16 }]}>
         <View style={styles.greetingRow}>
           <Text style={styles.greeting}>
@@ -68,16 +78,15 @@ export function PetScene({
             </TouchableOpacity>
           ) : null}
         </View>
-        <Text style={styles.petName} numberOfLines={1}>
+        <Text
+          style={styles.petName}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
           {petName}
         </Text>
       </View>
-
-      {pet ? (
-        <View pointerEvents="box-none" style={[styles.petSlot, { bottom: panelHeight * 0.17 }]}>
-          <Pet stage={pet.stage} mood={mood} size={petSize} accessibilityLabel={petName} />
-        </View>
-      ) : null}
 
       {pet ? (
         <View pointerEvents="none" style={styles.pillSlot}>
@@ -106,8 +115,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'rgba(255, 255, 255, 0.10)',
   },
+  // Kept to the left so the name sits beside the pet, not across it.
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     paddingHorizontal: 20,
+    maxWidth: '48%',
   },
   greetingRow: {
     flexDirection: 'row',

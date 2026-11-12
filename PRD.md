@@ -193,11 +193,13 @@ Onboarding alternates between questions and interstitial insight screens. The go
 ## 7. UI & Design System
 
 ### Color Palette (Warm, Premium)
+The palette follows the armadillo: the forest green of its world, the brown of its shell, the light tan of its body. Source of truth is `constants/colors.ts`.
+
 | Role | Color | Notes |
 |------|-------|-------|
-| Background | Warm cream / off-white (`#FAF7F4`) | Never pure white |
-| Primary accent | Terracotta / warm coral (`#C4614A`) | CTAs, active states |
-| Secondary accent | Warm sage green (`#7A9E7E`) | Progress, positive states |
+| Background | Light tan (`#F6EDE0`) | Never pure white |
+| Primary accent | Forest green (`#3E6B4E`) | CTAs, active states, the pet scene |
+| Secondary accent | Shell brown (`#AE5636`) | Celebration, highlights |
 | Surface / cards | Warm white (`#FFFFFF`) with soft shadow | Slight warmth, not clinical |
 | Text primary | Dark warm gray (`#1C1C1E`) | Not pure black |
 | Text secondary | Medium warm gray (`#6B6B6B`) | Subtext, labels |
