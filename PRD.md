@@ -1,6 +1,6 @@
 # Remedy — Product Requirements Document
-**Version:** 0.3 (MVP)
-**Last updated:** May 13, 2026
+**Version:** 0.4 (MVP)
+**Last updated:** November 11, 2026
 **Status:** Draft
 
 ---
@@ -66,6 +66,7 @@ There's no consumer product that gives them a real, structured program — the k
 - Daily session tracking
 - Pain check-in (before/after each session)
 - Paywall + subscription (monthly + annual)
+- Pet armadillo: a character the user names, which grows through five stages as sessions are completed (see §6.9)
 
 ### Out of scope (V2+)
 - Neck, shoulder, hip, knee pain programs
@@ -75,7 +76,7 @@ There's no consumer product that gives them a real, structured program — the k
 - Community / social features
 - Wearable integration
 - Employer / insurance partnerships
-- Avatar / animated guide character
+- Pet extras: outfits, coins, home-screen widget, alternate app icons, rigged (Rive) animation, missed-days push notifications
 
 ---
 
@@ -97,17 +98,18 @@ Onboarding alternates between questions and interstitial insight screens. The go
 8. **Interstitial: Money saved** — *"The average PT recovery program costs $1,200+. Remedy costs less than one session."* (cost comparison visual)
 9. **Q5: What makes it worse?** — Sitting too long / Bending / Standing / Morning stiffness / Exercise
 10. **Q6: What's your main goal?** — Reduce daily pain / Get back to working out / Sleep better / Improve mobility
-11. **Program match screen** — Personalized program summary based on all answers, with brief description of approach
-12. **Paywall** — trial then $4.99/week (7-day trial), $12.99/month (14-day trial), or $79.99/year (14-day trial)
-13. **Sign up** — Apple / Google / Email (after paywall, so user is committed before creating account)
-14. **Home / dashboard**
+11. **Meet your armadillo** — The pet is introduced curled up in a ball; the user gives it a name (see §6.9). Shown after the last question, before the commitment and program match screens
+12. **Program match screen** — Personalized program summary based on all answers, with brief description of approach; the named pet sits beside the program card
+13. **Paywall** — trial then $4.99/week (7-day trial), $12.99/month (14-day trial), or $79.99/year (14-day trial)
+14. **Sign up** — Apple / Google / Email (after paywall, so user is committed before creating account)
+15. **Home / dashboard**
 
 ### Core Loop (Daily)
 1. Open app → see today's session on home screen
 2. Tap "Start Session" → session player launches
 3. Session player: one exercise at a time, video + timer + rep/set guide
 4. End of session: pain check-in (1–10 slider, before vs after)
-5. Completion screen → next session preview
+5. Completion screen → the pet celebrates, and grows if the session crossed a stage threshold → next session preview
 
 ---
 
@@ -161,6 +163,7 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Program progress bar (Week 2 of 5)
 
 ### 6.7 Home Screen
+- Pet scene across roughly the top 40% of the screen: the armadillo at its current stage and mood, its name, and "N sessions until it grows"
 - Today's session card (or rest day indicator)
 - Quick pain summary ("Your pain is trending down 📉")
 - Program progress
@@ -173,6 +176,17 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - Subscriptions processed via **Apple IAP / StoreKit** (iOS-first)
 - No Stripe, no web checkout, no external purchase links for in-app premium unlocks
 - Users can access: onboarding + first session for free before hitting paywall
+
+### 6.9 Pet (Armadillo)
+- **One pet per user, named by the user.** Named on the "Meet your armadillo" onboarding screen (1–20 characters, no default name). Existing users name it from a one-time sheet on Home. Renamable from Profile.
+- **Stage (1–5), server-authoritative, only ever goes up.** Driven by lifetime completed sessions: closed ball (0) → peeking out of the ball (1) → sitting (4) → standing (9) → fully grown (15). The stage is raised inside the same server operation that completes a session. Missing days never lowers it.
+- **Mood, display only, derived on the client:** idle, ready (session available today), celebrating (session just completed), proud (stage-up, week complete, program complete), sleepy (rest day or late evening), stiff (missed planned days), concerned (pain score higher after a session).
+- **No guilt mechanics.** The pet never gets hurt, loses progress, or dies. Its state reflects the user's consistency, not the condition of their back — no medical claims are made through the pet.
+- **Where it appears:** Home (hero scene), session preview, session complete (with a growth moment when a stage is reached), week complete, program complete, onboarding welcome, the naming screen, the plan-building loading screens, the program match screen, Progress (five-stage card), Profile (beside the user's name), and reminder notification copy.
+- **Not shown** during exercise video playback, rest timers, or pain check-ins.
+- **Voice:** warm and a little cheeky. Used in completion and reminder copy.
+- **Art:** flat 2D sticker style with a thick black outline, a striped shell that reads as a beanie, one tooth, and a plaster on the shell until it is fully grown. One transparent image per stage and mood in `assets/pet/`, animated with the core `Animated` API (breathing, bounce, crossfade). No new packages.
+- **Brand:** the armadillo replaces the current logo in-app (welcome, loading, splash), on the app icon, and on the website and emails. Growth-engine marketing content is unchanged until the pet is live.
 
 ---
 
@@ -195,7 +209,7 @@ Onboarding alternates between questions and interstitial insight screens. The go
 - **Rounded corners throughout.** Cards, buttons, inputs — consistent radius.
 - **Soft shadows** on cards — depth without harsh borders.
 - **Large, readable text.** Accessible across all age groups (minimum 16px body).
-- **No avatar / mascot.** Clean human-focused design instead. (Deferred to V2+.)
+- **One mascot: the armadillo.** It is the only character in the app (see §6.9). Everything around it stays clean and spacious.
 - **Skeleton loaders** over spinners for loading states.
 - **Animations: subtle and purposeful.** Onboarding transitions, completion celebrations — nothing gratuitous.
 
