@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   Modal,
   Pressable,
   Share,
@@ -23,7 +24,7 @@ import {
   friendShareStarted,
 } from '../../lib/analytics/events/engagement';
 import type { friendShareDismissReason } from '../../lib/analytics/events/enums';
-import { AppLogo } from '../brand/AppLogo';
+import { petImage, type PetStage } from '../../constants/petImages';
 import { PetSays } from '../pet/PetSays';
 import { PET_SHARE_LINE } from '../../constants/petLines';
 import { fetchPetState } from '../../lib/petApi';
@@ -186,7 +187,7 @@ export function FriendShareSheet({ firstName, painImproved, onDismiss }: Props) 
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.body}>{copy.body}</Text>
 
-          <DancingLogo />
+          <DancingPet stage={pet?.stage ?? 1} />
 
           <TouchableOpacity
             style={styles.share}
@@ -201,9 +202,24 @@ export function FriendShareSheet({ firstName, painImproved, onDismiss }: Props) 
   );
 }
 
+const DANCE_BEATS = [0, 1, 2, 3, 4];
+
 /** Hop, lean left, hop, lean right, rest. Loops while the sheet is up. */
-function DancingLogo() {
+function DancingPet({ stage }: { stage: PetStage }) {
   const beat = useRef(new Animated.Value(0)).current;
+  const dance = useMemo(
+    () => ({
+      translateY: beat.interpolate({ inputRange: DANCE_BEATS, outputRange: [0, -18, 0, -18, 0] }),
+      rotate: beat.interpolate({
+        inputRange: DANCE_BEATS,
+        outputRange: ['0deg', '-12deg', '0deg', '12deg', '0deg'],
+      }),
+      scaleX: beat.interpolate({ inputRange: DANCE_BEATS, outputRange: [1, 0.94, 1.08, 0.94, 1.08] }),
+      scaleY: beat.interpolate({ inputRange: DANCE_BEATS, outputRange: [1, 1.08, 0.9, 1.08, 0.9] }),
+      shadowScale: beat.interpolate({ inputRange: DANCE_BEATS, outputRange: [1, 0.6, 1, 0.6, 1] }),
+    }),
+    [beat],
+  );
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -220,19 +236,26 @@ function DancingLogo() {
     return () => loop.stop();
   }, [beat]);
 
-  const input = [0, 1, 2, 3, 4];
-  const translateY = beat.interpolate({ inputRange: input, outputRange: [0, -18, 0, -18, 0] });
-  const rotate = beat.interpolate({ inputRange: input, outputRange: ['0deg', '-12deg', '0deg', '12deg', '0deg'] });
-  const scaleX = beat.interpolate({ inputRange: input, outputRange: [1, 0.94, 1.08, 0.94, 1.08] });
-  const scaleY = beat.interpolate({ inputRange: input, outputRange: [1, 1.08, 0.9, 1.08, 0.9] });
-  const shadowScale = beat.interpolate({ inputRange: input, outputRange: [1, 0.6, 1, 0.6, 1] });
-
   return (
     <View style={styles.dance}>
-      <Animated.View style={{ transform: [{ translateY }, { rotate }, { scaleX }, { scaleY }] }}>
-        <AppLogo size={72} />
+      <Animated.View
+        style={{
+          transform: [
+            { translateY: dance.translateY },
+            { rotate: dance.rotate },
+            { scaleX: dance.scaleX },
+            { scaleY: dance.scaleY },
+          ],
+        }}
+      >
+        <Image
+          source={petImage(stage, 'celebrating')}
+          resizeMode="contain"
+          accessible={false}
+          style={styles.pet}
+        />
       </Animated.View>
-      <Animated.View style={[styles.danceShadow, { transform: [{ scaleX: shadowScale }] }]} />
+      <Animated.View style={[styles.danceShadow, { transform: [{ scaleX: dance.shadowScale }] }]} />
     </View>
   );
 }
@@ -241,6 +264,10 @@ const styles = StyleSheet.create({
   dance: {
     marginTop: 26,
     alignItems: 'center',
+  },
+  pet: {
+    width: 96,
+    height: 96,
   },
   danceShadow: {
     marginTop: 8,

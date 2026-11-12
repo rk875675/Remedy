@@ -10,13 +10,27 @@ import {
 } from 'react-native';
 import { colors } from '../../constants/colors';
 import { type } from '../../constants/typography';
-import type { PetMood } from '../../constants/petImages';
+import { petScale, type PetMood, type PetStage } from '../../constants/petImages';
 import { PET_HOME_TRICK_LINES, fillPetLine } from '../../constants/petOnboardingLines';
 import { hapticSelection } from '../../lib/haptics';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { useReduceMotion } from '../../lib/useReduceMotion';
-import { Dust, DUST_PALE, easedTimeAt, type DustHandle } from './Dust';
+import { Dust, DUST_PALE, easedTimeAt, type DustHandle, type DustPoint } from './Dust';
 import { Pet } from './Pet';
+import {
+  call,
+  createPetBody,
+  moveBigStretch,
+  moveHop,
+  moveJumpSpin,
+  moveLand,
+  moveLookAround,
+  moveRock,
+  moveWeightShift,
+  moveWiggle,
+  petBodyStyles,
+  restBody,
+} from './petMotion';
 
 type PetSceneProps = {
   topInset: number;
@@ -29,6 +43,32 @@ type PetSceneProps = {
 };
 
 const TRACK_WIDTH = 180;
+const ROLL_START = -1.75;
+const ARRIVE_PAST = 12;
+const ROLL_PAST = 8;
+const POSE_GAP = 260;
+/** moveHop is on the ground after the crouch, the rise and the fall. */
+const HOP_LAND_MS = 410;
+
+type IdleName = 'look' | 'shift' | 'stretch' | 'hop';
+
+function legPuffs(
+  ease: (t: number) => number,
+  duration: number,
+  from: number,
+  to: number,
+  spots: number[],
+  travel: number,
+  size = 13,
+): DustPoint[] {
+  const span = to - from;
+  if (span === 0) return [];
+  return spots.map((spot) => ({
+    x: spot * travel,
+    delay: Math.round(duration * easedTimeAt(ease, (spot - from) / span)),
+    size,
+  }));
+}
 
 /** Home hero: forest-green panel with the pet on a soft hill and the day's action on the hill. */
 export function PetScene({
@@ -48,40 +88,60 @@ export function PetScene({
   const hillSize = width * 1.8;
   const petName = pet?.name ?? 'Your armadillo';
 
-  // --- The pet is alive: it rolls in, fidgets, and does a roll when tapped. ---
+  // --- The pet is alive: it rolls in, fidgets, and does a trick when tapped. ---
   const reduceMotion = useReduceMotion();
   const hasPet = pet !== null;
   const [ready, setReady] = useState(false);
   const [curled, setCurled] = useState(false);
   const [says, setSays] = useState<string | null>(null);
   const roll = useRef(new Animated.Value(0)).current;
-  const hop = useRef(new Animated.Value(0)).current;
-  const tilt = useRef(new Animated.Value(0)).current;
   const bubble = useRef(new Animated.Value(0)).current;
+  const body = useRef(createPetBody()).current;
   const busy = useRef(false);
   const mounted = useRef(true);
+  const entered = useRef(false);
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const sayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const running = useRef<Animated.CompositeAnimation | null>(null);
   const lineIndex = useRef(Math.floor(Math.random() * PET_HOME_TRICK_LINES.length));
+  const trickIndex = useRef(Math.floor(Math.random() * 3));
+  const lastIdle = useRef<IdleName | null>(null);
+  const shiftDir = useRef<1 | -1>(1);
   const dust = useRef<DustHandle>(null);
 
   // Curled up, the pet is drawn at 0.72 of its box, sitting on the bottom edge.
   const rollTravel = width * 0.36;
-  const petMotion = useMemo(() => {
+  const poseStage: PetStage = !pet || curled ? 1 : pet.stage;
+  const poseMood: PetMood = !pet || curled ? 'ready' : mood;
+  const drawn = petSize * petScale(poseStage, poseMood);
+  // Built on the full box, not the pose's drawn size, so curling and uncurling
+  // mid-trick never rebuilds these while a move is running.
+  const bodyLook = useMemo(
+    () => petBodyStyles(body, { height: petSize, hop: petSize * 0.14 }),
+    [body, petSize],
+  );
+  const rollMotion = useMemo(() => {
     const ballRadius = petSize * 0.32;
-    const pivot = petSize * 0.153; // the ball's centre, below the centre of the box
-    const degrees = Math.round((rollTravel / ballRadius) * (180 / Math.PI));
-    return {
-      transform: [
-        { translateX: roll.interpolate({ inputRange: [-1, 1], outputRange: [-rollTravel, rollTravel] }) },
-        { translateY: hop.interpolate({ inputRange: [0, 1], outputRange: [0, -petSize * 0.07] }) },
-        { translateY: pivot },
-        { rotate: roll.interpolate({ inputRange: [-1, 1], outputRange: [`-${degrees}deg`, `${degrees}deg`] }) },
-        { rotate: tilt.interpolate({ inputRange: [-1, 1], outputRange: ['-4deg', '4deg'] }) },
-        { translateY: -pivot },
-      ],
-    };
-  }, [roll, hop, tilt, petSize, rollTravel]);
+    const span = 2;
+    const distance = span * rollTravel;
+    const degrees = (distance / ballRadius) * (180 / Math.PI);
+    const translateX = roll.interpolate({
+      inputRange: [-span, span],
+      outputRange: [-distance, distance],
+    });
+    const rotate = roll.interpolate({
+      inputRange: [-span, span],
+      outputRange: [`-${degrees}deg`, `${degrees}deg`],
+    });
+    return { translateX, rotate };
+  }, [roll, petSize, rollTravel]);
+  const shadowMotion = useMemo(
+    () => ({
+      opacity: bodyLook.shadow.opacity,
+      transform: [{ translateX: rollMotion.translateX }, ...bodyLook.shadow.transform],
+    }),
+    [bodyLook, rollMotion.translateX],
+  );
   const bubbleMotion = useMemo(
     () => ({
       opacity: bubble,
@@ -89,6 +149,8 @@ export function PetScene({
     }),
     [bubble],
   );
+  const shadowW = drawn * 0.55;
+  const shadowH = Math.max(6, drawn * 0.07);
 
   function later(fn: () => void, ms: number) {
     timers.current.push(
@@ -102,141 +164,270 @@ export function PetScene({
     lineIndex.current = (lineIndex.current + 1) % PET_HOME_TRICK_LINES.length;
     const next = PET_HOME_TRICK_LINES[lineIndex.current] ?? PET_HOME_TRICK_LINES[0];
     setSays(fillPetLine(next, { name: pet?.name ?? null }));
+    if (sayTimer.current) clearTimeout(sayTimer.current);
+    bubble.stopAnimation();
     bubble.setValue(0);
     Animated.spring(bubble, { toValue: 1, speed: 16, bounciness: 14, useNativeDriver: true }).start();
-    later(() => {
-      Animated.timing(bubble, { toValue: 0, duration: 160, useNativeDriver: true }).start(() => {
-        if (mounted.current) setSays(null);
+    sayTimer.current = setTimeout(() => {
+      if (!mounted.current) return;
+      Animated.timing(bubble, { toValue: 0, duration: 160, useNativeDriver: true }).start(({ finished }) => {
+        if (finished && mounted.current) setSays(null);
       });
     }, 2800);
+    timers.current.push(sayTimer.current);
   }
 
-  /** Curl up, roll out to the right, across to the left, and back to the middle. */
+  function playMove(anim: Animated.CompositeAnimation, onDone?: (finished: boolean) => void) {
+    const prev = running.current;
+    running.current = anim;
+    prev?.stop();
+    restBody(body);
+    anim.start(({ finished }) => {
+      if (running.current !== anim) return;
+      running.current = null;
+      if (!mounted.current) return;
+      onDone?.(finished);
+    });
+  }
+
+  function rollTo(toValue: number, duration: number, easing: (t: number) => number) {
+    return Animated.timing(roll, { toValue, duration, easing, useNativeDriver: true });
+  }
+
+  function squashTo(toValue: number, duration: number) {
+    return Animated.timing(body.squash, {
+      toValue,
+      duration,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+  }
+
+  /** Crouch, curl, roll to both walls, rock, uncurl, wiggle. `speak` adds the line. */
   function doRoll(speak: boolean) {
     if (busy.current) return;
     if (reduceMotion !== false) {
       if (speak) say();
       return;
     }
+    if (rollTravel <= 0) return;
     busy.current = true;
-    setCurled(true);
-    // A puff of dust each time the ball passes one of these spots (in units of the travel).
-    const ease = Easing.inOut(Easing.cubic);
-    const at = (start: number, ms: number, from: number, to: number, spot: number) => ({
-      x: spot * rollTravel,
-      delay: start + ms * easedTimeAt(ease, (spot - from) / (to - from)),
-      size: 13,
-    });
-    dust.current?.play([
-      at(240, 520, 0, 1, 0.3),
-      at(240, 520, 0, 1, 0.7),
-      at(760, 900, 1, -1, 0.45),
-      at(760, 900, 1, -1, -0.1),
-      at(760, 900, 1, -1, -0.6),
-      at(1660, 560, -1, 0, -0.65),
-      at(1660, 560, -1, 0, -0.25),
-    ]);
-    const leg = (toValue: number, duration: number) =>
-      Animated.timing(roll, {
-        toValue,
-        duration,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: true,
-      });
-    later(() => {
-      const anim = Animated.sequence([leg(1, 520), leg(-1, 900), leg(0, 560)]);
-      running.current = anim;
-      anim.start(({ finished }) => {
-        running.current = null;
-        if (!mounted.current) return;
-        roll.setValue(0);
-        setCurled(false);
+    const rightEase = Easing.inOut(Easing.cubic);
+    const backEase = Easing.out(Easing.cubic);
+    const rightMs = 500;
+    const leftMs = 860;
+    const backMs = 620;
+    const past = ROLL_PAST / rollTravel;
+    playMove(
+      Animated.sequence([
+        squashTo(0.6, 90),
+        Animated.delay(120),
+        squashTo(0, 60),
+        call(() => {
+          if (mounted.current) setCurled(true);
+        }),
+        Animated.delay(POSE_GAP),
+        Animated.parallel([
+          rollTo(1, rightMs, rightEase),
+          call(() => {
+            dust.current?.play([
+              ...legPuffs(rightEase, rightMs, 0, 1, [0.32, 0.68], rollTravel),
+              { x: rollTravel, delay: rightMs, size: 15 },
+            ]);
+          }),
+        ]),
+        moveLand(body, 0.75),
+        Animated.parallel([
+          rollTo(-1, leftMs, rightEase),
+          call(() => {
+            dust.current?.play([
+              ...legPuffs(rightEase, leftMs, 1, -1, [0.4, -0.15, -0.6], rollTravel),
+              { x: -rollTravel, delay: leftMs, size: 15 },
+            ]);
+          }),
+        ]),
+        moveLand(body, 0.75),
+        Animated.parallel([
+          rollTo(past, backMs, backEase),
+          call(() => {
+            dust.current?.play(legPuffs(backEase, backMs, -1, past, [-0.62, -0.2], rollTravel));
+          }),
+        ]),
+        rollTo(0, 170, Easing.inOut(Easing.quad)),
+        moveRock(body, 1),
+        call(() => {
+          if (mounted.current) setCurled(false);
+        }),
+        Animated.delay(POSE_GAP),
+        moveWiggle(body),
+      ]),
+      (finished) => {
         busy.current = false;
         if (finished && speak) say();
-      });
-    }, 240);
+      },
+    );
   }
 
-  useEffect(() => {
-    mounted.current = true;
-    const pending = timers.current;
-    return () => {
-      mounted.current = false;
-      pending.forEach(clearTimeout);
-      running.current?.stop();
-    };
-  }, []);
-
-  // First appearance: it rolls in from off the left edge and uncurls.
-  useEffect(() => {
-    if (!hasPet || ready || reduceMotion === null) return;
-    if (reduceMotion) {
-      setReady(true);
+  function doJump() {
+    if (busy.current) return;
+    if (reduceMotion !== false) {
+      if (reduceMotion === true) say();
       return;
     }
     busy.current = true;
-    roll.setValue(-1.75);
-    setCurled(true);
-    setReady(true);
-    dust.current?.play(
-      [-1.05, -0.7, -0.4, -0.15].map((spot) => ({
-        x: spot * rollTravel,
-        delay: 1000 * easedTimeAt(Easing.out(Easing.cubic), (spot + 1.75) / 1.75) + 40,
-        size: 13,
-      })),
+    playMove(
+      moveJumpSpin(body, () => {
+        dust.current?.play([
+          { x: -14, delay: 0, size: 15 },
+          { x: 12, delay: 40, size: 12 },
+        ]);
+      }),
+      (finished) => {
+        busy.current = false;
+        if (finished) say();
+      },
     );
-    const anim = Animated.timing(roll, {
-      toValue: 0,
-      duration: 1000,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    });
-    running.current = anim;
-    anim.start(() => {
-      running.current = null;
-      if (!mounted.current) return;
-      setCurled(false);
+  }
+
+  function doStretch() {
+    if (busy.current) return;
+    if (reduceMotion !== false) {
+      if (reduceMotion === true) say();
+      return;
+    }
+    busy.current = true;
+    playMove(Animated.sequence([moveBigStretch(body), moveWiggle(body)]), (finished) => {
       busy.current = false;
+      if (finished) say();
     });
-  }, [hasPet, ready, reduceMotion, roll]);
+  }
+
+  function nextIdle(): Animated.CompositeAnimation {
+    const options: IdleName[] = ['look', 'shift', 'stretch', 'hop'];
+    let pick = options[Math.floor(Math.random() * options.length)] ?? 'look';
+    if (pick === lastIdle.current) {
+      pick = options[(options.indexOf(pick) + 1) % options.length] ?? 'hop';
+    }
+    lastIdle.current = pick;
+    if (pick === 'look') return moveLookAround(body);
+    if (pick === 'shift') {
+      const dir = shiftDir.current;
+      shiftDir.current = dir === 1 ? -1 : 1;
+      return moveWeightShift(body, dir);
+    }
+    if (pick === 'stretch') return moveBigStretch(body);
+    return moveHop(body, 0.6);
+  }
+
+  const actions = useRef({
+    roll: (_speak: boolean) => {},
+    idle: (): Animated.CompositeAnimation => moveLookAround(body),
+    play: (_anim: Animated.CompositeAnimation) => {},
+  });
+  actions.current = { roll: doRoll, idle: nextIdle, play: playMove };
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+      const current = running.current;
+      running.current = null;
+      current?.stop();
+      bubble.stopAnimation();
+    };
+  }, [bubble]);
+
+  // First appearance: mount the curled ball, then roll it in on the next commit
+  // so the interpolations are already on a native view.
+  useEffect(() => {
+    if (!hasPet || reduceMotion === null) return;
+    if (reduceMotion) {
+      if (!entered.current && running.current === null) {
+        // Reduce Motion arrived after the curled start pose was set: show the pet at rest.
+        roll.setValue(0);
+        setCurled(false);
+        busy.current = false;
+      }
+      if (!ready) setReady(true);
+      return;
+    }
+    if (!ready) {
+      if (rollTravel <= 0) return;
+      busy.current = true;
+      roll.setValue(ROLL_START);
+      setCurled(true);
+      setReady(true);
+      return;
+    }
+    if (entered.current) return;
+    if (rollTravel <= 0) {
+      busy.current = false;
+      return;
+    }
+    entered.current = true;
+    const past = ARRIVE_PAST / rollTravel;
+    const ease = Easing.out(Easing.cubic);
+    const rollMs = 880;
+    dust.current?.play(
+      legPuffs(ease, rollMs, ROLL_START, past, [-1.15, -0.72, -0.32, 0.02], rollTravel),
+    );
+    playMove(
+      Animated.sequence([
+        rollTo(past, rollMs, ease),
+        rollTo(0, 190, Easing.inOut(Easing.quad)),
+        moveRock(body, 1),
+        call(() => {
+          if (mounted.current) setCurled(false);
+        }),
+        Animated.delay(POSE_GAP),
+        Animated.parallel([
+          moveHop(body, 0.6),
+          Animated.sequence([
+            Animated.delay(HOP_LAND_MS),
+            call(() => {
+              dust.current?.play([{ x: 0, delay: 0, size: 14 }]);
+            }),
+          ]),
+        ]),
+      ]),
+      () => {
+        busy.current = false;
+      },
+    );
+    // playMove and rollTo only touch refs and the values from this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPet, ready, reduceMotion, roll, rollTravel]);
 
   // Left alone, it shifts about, and now and then goes for a roll on its own.
   useEffect(() => {
     if (!ready || reduceMotion !== false) return;
-    let timer: ReturnType<typeof setTimeout>;
-    let fidget: Animated.CompositeAnimation | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let alive = true;
     const schedule = () => {
       timer = setTimeout(() => {
-        if (!busy.current) {
-          const pick = Math.random();
-          if (pick < 0.1) {
-            doRoll(false);
-          } else if (pick < 0.58) {
-            fidget = Animated.sequence([
-              Animated.timing(hop, { toValue: 1, duration: 130, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-              Animated.timing(hop, { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-            ]);
-            fidget.start();
-          } else {
-            fidget = Animated.sequence([
-              Animated.timing(tilt, { toValue: 1, duration: 220, useNativeDriver: true }),
-              Animated.timing(tilt, { toValue: -1, duration: 320, useNativeDriver: true }),
-              Animated.spring(tilt, { toValue: 0, speed: 12, bounciness: 10, useNativeDriver: true }),
-            ]);
-            fidget.start();
-          }
+        if (!alive || !mounted.current) return;
+        if (!busy.current && running.current === null) {
+          if (Math.random() < 0.1) actions.current.roll(false);
+          else actions.current.play(actions.current.idle());
         }
-        schedule();
-      }, 5500 + Math.random() * 5500);
+        if (alive) schedule();
+      }, 6000 + Math.random() * 5000);
     };
     schedule();
     return () => {
-      clearTimeout(timer);
-      fidget?.stop();
+      alive = false;
+      if (timer) clearTimeout(timer);
+      // A trick owns the body until it finishes. An idle fidget does not.
+      if (!busy.current) {
+        const current = running.current;
+        running.current = null;
+        current?.stop();
+        restBody(body);
+      }
     };
-    // doRoll only reads refs and stable animated values.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, reduceMotion]);
+  }, [ready, reduceMotion, body]);
 
   return (
     <View style={styles.panel}>
@@ -263,18 +454,49 @@ export function PetScene({
           // Centred on the hill's crest. Only the ears reach the header's height, and
           // they sit near the centre, clear of the left-hand name column.
           <View pointerEvents="box-none" style={styles.petSlot}>
-            <Animated.View style={petMotion}>
-              <Pet
-                stage={curled ? 1 : pet.stage}
-                mood={curled ? 'ready' : mood}
-                size={petSize}
-                shadow={!curled}
-                accessibilityLabel={petName}
-                onPress={() => {
-                  hapticSelection();
-                  doRoll(true);
-                }}
-              />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.groundShadow,
+                shadowMotion,
+                {
+                  width: shadowW,
+                  height: shadowH,
+                  borderRadius: shadowW / 2,
+                  marginLeft: -shadowW / 2,
+                },
+              ]}
+            />
+            <Animated.View style={{ transform: [{ translateX: rollMotion.translateX }] }}>
+              <Animated.View style={bodyLook.mover}>
+                <Animated.View style={[bodyLook.squash, styles.poseBox, { width: petSize, height: petSize }]}>
+                  {/* Spin sits inside the squash so a wall hit flattens on the ground. */}
+                  <Animated.View
+                    style={[styles.poseBox, { width: petSize, height: drawn, transform: [{ rotate: rollMotion.rotate }] }]}
+                  >
+                    <Pet
+                      stage={curled ? 1 : pet.stage}
+                      mood={curled ? 'ready' : mood}
+                      size={petSize}
+                      shadow={false}
+                      accessibilityLabel={petName}
+                      onPress={() => {
+                        if (busy.current) return;
+                        hapticSelection();
+                        if (reduceMotion !== false) {
+                          say();
+                          return;
+                        }
+                        const trick = trickIndex.current % 3;
+                        trickIndex.current = trick + 1;
+                        if (trick === 0) doRoll(true);
+                        else if (trick === 1) doJump();
+                        else doStretch();
+                      }}
+                    />
+                  </Animated.View>
+                </Animated.View>
+              </Animated.View>
             </Animated.View>
           </View>
         ) : null}
@@ -433,6 +655,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
+  },
+  poseBox: {
+    justifyContent: 'flex-end',
+  },
+  groundShadow: {
+    position: 'absolute',
+    bottom: 0,
+    left: '50%',
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
   },
   pillSlot: {
     marginTop: 10,

@@ -26,7 +26,6 @@ import {
 import { openLegalDocument } from '../../lib/legalLinks';
 import { getPendingPromo, setPendingPromo } from '../../lib/pendingPromo';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
-import { AppLogo } from '../../components/brand/AppLogo';
 import { PetSays } from '../../components/pet/PetSays';
 import { PET_SIGN_IN_LINE, PET_SIGN_UP_LINE } from '../../constants/petLines';
 import { useOnboardingPet } from '../../lib/useOnboardingPet';
@@ -261,10 +260,9 @@ export default function SignInScreen() {
             stage={stage}
             mood="ready"
             line={isSignUp ? PET_SIGN_UP_LINE : PET_SIGN_IN_LINE}
-            size={64}
+            size={76}
           />
         </View>
-        <AppLogo size="sm" style={styles.logo} />
         <Text style={styles.appName}>Remedy</Text>
         <Text style={styles.tagline}>
           {isSignUp ? 'Create your account to save your plan.' : 'A stronger back starts here.'}
@@ -347,7 +345,7 @@ const styles = StyleSheet.create({
   },
   petRow: {
     alignSelf: 'stretch',
-    marginBottom: 8,
+    marginBottom: 22,
   },
   backButton: {
     position: 'absolute',
@@ -366,9 +364,6 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-  },
-  logo: {
-    marginBottom: 14,
   },
   appName: {
     fontSize: 36,

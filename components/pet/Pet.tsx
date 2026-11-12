@@ -1,7 +1,14 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
-import { motion } from '../../constants/typography';
 import { petImage, petScale, type PetMood, type PetStage } from '../../constants/petImages';
+import {
+  createPetBody,
+  moveHop,
+  moveNod,
+  petBodyStyles,
+  restBody,
+  type PetBody,
+} from './petMotion';
 
 type PetProps = {
   stage: PetStage;
@@ -13,11 +20,34 @@ type PetProps = {
 };
 
 type Pose = { stage: PetStage; mood: PetMood };
+type MotionKind = 'hop' | 'nod';
 
 const BREATH_Y = 0.025;
 const BREATH_X = 0.01;
-const POP_FROM = 0.94;
 const HOP_HEIGHT = 0.08;
+
+const rise = Easing.out(Easing.quad);
+const fall = Easing.in(Easing.quad);
+
+function timing(
+  value: Animated.Value,
+  toValue: number,
+  duration: number,
+  easing: (t: number) => number,
+): Animated.CompositeAnimation {
+  return Animated.timing(value, { toValue, duration, easing, useNativeDriver: true });
+}
+
+function settleSquash(value: Animated.Value): Animated.CompositeAnimation {
+  return Animated.spring(value, {
+    toValue: 0,
+    speed: 16,
+    bounciness: 14,
+    restDisplacementThreshold: 0.02,
+    restSpeedThreshold: 0.02,
+    useNativeDriver: true,
+  });
+}
 
 export function Pet({
   stage,
@@ -35,25 +65,32 @@ export function Pet({
   const [previous, setPrevious] = useState<Pose | null>(null);
   const lastPose = useRef<Pose>({ stage, mood });
   const poseToken = useRef(0);
-  const fading = useRef(false);
-  const fadeAnim = useRef<Animated.CompositeAnimation | null>(null);
-  const popAnim = useRef<Animated.CompositeAnimation | null>(null);
+  const swapping = useRef(false);
+  const swapAnim = useRef<Animated.CompositeAnimation | null>(null);
+  const motionAnim = useRef<Animated.CompositeAnimation | null>(null);
+  const motionKind = useRef<MotionKind | null>(null);
+
+  const bodyRef = useRef<PetBody | null>(null);
+  if (bodyRef.current === null) bodyRef.current = createPetBody();
+  const body = bodyRef.current;
 
   const breath = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(1)).current;
-  const pop = useRef(new Animated.Value(1)).current;
-  const hop = useRef(new Animated.Value(0)).current;
+
+  const drawn = size * petScale(stage, mood);
 
   // Built once. New interpolations created mid-animation are not driven by the
   // native driver, which froze the breath after the first crossfade and left
   // the outgoing pose stuck at full opacity.
+  // Sized to the whole box (not the pose's drawn size) so a change of pose
+  // never rebuilds them.
+  const bodyStyles = useMemo(
+    () => petBodyStyles(body, { height: size, hop: size * HOP_HEIGHT }),
+    [body, size],
+  );
   const prevOpacity = useMemo(
     () => fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
     [fade],
-  );
-  const hopY = useMemo(
-    () => hop.interpolate({ inputRange: [0, 1], outputRange: [0, -size * HOP_HEIGHT] }),
-    [hop, size],
   );
   const breathY = useMemo(
     () => breath.interpolate({ inputRange: [0, 1], outputRange: [0, (-size * BREATH_Y) / 2] }),
@@ -67,10 +104,30 @@ export function Pet({
     () => breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + BREATH_Y] }),
     [breath],
   );
-  const hopShadow = useMemo(
-    () => hop.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }),
-    [hop],
-  );
+
+  function stopMotion() {
+    swapAnim.current?.stop();
+    swapAnim.current = null;
+    motionAnim.current?.stop();
+    motionAnim.current = null;
+    motionKind.current = null;
+  }
+
+  // One move at a time. Celebration hops wait until a pose swap has finished.
+  function startHops() {
+    if (reduceMotionRef.current || lastPose.current.mood !== 'celebrating') return;
+    if (swapping.current || motionKind.current !== null) return;
+    motionAnim.current?.stop();
+    restBody(body);
+    motionKind.current = 'hop';
+    const anim = Animated.sequence([moveHop(body, 1), moveHop(body, 0.7)]);
+    motionAnim.current = anim;
+    anim.start(() => {
+      if (motionAnim.current !== anim) return;
+      motionAnim.current = null;
+      motionKind.current = null;
+    });
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -85,25 +142,18 @@ export function Pet({
     });
     return () => {
       mounted.current = false;
-      fadeAnim.current?.stop();
-      fadeAnim.current = null;
-      popAnim.current?.stop();
-      popAnim.current = null;
+      swapAnim.current?.stop();
+      swapAnim.current = null;
+      motionAnim.current?.stop();
+      motionAnim.current = null;
+      motionKind.current = null;
       sub.remove();
     };
   }, []);
 
-  function stopMotion() {
-    fadeAnim.current?.stop();
-    fadeAnim.current = null;
-    popAnim.current?.stop();
-    popAnim.current = null;
-  }
-
-  // Prepare the crossfade before paint. The animation itself starts after the
-  // outgoing image has mounted (see the effect below). A second change while
-  // a fade is running snaps to the new pose instead of restarting from 0,
-  // which kept the pet invisible across rapid pain-slider buckets.
+  // Prepare the swap before paint. The squash starts after the outgoing image
+  // has mounted. A second change while a swap is running snaps to the newest
+  // pose instead of restarting, which kept the pet invisible or squashed.
   useLayoutEffect(() => {
     const last = lastPose.current;
     if (last.stage === stage && last.mood === mood) return;
@@ -111,55 +161,55 @@ export function Pet({
     lastPose.current = { stage, mood };
     poseToken.current += 1;
     stopMotion();
+    restBody(body);
 
     const sameImage =
       reduceMotionRef.current ||
       petImage(prevPose.stage, prevPose.mood) === petImage(stage, mood);
 
-    if (sameImage || fading.current) {
-      fading.current = false;
+    if (sameImage || swapping.current) {
+      swapping.current = false;
       fade.setValue(1);
-      pop.setValue(1);
       setPrevious(null);
+      if (prevPose.mood === mood) startHops();
       return;
     }
 
-    fading.current = true;
+    swapping.current = true;
     fade.setValue(0);
-    pop.setValue(POP_FROM);
     setPrevious(prevPose);
-  }, [stage, mood, fade, pop]);
+  }, [stage, mood, fade, body]);
 
   useEffect(() => {
-    if (!previous || !fading.current) return;
+    if (!previous || !swapping.current) return;
     const token = poseToken.current;
-    const anim = Animated.parallel([
-      Animated.timing(fade, {
-        toValue: 1,
-        duration: motion.standard,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.spring(pop, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 18,
-        bounciness: 6,
-      }),
+    let live = true;
+    // Squash down, crossfade at the bottom, spring up taller than rest, settle.
+    const anim = Animated.sequence([
+      timing(body.squash, 0.85, 110, fall),
+      Animated.parallel([
+        timing(fade, 1, 90, rise),
+        Animated.sequence([timing(body.squash, -0.55, 130, rise), settleSquash(body.squash)]),
+      ]),
     ]);
-    fadeAnim.current = anim;
+    swapAnim.current = anim;
     anim.start(({ finished }) => {
-      if (poseToken.current !== token) return;
-      if (fadeAnim.current === anim) fadeAnim.current = null;
-      if (!finished) return;
-      fading.current = false;
-      if (mounted.current) setPrevious(null);
+      if (!live || poseToken.current !== token) return;
+      if (swapAnim.current === anim) swapAnim.current = null;
+      if (!finished || !mounted.current) return;
+      swapping.current = false;
+      setPrevious(null);
+      startHops();
     });
     return () => {
-      anim.stop();
-      if (fadeAnim.current === anim) fadeAnim.current = null;
+      live = false;
+      // Only stop this swap. A newer move may already own the body.
+      if (swapAnim.current === anim) {
+        anim.stop();
+        swapAnim.current = null;
+      }
     };
-  }, [previous, fade, pop]);
+  }, [previous, fade, body]);
 
   useEffect(() => {
     breath.setValue(0);
@@ -180,55 +230,69 @@ export function Pet({
   }, [mood, reduceMotion, breath, size]);
 
   useEffect(() => {
-    hop.setValue(0);
-    if (mood !== 'celebrating' || reduceMotion !== false) return;
-    const up = { toValue: 1, duration: 150, easing: Easing.out(Easing.quad), useNativeDriver: true };
-    const down = { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: true };
-    const hops = Animated.sequence([
-      Animated.timing(hop, up),
-      Animated.timing(hop, down),
-      Animated.delay(60),
-      Animated.timing(hop, up),
-      Animated.timing(hop, down),
-    ]);
-    hops.start();
+    if (mood !== 'celebrating' || reduceMotion !== false) {
+      if (motionKind.current === 'hop') {
+        motionAnim.current?.stop();
+        motionAnim.current = null;
+        motionKind.current = null;
+        restBody(body);
+      }
+      return;
+    }
+    startHops();
     return () => {
-      hops.stop();
-      hop.setValue(0);
+      if (motionKind.current !== 'hop') return;
+      motionAnim.current?.stop();
+      motionAnim.current = null;
+      motionKind.current = null;
+      restBody(body);
     };
-  }, [mood, reduceMotion, hop, size]);
+  }, [mood, reduceMotion, body]);
+
+  useEffect(() => {
+    if (reduceMotion !== true) return;
+    poseToken.current += 1;
+    stopMotion();
+    restBody(body);
+    fade.setValue(1);
+    swapping.current = false;
+    setPrevious(null);
+  }, [reduceMotion, body, fade]);
 
   function handlePress() {
     if (!reduceMotionRef.current) {
-      popAnim.current?.stop();
-      pop.setValue(POP_FROM);
-      const anim = Animated.spring(pop, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 18,
-        bounciness: 8,
-      });
-      popAnim.current = anim;
+      const wasSwapping = swapping.current;
+      poseToken.current += 1;
+      stopMotion();
+      restBody(body);
+      if (wasSwapping) {
+        swapping.current = false;
+        fade.setValue(1);
+        if (mounted.current) setPrevious(null);
+      }
+      motionKind.current = 'nod';
+      const anim = moveNod(body);
+      motionAnim.current = anim;
       anim.start(() => {
-        if (popAnim.current === anim) popAnim.current = null;
+        if (motionAnim.current !== anim) return;
+        motionAnim.current = null;
+        if (motionKind.current === 'nod') motionKind.current = null;
       });
     }
     onPress?.();
   }
 
-  const drawn = size * petScale(stage, mood);
   const shadowWidth = drawn * 0.55;
   const shadowHeight = drawn * 0.07;
   const labeled = !onPress && !!accessibilityLabel;
 
   const breathTransform = [
-    { translateY: hopY },
     { translateY: breathY },
     { scaleX: breathScaleX },
     { scaleY: breathScaleY },
   ];
 
-  const body = (
+  const art = (
     <View
       style={{ width: size, height: size }}
       accessible={labeled}
@@ -245,28 +309,30 @@ export function Pet({
               height: shadowHeight,
               borderRadius: shadowWidth / 2,
               left: (size - shadowWidth) / 2,
-              transform: [{ scale: hopShadow }],
             },
+            bodyStyles.shadow,
           ]}
         />
       ) : null}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { transform: breathTransform }]}>
-        {previous ? (
-          <PoseImage pose={previous} size={size} opacity={prevOpacity} />
-        ) : null}
-        <PoseImage pose={{ stage, mood }} size={size} opacity={fade} pop={pop} />
+        <Animated.View style={[bodyStyles.mover, StyleSheet.absoluteFill]}>
+          <Animated.View style={[bodyStyles.squash, StyleSheet.absoluteFill]}>
+            {previous ? <PoseImage pose={previous} size={size} opacity={prevOpacity} /> : null}
+            <PoseImage pose={{ stage, mood }} size={size} opacity={fade} />
+          </Animated.View>
+        </Animated.View>
       </Animated.View>
     </View>
   );
 
-  if (!onPress) return body;
+  if (!onPress) return art;
   return (
     <Pressable
       onPress={handlePress}
       accessibilityRole="imagebutton"
       accessibilityLabel={accessibilityLabel}
     >
-      {body}
+      {art}
     </Pressable>
   );
 }
@@ -275,24 +341,12 @@ function PoseImage({
   pose,
   size,
   opacity,
-  pop,
 }: {
   pose: Pose;
   size: number;
   opacity: Animated.AnimatedInterpolation<number> | Animated.Value;
-  pop?: Animated.Value;
 }) {
   const drawn = size * petScale(pose.stage, pose.mood);
-  const lift = useMemo(
-    () =>
-      pop
-        ? pop.interpolate({
-            inputRange: [POP_FROM, 1],
-            outputRange: [(drawn * (1 - POP_FROM)) / 2, 0],
-          })
-        : null,
-    [pop, drawn],
-  );
   return (
     <Animated.Image
       source={petImage(pose.stage, pose.mood)}
@@ -304,7 +358,6 @@ function PoseImage({
         width: drawn,
         height: drawn,
         opacity,
-        transform: pop && lift ? [{ translateY: lift }, { scale: pop }] : [],
       }}
     />
   );

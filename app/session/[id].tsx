@@ -65,6 +65,7 @@ import { firstNameFromDisplayName, resolveDisplayName } from '../../lib/greeting
 import { orderedEquipmentForExercises } from '../../lib/equipment';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import { PetBadge } from '../../components/pet/PetBadge';
+import { PetGrow } from '../../components/pet/PetGrow';
 import { PetSays } from '../../components/pet/PetSays';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
 import { fetchPetState } from '../../lib/petApi';
@@ -247,7 +248,12 @@ export default function SessionPlayerScreen() {
   const warmCopyRef = useRef<string | null>(null);
   const shareOfferRef = useRef<{ preview: boolean } | null>(null);
   const [pet, setPet] = useState<PetState | null>(null);
+  const petRef = useRef<PetState | null>(null);
+  petRef.current = pet;
   const [grewFrom, setGrewFrom] = useState<PetStage | null>(null);
+  // Holds the complete badge on the earlier stage until takePetGrowth answers.
+  const [badgeHold, setBadgeHold] = useState<PetStage | null>(null);
+  const [badgePinned, setBadgePinned] = useState(false);
   // Set once completion owns the pet snapshot, so the mount fetch cannot
   // overwrite a newer stage or the "seen" stage takePetGrowth just recorded.
   const petLock = useRef(false);
@@ -1089,6 +1095,11 @@ export default function SessionPlayerScreen() {
     }
 
     setPhase('complete');
+    const onScreen = petRef.current?.stage ?? null;
+    if (onScreen !== null) {
+      setBadgeHold(onScreen);
+      setBadgePinned(true);
+    }
 
     // Best-effort: the summary renders without it. Wait for the pre-completion
     // snapshot so a late mount response cannot mark the new stage first.
@@ -1100,22 +1111,42 @@ export default function SessionPlayerScreen() {
       if (!mountedRef.current) return;
       if (!state) {
         if (pre) setPet(pre);
+        setBadgePinned(false);
+        setBadgeHold(null);
         return;
       }
-      setPet(state);
-      if (pre && pre.total_sessions < state.total_sessions && pre.stage <= state.stage) {
-        await markPetStageSeen(userId, pre.stage);
+      const earlier = pre?.stage ?? petRef.current?.stage ?? null;
+      if (earlier !== null && earlier <= state.stage) {
+        setBadgeHold(earlier);
+        setBadgePinned(true);
+      } else if (earlier === null) {
+        setBadgeHold(null);
+        setBadgePinned(true);
       }
-      if (!mountedRef.current) return;
-      const from = await takePetGrowth(userId, state.stage);
-      if (from === null || !mountedRef.current) return;
-      setGrewFrom(from);
-      hapticCelebration();
-      petGrew({
-        source_screen: 'session',
-        stage: state.stage,
-        total_sessions: state.total_sessions,
-      });
+      setPet(state);
+      try {
+        if (pre && pre.total_sessions < state.total_sessions && pre.stage <= state.stage) {
+          await markPetStageSeen(userId, pre.stage);
+        }
+        if (!mountedRef.current) return;
+        const from = await takePetGrowth(userId, state.stage);
+        if (!mountedRef.current) return;
+        if (from !== null) {
+          setGrewFrom(from);
+          hapticCelebration();
+          petGrew({
+            source_screen: 'session',
+            stage: state.stage,
+            total_sessions: state.total_sessions,
+          });
+        }
+      } finally {
+        // Whatever happened, never leave the badge held on the earlier stage.
+        if (mountedRef.current) {
+          setBadgePinned(false);
+          setBadgeHold(null);
+        }
+      }
     })();
   }
 
@@ -1474,6 +1505,7 @@ export default function SessionPlayerScreen() {
     pet && grewFrom !== null && petStage !== undefined && petStage !== 1
       ? petLine(PET_GREW_LINES[petStage], pet.name)
       : null;
+  const badgeStage: PetStage | null = badgePinned ? badgeHold : (pet?.stage ?? null);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -1485,7 +1517,13 @@ export default function SessionPlayerScreen() {
         ]}
       >
         {pet ? (
-          <PetBadge stage={pet.stage} mood={petCompleteMood} size={badgeSize} />
+          grewFrom !== null ? (
+            <PetGrow from={grewFrom} to={pet.stage} mood={petCompleteMood} size={badgeSize} />
+          ) : badgeStage !== null ? (
+            <PetBadge stage={badgeStage} mood={petCompleteMood} size={badgeSize} />
+          ) : (
+            <View style={{ width: badgeSize, height: badgeSize }} />
+          )
         ) : (
           <Text style={styles.completeIcon}>✓</Text>
         )}
