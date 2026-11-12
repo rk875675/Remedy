@@ -11,7 +11,6 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
@@ -72,6 +71,10 @@ import {
 } from '../../lib/tabRefresh';
 import { isPendingApplyDue } from '../../lib/programAnswers';
 import { flushPendingProgramApply } from '../../lib/applyProgramAnswers';
+import { derivePetMood, type PetState } from '../../lib/pet';
+import { fetchPetState } from '../../lib/petApi';
+import { countMissedThisWeek } from '../../lib/streak';
+import { PetScene } from '../../components/pet/PetScene';
 import type { UserPlanSession, UserProgram } from '../../types/database';
 
 type SessionWithExerciseCount = UserPlanSession & { exercise_count: number };
@@ -212,67 +215,6 @@ function StretchReminderCard() {
   );
 }
 
-// Ghost of the logo: chubby vertebrae, thin terracotta discs, a slight lean.
-// A left-to-right fade keeps it in the card instead of sitting on top of it.
-const VERTEBRAE = [
-  { x: 78, y: 4, w: 70, h: 48, rot: -7 },
-  { x: 70, y: 58, w: 74, h: 50, rot: -3 },
-  { x: 64, y: 114, w: 78, h: 52, rot: 2 },
-  { x: 56, y: 172, w: 82, h: 54, rot: 6 },
-  { x: 46, y: 232, w: 90, h: 60, rot: 11 },
-];
-
-function HeroOrnament() {
-  return (
-    <View pointerEvents="none" style={styles.ornament}>
-      <Svg width={220} height={310}>
-        <Defs>
-          <LinearGradient id="bone" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.1" />
-            <Stop offset="0.25" stopColor="#FFFFFF" stopOpacity="0.38" />
-            <Stop offset="0.6" stopColor="#FFFFFF" stopOpacity="0.78" />
-            <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0.96" />
-          </LinearGradient>
-          <LinearGradient id="disc" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={colors.secondary} stopOpacity="0.15" />
-            <Stop offset="0.3" stopColor={colors.secondary} stopOpacity="0.5" />
-            <Stop offset="1" stopColor={colors.secondary} stopOpacity="0.92" />
-          </LinearGradient>
-        </Defs>
-        {VERTEBRAE.map((v, i) => {
-          const pivotX = v.x + v.w / 2;
-          const pivotY = v.y + v.h / 2;
-          const turn = `rotate(${v.rot} ${pivotX} ${pivotY})`;
-          return (
-            <React.Fragment key={i}>
-              <Rect
-                x={v.x}
-                y={v.y}
-                width={v.w}
-                height={v.h}
-                rx={20}
-                fill="url(#bone)"
-                transform={turn}
-              />
-              {i < VERTEBRAE.length - 1 ? (
-                <Rect
-                  x={v.x + 14}
-                  y={v.y + v.h - 1}
-                  width={v.w - 28}
-                  height={5}
-                  rx={2}
-                  fill="url(#disc)"
-                  transform={turn}
-                />
-              ) : null}
-            </React.Fragment>
-          );
-        })}
-      </Svg>
-    </View>
-  );
-}
-
 function MetaChip({ glyph, label }: { glyph: string; label: string }) {
   return (
     <View style={styles.chip}>
@@ -313,6 +255,8 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [sharePrompt, setSharePrompt] = useState<FriendShareHomePrompt | null>(null);
+  const [thisWeekCompletions, setWeekCompletions] = useState<RawCompletion[]>([]);
+  const [pet, setPet] = useState<PetState | null>(null);
 
   const fetchData = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
@@ -326,6 +270,7 @@ export default function HomeScreen() {
       setNextSessionId(null);
       setIsDoneToday(false);
       setSessionsThisWeek(0);
+      setWeekCompletions([]);
       setWeekSessions([]);
       setDisplayWeekDays(Array.from({ length: 7 }, () => false));
       setLoaded(false);
@@ -336,6 +281,9 @@ export default function HomeScreen() {
 
     beginTabRefresh('home');
     try {
+    void fetchPetState().then((next) => {
+      if (next) setPet(next);
+    });
     const [
       offsetStr,
       storedDays,
@@ -413,6 +361,7 @@ export default function HomeScreen() {
 
     const weekCompletions = home.week_completions as RawCompletion[];
     setSessionsThisWeek(weekCompletions.length);
+    setWeekCompletions(weekCompletions);
     const weekDays = computeWeekDays(weekCompletions, 0);
     setDisplayWeekDays(weekDays);
     const doneToday = weekDays[todayDayIndex()];
@@ -622,11 +571,32 @@ export default function HomeScreen() {
     router.navigate('/(tabs)/profile?editName=1');
   }
 
+  const petMood = derivePetMood({
+    programComplete: Boolean(userProgram && userProgram.current_week > durationWeeks),
+    isDoneToday,
+    hasSessionToday: todaySession !== null,
+    isRestDay,
+    missedPlannedDays: countMissedThisWeek(thisWeekCompletions, weekSchedule),
+    hour: new Date().getHours(),
+  });
+  const petScene = (
+    <View style={styles.petScene}>
+      <PetScene
+        topInset={insets.top}
+        greeting={greeting}
+        firstName={firstName}
+        onPressFirstName={openProfileNameEdit}
+        pet={pet}
+        mood={petMood}
+      />
+    </View>
+  );
+
   if (!loaded) {
     return (
       <TabFadeWrapper>
-        <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-          <Skeleton height={32} width={200} borderRadius={8} style={styles.skeletonHeader} />
+        <View style={styles.container}>
+          {petScene}
           <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonCard} />
           <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonCard} />
         </View>
@@ -637,27 +607,11 @@ export default function HomeScreen() {
   return (
     <TabFadeWrapper>
       <ScrollView
-        style={[styles.container, { paddingTop: insets.top + 16 }]}
+        style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-      <View style={styles.greetingRow}>
-        <Text style={styles.greeting}>
-          {greeting}
-          {firstName ? ', ' : ''}
-        </Text>
-        {firstName ? (
-          <TouchableOpacity
-            onPress={openProfileNameEdit}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Edit name"
-          >
-            <Text style={styles.greeting}>{firstName}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      {petScene}
 
       {/* Today's session, rest day, or program completion */}
       {userProgram && userProgram.current_week > durationWeeks ? (
@@ -698,7 +652,6 @@ export default function HomeScreen() {
         </View>
       ) : todaySession ? (
         <View style={styles.sessionCard}>
-          <HeroOrnament />
           <Text style={styles.sessionLabel}>Today's Session</Text>
           <Text style={styles.sessionTitle}>{todaySession.title}</Text>
           <Text style={styles.sessionPurpose}>
@@ -738,7 +691,6 @@ export default function HomeScreen() {
         </View>
       ) : isDoneToday ? (
         <View style={styles.sessionCard}>
-          <HeroOrnament />
           <Text style={styles.sessionLabel}>All set</Text>
           <Text style={styles.sessionTitle}>You're good for today</Text>
           <Text style={styles.restTip}>
@@ -773,7 +725,6 @@ export default function HomeScreen() {
         </View>
       ) : (
         <View style={styles.sessionCard}>
-          {isRestDay ? <HeroOrnament /> : null}
           <Text style={styles.sessionLabel}>{isRestDay ? 'Rest day' : 'Up Next'}</Text>
           <Text style={styles.sessionTitle}>{isRestDay ? 'Recovery day' : 'Your next session'}</Text>
           <Text style={styles.restTip}>
@@ -891,17 +842,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 48,
   },
-  greetingRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'baseline',
-    marginBottom: 18,
-  },
-  greeting: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    letterSpacing: -0.1,
+  // Full-bleed: cancels the container's horizontal padding.
+  petScene: {
+    marginHorizontal: -24,
+    marginBottom: 20,
   },
 
   // Stretch break countdown card
@@ -957,11 +901,6 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     marginBottom: 20,
     overflow: 'hidden',
-  },
-  ornament: {
-    position: 'absolute',
-    top: -12,
-    right: -30,
   },
   nextChip: {
     alignSelf: 'flex-start',
@@ -1074,9 +1013,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   // Skeletons
-  skeletonHeader: {
-    marginBottom: 24,
-  },
   skeletonCard: {
     marginBottom: 16,
   },

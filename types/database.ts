@@ -827,6 +827,16 @@ export type Database = {
         };
         Returns: undefined;
       };
+      get_pet_state: {
+        Args: Record<string, never>;
+        Returns: Record<string, unknown>;
+      };
+      set_pet_name: {
+        Args: {
+          p_name: string;
+        };
+        Returns: Record<string, unknown>;
+      };
     };
     Enums: Record<string, never>;
   };
