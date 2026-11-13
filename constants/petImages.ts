@@ -8,6 +8,8 @@ export const PET_MOODS = [
   'sleepy',
   'stiff',
   'concerned',
+  // Only ever chosen on the device (poked too much); the server never sends it.
+  'angry',
 ] as const;
 
 export type PetMood = (typeof PET_MOODS)[number];
@@ -27,6 +29,7 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s2_celebrating: require('../assets/pet/s2_celebrating.png'),
   s2_sleepy: require('../assets/pet/s2_sleepy.png'),
   s2_concerned: require('../assets/pet/s2_concerned.png'),
+  s2_angry: require('../assets/pet/s2_angry.png'),
 
   s3_idle: require('../assets/pet/s3_idle.png'),
   s3_ready: require('../assets/pet/s3_ready.png'),
@@ -35,6 +38,7 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s3_sleepy: require('../assets/pet/s3_sleepy.png'),
   s3_stiff: require('../assets/pet/s3_stiff.png'),
   s3_concerned: require('../assets/pet/s3_concerned.png'),
+  s3_angry: require('../assets/pet/s3_angry.png'),
 
   s4_idle: require('../assets/pet/s4_idle.png'),
   s4_ready: require('../assets/pet/s4_ready.png'),
@@ -43,6 +47,7 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s4_sleepy: require('../assets/pet/s4_sleepy.png'),
   s4_stiff: require('../assets/pet/s4_stiff.png'),
   s4_concerned: require('../assets/pet/s4_concerned.png'),
+  s4_angry: require('../assets/pet/s4_angry.png'),
 
   s5_idle: require('../assets/pet/s5_idle.png'),
   s5_ready: require('../assets/pet/s5_ready.png'),
@@ -51,11 +56,12 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s5_sleepy: require('../assets/pet/s5_sleepy.png'),
   s5_stiff: require('../assets/pet/s5_stiff.png'),
   s5_concerned: require('../assets/pet/s5_concerned.png'),
+  s5_angry: require('../assets/pet/s5_angry.png'),
 };
 
 /** Poses the early stages were never drawn in. */
 const POSE_FALLBACKS: Partial<Record<PetStage, Partial<Record<PetMood, PetMood>>>> = {
-  1: { proud: 'celebrating', sleepy: 'idle' },
+  1: { proud: 'celebrating', sleepy: 'idle', angry: 'stiff' },
   2: { proud: 'celebrating', stiff: 'sleepy' },
 };
 

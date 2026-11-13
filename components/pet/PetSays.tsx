@@ -11,16 +11,27 @@ import {
 import { colors } from '../../constants/colors';
 import type { PetMood, PetStage } from '../../constants/petImages';
 import { PET_POKE_LINES, PET_WAKE_LINE, fillPetLine } from '../../constants/petOnboardingLines';
+import {
+  PET_ANGRY,
+  PET_IGNORING,
+  PET_WARN,
+  pickPetLine,
+} from '../../constants/petMoodLines';
 import { hapticSelection } from '../../lib/haptics';
 import { usePetName } from '../../lib/petNameCache';
+import { createPatience } from '../../lib/petTemper';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import { Dust, easedTimeAt, type DustHandle } from './Dust';
 import { PetBadge } from './PetBadge';
-import { PET_UNFURL_MS } from './Pet';
+import { PetEmotes, type PetEmotesHandle } from './PetEmotes';
+import { PET_UNFURL_MS, petCurlMs, petUnfurlMs } from './Pet';
 import {
   call,
   createPetBody,
   moveBigStretch,
+  moveHeadShake,
+  moveHuff,
+  moveStomp,
   moveHop,
   moveJumpSpin,
   moveLand,
@@ -77,6 +88,9 @@ const DROP_FROM = -220;
 // The unfurl from the ball (see Pet.tsx) takes about this long.
 const POSE_WAIT_MS = PET_UNFURL_MS;
 const TALK_MS = 260;
+/** How long it sulks after being poked too much. */
+const SULK_MS = 3000;
+const GRACE_MS = 3000;
 const outCubic = Easing.out(Easing.cubic);
 
 /**
@@ -109,6 +123,15 @@ export function PetSays({
   const pokeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pokeIndex = useRef(Math.floor(Math.random() * PET_POKE_LINES.length));
   const napping = asleep && poke === null;
+  // Temper: a face worn over the screen's own mood while it is annoyed or sulking.
+  const [moodOverride, setMoodOverride] = useState<PetMood | null>(null);
+  const patience = useRef(createPatience()).current;
+  const emotes = useRef<PetEmotesHandle>(null);
+  const temperToken = useRef(0);
+  const temperTimers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const sulking = useRef(false);
+  const graceUntil = useRef(0);
+  const lastSnap = useRef(-1);
   const spoken = fillPetLine(poke ?? line, { name });
 
   // Known Reduce Motion, or an entrance of none: show the pet and the line, still.
@@ -342,6 +365,9 @@ export function PetSays({
       talkAnim.current?.stop();
       talk.setValue(0);
       if (pokeTimer.current) clearTimeout(pokeTimer.current);
+      temperToken.current += 1;
+      temperTimers.current.forEach(clearTimeout);
+      temperTimers.current = [];
     };
   }, [talk]);
 
@@ -594,7 +620,7 @@ export function PetSays({
       timer = setTimeout(
         () => {
           if (stopped || !mounted.current) return;
-          if (!talkingRef.current && moveRef.current === null) {
+          if (!talkingRef.current && moveRef.current === null && !sulking.current) {
             let pick = Math.floor(Math.random() * 5);
             if (pick === lastIdle.current) pick = (pick + 1) % 5;
             lastIdle.current = pick;
@@ -629,8 +655,133 @@ export function PetSays({
     };
   }, [entered, napping, reduceMotion, body]);
 
+  function temperLater(id: number, fn: () => void, ms: number) {
+    temperTimers.current.push(
+      setTimeout(() => {
+        if (mounted.current && id === temperToken.current) fn();
+      }, ms),
+    );
+  }
+
+  /** Cancels the last temper script (its timers can no longer fire). */
+  function beginTemper(): number {
+    temperToken.current += 1;
+    temperTimers.current.forEach(clearTimeout);
+    temperTimers.current = [];
+    return temperToken.current;
+  }
+
+  /** A line over the screen's own for `ms`; then the screen's line comes back. */
+  function showPoke(line: string, ms: number) {
+    pokeOwnsLine.current = true;
+    setPoke(line);
+    if (pokeTimer.current) clearTimeout(pokeTimer.current);
+    pokeTimer.current = setTimeout(() => {
+      if (!mounted.current) return;
+      pokeOwnsLine.current = true;
+      setPoke(null);
+    }, ms);
+  }
+
+  function warnPoke() {
+    const id = beginTemper();
+    showPoke(pickPetLine(PET_WARN, name), 2200);
+    if (reduceRef.current !== false) {
+      setMoodOverride('angry');
+      temperLater(id, () => setMoodOverride(null), 2200);
+      return;
+    }
+    setMoodOverride('stiff');
+    emotes.current?.play(Math.random() < 0.5 ? 'question' : 'vein');
+    beginMoveRef.current(moveHeadShake(body));
+    temperLater(id, () => setMoodOverride(null), 1700);
+  }
+
+  /** Done sulking: its own mood and the screen's line come back. */
+  function endSulk(id: number) {
+    if (id !== temperToken.current) return;
+    sulking.current = false;
+    setMoodOverride(null);
+    setCurled(false);
+    setPoke(null);
+    patience.reset();
+    graceUntil.current = Date.now() + GRACE_MS;
+  }
+
+  function snapPoke() {
+    const id = beginTemper();
+    patience.reset();
+    graceUntil.current = Date.now() + 60000;
+    const moving = reduceRef.current === false;
+    // Angry (0) or into the ball (1); not the same twice. Stage 1 is already a ball.
+    let variant = moving && stage > 1 ? Math.round(Math.random()) : 0;
+    if (moving && stage > 1 && variant === lastSnap.current) variant = variant === 0 ? 1 : 0;
+    lastSnap.current = variant;
+    setMoodOverride('angry');
+    sulking.current = true;
+    if (!moving) {
+      showPoke(pickPetLine(PET_ANGRY, name), SULK_MS);
+      temperLater(id, () => endSulk(id), SULK_MS);
+      return;
+    }
+    emotes.current?.play('steam');
+    if (variant === 0) {
+      showPoke(pickPetLine(PET_ANGRY, name), SULK_MS + 400);
+      beginMoveRef.current(Animated.sequence([moveStomp(body), moveHuff(body)]));
+      temperLater(id, () => endSulk(id), SULK_MS + 400);
+      return;
+    }
+    showPoke(pickPetLine(PET_ANGRY, name), 1400);
+    beginMoveRef.current(moveStomp(body));
+    temperLater(id, () => setCurled(true), 700);
+    const curledAt = 700 + petCurlMs(stage);
+    temperLater(
+      id,
+      () => {
+        emotes.current?.play('dots');
+        showPoke(pickPetLine(PET_IGNORING, name), SULK_MS);
+      },
+      curledAt,
+    );
+    temperLater(
+      id,
+      () => {
+        setMoodOverride(null);
+        setCurled(false);
+      },
+      curledAt + SULK_MS,
+    );
+    temperLater(id, () => endSulk(id), curledAt + SULK_MS + petUnfurlMs(stage) + 200);
+  }
+
+  /** Sulking: it does not listen. A shiver, some dots, hardly ever a word. */
+  function sulkTap() {
+    const r = Math.random();
+    if (r < 0.3 && moveRef.current === null && reduceRef.current === false) {
+      beginMoveRef.current(moveShiver(body));
+    } else if (r < 0.7) {
+      emotes.current?.play('dots');
+    }
+  }
+
   function handlePoke() {
     hapticSelection();
+    if (!asleep && enteredRef.current && reduceRef.current !== null) {
+      if (sulking.current) {
+        sulkTap();
+        return;
+      }
+      const now = Date.now();
+      const verdict = now < graceUntil.current ? 'fine' : patience.tap(now);
+      if (verdict === 'warn') {
+        warnPoke();
+        return;
+      }
+      if (verdict === 'snap') {
+        snapPoke();
+        return;
+      }
+    }
     pokeOwnsLine.current = true;
     if (asleep) {
       setPoke(PET_WAKE_LINE);
@@ -653,6 +804,7 @@ export function PetSays({
             ? moveWiggle(body)
             : moveHop(body, 1);
       beginMoveRef.current(move);
+      if (!asleep && (step === 1 || Math.random() < 0.3)) emotes.current?.play('hearts');
     }
     if (pokeTimer.current) clearTimeout(pokeTimer.current);
     pokeTimer.current = setTimeout(() => {
@@ -660,7 +812,7 @@ export function PetSays({
     }, POKE_MS);
   }
 
-  const shownMood: PetMood = napping ? 'sleepy' : asleep ? 'ready' : mood;
+  const shownMood: PetMood = napping ? 'sleepy' : asleep ? 'ready' : (moodOverride ?? mood);
   const badgeStage: PetStage = curled ? 1 : stage;
   const badgeMood: PetMood = curled ? 'ready' : shownMood;
   const tag = name && name.trim() ? name.trim() : null;
@@ -703,6 +855,9 @@ export function PetSays({
           />
         </Animated.View>
         <Dust ref={dust} />
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <PetEmotes ref={emotes} size={size} tone="dark" />
+        </View>
         <Animated.View style={[{ width: size, height: size }, entranceStyle]}>
           <Animated.View style={bodyStyles.mover}>
             <Animated.View style={bodyStyles.squash}>

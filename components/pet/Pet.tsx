@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import {
+  displayedPetMood,
   petImage,
   petScale,
   type PetMood,
@@ -75,9 +76,9 @@ function isClipStage(s: PetStage): s is ClipStage {
   return s !== 1;
 }
 
-const UNFURL_FRAME_MS = 30;
-const CURL_FRAME_MS = 24;
-const HANDOVER_MS = 80;
+const UNFURL_FRAME_MS = 20;
+const CURL_FRAME_MS = 16;
+const HANDOVER_MS = 60;
 // Waiting for the sheet to load, plus the two hand-over fades.
 const CLIP_ALLOWANCE_MS = 150;
 const SHEET_TIMEOUT_MS = 250;
@@ -86,6 +87,22 @@ const FRAME_HOLD = 0.999;
 const FRAME_EDGE = 0.001;
 const MOST_FRAMES = Math.max(...Object.values(PET_UNFURL_CLIPS).map((c) => c.frames));
 const upTo50 = (ms: number): number => Math.ceil(ms / 50) * 50;
+
+/** How long leaving the ball takes at this stage, including loading and hand-over fades. */
+export function petUnfurlMs(stage: PetStage): number {
+  if (!isClipStage(stage)) return 0;
+  return upTo50(PET_UNFURL_CLIPS[stage].frames * UNFURL_FRAME_MS + CLIP_ALLOWANCE_MS);
+}
+/** How long curling into the ball takes from this stage. */
+export function petCurlMs(stage: PetStage): number {
+  if (!isClipStage(stage)) return 0;
+  return upTo50(PET_UNFURL_CLIPS[stage].frames * CURL_FRAME_MS + CLIP_ALLOWANCE_MS);
+}
+
+/** One picture per drawn pose, so two moods that share a drawing share a view. */
+function poseKey(pose: Pose): string {
+  return `${pose.stage}-${displayedPetMood(pose.stage, pose.mood)}`;
+}
 
 /** The longest unfurl, including loading and hand-over fades, for callers that wait on it. */
 export const PET_UNFURL_MS = upTo50(MOST_FRAMES * UNFURL_FRAME_MS + CLIP_ALLOWANCE_MS);
@@ -105,12 +122,15 @@ export function Pet({
   const reduceMotionRef = useRef(false);
   const mounted = useRef(true);
 
-  const [previous, setPrevious] = useState<Pose | null>(null);
+  // Two fixed picture slots. Each slot keeps its own opacity value for life:
+  // swapping which value drives a mounted picture made it vanish on device.
+  const [slots, setSlots] = useState<[Pose | null, Pose | null]>([{ stage, mood }, null]);
+  const active = useRef<0 | 1>(0);
+  const [fadeToken, setFadeToken] = useState<number | null>(null);
   const lastPose = useRef<Pose>({ stage, mood });
   const poseToken = useRef(0);
   const swapping = useRef(false);
   const swapAnim = useRef<Animated.CompositeAnimation | null>(null);
-  const [shown, setShown] = useState<Pose>({ stage, mood });
   // Set while a sprite-sheet clip is mounted (ball <-> stage N).
   const [clip, setClipState] = useState<ClipPlay | null>(null);
   const clipRef = useRef<ClipPlay | null>(null);
@@ -130,13 +150,13 @@ export function Pet({
   const body = bodyRef.current;
 
   const breath = useRef(new Animated.Value(0)).current;
-  const fade = useRef(new Animated.Value(1)).current;
+  const slotOpacity = useRef<[Animated.Value, Animated.Value]>([
+    new Animated.Value(1),
+    new Animated.Value(0),
+  ]).current;
+  const clipOpacity = useRef(new Animated.Value(0)).current;
   // Which cell of the sheet shows.
   const frame = useRef(new Animated.Value(0)).current;
-  // 0 = outgoing pose, 1 = clip, 2 = target pose. One value drives all three
-  // opacities, so they can never all be hidden.
-  const mix = useRef(new Animated.Value(0)).current;
-
   const drawn = size * petScale(stage, mood);
 
   // Built once. New interpolations created mid-animation are not driven by the
@@ -147,24 +167,6 @@ export function Pet({
   const bodyStyles = useMemo(
     () => petBodyStyles(body, { height: size, hop: size * HOP_HEIGHT }),
     [body, size],
-  );
-  const prevOpacity = useMemo(
-    () => fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-    [fade],
-  );
-  const outgoingOpacity = useMemo(
-    // Each picture stays solid until the next one fully covers it: fading one out
-    // while the other fades in lets the background show through, which reads as a flash.
-    () => mix.interpolate({ inputRange: [0, 0.999, 1, 2], outputRange: [1, 1, 0, 0] }),
-    [mix],
-  );
-  const clipOpacity = useMemo(
-    () => mix.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 1] }),
-    [mix],
-  );
-  const targetOpacity = useMemo(
-    () => mix.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 0, 1] }),
-    [mix],
   );
   // Cell offsets of the sheet, built once per clip (never mid-animation). Frame
   // i holds from i to i + FRAME_HOLD, so there is no half-way slide.
@@ -206,6 +208,31 @@ export function Pet({
     motionAnim.current?.stop();
     motionAnim.current = null;
     motionKind.current = null;
+  }
+
+  /** Show `pose` at rest, with nothing else on screen. */
+  function snapTo(pose: Pose) {
+    const a = active.current;
+    swapping.current = false;
+    slotOpacity[a].setValue(1);
+    slotOpacity[a === 0 ? 1 : 0].setValue(0);
+    clipOpacity.setValue(0);
+    if (!mounted.current) return;
+    setSlots(a === 0 ? [pose, null] : [null, pose]);
+    setFadeToken(null);
+    setClip(null);
+  }
+
+  /** Put `pose` in the free slot, hidden, ready to be brought in. */
+  function bringIn(prevPose: Pose, pose: Pose): void {
+    const out = active.current;
+    const inc: 0 | 1 = out === 0 ? 1 : 0;
+    active.current = inc;
+    slotOpacity[out].setValue(1);
+    slotOpacity[inc].setValue(0);
+    clipOpacity.setValue(0);
+    setSlots(inc === 1 ? [prevPose, pose] : [pose, prevPose]);
+    swapping.current = true;
   }
 
   // One move at a time. Celebration hops wait until a pose swap has finished.
@@ -263,14 +290,12 @@ export function Pet({
       petImage(prevPose.stage, prevPose.mood) === petImage(stage, mood);
 
     if (sameImage || swapping.current) {
-      swapping.current = false;
-      setShown({ stage, mood });
-      fade.setValue(1);
-      setPrevious(null);
-      setClip(null);
+      snapTo({ stage, mood });
       if (prevPose.mood === mood) startHops();
       return;
     }
+
+    bringIn(prevPose, { stage, mood });
 
     // Leaving or entering the ball plays the clip of the stage that is not the ball.
     const unfurl = prevPose.stage === 1 && stage > 1;
@@ -278,12 +303,8 @@ export function Pet({
     if ((unfurl || stage === 1) && isClipStage(open)) {
       const reverse = !unfurl;
       const cutFrom = reverse ? petImage(open, 'idle') : petImage(1, 'ready');
-      fade.setValue(1);
-      mix.setValue(0);
       frame.setValue(reverse ? PET_UNFURL_CLIPS[open].frames - FRAME_EDGE : 0);
-      setShown({ stage, mood });
-      setPrevious(prevPose);
-      swapping.current = true;
+      setFadeToken(null);
       setClip({
         stage: open,
         reverse,
@@ -293,21 +314,22 @@ export function Pet({
       return;
     }
 
-    setShown({ stage, mood });
-    swapping.current = true;
-    fade.setValue(0);
-    setPrevious(prevPose);
-  }, [stage, mood, fade, frame, mix, body]);
+    setClip(null);
+    setFadeToken(poseToken.current);
+  }, [stage, mood, frame, body]);
 
   useEffect(() => {
-    if (!previous || !swapping.current || clipRef.current) return;
-    const token = poseToken.current;
+    if (fadeToken === null || !swapping.current || clipRef.current) return;
+    const token = fadeToken;
+    const inc = active.current;
+    const out: 0 | 1 = inc === 0 ? 1 : 0;
     let live = true;
     // Squash down, crossfade at the bottom, spring up taller than rest, settle.
     const anim = Animated.sequence([
       timing(body.squash, 0.85, 110, fall),
       Animated.parallel([
-        timing(fade, 1, 100, rise),
+        timing(slotOpacity[inc], 1, 100, rise),
+        timing(slotOpacity[out], 0, 100, rise),
         Animated.sequence([timing(body.squash, -0.55, 130, rise), settleSquash(body.squash)]),
       ]),
     ]);
@@ -316,8 +338,7 @@ export function Pet({
       if (!live || poseToken.current !== token) return;
       if (swapAnim.current === anim) swapAnim.current = null;
       if (!finished || !mounted.current) return;
-      swapping.current = false;
-      setPrevious(null);
+      snapTo(lastPose.current);
       startHops();
     });
     return () => {
@@ -328,7 +349,7 @@ export function Pet({
         swapAnim.current = null;
       }
     };
-  }, [previous, fade, body]);
+  }, [fadeToken, body]);
 
   // Sprite-sheet unfurl / curl. The clip mounts invisible over the outgoing
   // pose; once its sheet has loaded (or been given up on) the clip plays.
@@ -351,25 +372,26 @@ export function Pet({
         easing: Easing.linear,
         useNativeDriver: true,
       });
-      // Hand over to the clip (a hard cut when it starts on the outgoing pose),
-      // run the frames, then cross-fade to the real target pose.
-      let start: Animated.CompositeAnimation;
-      if (clip.cut) {
-        mix.setValue(1);
-        start = frameRun;
-      } else {
-        start = Animated.parallel([timing(mix, 1, HANDOVER_MS, Easing.linear), frameRun]);
-      }
-      const run = Animated.sequence([start, timing(mix, 2, HANDOVER_MS, Easing.linear)]);
+      // The clip sits above both pictures. It covers the outgoing pose (at once
+      // when it starts on that very drawing), the pose underneath is swapped
+      // while it plays, and it fades away over the real target pose. Nothing is
+      // ever faded out before what replaces it is fully solid.
+      const inc = active.current;
+      const out: 0 | 1 = inc === 0 ? 1 : 0;
+      const run = Animated.sequence([
+        timing(clipOpacity, 1, clip.cut ? 1 : HANDOVER_MS, Easing.linear),
+        timing(slotOpacity[out], 0, 1, Easing.linear),
+        frameRun,
+        timing(slotOpacity[inc], 1, 1, Easing.linear),
+        timing(clipOpacity, 0, HANDOVER_MS, Easing.linear),
+      ]);
       anim = run;
       swapAnim.current = run;
       run.start(({ finished }) => {
         if (!live || poseToken.current !== token) return;
         if (swapAnim.current === run) swapAnim.current = null;
         if (!finished || !mounted.current) return;
-        swapping.current = false;
-        setPrevious(null);
-        setClip(null);
+        snapTo(lastPose.current);
         startHops();
       });
     };
@@ -397,7 +419,7 @@ export function Pet({
         swapAnim.current = null;
       }
     };
-  }, [clip, frame, mix, fade, body]);
+  }, [clip, frame, body]);
 
   function handleSheetLoad(token: number) {
     loadedToken.current = token;
@@ -449,12 +471,8 @@ export function Pet({
     poseToken.current += 1;
     stopMotion();
     restBody(body);
-    fade.setValue(1);
-    swapping.current = false;
-    setShown(lastPose.current);
-    setPrevious(null);
-    setClip(null);
-  }, [reduceMotion, body, fade]);
+    snapTo(lastPose.current);
+  }, [reduceMotion, body]);
 
   function handlePress() {
     if (!reduceMotionRef.current) {
@@ -462,15 +480,7 @@ export function Pet({
       poseToken.current += 1;
       stopMotion();
       restBody(body);
-      if (wasSwapping) {
-        swapping.current = false;
-        setShown(lastPose.current);
-        fade.setValue(1);
-        if (mounted.current) {
-          setPrevious(null);
-          setClip(null);
-        }
-      }
+      if (wasSwapping) snapTo(lastPose.current);
       motionKind.current = 'nod';
       const anim = moveNod(body);
       motionAnim.current = anim;
@@ -492,8 +502,6 @@ export function Pet({
     { scaleX: breathScaleX },
     { scaleY: breathScaleY },
   ];
-
-  const playing = clip !== null && cellOffsets !== null;
 
   const art = (
     <View
@@ -520,17 +528,13 @@ export function Pet({
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { transform: breathTransform }]}>
         <Animated.View style={[bodyStyles.mover, StyleSheet.absoluteFill]}>
           <Animated.View style={[bodyStyles.squash, StyleSheet.absoluteFill]}>
-            {/* Keyed by pose alone, so the picture on screen keeps its view when it
-                becomes the outgoing one: a remount blanks it for a frame. */}
-            {previous ? (
-              <PoseImage
-                key={`${previous.stage}-${previous.mood}`}
-                pose={previous}
-                size={size}
-                opacity={playing ? outgoingOpacity : prevOpacity}
-              />
+            {slots[0] ? (
+              <PoseImage key={`a-${poseKey(slots[0])}`} pose={slots[0]} size={size} opacity={slotOpacity[0]} />
             ) : null}
-            {playing && clip && cellOffsets ? (
+            {slots[1] ? (
+              <PoseImage key={`b-${poseKey(slots[1])}`} pose={slots[1]} size={size} opacity={slotOpacity[1]} />
+            ) : null}
+            {clip && cellOffsets ? (
               <ClipView
                 key={`clip-${clip.token}`}
                 clip={PET_UNFURL_CLIPS[clip.stage]}
@@ -541,12 +545,6 @@ export function Pet({
                 onLoad={() => handleSheetLoad(clip.token)}
               />
             ) : null}
-            <PoseImage
-              key={`${shown.stage}-${shown.mood}`}
-              pose={shown}
-              size={size}
-              opacity={playing ? targetOpacity : fade}
-            />
           </Animated.View>
         </Animated.View>
       </Animated.View>
@@ -565,7 +563,7 @@ export function Pet({
   );
 }
 
-type Opacity = Animated.AnimatedInterpolation<number> | Animated.Value;
+type Opacity = Animated.Value;
 
 function PoseImage({ pose, size, opacity }: { pose: Pose; size: number; opacity: Opacity }) {
   const drawn = size * petScale(pose.stage, pose.mood);

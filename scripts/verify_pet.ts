@@ -9,6 +9,7 @@ import {
   type PetMoodInput,
   type PetState,
 } from '../lib/pet';
+import { createPatience, petSleepReason, type Patience } from '../lib/petTemper';
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: string) {
@@ -141,6 +142,91 @@ console.log('derivePetMood');
     'missed days alone do not make a rest day stiff',
     mood({ isRestDay: true, missedPlannedDays: 2 }) === 'sleepy',
   );
+}
+
+console.log('petSleepReason');
+{
+  const at = (month: number, day: number, hour: number, minute = 0) =>
+    new Date(2026, month - 1, day, hour, minute);
+  check('22:00 -> night', petSleepReason(at(3, 4, 22, 0), 'Biscuit') === 'night');
+  check('23:59 -> night', petSleepReason(at(3, 4, 23, 59), 'Biscuit') === 'night');
+  check('00:00 -> night', petSleepReason(at(3, 4, 0, 0), 'Biscuit') === 'night');
+  check('04:59 -> night', petSleepReason(at(3, 4, 4, 59), 'Biscuit') === 'night');
+  check('05:00 -> early', petSleepReason(at(3, 4, 5, 0), 'Biscuit') === 'early');
+  check('06:59 -> early', petSleepReason(at(3, 4, 6, 59), 'Biscuit') === 'early');
+  check('07:00 -> up', petSleepReason(at(3, 4, 7, 0), 'Biscuit') === null);
+  check('10:00 -> up', petSleepReason(at(3, 4, 10, 0), 'Biscuit') === null);
+  check('21:59 -> up', petSleepReason(at(3, 4, 21, 59), 'Biscuit') === null);
+
+  // Nap days: same answer for the whole window, whatever the time of day, and mixed across days.
+  let napDays = 0;
+  let consistent = true;
+  let outsideWindow = true;
+  const days = 400;
+  for (let i = 0; i < days; i += 1) {
+    const day = new Date(2026, 0, 1 + i);
+    const month = day.getMonth() + 1;
+    const date = day.getDate();
+    const first = petSleepReason(at(month, date, 13, 0), 'Biscuit');
+    if (first === 'nap') napDays += 1;
+    for (const [h, m] of [[13, 30], [14, 0], [15, 29]] as Array<[number, number]>) {
+      if (petSleepReason(at(month, date, h, m), 'Biscuit') !== first) consistent = false;
+    }
+    if (petSleepReason(at(month, date, 15, 30), 'Biscuit') !== null) outsideWindow = false;
+    if (petSleepReason(at(month, date, 12, 59), 'Biscuit') !== null) outsideWindow = false;
+  }
+  check('a nap day is stable across 13:00-15:29', consistent);
+  check('never a nap at 12:59 or 15:30', outsideWindow);
+  const share = napDays / days;
+  check('about 45% of days are nap days', share > 0.35 && share < 0.55, `got ${(share * 100).toFixed(1)}%`);
+  check('nap days vary with the pet', (() => {
+    let differs = 0;
+    for (let i = 0; i < 60; i += 1) {
+      const day = new Date(2026, 5, 1 + i);
+      const a = petSleepReason(at(day.getMonth() + 1, day.getDate(), 14), 'Biscuit');
+      const b = petSleepReason(at(day.getMonth() + 1, day.getDate(), 14), 'Pebble');
+      if (a !== b) differs += 1;
+    }
+    return differs > 0;
+  })());
+}
+
+console.log('createPatience');
+{
+  const feed = (p: Patience, times: number[]) => times.map((t) => p.tap(t));
+
+  const calm = createPatience();
+  check(
+    'calm taps (3 s apart) are always fine',
+    feed(calm, [0, 3000, 6000, 9000, 12000, 15000, 18000, 21000]).every((v) => v === 'fine'),
+  );
+
+  const quick = createPatience();
+  const warn = feed(quick, [0, 400, 800, 1200]);
+  check('three quick taps are fine', warn.slice(0, 3).every((v) => v === 'fine'));
+  check('the fourth tap inside 2.5 s warns', warn[3] === 'warn');
+  check('the warning comes only once', feed(quick, [1500, 1800]).every((v) => v === 'fine'));
+  check('the seventh tap snaps', quick.tap(2100) === 'snap');
+  check('after a snap it starts over (fine)', quick.tap(2300) === 'fine');
+
+  const slowFour = createPatience();
+  check(
+    'four taps spread over 3 s do not warn',
+    feed(slowFour, [0, 1000, 2000, 3000]).every((v) => v === 'fine'),
+  );
+
+  const decay = createPatience();
+  feed(decay, [0, 300, 600, 900]);
+  check('a calm pause forgets the warning', decay.tap(5000) === 'fine');
+  check(
+    'and it can warn again afterwards',
+    feed(decay, [5200, 5400, 5600]).includes('warn'),
+  );
+
+  const reset = createPatience();
+  feed(reset, [0, 200, 400, 600]);
+  reset.reset();
+  check('reset() clears the count', feed(reset, [700, 800, 900]).every((v) => v === 'fine'));
 }
 
 if (failures > 0) {

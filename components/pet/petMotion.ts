@@ -280,3 +280,101 @@ export function movePoseSwap(body: PetBody, swap: () => void): Animated.Composit
     settle(body.squash, 14),
   ]);
 }
+
+/** "No": a quick head shake, side to side, dying away. */
+export function moveHeadShake(body: PetBody): Animated.CompositeAnimation {
+  return Animated.sequence([
+    to(body.tilt, -0.8, 80),
+    to(body.tilt, 0.8, 110),
+    to(body.tilt, -0.6, 100),
+    to(body.tilt, 0.45, 90),
+    to(body.tilt, -0.2, 80),
+    settle(body.tilt, 6),
+  ]);
+}
+
+/** Angry: two hard little stomps, each landing flat. */
+export function moveStomp(body: PetBody): Animated.CompositeAnimation {
+  const stomp = () =>
+    Animated.sequence([
+      Animated.parallel([to(body.lift, 0.3, 90), to(body.squash, -0.2, 90)]),
+      Animated.parallel([to(body.lift, 0, 70, fall), to(body.squash, 0.55, 70, fall)]),
+      to(body.squash, 0, 120, smooth),
+    ]);
+  return Animated.sequence([stomp(), Animated.delay(60), stomp()]);
+}
+
+/** Angry: puffs itself up, holds it, lets it out in a snort. */
+export function moveHuff(body: PetBody): Animated.CompositeAnimation {
+  return Animated.sequence([
+    to(body.squash, -0.45, 360, smooth),
+    Animated.delay(160),
+    Animated.parallel([to(body.squash, 0.5, 110), to(body.shake, 0.5, 110)]),
+    Animated.parallel([to(body.shake, 0, 90), settle(body.squash, 8)]),
+  ]);
+}
+
+/** Sad: sinks slowly, sighs, comes back up to rest. */
+export function moveDroop(body: PetBody): Animated.CompositeAnimation {
+  return Animated.sequence([
+    to(body.squash, 0.6, 520, smooth),
+    Animated.delay(480),
+    to(body.squash, 0.4, 220, smooth),
+    to(body.squash, 0.62, 260, smooth),
+    to(body.squash, 0, 520, smooth),
+  ]);
+}
+
+/** Startled: shoots up stretched thin, hangs there, drops, squashes. */
+export function moveStartle(body: PetBody): Animated.CompositeAnimation {
+  return Animated.sequence([
+    Animated.parallel([to(body.lift, 0.8, 80), to(body.squash, -0.7, 80)]),
+    Animated.delay(160),
+    Animated.parallel([to(body.lift, 0, 140, fall), to(body.squash, -0.3, 140, fall)]),
+    to(body.squash, 0.6, 60),
+    settle(body.squash, 12),
+  ]);
+}
+
+/** Asleep: one slow breath in and out. Loop it. */
+export function moveSnore(body: PetBody): Animated.CompositeAnimation {
+  return Animated.sequence([
+    to(body.squash, -0.1, 1500, smooth),
+    to(body.squash, 0.1, 1700, smooth),
+    to(body.squash, 0, 300, smooth),
+  ]);
+}
+
+/** Happy: six quick beats, leaning and bouncing from side to side. */
+export function moveDance(body: PetBody): Animated.CompositeAnimation {
+  const beat = (dir: 1 | -1) =>
+    Animated.parallel([
+      to(body.tilt, 0.8 * dir, 140, smooth),
+      to(body.shake, 0.7 * dir, 140, smooth),
+      Animated.sequence([to(body.lift, 0.3, 70), to(body.lift, 0, 70, fall)]),
+    ]);
+  return Animated.sequence([
+    beat(1),
+    beat(-1),
+    beat(1),
+    beat(-1),
+    beat(1),
+    beat(-1),
+    Animated.parallel([to(body.tilt, 0, 120, smooth), to(body.shake, 0, 120, smooth)]),
+    moveLand(body, 0.5),
+  ]);
+}
+
+/** Dizzy: lurches one way, then the other, wider and slower, and sags. */
+export function moveStagger(body: PetBody): Animated.CompositeAnimation {
+  const lean = (tilt: number, shake: number, ms: number) =>
+    Animated.parallel([to(body.tilt, tilt, ms, smooth), to(body.shake, shake, ms, smooth)]);
+  return Animated.sequence([
+    lean(0.9, 0.6, 220),
+    lean(-1, -0.8, 300),
+    lean(0.7, 0.8, 280),
+    lean(-0.5, -0.5, 260),
+    to(body.squash, 0.5, 160),
+    Animated.parallel([to(body.tilt, 0, 220, smooth), to(body.shake, 0, 220, smooth), settle(body.squash, 6)]),
+  ]);
+}
