@@ -106,6 +106,8 @@ const HOP_LAND_MS = 410;
 const SAY_MS = 2800;
 /** A tap-driven line never replaces the bubble more often than this. */
 const SAY_GAP_MS = 2000;
+/** Share of ordinary calm-tap reactions that get a bubble. */
+const CALM_BUBBLE_CHANCE = 0.7;
 const ANGRY_LINE_GAP_MS = 2500;
 /** At most one calm-tap reaction that changes the face in this long. */
 const FACE_REACT_GAP_MS = 6000;
@@ -117,8 +119,8 @@ const GRACE_MS = 4000;
 const GRUMPY_MIN_MS = 15000;
 const GRUMPY_SPREAD_MS = 5000;
 /** Storm off: gone, back turned, then sulking. */
-const GONE_MIN_MS = 15000;
-const GONE_SPREAD_MS = 10000;
+const GONE_MIN_MS = 6000;
+const GONE_SPREAD_MS = 3000;
 const PEEK_PHASE_MS = 3400;
 const BACK_TURNED_MS = 6000;
 const SULK_MIN_MS = 15000;
@@ -278,6 +280,7 @@ export function PetScene({
   const lastTrick = useRef<TapName | null>(null);
   const lastFaceReact = useRef(0);
   const lastSayAt = useRef(0);
+  const silentTap = useRef(false);
   const lastAngryLine = useRef(0);
   const lastStirAt = useRef(0);
   const wokenRef = useRef(false);
@@ -864,7 +867,12 @@ export function PetScene({
   }
 
   function trick(name: TapName) {
-    const lineFrom = (group: readonly string[]) => () => say(pickPetLine(group, live.current.name));
+    // Ordinary calm-tap lines show about 70% of the time, never two silent taps in a row.
+    const lineFrom = (group: readonly string[]) => () => {
+      const silent = !silentTap.current && Math.random() >= CALM_BUBBLE_CHANCE;
+      silentTap.current = silent;
+      if (!silent) say(pickPetLine(group, live.current.name));
+    };
     const trickLine = lineFrom(PET_HOME_TRICK_LINES);
     const happyLine = lineFrom(PET_HAPPY);
     const run = (safe: boolean, steps: Step[], line: () => void) => {
@@ -1115,7 +1123,7 @@ export function PetScene({
     runSteps(id, [() => 450, () => moveHop(body, 0.9)], () => finishCalm(id));
   }
 
-  /** Rung 3: always curls up and rolls off. Gone 15-25 s, back turned 6 s, sulks 15-20 s. */
+  /** Rung 3: always curls up and rolls off. Gone 6-9 s, back turned 6 s, sulks 15-20 s. */
   function stormOff() {
     const id = begin(false, true);
     patience.reset();
@@ -1363,6 +1371,11 @@ export function PetScene({
     sleep: maybeSleep,
     // The slow clock: bedtime, a new activity, or a small fidget.
     wander: () => {
+      // Home left open past 07:00 (or the end of the nap): it wakes up by itself.
+      if (emo.current === 'asleep' && !busy.current && !currentReason()) {
+        quietWake();
+        return;
+      }
       if (emo.current !== 'awake' || busy.current) return;
       maybeSleep();
       if (emo.current !== 'awake' || busy.current || activity.current) return;

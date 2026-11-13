@@ -81,6 +81,22 @@ def fit_in_safe_zone(mark: Image.Image, canvas_size: int = 1024, safe_frac: floa
     x = (canvas_size - new_w) // 2
     y = (canvas_size - new_h) // 2
     canvas.paste(resized, (x, y), resized)
+
+    # The launcher mask is a circle (about 66% of the canvas across), so a square
+    # box that is 66% wide still pokes its corners out: ear tips clipped. Pull the
+    # mark in until every visible pixel is inside that circle.
+    alpha = np.array(canvas)[..., 3]
+    ys, xs = np.nonzero(alpha > 8)
+    centre = (canvas_size - 1) / 2
+    farthest = float(np.sqrt((xs - centre) ** 2 + (ys - centre) ** 2).max())
+    limit = canvas_size * 0.32
+    if farthest > limit:
+        shrink = limit / farthest
+        small = resized.resize(
+            (max(1, int(round(new_w * shrink))), max(1, int(round(new_h * shrink)))), Image.LANCZOS
+        )
+        canvas = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+        canvas.paste(small, ((canvas_size - small.width) // 2, (canvas_size - small.height) // 2), small)
     return canvas
 
 

@@ -800,7 +800,8 @@ function JourneyRoute({
               const reached = currentIdx >= 0 && i <= currentIdx;
               const look = nodeLooks[i];
               const end = complete && i === lastIdx;
-              const plain = !complete && !pet && i === currentIdx;
+              // The current node is bare ground: the pet stands on it, so no dot shows under its feet.
+              const plain = !complete && i === currentIdx;
               const scale = scalesRef.current[i];
               return (
                 <View

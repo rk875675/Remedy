@@ -144,6 +144,7 @@ export function PetSays({
   const lastAngryTap = useRef(0);
   const angryTaps = useRef(0);
   const lastReactAt = useRef(0);
+  const silentPoke = useRef(false);
   const lastFaceReact = useRef(0);
   const spoken = fillPetLine(poke ?? line, { name });
 
@@ -813,10 +814,13 @@ export function PetSays({
       if (now - lastReactAt.current < REACT_GAP_MS) return;
       lastReactAt.current = now;
     }
-    pokeOwnsLine.current = true;
+    // An ordinary poke gets a bubble about 70% of the time, never two silent in a row.
+    const silent = !asleep && !silentPoke.current && Math.random() >= 0.7;
+    silentPoke.current = silent;
+    if (!silent) pokeOwnsLine.current = true;
     if (asleep) {
       setPoke(PET_WAKE_LINE);
-    } else {
+    } else if (!silent) {
       pokeIndex.current = (pokeIndex.current + 1) % PET_POKE_LINES.length;
       setPoke(PET_POKE_LINES[pokeIndex.current] ?? PET_POKE_LINES[0]);
     }

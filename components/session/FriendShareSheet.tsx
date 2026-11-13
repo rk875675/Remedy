@@ -187,7 +187,8 @@ export function FriendShareSheet({ firstName, painImproved, onDismiss }: Props) 
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.body}>{copy.body}</Text>
 
-          <DancingPet stage={pet?.stage ?? 1} />
+          {/* Not drawn until the stage is known, so the ball never shows first. */}
+          {pet ? <DancingPet stage={pet.stage} /> : <View style={styles.dance} />}
 
           <TouchableOpacity
             style={styles.share}

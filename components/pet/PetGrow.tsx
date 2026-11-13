@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import type { PetMood, PetStage } from '../../constants/petImages';
 import { hapticSuccess } from '../../lib/haptics';
@@ -46,6 +46,8 @@ export function PetGrow({ from, to, mood, size, onDone }: PetGrowProps) {
   const reduce = useReduceMotion();
   const [stage, setStage] = useState<PetStage>(reduce === true ? to : from);
   const done = useRef(false);
+  // Pet's own celebrating hops would overlap the jump-spin: hold them until the sequence is over.
+  const [settled, setSettled] = useState(reduce === true);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -171,6 +173,7 @@ export function PetGrow({ from, to, mood, size, onDone }: PetGrowProps) {
     anim.start(({ finished }) => {
       if (!live || !finished || done.current) return;
       done.current = true;
+      setSettled(true);
       onDoneRef.current?.();
     });
 
@@ -209,7 +212,7 @@ export function PetGrow({ from, to, mood, size, onDone }: PetGrowProps) {
       <Animated.View style={[bodyStyles.mover, { width: size, height: size }]}>
         <Animated.View style={[bodyStyles.squash, { width: size, height: size }]}>
           <Animated.View style={{ transform: [{ translateX: shudderX }, { translateY: footY }, { scale }] }}>
-            <PetBadge key={stage} stage={stage} mood={mood} size={size} />
+            <PetBadge key={stage} stage={stage} mood={settled || mood !== 'celebrating' ? mood : 'idle'} size={size} />
           </Animated.View>
         </Animated.View>
       </Animated.View>

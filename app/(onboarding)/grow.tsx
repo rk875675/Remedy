@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,9 +33,14 @@ export default function GrowScreen() {
 
   // Someone who already has a pet on the server (or is retaking) skips this screen.
   const hasPet = retaking || (!!user && !!name && !progress?.pet_name);
+  const redirected = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      if (hasPet) router.replace('/(onboarding)/founder');
+      // Once only: this callback reruns when the router changes, and a second replace stacks founder twice.
+      if (hasPet && !redirected.current) {
+        redirected.current = true;
+        router.replace('/(onboarding)/founder');
+      }
     }, [hasPet, router]),
   );
 

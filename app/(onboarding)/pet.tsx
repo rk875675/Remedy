@@ -71,9 +71,14 @@ export default function PetScreen() {
 
   // Someone who already has a pet on the server (or is retaking) is never asked again.
   const hasPet = retaking || (!!user && !!petName && !progress?.pet_name);
+  const redirected = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      if (hasPet) router.replace('/(onboarding)/founder');
+      // Once only: this callback reruns when the router changes, and a second replace stacks founder twice.
+      if (hasPet && !redirected.current) {
+        redirected.current = true;
+        router.replace('/(onboarding)/founder');
+      }
     }, [hasPet, router]),
   );
 
