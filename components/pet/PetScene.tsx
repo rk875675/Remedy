@@ -18,8 +18,6 @@ import {
   PET_ANGRY,
   PET_COMING_BACK,
   PET_CURIOUS,
-  PET_DIZZY,
-  PET_DIZZY_UP,
   PET_EARLY_MORNING,
   PET_FORGIVEN,
   PET_GONE_BUBBLE,
@@ -30,18 +28,32 @@ import {
   PET_NAP_REFUSE,
   PET_NAP_UP,
   PET_NIGHT_UP,
+  PET_READING,
+  PET_READING_AWAY,
+  PET_READING_LOOKUP,
   PET_SAD,
   PET_SLEEP_HALF,
   PET_SLEEP_MUMBLE,
   PET_STARTLED,
   PET_STORM_OFF,
+  PET_STRETCHING,
+  PET_STRETCH_STOP,
   PET_WARN,
   PET_WOKEN_GRUMPY,
   pickPetLine,
 } from '../../constants/petMoodLines';
 import { hapticSelection } from '../../lib/haptics';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
-import { createPatience, petSleepReason, type SleepReason } from '../../lib/petTemper';
+import {
+  ANGRY_HOLD_MS,
+  createLadder,
+  createPatience,
+  ladderTap,
+  ladderTick,
+  petSleepReason,
+  type LadderAction,
+  type SleepReason,
+} from '../../lib/petTemper';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import { Dust, DUST_PALE, easedTimeAt, type DustHandle, type DustPoint } from './Dust';
 import { PetEmotes, type PetEmotesHandle } from './PetEmotes';
@@ -53,22 +65,26 @@ import {
   moveDance,
   moveDroop,
   moveHeadShake,
+  moveHoldStretch,
   moveHop,
   moveHuff,
   moveJumpSpin,
   moveLand,
   moveLookAround,
+  moveNod,
+  movePoseSwap,
   moveRock,
   moveShiver,
   moveSnore,
-  moveStagger,
   moveStartle,
   moveStomp,
+  moveSway,
   moveWeightShift,
   moveWiggle,
   petBodyStyles,
   restBody,
 } from './petMotion';
+import { usePetFace } from './usePetFace';
 
 type PetSceneProps = {
   topInset: number;
@@ -88,66 +104,99 @@ const POSE_GAP = 260;
 /** moveHop is on the ground after the crouch, the rise and the fall. */
 const HOP_LAND_MS = 410;
 const SAY_MS = 2800;
-/** After a meltdown, taps do not count toward patience for this long. */
+/** A tap-driven line never replaces the bubble more often than this. */
+const SAY_GAP_MS = 2000;
+const ANGRY_LINE_GAP_MS = 2500;
+/** At most one calm-tap reaction that changes the face in this long. */
+const FACE_REACT_GAP_MS = 6000;
+const HAPPY_HOLD_MS = 4000;
+const PROUD_HOLD_MS = 3000;
+/** After an emotional state ends, taps do not count toward patience for this long. */
 const GRACE_MS = 4000;
-const HIDE_MS = 8000;
-const GONE_MIN_MS = 5000;
-const GONE_SPREAD_MS = 2000;
-const SAD_AUTO_MS = 6500;
-const SAD_TAP_AFTER_MS = 1500;
-const LIE_DOWN_MS = 3500;
+/** Woken up grumpy: the face stays this long. */
+const GRUMPY_MIN_MS = 15000;
+const GRUMPY_SPREAD_MS = 5000;
+/** Storm off: gone, back turned, then sulking. */
+const GONE_MIN_MS = 15000;
+const GONE_SPREAD_MS = 10000;
+const PEEK_PHASE_MS = 3400;
+const BACK_TURNED_MS = 6000;
+const SULK_MIN_MS = 15000;
+const SULK_SPREAD_MS = 5000;
+/** After the angry hold, roughly half the time it turns sad instead of just calming down. */
+const SAD_CHANCE = 0.5;
+const SAD_MIN_MS = 15000;
+const SAD_SPREAD_MS = 5000;
+const SAD_TAP_AFTER_MS = 2500;
+/** Taps on a sleeper closer together than this count as one. */
+const STIR_GAP_MS = 1200;
+/** Things it gets up to on its own. */
+const ACTIVITY_CHANCE = 0.55;
+const ACTIVITY_MIN_MS = 60000;
+const ACTIVITY_SPREAD_MS = 90000;
+const REST_MIN_MS = 30000;
+const REST_SPREAD_MS = 60000;
+const ACTIVITY_LINE_MIN_MS = 20000;
+const ACTIVITY_LINE_SPREAD_MS = 20000;
+const LOOKED_UP_WINDOW_MS = 8000;
 /** Coming back to the tab after this long, a woken pet may fall asleep again. */
 const REENTER_MS = 10 * 60 * 1000;
+/** Back from the tab after this long, it may be up to something new. */
+const NEW_ACTIVITY_AWAY_MS = 60 * 1000;
 
 type IdleName = 'look' | 'shift' | 'stretch' | 'hop';
+type Activity = 'reading' | 'stretching';
+const ACTIVITIES: readonly Activity[] = ['reading', 'stretching'];
+// Not the same one twice running, even across visits to the tab.
+let lastActivityShown: Activity | null = null;
 
 /**
- * awake    up, ready to be tapped
- * asleep   lying down with Zs; taps stir it
- * annoyed  the warning (head shake)
- * angry    a scripted outburst or wake-up; taps are ignored
- * gone     rolled off screen
- * sulking  curled up, not listening
- * sad      drooping, waits for one gentle tap
+ * awake    up and ready; may be doing an activity
+ * asleep   in bed (night) or lying down (nap); taps stir it
+ * grumpy   just woken: angry face for 15-20 s
+ * angry    the spam ladder's second rung; held until it has been left alone
+ * gone     rolled off screen (or on its way)
+ * sulking  back from the storm, ignoring taps
+ * sad      hurt feelings; one gentle tap after a pause cheers it up
  */
-type Emo = 'awake' | 'asleep' | 'annoyed' | 'angry' | 'gone' | 'sulking' | 'sad';
-type Verdict = 'warn' | 'snap';
+type Emo = 'awake' | 'asleep' | 'grumpy' | 'angry' | 'gone' | 'sulking' | 'sad';
+type Pending = Exclude<LadderAction, 'none' | 'soften'>;
+const PENDING_RANK: Record<Pending, number> = { warn: 1, angry: 2, storm: 3 };
 type TapName =
   | 'roll'
   | 'jumpSpin'
   | 'stretch'
   | 'wiggle'
-  | 'proud'
-  | 'startle'
+  | 'dance'
   | 'lookAround'
+  | 'startle'
   | 'curlPeek'
-  | 'dance';
-type Meltdown = 'storm' | 'hide' | 'sad' | 'dizzy';
+  | 'happy'
+  | 'proud';
 /** One step of a script: a move to play, a wait in ms, or nothing (just do it). */
 type Step = () => Animated.CompositeAnimation | number | void;
 
-// Calm taps lean affectionate; the long roll is the rarest.
-const TAP_WEIGHTS: Record<TapName, number> = {
+// Movement-only reactions keep whatever face is showing. Calm taps lean affectionate.
+const MOVE_WEIGHTS: Record<'roll' | 'jumpSpin' | 'stretch' | 'wiggle' | 'dance' | 'lookAround' | 'startle' | 'curlPeek', number> = {
   roll: 1,
   jumpSpin: 2,
   stretch: 1,
-  wiggle: 3,
-  proud: 2,
-  startle: 1,
-  lookAround: 1,
-  curlPeek: 1.5,
+  wiggle: 2.5,
   dance: 2,
+  lookAround: 1,
+  startle: 0.8,
+  curlPeek: 1.2,
 };
-const MELTDOWN_WEIGHTS: Record<Meltdown, number> = { storm: 3, hide: 2, sad: 2.5, dizzy: 1.5 };
+const FACE_WEIGHTS: Record<'happy' | 'proud', number> = { happy: 3, proud: 1.2 };
 
 /** A random key by weight, never `avoid` (so the same thing never happens twice in a row). */
-function weightedPick<T extends string>(weights: Record<T, number>, avoid: T | null): T {
+function weightedPick<T extends string>(weights: Partial<Record<T, number>>, avoid: T | null): T {
   const all = Object.keys(weights) as T[];
-  const keys = all.filter((key) => weights[key] > 0 && key !== avoid);
-  const total = keys.reduce((sum, key) => sum + weights[key], 0);
+  const keys = all.filter((key) => (weights[key] ?? 0) > 0 && key !== avoid);
+  const total = keys.reduce((sum, key) => sum + (weights[key] ?? 0), 0);
   let r = Math.random() * total;
   for (const key of keys) {
-    r -= weights[key];
+    r -= weights[key] ?? 0;
     if (r <= 0) return key;
   }
   return keys[keys.length - 1] ?? (all[0] as T);
@@ -189,14 +238,14 @@ export function PetScene({
   const hillSize = width * 1.8;
   const petName = pet?.name ?? 'Your armadillo';
 
-  // --- The pet is alive: it rolls in, fidgets, sleeps, and has feelings when tapped. ---
+  // --- The pet is alive: it rolls in, fidgets, sleeps, reads, and has feelings when tapped. ---
   const reduceMotion = useReduceMotion();
   const hasPet = pet !== null;
   const [ready, setReady] = useState(false);
   const [curled, setCurled] = useState(false);
   const [says, setSays] = useState<string | null>(null);
-  // What the emotion shows on the pet's face, over the server's mood. null = the baseline.
-  const [face, setFace] = useState<PetMood | null>(null);
+  // Every face change goes through this controller (hold times, deferral, cleanup).
+  const { face, request: requestFace, current: faceNow } = usePetFace();
   const [flip, setFlip] = useState(false);
   const [sleeping, setSleeping] = useState(false);
   const [woken, setWoken] = useState(false);
@@ -207,9 +256,13 @@ export function PetScene({
   const interruptible = useRef(true);
   const mounted = useRef(true);
   const entered = useRef(false);
+  const decided = useRef(false);
   const seq = useRef(0);
   const seqTimers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const sayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deferTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const angryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const grumpyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const running = useRef<Animated.CompositeAnimation | null>(null);
   const lastIdle = useRef<IdleName | null>(null);
   const shiftDir = useRef<1 | -1>(1);
@@ -217,17 +270,28 @@ export function PetScene({
   const emotes = useRef<PetEmotesHandle>(null);
 
   const emo = useRef<Emo>('awake');
-  const pending = useRef<Verdict | null>(null);
+  const pending = useRef<Pending | null>(null);
   const patience = useRef(createPatience()).current;
+  const ladder = useRef(createLadder());
   const graceUntil = useRef(0);
+  const lockUntil = useRef(0);
   const lastTrick = useRef<TapName | null>(null);
-  const lastMelt = useRef<Meltdown | null>(null);
+  const lastFaceReact = useRef(0);
+  const lastSayAt = useRef(0);
+  const lastAngryLine = useRef(0);
+  const lastStirAt = useRef(0);
   const wokenRef = useRef(false);
   const sleepReason = useRef<SleepReason | null>(null);
   const stir = useRef(0);
   const napNeed = useRef(5);
   const sadSince = useRef(0);
   const awayAt = useRef<number | null>(null);
+  const activity = useRef<Activity | null>(null);
+  const lookedUpAt = useRef(0);
+  const nextActivityAt = useRef(Date.now() + 15000 + Math.random() * 30000);
+  type Storm = { goneUntil: number; backUntil: number; sulkUntil: number };
+  const storm = useRef<Storm | null>(null);
+  const stormPhase = useRef<'gone' | 'back' | 'sulk' | null>(null);
 
   // Curled up, the pet is drawn at 0.72 of its box, sitting on the bottom edge.
   const rollTravel = width * 0.36;
@@ -306,6 +370,7 @@ export function PetScene({
     const stage = live.current.stage;
     return stage > 1 ? petUnfurlMs(stage) : POSE_GAP;
   };
+  const still = (): boolean => live.current.reduce !== false;
 
   /** A timer that only fires if the script that set it is still the current one. */
   function later(id: number, fn: () => void, ms: number) {
@@ -316,8 +381,25 @@ export function PetScene({
     );
   }
 
-  function say(line: string, ms: number = SAY_MS) {
+  /** The speech bubble. A tap-driven line is dropped, not queued, if the last one is under 2 s old. */
+  function say(line: string, opts: { force?: boolean; defer?: boolean; ms?: number } = {}) {
     if (!mounted.current) return;
+    const now = Date.now();
+    const wait = SAY_GAP_MS - (now - lastSayAt.current);
+    if (!opts.force && wait > 0) {
+      // `defer`: say it once the bubble is free (the latest deferred line wins).
+      if (opts.defer) {
+        if (deferTimer.current) clearTimeout(deferTimer.current);
+        deferTimer.current = setTimeout(() => {
+          deferTimer.current = null;
+          say(line, { ...opts, force: true });
+        }, wait);
+      }
+      return;
+    }
+    if (deferTimer.current) clearTimeout(deferTimer.current);
+    deferTimer.current = null;
+    lastSayAt.current = now;
     setSays(line);
     if (sayTimer.current) clearTimeout(sayTimer.current);
     bubble.stopAnimation();
@@ -328,7 +410,7 @@ export function PetScene({
       Animated.timing(bubble, { toValue: 0, duration: 160, useNativeDriver: true }).start(({ finished }) => {
         if (finished && mounted.current) setSays(null);
       });
-    }, ms);
+    }, opts.ms ?? SAY_MS);
   }
 
   function playMove(anim: Animated.CompositeAnimation, onDone?: (finished: boolean) => void) {
@@ -344,6 +426,13 @@ export function PetScene({
     });
   }
 
+  function stopLoop() {
+    const prev = running.current;
+    running.current = null;
+    prev?.stop();
+    restBody(body);
+  }
+
   function rollTo(toValue: number, duration: number, easing: (t: number) => number) {
     return Animated.timing(roll, { toValue, duration, easing, useNativeDriver: true });
   }
@@ -357,23 +446,33 @@ export function PetScene({
     });
   }
 
+  function clearAngryTimer() {
+    if (angryTimer.current) clearTimeout(angryTimer.current);
+    angryTimer.current = null;
+  }
+
   /**
    * Start a new script: everything the last one had pending (moves, timers,
    * emotes) is cancelled, and its late callbacks can no longer change anything.
    * `safe` says the script may be cut off at any moment (no rolling or curling).
+   * An activity in progress is put away (its face goes back to the baseline).
    */
-  function begin(safe: boolean): number {
+  function begin(safe: boolean, keepFace = false): number {
     seq.current += 1;
     seqTimers.current.forEach(clearTimeout);
     seqTimers.current = [];
-    const prev = running.current;
-    running.current = null;
-    prev?.stop();
-    restBody(body);
+    clearAngryTimer();
+    stopLoop();
     emotes.current?.stop();
     busy.current = true;
     interruptible.current = safe;
     pending.current = null;
+    if (activity.current) {
+      activity.current = null;
+      lookedUpAt.current = 0;
+      nextActivityAt.current = Date.now() + REST_MIN_MS + Math.random() * REST_SPREAD_MS;
+      if (!keepFace) requestFace(null, { force: true });
+    }
     return seq.current;
   }
 
@@ -395,24 +494,26 @@ export function PetScene({
     } else next();
   }
 
-  /** Back to ordinary: awake, free, nothing on the pet's face. */
+  /** Back to ordinary: awake and free. (Faces are never reset here; the controller owns them.) */
   function endAwake(id: number) {
     if (id !== seq.current || !mounted.current) return;
     emo.current = 'awake';
     busy.current = false;
     interruptible.current = true;
-    setFace(null);
     setFlip(false);
     const waiting = pending.current;
     pending.current = null;
-    if (waiting === 'snap') doMeltdown();
-    else if (waiting === 'warn') doWarn();
+    if (waiting) fireAction(waiting);
   }
 
-  function finishMeltdown(id: number) {
+  /** An emotional state is over: patience and the ladder start from nothing. */
+  function finishCalm(id: number) {
     if (id !== seq.current) return;
     patience.reset();
+    ladder.current = createLadder();
     graceUntil.current = Date.now() + GRACE_MS;
+    storm.current = null;
+    stormPhase.current = null;
     endAwake(id);
   }
 
@@ -431,14 +532,20 @@ export function PetScene({
     return petSleepReason(new Date(), live.current.name ?? 'remedy-pet');
   }
 
+  /** Night: tucked into the bed drawing. The afternoon nap lies on the ground. */
+  function sleepFace(reason: SleepReason): PetMood {
+    return reason === 'nap' ? 'sleepy' : 'bed';
+  }
+
   function fallAsleep(reason: SleepReason) {
-    const id = begin(true);
+    const id = begin(true, true);
     sleepReason.current = reason;
     stir.current = 0;
+    lastStirAt.current = 0;
     napNeed.current = 5 + (Math.random() < 0.5 ? 1 : 0);
     emo.current = 'asleep';
-    if (live.current.reduce !== false) {
-      setFace('sleepy');
+    if (still()) {
+      requestFace(sleepFace(reason), { force: true });
       setSleeping(true);
       busy.current = false;
       return;
@@ -446,17 +553,15 @@ export function PetScene({
     runSteps(id, [
       () => 250,
       () => {
-        setFace('sleepy');
+        requestFace(sleepFace(reason), { force: true });
         setSleeping(true);
         return 700;
       },
-      () => {
-        busy.current = false;
-        return Animated.loop(moveSnore(body));
-      },
+      () => snoring(),
     ]);
   }
 
+  /** Awake and free to be put to bed: no tricks, no emotion running, not already woken. */
   function maybeSleep(force = false) {
     if (!entered.current || !mounted.current) return;
     if (emo.current !== 'awake' || busy.current) return;
@@ -476,6 +581,7 @@ export function PetScene({
     setSleeping(false);
     wokenRef.current = true;
     setWoken(true);
+    requestFace(null, { force: true });
     endAwake(id);
   }
 
@@ -485,8 +591,12 @@ export function PetScene({
   }
 
   function tapAsleep() {
-    // Mid curl-up gag: let it finish, it ends back in the ball's unfurled pose.
+    // Mid curl-up gag: let it finish.
     if (busy.current && !interruptible.current) return;
+    const now = Date.now();
+    // A burst of taps is one stir, so spamming cannot rush it out of bed.
+    if (now - lastStirAt.current < STIR_GAP_MS) return;
+    lastStirAt.current = now;
     const reason = sleepReason.current ?? 'night';
     stir.current += 1;
     const n = stir.current;
@@ -503,13 +613,13 @@ export function PetScene({
     // The nap pet's third refusal is to roll up and shut the world out.
     const ballTap = nap && n === 3;
     const id = begin(!ballTap);
-    if (live.current.reduce !== false) {
+    if (still()) {
       busy.current = false;
-      say(line);
+      say(line, { force: true });
       return;
     }
     if (!ballTap) {
-      say(line);
+      say(line, { force: true });
       runSteps(id, [
         () => (n % 2 === 0 ? moveRock(body, n % 4 === 0 ? 1 : -1) : moveShiver(body)),
         () => snoring(),
@@ -518,7 +628,7 @@ export function PetScene({
     }
     runSteps(id, [
       () => {
-        say(line);
+        say(line, { force: true });
         return moveShiver(body);
       },
       () => {
@@ -526,7 +636,7 @@ export function PetScene({
         return curlWait();
       },
       () => {
-        say(pickPetLine(PET_NAP_BALL));
+        say(pickPetLine(PET_NAP_BALL), { force: true });
         return 1100;
       },
       () => moveRock(body, 1),
@@ -541,46 +651,148 @@ export function PetScene({
   function wakeUp(reason: SleepReason) {
     const id = begin(true);
     const nap = reason === 'nap';
-    emo.current = 'angry';
+    emo.current = 'grumpy';
     setSleeping(false);
-    say(pickPetLine(nap ? PET_NAP_UP : PET_NIGHT_UP));
-    const settle = () => {
-      wokenRef.current = true;
-      setWoken(true);
-      setFace(null);
+    wokenRef.current = true;
+    setWoken(true);
+    // Out of bed (or off the ground) and scowling.
+    requestFace('angry', { force: true });
+    say(pickPetLine(nap ? PET_NAP_UP : PET_NIGHT_UP), { force: true });
+    const grumpy = () => {
+      busy.current = false;
+      interruptible.current = true;
+      if (grumpyTimer.current) clearTimeout(grumpyTimer.current);
+      grumpyTimer.current = setTimeout(() => {
+        grumpyTimer.current = null;
+        if (!mounted.current) return;
+        requestFace(null);
+        emo.current = 'awake';
+        patience.reset();
+        ladder.current = createLadder();
+        graceUntil.current = Date.now() + GRACE_MS;
+      }, GRUMPY_MIN_MS + Math.random() * GRUMPY_SPREAD_MS);
     };
-    if (live.current.reduce !== false) {
-      setFace('angry');
-      later(id, () => say(pickPetLine(PET_WOKEN_GRUMPY)), 1300);
-      later(id, settle, 3300);
-      later(id, () => finishMeltdown(id), 3700);
+    if (still()) {
+      later(id, () => say(pickPetLine(PET_WOKEN_GRUMPY), { force: true }), 1300);
+      later(id, grumpy, 1500);
       return;
     }
     runSteps(
       id,
       [
-        () => {
-          setFace('angry');
-          emotes.current?.play('vein');
-          return 450;
-        },
+        () => 450,
         () => moveStomp(body),
-        () => {
-          emotes.current?.play('steam');
-          return nap ? 500 : 300;
-        },
         () => (nap ? moveHuff(body) : undefined),
         () => {
-          say(pickPetLine(PET_WOKEN_GRUMPY));
-          return nap ? 1800 : 1100;
-        },
-        () => {
-          settle();
-          return 450;
+          say(pickPetLine(PET_WOKEN_GRUMPY), { force: true });
+          return nap ? 1500 : 900;
         },
       ],
-      () => finishMeltdown(id),
+      grumpy,
     );
+  }
+
+  /** Grumpy: no face change, a shiver if the body is free, a line now and then. */
+  function tapGrumpy(now: number) {
+    if (!still() && running.current === null && !busy.current) playMove(moveShiver(body));
+    if (now - lastAngryLine.current >= ANGRY_LINE_GAP_MS) {
+      lastAngryLine.current = now;
+      say(pickPetLine(PET_WOKEN_GRUMPY));
+    }
+  }
+
+  // ---- activities ----
+
+  /** It only gets up to things when it is standing around in a plain mood. */
+  function activityAllowed(): boolean {
+    const m = live.current.mood;
+    return (
+      live.current.stage > 1 &&
+      (m === 'idle' || m === 'ready') &&
+      emo.current === 'awake' &&
+      !busy.current &&
+      !activity.current &&
+      faceNow() === null &&
+      !curled
+    );
+  }
+
+  function pickActivity(): Activity {
+    const options = ACTIVITIES.filter((a) => a !== lastActivityShown);
+    return options[Math.floor(Math.random() * options.length)] ?? 'reading';
+  }
+
+  function activityLoop(kind: Activity): Animated.CompositeAnimation {
+    return Animated.loop(kind === 'reading' ? moveSway(body) : moveHoldStretch(body));
+  }
+
+  function scheduleActivityLine(id: number, kind: Activity) {
+    later(
+      id,
+      () => {
+        if (activity.current !== kind) return;
+        say(pickPetLine(kind === 'reading' ? PET_READING : PET_STRETCHING), { force: true });
+        scheduleActivityLine(id, kind);
+      },
+      ACTIVITY_LINE_MIN_MS + Math.random() * ACTIVITY_LINE_SPREAD_MS,
+    );
+  }
+
+  function startActivity(kind: Activity) {
+    const id = begin(true);
+    activity.current = kind;
+    lastActivityShown = kind;
+    lookedUpAt.current = 0;
+    requestFace(kind, { force: true });
+    if (still()) {
+      busy.current = false;
+    } else {
+      runSteps(id, [
+        () => 600,
+        () => {
+          busy.current = false;
+          return activityLoop(kind);
+        },
+      ]);
+    }
+    scheduleActivityLine(id, kind);
+    later(id, () => endActivity(id), ACTIVITY_MIN_MS + Math.random() * ACTIVITY_SPREAD_MS);
+  }
+
+  /** Its time is up: puts the book down or lets the stretch go, back to standing. */
+  function endActivity(id: number) {
+    if (id !== seq.current) return;
+    activity.current = null;
+    lookedUpAt.current = 0;
+    nextActivityAt.current = Date.now() + REST_MIN_MS + Math.random() * REST_SPREAD_MS;
+    stopLoop();
+    requestFace(null);
+    endAwake(id);
+  }
+
+  /** A calm tap during an activity. Reading: look up, then (soon) put the book away. */
+  function activityTap(now: number) {
+    const kind = activity.current;
+    if (!kind) return;
+    if (kind === 'reading' && now - lookedUpAt.current > LOOKED_UP_WINDOW_MS) {
+      lookedUpAt.current = now;
+      lockUntil.current = now + 900;
+      say(pickPetLine(PET_READING_LOOKUP), { force: true });
+      if (!still()) {
+        playMove(moveNod(body), (finished) => {
+          if (finished && activity.current === 'reading') playMove(activityLoop('reading'));
+        });
+      }
+      return;
+    }
+    const lines = kind === 'reading' ? PET_READING_AWAY : PET_STRETCH_STOP;
+    const id = begin(true);
+    say(pickPetLine(lines), { force: true });
+    if (still()) {
+      endAwake(id);
+      return;
+    }
+    runSteps(id, [() => 400, () => moveWiggle(body)], () => endAwake(id));
   }
 
   // ---- tap reactions when awake ----
@@ -639,7 +851,7 @@ export function PetScene({
   }
 
   function startRoll(speak: boolean) {
-    if (busy.current || emo.current !== 'awake' || live.current.rollTravel <= 0) return;
+    if (busy.current || emo.current !== 'awake' || activity.current || live.current.rollTravel <= 0) return;
     const id = begin(false);
     runSteps(
       id,
@@ -679,59 +891,13 @@ export function PetScene({
         run(true, [() => Animated.sequence([moveBigStretch(body), moveWiggle(body)])], trickLine);
         return;
       case 'wiggle':
-        run(
-          true,
-          [
-            () => {
-              emotes.current?.play('hearts');
-              return moveWiggle(body);
-            },
-          ],
-          happyLine,
-        );
-        return;
-      case 'proud':
-        run(
-          true,
-          [
-            () => {
-              setFace('proud');
-              emotes.current?.play('sparkle');
-              return 400;
-            },
-            () => moveHop(body, 0.6),
-            () => 500,
-            () => {
-              setFace(null);
-              return 400;
-            },
-          ],
-          happyLine,
-        );
+        run(true, [() => moveWiggle(body)], happyLine);
         return;
       case 'startle':
-        run(
-          true,
-          [
-            () => {
-              emotes.current?.play('bang');
-              return moveStartle(body);
-            },
-          ],
-          lineFrom(PET_STARTLED),
-        );
+        run(true, [() => moveStartle(body)], lineFrom(PET_STARTLED));
         return;
       case 'lookAround':
-        run(
-          true,
-          [
-            () => {
-              emotes.current?.play('question');
-              return moveLookAround(body);
-            },
-          ],
-          lineFrom(PET_CURIOUS),
-        );
+        run(true, [() => moveLookAround(body)], lineFrom(PET_CURIOUS));
         return;
       case 'curlPeek':
         run(
@@ -749,10 +915,7 @@ export function PetScene({
               setCurled(false);
               return unfurlWait();
             },
-            () => {
-              emotes.current?.play('hearts');
-              return moveWiggle(body);
-            },
+            () => moveWiggle(body),
           ],
           happyLine,
         );
@@ -762,16 +925,41 @@ export function PetScene({
           true,
           [
             () => moveDance(body),
-            () => {
-              emotes.current?.play('hearts');
-              return Animated.parallel([
+            () =>
+              Animated.parallel([
                 moveHop(body, 0.7),
                 Animated.sequence([
                   Animated.delay(HOP_LAND_MS),
                   call(() => dustAt([{ x: 0, delay: 0, size: 14 }])),
                 ]),
-              ]);
+              ]),
+          ],
+          happyLine,
+        );
+        return;
+      case 'happy':
+        // The hugging-itself drawing, held 4 s, then back on its own.
+        run(
+          true,
+          [
+            () => {
+              requestFace('happy', { hold: HAPPY_HOLD_MS, auto: true });
+              return 450;
             },
+            () => moveWiggle(body),
+          ],
+          happyLine,
+        );
+        return;
+      case 'proud':
+        run(
+          true,
+          [
+            () => {
+              requestFace('proud', { hold: PROUD_HOLD_MS, auto: true });
+              return 450;
+            },
+            () => moveHop(body, 0.6),
           ],
           happyLine,
         );
@@ -779,92 +967,183 @@ export function PetScene({
     }
   }
 
-  function happyTap() {
-    if (live.current.reduce !== false) {
+  /** One calm tap. Face-changing reactions are rare; the rest keep the current face. */
+  function happyTap(now: number) {
+    if (still()) {
       if (live.current.reduce === true) say(pickPetLine(PET_HAPPY, live.current.name));
       return;
     }
-    const weights = { ...TAP_WEIGHTS };
+    const faceOk = now - lastFaceReact.current >= FACE_REACT_GAP_MS && faceNow() === null;
+    const weights: Partial<Record<TapName, number>> = { ...MOVE_WEIGHTS };
     if (live.current.rollTravel <= 0) weights.roll = 0;
-    const pick = weightedPick(weights, lastTrick.current);
+    if (faceOk) Object.assign(weights, FACE_WEIGHTS);
+    const pick = weightedPick<TapName>(weights, lastTrick.current);
     lastTrick.current = pick;
+    if (pick === 'happy' || pick === 'proud') lastFaceReact.current = now;
     trick(pick);
   }
 
-  // ---- warning and meltdowns ----
+  // ---- the spam ladder: warn, angry, storm off ----
 
+  /** Rung 1: a warning. The face does not change. */
   function doWarn() {
-    const id = begin(true);
-    emo.current = 'annoyed';
-    say(pickPetLine(PET_WARN));
-    if (live.current.reduce !== false) {
-      setFace('angry');
-      later(id, () => setFace(null), 2400);
-      later(id, () => endAwake(id), 2800);
+    const kind = activity.current;
+    if (kind && !busy.current) {
+      // Keep the activity going; just shake the head and carry on.
+      lockUntil.current = Date.now() + 1300;
+      say(pickPetLine(PET_WARN), { defer: true });
+      if (still()) return;
+      const id = seq.current;
+      playMove(moveHeadShake(body), (finished) => {
+        if (finished && id === seq.current && activity.current === kind) playMove(activityLoop(kind));
+      });
       return;
     }
-    runSteps(
+    const id = begin(true);
+    say(pickPetLine(PET_WARN), { defer: true });
+    if (still()) {
+      later(id, () => endAwake(id), 900);
+      return;
+    }
+    runSteps(id, [() => moveHeadShake(body), () => 700], () => endAwake(id));
+  }
+
+  /** Rung 2: angry face, a stomp and a huff, a line. Held until it has been left alone. */
+  function enterAngry() {
+    const id = begin(true, true);
+    emo.current = 'angry';
+    requestFace('angry', { force: true });
+    lastAngryLine.current = Date.now();
+    say(pickPetLine(PET_ANGRY), { defer: true });
+    const hold = () => {
+      if (id !== seq.current) return;
+      busy.current = false;
+      interruptible.current = true;
+      scheduleAngryCheck();
+    };
+    if (still()) {
+      hold();
+      return;
+    }
+    runSteps(id, [() => 450, () => moveStomp(body), () => moveHuff(body)], hold);
+  }
+
+  /** Wakes up when angry has gone ANGRY_HOLD_MS without a tap. */
+  function scheduleAngryCheck() {
+    clearAngryTimer();
+    const wait = Math.max(250, ladder.current.lastTapAt + ANGRY_HOLD_MS - Date.now());
+    angryTimer.current = setTimeout(() => {
+      angryTimer.current = null;
+      if (!mounted.current || emo.current !== 'angry') return;
+      const step = ladderTick(ladder.current, Date.now());
+      ladder.current = step.state;
+      if (step.action === 'soften') soften();
+      else scheduleAngryCheck();
+    }, wait);
+  }
+
+  /** While angry: no face change, a shiver if the body is free, a line at most every 2.5 s. */
+  function angryTap(now: number) {
+    if (!still() && running.current === null && !busy.current) playMove(moveShiver(body));
+    if (now - lastAngryLine.current >= ANGRY_LINE_GAP_MS) {
+      lastAngryLine.current = now;
+      say(pickPetLine(PET_ANGRY));
+    }
+    scheduleAngryCheck();
+  }
+
+  /** Left alone long enough: sad about half the time, otherwise straight back to normal. */
+  function soften() {
+    const id = begin(true);
+    patience.reset();
+    ladder.current = createLadder();
+    if (Math.random() < SAD_CHANCE) {
+      getSad(id);
+      return;
+    }
+    emo.current = 'awake';
+    requestFace(null);
+    say(pickPetLine(PET_COMING_BACK), { defer: true });
+    if (still()) {
+      later(id, () => finishCalm(id), 600);
+      return;
+    }
+    runSteps(id, [() => 500, () => moveNod(body)], () => finishCalm(id));
+  }
+
+  /** Hurt feelings: the sad drawing for 15-20 s; one gentle tap after a pause cheers it up. */
+  function getSad(id: number) {
+    emo.current = 'sad';
+    sadSince.current = Date.now();
+    requestFace('sad', { force: true });
+    say(pickPetLine(PET_SAD), { defer: true });
+    if (!still()) {
+      runSteps(id, [() => 600, () => moveDroop(body), () => 4500, () => moveDroop(body)], () => {
+        if (id === seq.current) busy.current = false;
+      });
+    } else {
+      busy.current = false;
+    }
+    later(
       id,
-      [
-        () => {
-          setFace('stiff');
-          emotes.current?.play(Math.random() < 0.5 ? 'question' : 'vein');
-          return 350;
-        },
-        () => moveHeadShake(body),
-        () => 1000,
-        () => {
-          setFace(null);
-          return 400;
-        },
-      ],
-      () => endAwake(id),
+      () => {
+        emo.current = 'awake';
+        requestFace(null);
+        say(pickPetLine(PET_COMING_BACK), { defer: true });
+        later(id, () => finishCalm(id), 500);
+      },
+      SAD_MIN_MS + Math.random() * SAD_SPREAD_MS,
     );
   }
 
-  function doMeltdown() {
-    patience.reset();
-    graceUntil.current = Date.now() + 60000;
-    const stage = live.current.stage;
-    const weights = { ...MELTDOWN_WEIGHTS };
-    if (stage <= 1) weights.dizzy = 0;
-    if (live.current.rollTravel <= 0) weights.storm = 0;
-    const pick = weightedPick(weights, lastMelt.current);
-    lastMelt.current = pick;
-    if (live.current.reduce !== false) {
-      reducedMeltdown(pick === 'sad' || pick === 'dizzy');
+  function tapSad(now: number) {
+    if (now - sadSince.current < SAD_TAP_AFTER_MS) return;
+    cheerUp(now);
+  }
+
+  /** The gentle tap worked: the happy drawing held 4 s, a hop, a forgiving line. */
+  function cheerUp(now: number) {
+    const id = begin(true);
+    emo.current = 'awake';
+    lastFaceReact.current = now;
+    requestFace('happy', { force: true, hold: HAPPY_HOLD_MS, auto: true });
+    say(pickPetLine(PET_FORGIVEN), { defer: true });
+    if (still()) {
+      later(id, () => finishCalm(id), 600);
       return;
     }
-    if (pick === 'storm') stormOff();
-    else if (pick === 'hide') hideInBall();
-    else if (pick === 'sad') getSad();
-    else dizzyFlop();
+    runSteps(id, [() => 450, () => moveHop(body, 0.9)], () => finishCalm(id));
   }
 
-  /** Reduce Motion: a pose and a line for a few seconds, then back. */
-  function reducedMeltdown(sad: boolean) {
-    const id = begin(true);
-    emo.current = 'angry';
-    setFace(sad ? 'concerned' : 'angry');
-    say(pickPetLine(sad ? PET_SAD : PET_ANGRY));
-    later(id, () => {
-      setFace(null);
-      say(pickPetLine(sad ? PET_FORGIVEN : PET_COMING_BACK));
-    }, 3200);
-    later(id, () => finishMeltdown(id), 3700);
-  }
-
-  /** Angry, stomps, curls up and rolls off the side. Gone 5-7 s, then sneaks back. */
+  /** Rung 3: always curls up and rolls off. Gone 15-25 s, back turned 6 s, sulks 15-20 s. */
   function stormOff() {
-    const id = begin(false);
-    emo.current = 'angry';
+    const id = begin(false, true);
+    patience.reset();
+    ladder.current = createLadder();
+    // The pet is not there to tap from the moment it turns to go.
+    emo.current = 'gone';
+    const goneMs = GONE_MIN_MS + Math.random() * GONE_SPREAD_MS;
+    const sulkMs = SULK_MIN_MS + Math.random() * SULK_SPREAD_MS;
+    if (still() || live.current.rollTravel <= 0) {
+      // No rolling with Reduce Motion: it just stays angry and ignores you.
+      say(pickPetLine(PET_STORM_OFF), { defer: true });
+      later(id, () => {
+        emo.current = 'sulking';
+        emotes.current?.play('dots');
+      }, 600);
+      later(id, () => {
+        requestFace(null);
+        say(pickPetLine(PET_COMING_BACK), { defer: true });
+        later(id, () => finishCalm(id), 500);
+      }, 600 + sulkMs);
+      return;
+    }
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
     const travel = live.current.rollTravel;
     const w = live.current.width;
     const size = live.current.petSize;
     const off = (w / 2 + size * 0.75) / travel;
     const peek = (w / 2 + size * 0.1) / travel;
-    const goneMs = GONE_MIN_MS + Math.random() * GONE_SPREAD_MS;
     const exitEase = Easing.in(Easing.cubic);
     const exitMs = 700;
     const returnEase = Easing.out(Easing.cubic);
@@ -873,17 +1152,7 @@ export function PetScene({
       id,
       [
         () => {
-          setFace('angry');
-          emotes.current?.play('vein');
-          say(pickPetLine(PET_ANGRY));
-          return 450;
-        },
-        () => {
-          emotes.current?.play('steam');
-          return moveStomp(body);
-        },
-        () => {
-          say(pickPetLine(PET_STORM_OFF));
+          say(pickPetLine(PET_STORM_OFF), { defer: true });
           return 600;
         },
         () => Animated.sequence([squashTo(0.6, 90), squashTo(0, 60)]),
@@ -899,18 +1168,22 @@ export function PetScene({
             ),
           ]),
         () => {
-          emo.current = 'gone';
-          return 1800;
+          stormPhase.current = 'gone';
+          const now = Date.now();
+          const goneUntil = now + goneMs;
+          const backUntil = goneUntil + PEEK_PHASE_MS + returnMs + BACK_TURNED_MS;
+          storm.current = { goneUntil, backUntil, sulkUntil: backUntil + sulkMs };
+          return Math.round(goneMs * 0.45);
         },
         () => {
-          say(pickPetLine(PET_GONE_BUBBLE), 2600);
-          return goneMs - 1800;
+          say(pickPetLine(PET_GONE_BUBBLE), { force: true, ms: 2600 });
+          return Math.round(goneMs * 0.55);
         },
-        // A peek round the edge, then it thinks better of it.
+        // A peek round the edge, then it thinks better of it, then it comes back.
         () => rollTo(dir * peek, 900, Easing.out(Easing.quad)),
+        () => 700,
+        () => rollTo(dir * off, 450, Easing.in(Easing.quad)),
         () => 650,
-        () => rollTo(dir * off, 420, Easing.in(Easing.quad)),
-        () => 450,
         () =>
           Animated.parallel([
             rollTo(0, returnMs, returnEase),
@@ -921,187 +1194,121 @@ export function PetScene({
         () => moveLand(body, 0.8),
         () => moveRock(body, dir === 1 ? -1 : 1),
         () => 500,
-        // Unfurls with its back turned, scowling, and takes a while about it.
+        // Unfurls still angry, with its back turned.
         () => {
-          emo.current = 'angry';
+          emo.current = 'sulking';
           setFlip(true);
           setCurled(false);
           return unfurlWait();
         },
-        () => 1200,
-        () => {
-          setFace(null);
-          setFlip(false);
-          say(pickPetLine(PET_COMING_BACK));
-          return 450;
-        },
-        () => moveHop(body, 0.5),
+        ...stormTail(),
       ],
-      () => finishMeltdown(id),
+      () => finishCalm(id),
     );
   }
 
-  /** Curls up on the spot and stops listening. Taps are ignored (see tapSulk). */
-  function hideInBall() {
+  /** From "back turned" to the end; each wait is worked out from the clock when it starts. */
+  function stormTail(): Step[] {
+    return [
+      () => {
+        stormPhase.current = 'back';
+        return Math.max(0, (storm.current?.backUntil ?? 0) - Date.now());
+      },
+      // Turns round with a squash, still angry.
+      () => movePoseSwap(body, () => mounted.current && setFlip(false)),
+      () => {
+        stormPhase.current = 'sulk';
+        return Math.max(0, (storm.current?.sulkUntil ?? 0) - Date.now());
+      },
+      () => {
+        stormPhase.current = null;
+        requestFace(null);
+        say(pickPetLine(PET_COMING_BACK), { defer: true });
+        return 500;
+      },
+      () => moveHop(body, 0.5),
+    ];
+  }
+
+  /**
+   * Back on Home (or in the app) after a while: a storm that has run its course
+   * is not replayed. The pet is simply where it would be by now.
+   * Returns true when it took over.
+   */
+  function reconcileStorm(): boolean {
+    const tl = storm.current;
+    if (!tl || !stormPhase.current || !entered.current) return false;
+    const now = Date.now();
+    const phase = stormPhase.current;
+    if (phase === 'gone' && now < tl.goneUntil) return false;
+    if (phase === 'back' && now < tl.backUntil) return false;
+    if (phase === 'sulk' && now < tl.sulkUntil) return false;
     const id = begin(false);
-    emo.current = 'angry';
-    runSteps(
-      id,
-      [
-        () => {
-          setFace('angry');
-          emotes.current?.play('vein');
-          say(pickPetLine(PET_ANGRY));
-          return 450;
-        },
-        () => moveStomp(body),
-        () => Animated.sequence([squashTo(0.6, 90), squashTo(0, 60)]),
-        () => {
-          setCurled(true);
-          return curlWait();
-        },
-        () => {
-          emo.current = 'sulking';
-          emotes.current?.play('dots');
-          say(pickPetLine(PET_IGNORING));
-          return HIDE_MS;
-        },
-        // Comes out sad, not angry.
-        () => {
-          emo.current = 'angry';
-          setFace('concerned');
-          setCurled(false);
-          return unfurlWait();
-        },
-        () => {
-          emotes.current?.play('drop');
-          return moveDroop(body);
-        },
-        () => 900,
-        () => {
-          setFace(null);
-          say(pickPetLine(PET_COMING_BACK));
-          return 450;
-        },
-      ],
-      () => finishMeltdown(id),
-    );
+    roll.setValue(0);
+    setCurled(false);
+    emo.current = 'sulking';
+    if (now >= tl.sulkUntil) {
+      stormPhase.current = null;
+      setFlip(false);
+      requestFace(null, { force: true });
+      finishCalm(id);
+      return true;
+    }
+    setFlip(now < tl.backUntil);
+    const tail = stormTail();
+    // From the phase it should be in now, not from the top.
+    const from = now < tl.backUntil ? 0 : 2;
+    runSteps(id, [() => 200, ...tail.slice(from)], () => finishCalm(id));
+    return true;
   }
 
+  /** Sulking: it does not listen. A shiver, some dots, hardly ever a word. */
   function tapSulk() {
     const r = Math.random();
-    if (r < 0.3 && running.current === null) playMove(moveShiver(body));
-    else if (r < 0.65) emotes.current?.play('dots');
-    // Ignoring is the joke: most taps get no line at all.
-    if (r > 0.8) say(pickPetLine(PET_IGNORING), 1800);
-  }
-
-  /** No anger: it droops and waits for one gentle tap. */
-  function getSad() {
-    const id = begin(true);
-    emo.current = 'sad';
-    sadSince.current = Date.now();
-    runSteps(
-      id,
-      [
-        () => {
-          setFace('concerned');
-          say(pickPetLine(PET_SAD));
-          emotes.current?.play('drop');
-          return 400;
-        },
-        () => moveDroop(body),
-        () => 1500,
-        () => {
-          emotes.current?.play('drop');
-          return moveDroop(body);
-        },
-        () => SAD_AUTO_MS - 5000,
-      ],
-      () => cheerUp(),
-    );
-  }
-
-  function tapSad() {
-    if (Date.now() - sadSince.current < SAD_TAP_AFTER_MS) {
-      if (running.current === null) playMove(moveShiver(body));
-      return;
-    }
-    cheerUp();
-  }
-
-  function cheerUp() {
-    const id = begin(true);
-    emo.current = 'angry';
-    runSteps(
-      id,
-      [
-        () => {
-          setFace(null);
-          emotes.current?.play('hearts');
-          say(pickPetLine(PET_FORGIVEN));
-          return 450;
-        },
-        () => moveHop(body, 0.9),
-      ],
-      () => finishMeltdown(id),
-    );
-  }
-
-  /** Staggers, flops down for a minute, gets up. Stage 2 and up only (it needs the lying pose). */
-  function dizzyFlop() {
-    const id = begin(true);
-    emo.current = 'angry';
-    runSteps(
-      id,
-      [
-        () => {
-          say(pickPetLine(PET_DIZZY));
-          emotes.current?.play('question');
-          return moveStagger(body);
-        },
-        () => {
-          setFace('sleepy');
-          return LIE_DOWN_MS;
-        },
-        () => {
-          setFace(null);
-          return 450;
-        },
-        () => {
-          say(pickPetLine(PET_DIZZY_UP));
-          return moveHop(body, 0.5);
-        },
-      ],
-      () => finishMeltdown(id),
-    );
+    if (r < 0.25 && running.current === null && !still()) playMove(moveShiver(body));
+    else if (r < 0.7) emotes.current?.play('dots');
+    if (r > 0.85) say(pickPetLine(PET_IGNORING));
   }
 
   // ---- the tap ----
 
+  function fireAction(action: Pending) {
+    if (emo.current === 'awake' && busy.current && !interruptible.current) {
+      // Mid roll: wait until it is back on its feet.
+      const waiting = pending.current;
+      if (waiting === null || PENDING_RANK[action] > PENDING_RANK[waiting]) pending.current = action;
+      return;
+    }
+    if (action === 'warn') doWarn();
+    else if (action === 'angry') enterAngry();
+    else stormOff();
+  }
+
   function handleTap() {
     hapticSelection();
     if (live.current.reduce === null) return;
+    const now = Date.now();
     const state = emo.current;
     if (state === 'asleep') return tapAsleep();
+    if (state === 'gone') return;
     if (state === 'sulking') return tapSulk();
-    if (state === 'sad') return tapSad();
-    if (state === 'gone' || state === 'angry') return;
+    if (state === 'sad') return tapSad(now);
+    if (state === 'grumpy') return tapGrumpy(now);
 
-    const now = Date.now();
-    const verdict = now < graceUntil.current ? 'fine' : patience.tap(now);
-    if (verdict !== 'fine') {
-      if (state === 'awake' && busy.current && !interruptible.current) {
-        // Mid roll: wait until it is back on its feet.
-        if (verdict === 'snap' || pending.current === null) pending.current = verdict;
-        return;
-      }
-      if (verdict === 'snap') doMeltdown();
-      else doWarn();
+    // Awake or angry: every tap feeds the ladder, whatever else is going on.
+    const verdict =
+      ladder.current.phase === 'calm' && now >= graceUntil.current ? patience.tap(now) : 'fine';
+    const step = ladderTap(ladder.current, now, verdict);
+    ladder.current = step.state;
+    if (step.action === 'warn' || step.action === 'angry' || step.action === 'storm') {
+      fireAction(step.action);
       return;
     }
-    if (state !== 'awake' || busy.current) return;
-    happyTap();
+    if (state === 'angry') return angryTap(now);
+    // A reaction is already running or locked: extra taps do nothing more.
+    if (busy.current || now < lockUntil.current) return;
+    if (activity.current) return activityTap(now);
+    happyTap(now);
   }
 
   function nextIdle(): Animated.CompositeAnimation {
@@ -1128,6 +1335,8 @@ export function PetScene({
     returned: (_awayMs: number) => {},
     quietWake: () => {},
     sleep: () => {},
+    wander: () => {},
+    mood: () => {},
   });
   actions.current = {
     roll: startRoll,
@@ -1135,15 +1344,51 @@ export function PetScene({
     play: playMove,
     returned: (awayMs: number) => {
       if (!entered.current || live.current.reduce === null) return;
+      if (reconcileStorm()) return;
       if (emo.current === 'asleep') {
         if (!currentReason() || !sleepAllowed()) quietWake();
         return;
       }
-      if (wokenRef.current && awayMs < REENTER_MS) return;
-      maybeSleep(true);
+      if (emo.current !== 'awake' || busy.current) return;
+      if (!wokenRef.current || awayMs >= REENTER_MS) {
+        maybeSleep(true);
+        if (emo.current !== 'awake') return;
+      }
+      // Something new to be doing, now that it has been a while.
+      if (awayMs >= NEW_ACTIVITY_AWAY_MS && activityAllowed() && Math.random() < ACTIVITY_CHANCE) {
+        startActivity(pickActivity());
+      }
     },
     quietWake,
     sleep: maybeSleep,
+    // The slow clock: bedtime, a new activity, or a small fidget.
+    wander: () => {
+      if (emo.current !== 'awake' || busy.current) return;
+      maybeSleep();
+      if (emo.current !== 'awake' || busy.current || activity.current) return;
+      if (Date.now() >= nextActivityAt.current && activityAllowed()) {
+        if (Math.random() < 0.6) {
+          startActivity(pickActivity());
+        } else {
+          nextActivityAt.current = Date.now() + 30000 + Math.random() * 30000;
+        }
+        return;
+      }
+      if (still() || running.current !== null) return;
+      if (Math.random() < 0.1) actions.current.roll(false);
+      else actions.current.play(actions.current.idle());
+    },
+    // The server's mood changed: an activity does not outlast a mood it was only for in a plain one.
+    mood: () => {
+      const m = live.current.mood;
+      const plain = m === 'idle' || m === 'ready' || m === 'sleepy';
+      if (emo.current === 'asleep' && !plain) {
+        quietWake();
+      } else if (activity.current && !(m === 'idle' || m === 'ready')) {
+        const id = begin(true);
+        endAwake(id);
+      }
+    },
   };
 
   useEffect(() => {
@@ -1153,7 +1398,10 @@ export function PetScene({
       seq.current += 1;
       seqTimers.current.forEach(clearTimeout);
       seqTimers.current = [];
+      clearAngryTimer();
+      if (grumpyTimer.current) clearTimeout(grumpyTimer.current);
       if (sayTimer.current) clearTimeout(sayTimer.current);
+      if (deferTimer.current) clearTimeout(deferTimer.current);
       const current = running.current;
       running.current = null;
       current?.stop();
@@ -1161,7 +1409,7 @@ export function PetScene({
     };
   }, [bubble]);
 
-  // Leaving the tab and coming back (or the app) later: it may be time for bed.
+  // Leaving the tab and coming back (or the app) later: it may be time for bed, or something new.
   useFocusEffect(
     useCallback(() => {
       if (awayAt.current !== null) {
@@ -1187,12 +1435,9 @@ export function PetScene({
     return () => sub.remove();
   }, []);
 
-  // A session finished (or something else changed the mood) under a sleeper.
+  // A session finished (or something else changed the mood) under a sleeper or an activity.
   useEffect(() => {
-    if (emo.current !== 'asleep') return;
-    const m = live.current.mood;
-    if (m === 'idle' || m === 'ready' || m === 'sleepy') return;
-    actions.current.quietWake();
+    actions.current.mood();
   }, [mood]);
 
   // First appearance: mount the curled ball, then roll it in on the next commit
@@ -1208,7 +1453,13 @@ export function PetScene({
       }
       entered.current = true;
       if (!ready) setReady(true);
-      actions.current.sleep();
+      if (!decided.current) {
+        decided.current = true;
+        actions.current.sleep();
+        if (emo.current === 'awake' && activityAllowed() && Math.random() < ACTIVITY_CHANCE) {
+          startActivity(pickActivity());
+        }
+      }
       return;
     }
     if (!ready) {
@@ -1225,14 +1476,20 @@ export function PetScene({
       return;
     }
     entered.current = true;
+    decided.current = true;
     const past = ARRIVE_PAST / rollTravel;
     const ease = Easing.out(Easing.cubic);
     const rollMs = 880;
     dust.current?.play(
       legPuffs(ease, rollMs, ROLL_START, past, [-1.15, -0.72, -0.32, 0.02], rollTravel),
     );
-    // Asleep at arrival: roll in, unfurl, yawn, then lie down.
+    // What is it up to? Asleep in sleeping hours, otherwise often mid-activity.
     const sleepNow = !wokenRef.current && sleepAllowed() && currentReason() !== null;
+    const m = live.current.mood;
+    const doing: Activity | null =
+      !sleepNow && live.current.stage > 1 && (m === 'idle' || m === 'ready') && Math.random() < ACTIVITY_CHANCE
+        ? pickActivity()
+        : null;
     const id = begin(false);
     runSteps(
       id,
@@ -1248,21 +1505,24 @@ export function PetScene({
             Animated.delay(unfurlWait()),
             sleepNow
               ? moveBigStretch(body)
-              : Animated.parallel([
-                  moveHop(body, 0.6),
-                  Animated.sequence([
-                    Animated.delay(HOP_LAND_MS),
-                    call(() => {
-                      dust.current?.play([{ x: 0, delay: 0, size: 14 }]);
-                    }),
+              : doing
+                ? moveNod(body)
+                : Animated.parallel([
+                    moveHop(body, 0.6),
+                    Animated.sequence([
+                      Animated.delay(HOP_LAND_MS),
+                      call(() => {
+                        dust.current?.play([{ x: 0, delay: 0, size: 14 }]);
+                      }),
+                    ]),
                   ]),
-                ]),
           ]),
       ],
       () => {
         if (id !== seq.current) return;
         const reason = sleepNow ? currentReason() : null;
         if (reason) fallAsleep(reason);
+        else if (doing) startActivity(doing);
         else endAwake(id);
       },
     );
@@ -1270,18 +1530,15 @@ export function PetScene({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasPet, ready, reduceMotion, roll, rollTravel]);
 
-  // Left alone, it shifts about, and now and then goes for a roll on its own.
+  // The slow clock: now and then bedtime, a new activity, a fidget or a roll.
   useEffect(() => {
-    if (!ready || reduceMotion !== false) return;
+    if (!ready || reduceMotion === null) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let alive = true;
     const schedule = () => {
       timer = setTimeout(() => {
         if (!alive || !mounted.current) return;
-        if (emo.current === 'awake' && !busy.current && running.current === null) {
-          if (Math.random() < 0.1) actions.current.roll(false);
-          else actions.current.play(actions.current.idle());
-        }
+        actions.current.wander();
         if (alive) schedule();
       }, 6000 + Math.random() * 5000);
     };
@@ -1290,11 +1547,8 @@ export function PetScene({
       alive = false;
       if (timer) clearTimeout(timer);
       // A trick owns the body until it finishes. An idle fidget does not.
-      if (!busy.current && emo.current === 'awake') {
-        const current = running.current;
-        running.current = null;
-        current?.stop();
-        restBody(body);
+      if (!busy.current && emo.current === 'awake' && !activity.current) {
+        stopLoop();
       }
     };
   }, [ready, reduceMotion, body]);
@@ -1357,9 +1611,15 @@ export function PetScene({
                   </Animated.View>
                 </Animated.View>
               </Animated.View>
-              {/* Zs, steam, hearts: over the pet, never taking a touch. */}
+              {/* Zs while it sleeps and dots when it ignores you: over the pet, never taking a touch. */}
               <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: petSize, height: petSize }}>
-                <PetEmotes ref={emotes} size={petSize} zzz={sleeping} tone="light" />
+                <PetEmotes
+                  ref={emotes}
+                  size={petSize}
+                  zzz={sleeping}
+                  zzzAt={face === 'bed' && pet.stage > 1 ? 'bed' : 'head'}
+                  tone="light"
+                />
               </View>
             </Animated.View>
           </View>

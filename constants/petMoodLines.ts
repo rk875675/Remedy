@@ -139,7 +139,7 @@ export const PET_COMING_BACK = [
   'That was a lot. Let us start over.',
 ] as const;
 
-/** The sad meltdown. */
+/** Hurt feelings, after being angry. */
 export const PET_SAD = [
   'That hurt my feelings.',
   'I thought we were friends.',
@@ -185,19 +185,48 @@ export const PET_CURIOUS = [
   'Nothing. Just checking.',
 ] as const;
 
-/** The dizzy flop. */
-export const PET_DIZZY = [
-  'I need a minute.',
-  'Whoa. Need a minute.',
-  'Room is spinning. One minute.',
-  'Give me a minute. Or three.',
+/** Reading the book, now and then. */
+export const PET_READING = [
+  'It reads better this way.',
+  'Chapter three. No idea what is happening.',
+  'Do not tell me how it ends.',
+  'The plot is thickening. Or the book is upside down.',
+  'One more page. I said that ten pages ago.',
+  'The armadillo did it. I think.',
 ] as const;
 
-/** Up again after the flop. */
-export const PET_DIZZY_UP = [
-  'Okay. Better. Do not test me.',
-  'I am back. Slower this time.',
-  'Up. Steady. Mostly.',
+/** First tap while reading. */
+export const PET_READING_LOOKUP = [
+  'I am at a good part.',
+  'Mm? Hold on. Good part.',
+  'Shh. The butler is about to speak.',
+  'Yes? Quickly. I have a page to turn.',
+] as const;
+
+/** Second tap: the book goes away. */
+export const PET_READING_AWAY = [
+  'Fine. Bookmark. Bookmark.',
+  'Okay. Book away. I am all yours.',
+  'I will finish it later. Probably.',
+  'Closing it. Dramatically.',
+] as const;
+
+/** Holding a stretch, now and then. */
+export const PET_STRETCHING = [
+  'Reach. Hold. Do not pull anything.',
+  'Ahhh. That is the good one.',
+  'Arms up. Mind clear. Nearly.',
+  'I am as tall as I get.',
+  'Hold it. Count to five. I lost count.',
+  'Look how long I am.',
+] as const;
+
+/** A tap ends the stretch. */
+export const PET_STRETCH_STOP = [
+  'Okay, okay. Stretch over.',
+  'Mid-stretch. Rude. Fine.',
+  'And release.',
+  'That was a good one. Hi.',
 ] as const;
 
 const lastPicked = new Map<readonly string[], string>();

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -20,6 +20,7 @@ import {
 import { hapticSelection } from '../../lib/haptics';
 import { usePetName } from '../../lib/petNameCache';
 import { createPatience } from '../../lib/petTemper';
+import { usePetFace } from './usePetFace';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import { Dust, easedTimeAt, type DustHandle } from './Dust';
 import { PetBadge } from './PetBadge';
@@ -88,9 +89,17 @@ const DROP_FROM = -220;
 // The unfurl from the ball (see Pet.tsx) takes about this long.
 const POSE_WAIT_MS = PET_UNFURL_MS;
 const TALK_MS = 260;
-/** How long it sulks after being poked too much. */
-const SULK_MS = 3000;
+/** Angry is held at least this long, and until this long after the last tap. */
+const ANGRY_MIN_MS = 8000;
+const ANGRY_AFTER_TAP_MS = 4000;
+/** Taps while angry that send it into its ball, and how long it stays there. */
+const BALL_TAPS = 5;
+const BALL_MS = 8000;
 const GRACE_MS = 3000;
+const HAPPY_HOLD_MS = 3000;
+/** At most one reaction to a calm tap in this long; at most one face change in the longer one. */
+const REACT_GAP_MS = 2000;
+const FACE_REACT_GAP_MS = 6000;
 const outCubic = Easing.out(Easing.cubic);
 
 /**
@@ -123,15 +132,19 @@ export function PetSays({
   const pokeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pokeIndex = useRef(Math.floor(Math.random() * PET_POKE_LINES.length));
   const napping = asleep && poke === null;
-  // Temper: a face worn over the screen's own mood while it is annoyed or sulking.
-  const [moodOverride, setMoodOverride] = useState<PetMood | null>(null);
+  // Temper. Every face worn over the screen's own mood goes through one controller.
+  const { face, request: requestFace, current: faceNow } = usePetFace();
   const patience = useRef(createPatience()).current;
   const emotes = useRef<PetEmotesHandle>(null);
   const temperToken = useRef(0);
   const temperTimers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
-  const sulking = useRef(false);
+  const phase = useRef<'calm' | 'angry' | 'ball'>('calm');
   const graceUntil = useRef(0);
-  const lastSnap = useRef(-1);
+  const angrySince = useRef(0);
+  const lastAngryTap = useRef(0);
+  const angryTaps = useRef(0);
+  const lastReactAt = useRef(0);
+  const lastFaceReact = useRef(0);
   const spoken = fillPetLine(poke ?? line, { name });
 
   // Known Reduce Motion, or an entrance of none: show the pet and the line, still.
@@ -620,7 +633,7 @@ export function PetSays({
       timer = setTimeout(
         () => {
           if (stopped || !mounted.current) return;
-          if (!talkingRef.current && moveRef.current === null && !sulking.current) {
+          if (!talkingRef.current && moveRef.current === null && phase.current === 'calm') {
             let pick = Math.floor(Math.random() * 5);
             if (pick === lastIdle.current) pick = (pick + 1) % 5;
             lastIdle.current = pick;
@@ -683,92 +696,107 @@ export function PetSays({
     }, ms);
   }
 
+  /** Rung 1: a warning and a head shake. The face does not change. */
   function warnPoke() {
-    const id = beginTemper();
+    beginTemper();
     showPoke(pickPetLine(PET_WARN, name), 2200);
-    if (reduceRef.current !== false) {
-      setMoodOverride('angry');
-      temperLater(id, () => setMoodOverride(null), 2200);
-      return;
-    }
-    setMoodOverride('stiff');
-    emotes.current?.play(Math.random() < 0.5 ? 'question' : 'vein');
-    beginMoveRef.current(moveHeadShake(body));
-    temperLater(id, () => setMoodOverride(null), 1700);
+    if (reduceRef.current === false) beginMoveRef.current(moveHeadShake(body));
   }
 
-  /** Done sulking: its own mood and the screen's line come back. */
-  function endSulk(id: number) {
+  /** Back to normal: the screen's own mood and line, patience and grace reset. */
+  function endTemper(id: number) {
     if (id !== temperToken.current) return;
-    sulking.current = false;
-    setMoodOverride(null);
+    phase.current = 'calm';
+    requestFace(null);
     setCurled(false);
+    pokeOwnsLine.current = true;
     setPoke(null);
     patience.reset();
     graceUntil.current = Date.now() + GRACE_MS;
   }
 
+  /** Angry ends ANGRY_MIN_MS after it began or ANGRY_AFTER_TAP_MS after the last tap, whichever is later. */
+  function scheduleAngryEnd(id: number) {
+    const endAt = Math.max(
+      angrySince.current + ANGRY_MIN_MS,
+      lastAngryTap.current + ANGRY_AFTER_TAP_MS,
+    );
+    temperLater(
+      id,
+      () => {
+        const due = Math.max(
+          angrySince.current + ANGRY_MIN_MS,
+          lastAngryTap.current + ANGRY_AFTER_TAP_MS,
+        );
+        if (Date.now() < due) scheduleAngryEnd(id);
+        else endTemper(id);
+      },
+      Math.max(0, endAt - Date.now()),
+    );
+  }
+
+  /** Rung 2: the angry drawing, held at least 8 s, ignoring taps. */
   function snapPoke() {
     const id = beginTemper();
     patience.reset();
     graceUntil.current = Date.now() + 60000;
-    const moving = reduceRef.current === false;
-    // Angry (0) or into the ball (1); not the same twice. Stage 1 is already a ball.
-    let variant = moving && stage > 1 ? Math.round(Math.random()) : 0;
-    if (moving && stage > 1 && variant === lastSnap.current) variant = variant === 0 ? 1 : 0;
-    lastSnap.current = variant;
-    setMoodOverride('angry');
-    sulking.current = true;
-    if (!moving) {
-      showPoke(pickPetLine(PET_ANGRY, name), SULK_MS);
-      temperLater(id, () => endSulk(id), SULK_MS);
-      return;
-    }
-    emotes.current?.play('steam');
-    if (variant === 0) {
-      showPoke(pickPetLine(PET_ANGRY, name), SULK_MS + 400);
+    phase.current = 'angry';
+    angryTaps.current = 0;
+    angrySince.current = Date.now();
+    lastAngryTap.current = angrySince.current;
+    requestFace('angry', { force: true, hold: ANGRY_MIN_MS });
+    showPoke(pickPetLine(PET_ANGRY, name), 3000);
+    if (reduceRef.current === false) {
       beginMoveRef.current(Animated.sequence([moveStomp(body), moveHuff(body)]));
-      temperLater(id, () => endSulk(id), SULK_MS + 400);
-      return;
     }
-    showPoke(pickPetLine(PET_ANGRY, name), 1400);
-    beginMoveRef.current(moveStomp(body));
-    temperLater(id, () => setCurled(true), 700);
-    const curledAt = 700 + petCurlMs(stage);
-    temperLater(
-      id,
-      () => {
-        emotes.current?.play('dots');
-        showPoke(pickPetLine(PET_IGNORING, name), SULK_MS);
-      },
-      curledAt,
-    );
-    temperLater(
-      id,
-      () => {
-        setMoodOverride(null);
-        setCurled(false);
-      },
-      curledAt + SULK_MS,
-    );
-    temperLater(id, () => endSulk(id), curledAt + SULK_MS + petUnfurlMs(stage) + 200);
+    scheduleAngryEnd(id);
   }
 
-  /** Sulking: it does not listen. A shiver, some dots, hardly ever a word. */
-  function sulkTap() {
-    const r = Math.random();
-    if (r < 0.3 && moveRef.current === null && reduceRef.current === false) {
+  /** Rung 3: spamming an angry pet curls it into its ball for about 8 s. */
+  function curlUp() {
+    const id = beginTemper();
+    phase.current = 'ball';
+    showPoke(pickPetLine(PET_IGNORING, name), BALL_MS + petCurlMs(stage));
+    setCurled(true);
+    emotes.current?.play('dots');
+    temperLater(
+      id,
+      () => {
+        // Out of the ball in the screen's own mood.
+        requestFace(null);
+        setCurled(false);
+      },
+      petCurlMs(stage) + BALL_MS,
+    );
+    temperLater(id, () => endTemper(id), petCurlMs(stage) + BALL_MS + petUnfurlMs(stage) + 200);
+  }
+
+  /** Angry or in the ball: it does not listen. Dots, the odd shiver, no new face. */
+  function ignoreTap() {
+    const now = Date.now();
+    emotes.current?.play('dots');
+    if (phase.current === 'ball') {
+      if (Math.random() < 0.3 && moveRef.current === null && reduceRef.current === false) {
+        beginMoveRef.current(moveShiver(body));
+      }
+      return;
+    }
+    lastAngryTap.current = now;
+    angryTaps.current += 1;
+    if (reduceRef.current === false && stage > 1 && angryTaps.current >= BALL_TAPS) {
+      curlUp();
+      return;
+    }
+    if (Math.random() < 0.3 && moveRef.current === null && reduceRef.current === false) {
       beginMoveRef.current(moveShiver(body));
-    } else if (r < 0.7) {
-      emotes.current?.play('dots');
     }
   }
 
   function handlePoke() {
     hapticSelection();
     if (!asleep && enteredRef.current && reduceRef.current !== null) {
-      if (sulking.current) {
-        sulkTap();
+      if (phase.current !== 'calm') {
+        ignoreTap();
         return;
       }
       const now = Date.now();
@@ -781,6 +809,9 @@ export function PetSays({
         snapPoke();
         return;
       }
+      // A reaction is still going: more taps only feed patience.
+      if (now - lastReactAt.current < REACT_GAP_MS) return;
+      lastReactAt.current = now;
     }
     pokeOwnsLine.current = true;
     if (asleep) {
@@ -804,7 +835,18 @@ export function PetSays({
             ? moveWiggle(body)
             : moveHop(body, 1);
       beginMoveRef.current(move);
-      if (!asleep && (step === 1 || Math.random() < 0.3)) emotes.current?.play('hearts');
+      // Now and then the happy drawing, for 3 s; never more than once in 6 s.
+      const now = Date.now();
+      if (
+        !asleep &&
+        stage > 1 &&
+        faceNow() === null &&
+        now - lastFaceReact.current >= FACE_REACT_GAP_MS &&
+        Math.random() < 0.3
+      ) {
+        lastFaceReact.current = now;
+        requestFace('happy', { hold: HAPPY_HOLD_MS, auto: true });
+      }
     }
     if (pokeTimer.current) clearTimeout(pokeTimer.current);
     pokeTimer.current = setTimeout(() => {
@@ -812,7 +854,7 @@ export function PetSays({
     }, POKE_MS);
   }
 
-  const shownMood: PetMood = napping ? 'sleepy' : asleep ? 'ready' : (moodOverride ?? mood);
+  const shownMood: PetMood = napping ? 'sleepy' : asleep ? 'ready' : (face ?? mood);
   const badgeStage: PetStage = curled ? 1 : stage;
   const badgeMood: PetMood = curled ? 'ready' : shownMood;
   const tag = name && name.trim() ? name.trim() : null;

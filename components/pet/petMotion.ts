@@ -365,16 +365,20 @@ export function moveDance(body: PetBody): Animated.CompositeAnimation {
   ]);
 }
 
-/** Dizzy: lurches one way, then the other, wider and slower, and sags. */
-export function moveStagger(body: PetBody): Animated.CompositeAnimation {
-  const lean = (tilt: number, shake: number, ms: number) =>
-    Animated.parallel([to(body.tilt, tilt, ms, smooth), to(body.shake, shake, ms, smooth)]);
+/** Reading: a slow, gentle sway from side to side. Loop it. */
+export function moveSway(body: PetBody): Animated.CompositeAnimation {
   return Animated.sequence([
-    lean(0.9, 0.6, 220),
-    lean(-1, -0.8, 300),
-    lean(0.7, 0.8, 280),
-    lean(-0.5, -0.5, 260),
-    to(body.squash, 0.5, 160),
-    Animated.parallel([to(body.tilt, 0, 220, smooth), to(body.shake, 0, 220, smooth), settle(body.squash, 6)]),
+    to(body.tilt, 0.28, 2200, smooth),
+    to(body.tilt, -0.28, 2600, smooth),
+    to(body.tilt, 0, 1200, smooth),
+  ]);
+}
+
+/** Holding a stretch: slowly reaches a touch higher, eases back, and leans. Loop it. */
+export function moveHoldStretch(body: PetBody): Animated.CompositeAnimation {
+  return Animated.sequence([
+    Animated.parallel([to(body.squash, -0.16, 1700, smooth), to(body.tilt, 0.15, 1700, smooth)]),
+    Animated.parallel([to(body.squash, -0.04, 1900, smooth), to(body.tilt, -0.15, 1900, smooth)]),
+    Animated.parallel([to(body.squash, 0, 800, smooth), to(body.tilt, 0, 800, smooth)]),
   ]);
 }

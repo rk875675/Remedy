@@ -4,6 +4,7 @@ import {
   Dimensions,
   Easing,
   PanResponder,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,11 +13,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WarmBackground } from '../../components/onboarding/WarmBackground';
-import { OptionCard } from '../../components/onboarding/OptionCard';
 import { ContinueButton } from '../../components/onboarding/ContinueButton';
 import { PersonalizingLayout } from '../../components/onboarding/PersonalizingLayout';
 import { useOnboarding, useTrackOnboardingStep } from '../../context/OnboardingContext';
 import { colors } from '../../constants/colors';
+import { radius } from '../../constants/spacing';
+import { shadows } from '../../constants/shadows';
 import { fillPetLine, PET_Q8, type PetSay } from '../../constants/petOnboardingLines';
 import { type } from '../../constants/typography';
 import { onboardingOptionSelected } from '../../lib/analytics/events/onboarding';
@@ -273,8 +275,9 @@ function DaySlider({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
+      // Sideways belongs to the slider; a mostly vertical drag is the page scrolling.
+      onPanResponderTerminationRequest: (_e, g) => Math.abs(g.dy) > Math.abs(g.dx),
+      onShouldBlockNativeResponder: () => false,
       onPanResponderGrant: () => {
         dragged.current = false;
       },
@@ -372,6 +375,52 @@ function DaySlider({
       </View>
       <Text style={styles.sliderCaption}>Slide or tap a number</Text>
     </View>
+  );
+}
+
+/** One of three equal tiles in a row; the look of OptionCard, in less room. */
+function MinuteTile({
+  opt,
+  selected,
+  recommended,
+  onPress,
+}: {
+  opt: (typeof MINUTE_OPTIONS)[number];
+  selected: boolean;
+  recommended: boolean;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const figure = opt.value >= 30 ? '30+' : String(opt.value);
+  return (
+    <Animated.View style={[styles.minuteSlot, { transform: [{ scale }] }]}>
+      <Pressable
+        style={[styles.minuteTile, selected && styles.minuteTileSelected]}
+        onPress={() => {
+          hapticSelection();
+          onPress();
+        }}
+        onPressIn={() =>
+          Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start()
+        }
+        onPressOut={() =>
+          Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 8 }).start()
+        }
+        accessibilityRole="button"
+        accessibilityLabel={recommended ? `${opt.label}, recommended for you` : opt.label}
+        accessibilityState={{ selected }}
+      >
+        <Text style={[styles.minuteFigure, selected && styles.minuteFigureSelected]}>{figure}</Text>
+        <Text style={[styles.minuteUnit, selected && styles.minuteUnitSelected]}>min</Text>
+      </Pressable>
+      {recommended ? (
+        <View pointerEvents="none" style={styles.minuteTag}>
+          <Text allowFontScaling={false} style={styles.minuteTagText}>
+            Recommended
+          </Text>
+        </View>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -479,30 +528,26 @@ export default function Q8Screen() {
             How much time do you have each day?
           </Text>
 
-          <View style={styles.options}>
+          <View style={styles.minuteRow}>
             {MINUTE_OPTIONS.map((opt) => (
-              <OptionCard
+              <MinuteTile
                 key={opt.value}
-                label={opt.label}
-                subtitle={
-                  opt.value === RECOMMENDED_MINUTES ? 'Recommended for you' : undefined
-                }
+                opt={opt}
                 selected={minutes === opt.value}
+                recommended={opt.value === RECOMMENDED_MINUTES}
                 onPress={() => handleMinutes(opt)}
               />
             ))}
           </View>
 
           <View style={styles.daysBlock}>
-            <View style={styles.daysCluster}>
-              <Text style={styles.subheading}>How many days per week?</Text>
+            <Text style={styles.subheading}>How many days per week?</Text>
 
-              <DaySlider
-                selected={selectedDays}
-                recommended={suggested}
-                onSelect={selectDay}
-              />
-            </View>
+            <DaySlider
+              selected={selectedDays}
+              recommended={suggested}
+              onSelect={selectDay}
+            />
           </View>
         </ScrollView>
       </PersonalizingLayout>
@@ -524,39 +569,87 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
+  // The gap keeps the last thing on the page clear of the Continue button.
   scroll: {
     flex: 1,
+    marginBottom: 12,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'flex-start',
     paddingTop: 4,
-    paddingBottom: 8,
+    paddingBottom: 16,
   },
   heading: {
     ...type.question,
     color: colors.textPrimary,
-    marginBottom: 20,
+    marginBottom: 14,
   },
-  options: {
-    gap: 12,
+  // Room above the tiles for the tag that sits on the recommended one's top edge.
+  minuteRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 10,
+  },
+  minuteSlot: {
+    flex: 1,
+  },
+  minuteTile: {
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.button,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  minuteTileSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+    ...shadows.low,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.12,
+  },
+  minuteFigure: {
+    fontSize: 26,
+    fontWeight: '600',
+    lineHeight: 30,
+    color: colors.textPrimary,
+  },
+  minuteFigureSelected: {
+    color: colors.primaryDeep,
+  },
+  minuteUnit: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  minuteUnitSelected: {
+    color: colors.primary,
+  },
+  minuteTag: {
+    position: 'absolute',
+    top: -9,
+    alignSelf: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radius.chip,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  minuteTagText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   daysBlock: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    marginTop: 8,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  daysCluster: {
-    position: 'relative',
+    marginTop: 28,
   },
   subheading: {
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.2,
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   slider: {
     position: 'relative',

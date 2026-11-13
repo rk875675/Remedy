@@ -6,26 +6,16 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 
 /**
- * Small marks that float around the pet's head: Zs, steam, an anger mark, a
- * tear, hearts. Monochrome glyphs and shapes, no emoji. Fill the pet's box with
- * it (it is absolutely positioned and never takes touches) and call
- * `ref.play(kind)`. `zzz` loops while asleep. With Reduce Motion on, a mark is
- * shown still for a moment instead of moving.
+ * The only two marks the pet wears: Zs drifting up while it sleeps, and three
+ * dots when it is ignoring you. Feelings themselves are shown by the drawings.
+ * Fill the pet's box with it (it is absolutely positioned and never takes
+ * touches). With Reduce Motion on, the marks do not move.
  */
-export type EmoteKind =
-  | 'zzz'
-  | 'steam'
-  | 'vein'
-  | 'bang'
-  | 'drop'
-  | 'hearts'
-  | 'sparkle'
-  | 'question'
-  | 'dots';
+export type EmoteKind = 'dots';
 
 export type PetEmotesHandle = {
   play: (kind: EmoteKind) => void;
@@ -37,262 +27,31 @@ type PetEmotesProps = {
   size: number;
   /** Floating Zs for as long as this is true. */
   zzz?: boolean;
+  /** Where the Zs rise from: over the head, or over the pillow end of the bed drawing. */
+  zzzAt?: 'head' | 'bed';
   /** `light` on the green hill, `dark` on the tan page. */
   tone?: 'light' | 'dark';
 };
 
-type OneShot = Exclude<EmoteKind, 'zzz'>;
-type Shape = 'text' | 'puff' | 'drop' | 'vein' | 'dot';
-type Slot = 'main' | 'soft';
-
-type Piece = {
-  key: string;
-  shape: Shape;
-  glyph?: string;
-  x: number;
-  y: number;
-  dim: number;
-  slot: Slot;
-  motion: Animated.WithAnimatedValue<ViewStyle>;
-};
-
 const TONES = {
-  light: { main: '#FFFFFF', soft: '#F6EDE0', puff: 'rgba(246, 237, 224, 0.85)' },
-  dark: { main: '#AE5636', soft: '#AE5636', puff: 'rgba(174, 86, 54, 0.45)' },
+  light: { main: '#FFFFFF' },
+  dark: { main: '#AE5636' },
 } as const;
 
-const DURATION_MS: Record<OneShot, number> = {
-  steam: 1100,
-  vein: 900,
-  bang: 800,
-  drop: 1300,
-  hearts: 1500,
-  sparkle: 1000,
-  question: 1300,
-  dots: 1500,
-};
+const DOTS_MS = 1500;
 const STILL_MS = 1400;
-const ZZZ_ONCE_MS = 3600;
-
-function buildPieces(burst: Animated.Value, size: number): Record<OneShot, Piece[]> {
-  const u = Math.max(0.55, size / 220);
-  const ax = size * 0.6;
-  const ay = size * 0.26;
-  const ramp = (inputRange: number[], outputRange: number[]) =>
-    burst.interpolate({ inputRange, outputRange, extrapolate: 'clamp' });
-  const deg = (inputRange: number[], outputRange: string[]) =>
-    burst.interpolate({ inputRange, outputRange, extrapolate: 'clamp' });
-
-  const steam: Piece[] = [0, 1, 2].map((i) => {
-    const s = i * 0.1;
-    const dim = (13 + (i % 2) * 5) * u;
-    return {
-      key: `steam-${i}`,
-      shape: 'puff',
-      x: ax + (i - 1) * 16 * u - dim / 2,
-      y: ay,
-      dim,
-      slot: 'main',
-      motion: {
-        opacity: ramp([0, s, s + 0.12, 0.7, 1], [0, 0, 0.9, 0.5, 0]),
-        transform: [
-          { translateX: ramp([s, 1], [0, (i - 1) * size * 0.1]) },
-          { translateY: ramp([s, 1], [0, -size * (0.2 + i * 0.04)]) },
-          { scale: ramp([s, 1], [0.4, 1.6]) },
-        ],
-      },
-    };
-  });
-
-  const vein: Piece[] = [
-    {
-      key: 'vein',
-      shape: 'vein',
-      x: ax + size * 0.08,
-      y: ay - size * 0.12,
-      dim: 22 * u,
-      slot: 'main',
-      motion: {
-        opacity: ramp([0, 0.05, 0.8, 1], [0, 1, 1, 0]),
-        transform: [
-          { scale: ramp([0, 0.15, 0.3, 1], [0, 1.4, 1, 1]) },
-          { rotate: deg([0, 0.3, 0.4, 0.5, 0.6, 0.7, 1], ['0deg', '-10deg', '10deg', '-8deg', '8deg', '0deg', '0deg']) },
-        ],
-      },
-    },
-  ];
-
-  const bang: Piece[] = [
-    {
-      key: 'bang',
-      shape: 'text',
-      glyph: '!',
-      x: ax + size * 0.04,
-      y: ay - size * 0.2,
-      dim: 38 * u,
-      slot: 'main',
-      motion: {
-        opacity: ramp([0, 0.1, 0.75, 1], [0, 1, 1, 0]),
-        transform: [
-          { scale: ramp([0, 0.2, 0.3, 1], [0, 1.5, 1, 1]) },
-          { translateY: ramp([0, 0.3, 1], [0, -4 * u, -10 * u]) },
-        ],
-      },
-    },
-  ];
-
-  const drop: Piece[] = [
-    {
-      key: 'drop',
-      shape: 'drop',
-      x: ax + size * 0.1,
-      y: ay + size * 0.04,
-      dim: 10 * u,
-      slot: 'main',
-      motion: {
-        opacity: ramp([0, 0.12, 0.75, 1], [0, 1, 1, 0]),
-        transform: [
-          { translateY: ramp([0, 1], [0, size * 0.17]) },
-          { scale: ramp([0, 0.2, 1], [0.4, 1, 1]) },
-        ],
-      },
-    },
-  ];
-
-  const hearts: Piece[] = [0, 1, 2].map((i) => {
-    const s = i * 0.18;
-    return {
-      key: `heart-${i}`,
-      shape: 'text',
-      glyph: '\u2661',
-      x: ax + [-0.08, 0.1, 0.01][i]! * size,
-      y: ay,
-      dim: (22 + i * 3) * u,
-      slot: 'soft',
-      motion: {
-        opacity: ramp([0, s, s + 0.12, 0.7, 1], [0, 0, 1, 1, 0]),
-        transform: [
-          { translateY: ramp([s, 1], [0, -size * 0.3]) },
-          { translateX: ramp([s, s + 0.4, 1], [0, (i % 2 ? 6 : -6) * u, 0]) },
-          { scale: ramp([s, s + 0.2, 1], [0.4, 1, 1]) },
-        ],
-      },
-    };
-  });
-
-  const sparkle: Piece[] = [0, 1].map((i) => {
-    const s = i * 0.25;
-    return {
-      key: `sparkle-${i}`,
-      shape: 'text',
-      glyph: '\u2726',
-      x: ax + (i === 0 ? -0.05 : 0.12) * size,
-      y: ay - (i === 0 ? 0.08 : 0.02) * size,
-      dim: (i === 0 ? 24 : 16) * u,
-      slot: 'soft',
-      motion: {
-        opacity: ramp([0, s, s + 0.1, s + 0.5, 1], [0, 0, 1, 0, 0]),
-        transform: [
-          { scale: ramp([0, s, s + 0.2, s + 0.5, 1], [0, 0, 1.2, 0, 0]) },
-          { rotate: deg([0, s, s + 0.5, 1], ['0deg', '0deg', '90deg', '90deg']) },
-        ],
-      },
-    };
-  });
-
-  const question: Piece[] = [
-    {
-      key: 'question',
-      shape: 'text',
-      glyph: '?',
-      x: ax + size * 0.04,
-      y: ay - size * 0.2,
-      dim: 38 * u,
-      slot: 'main',
-      motion: {
-        opacity: ramp([0, 0.1, 0.8, 1], [0, 1, 1, 0]),
-        transform: [
-          { scale: ramp([0, 0.2, 1], [0, 1.2, 1]) },
-          { rotate: deg([0, 0.3, 0.5, 0.7, 1], ['0deg', '-12deg', '10deg', '-6deg', '0deg']) },
-          { translateY: ramp([0, 1], [0, -8 * u]) },
-        ],
-      },
-    },
-  ];
-
-  const dots: Piece[] = [0, 1, 2].map((i) => {
-    const s = 0.1 + i * 0.2;
-    const dim = 7 * u;
-    return {
-      key: `dot-${i}`,
-      shape: 'dot',
-      x: ax + (i - 1) * 14 * u - dim / 2 + size * 0.05,
-      y: ay - size * 0.1,
-      dim,
-      slot: 'main',
-      motion: {
-        opacity: ramp([0, s, s + 0.06, 0.85, 1], [0, 0, 1, 1, 0]),
-        transform: [{ translateY: ramp([s, s + 0.1, s + 0.2], [0, -4 * u, 0]) }],
-      },
-    };
-  });
-
-  return { steam, vein, bang, drop, hearts, sparkle, question, dots };
-}
-
-/** The mark itself, drawn from Views and a glyph. */
-function Mark({ piece, color, puff }: { piece: Piece; color: string; puff: string }) {
-  const { dim } = piece;
-  if (piece.shape === 'puff') {
-    return <View style={{ width: dim, height: dim, borderRadius: dim / 2, backgroundColor: puff }} />;
-  }
-  if (piece.shape === 'dot') {
-    return <View style={{ width: dim, height: dim, borderRadius: dim / 2, backgroundColor: color }} />;
-  }
-  if (piece.shape === 'drop') {
-    return (
-      <View
-        style={{
-          width: dim,
-          height: dim,
-          borderRadius: dim / 2,
-          borderTopRightRadius: 0,
-          backgroundColor: color,
-          transform: [{ rotate: '-45deg' }],
-        }}
-      />
-    );
-  }
-  if (piece.shape === 'vein') {
-    // Four short arcs round an empty middle: the anger mark.
-    const a = dim * 0.42;
-    const t = Math.max(2, dim * 0.13);
-    const arc = { position: 'absolute' as const, width: a, height: a, borderColor: color };
-    return (
-      <View style={{ width: dim, height: dim }}>
-        <View style={[arc, { top: 0, left: 0, borderRightWidth: t, borderBottomWidth: t, borderBottomRightRadius: a }]} />
-        <View style={[arc, { top: 0, right: 0, borderLeftWidth: t, borderBottomWidth: t, borderBottomLeftRadius: a }]} />
-        <View style={[arc, { bottom: 0, left: 0, borderRightWidth: t, borderTopWidth: t, borderTopRightRadius: a }]} />
-        <View style={[arc, { bottom: 0, right: 0, borderLeftWidth: t, borderTopWidth: t, borderTopLeftRadius: a }]} />
-      </View>
-    );
-  }
-  return (
-    <Text style={{ fontSize: dim, lineHeight: dim * 1.15, fontWeight: '900', color }} allowFontScaling={false}>
-      {piece.glyph}
-    </Text>
-  );
-}
 
 /** Zs drifting up while the pet sleeps. */
 function ZzzLayer({
   size,
   animate,
   color,
+  at,
 }: {
   size: number;
   animate: boolean;
   color: string;
+  at: 'head' | 'bed';
 }) {
   const values = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
   const u = Math.max(0.55, size / 220);
@@ -332,10 +91,13 @@ function ZzzLayer({
     };
   }, [animate, values]);
 
+  // The bed drawing lies with its head at the pillow end, low and to the left.
+  const left = at === 'bed' ? size * 0.3 : size * 0.62;
+  const top = at === 'bed' ? size * 0.2 : size * 0.16;
   return (
     <View
       pointerEvents="none"
-      style={{ position: 'absolute', left: size * 0.62, top: size * 0.16, flexDirection: 'row', alignItems: 'flex-end' }}
+      style={{ position: 'absolute', left, top, flexDirection: 'row', alignItems: 'flex-end' }}
     >
       {values.map((value, i) => (
         <Animated.Text
@@ -354,7 +116,7 @@ function ZzzLayer({
 }
 
 export const PetEmotes = forwardRef<PetEmotesHandle, PetEmotesProps>(function PetEmotes(
-  { size, zzz = false, tone = 'light' },
+  { size, zzz = false, zzzAt = 'head', tone = 'light' },
   ref,
 ) {
   const reduceMotion = useReduceMotion();
@@ -363,13 +125,34 @@ export const PetEmotes = forwardRef<PetEmotesHandle, PetEmotesProps>(function Pe
   stillRef.current = still;
   const mounted = useRef(true);
   const burst = useRef(new Animated.Value(0)).current;
-  const pieces = useMemo(() => buildPieces(burst, size), [burst, size]);
-  const [shown, setShown] = useState<{ kind: OneShot; id: number } | null>(null);
-  const [zzzOnce, setZzzOnce] = useState(false);
+  const u = Math.max(0.55, size / 220);
+  const dotLooks = useMemo(
+    () =>
+      [0, 1, 2].map((i) => {
+        const s = 0.1 + i * 0.2;
+        return {
+          opacity: burst.interpolate({
+            inputRange: [0, s, s + 0.06, 0.85, 1],
+            outputRange: [0, 0, 1, 1, 0],
+            extrapolate: 'clamp',
+          }),
+          transform: [
+            {
+              translateY: burst.interpolate({
+                inputRange: [s, s + 0.1, s + 0.2],
+                outputRange: [0, -4 * u, 0],
+                extrapolate: 'clamp',
+              }),
+            },
+          ],
+        };
+      }),
+    [burst, u],
+  );
+  const [dots, setDots] = useState<number | null>(null);
   const counter = useRef(0);
   const stillTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const zzzTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const colors = TONES[tone];
+  const color = TONES[tone].main;
 
   function clearStillTimer() {
     if (stillTimer.current) clearTimeout(stillTimer.current);
@@ -379,26 +162,14 @@ export const PetEmotes = forwardRef<PetEmotesHandle, PetEmotesProps>(function Pe
   useImperativeHandle(
     ref,
     () => ({
-      play(kind) {
+      play() {
         if (!mounted.current) return;
-        if (kind === 'zzz') {
-          setZzzOnce(true);
-          if (zzzTimer.current) clearTimeout(zzzTimer.current);
-          zzzTimer.current = setTimeout(() => {
-            if (mounted.current) setZzzOnce(false);
-          }, ZZZ_ONCE_MS);
-          return;
-        }
         counter.current += 1;
-        setShown({ kind, id: counter.current });
+        setDots(counter.current);
       },
       stop() {
         clearStillTimer();
-        if (zzzTimer.current) clearTimeout(zzzTimer.current);
-        zzzTimer.current = null;
-        if (!mounted.current) return;
-        setShown(null);
-        setZzzOnce(false);
+        if (mounted.current) setDots(null);
       },
     }),
     [],
@@ -409,49 +180,61 @@ export const PetEmotes = forwardRef<PetEmotesHandle, PetEmotesProps>(function Pe
     return () => {
       mounted.current = false;
       clearStillTimer();
-      if (zzzTimer.current) clearTimeout(zzzTimer.current);
     };
   }, []);
 
-  // Run the mark once it is on screen.
+  // Run the dots once they are on screen.
   useEffect(() => {
-    if (!shown) return;
+    if (dots === null) return;
     clearStillTimer();
     if (stillRef.current) {
       stillTimer.current = setTimeout(() => {
-        if (mounted.current) setShown(null);
+        if (mounted.current) setDots(null);
       }, STILL_MS);
       return clearStillTimer;
     }
     burst.setValue(0);
     const anim = Animated.timing(burst, {
       toValue: 1,
-      duration: DURATION_MS[shown.kind],
+      duration: DOTS_MS,
       easing: Easing.linear,
       useNativeDriver: true,
     });
     let live = true;
     anim.start(({ finished }) => {
-      if (live && finished && mounted.current) setShown(null);
+      if (live && finished && mounted.current) setDots(null);
     });
     return () => {
       live = false;
       anim.stop();
     };
-  }, [shown, burst]);
+  }, [dots, burst]);
 
-  const list = shown ? pieces[shown.kind] : [];
+  const ax = size * 0.65;
+  const ay = size * 0.16;
+  const dim = 7 * u;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {zzz || zzzOnce ? <ZzzLayer size={size} animate={!still} color={colors.main} /> : null}
-      {list.map((piece) => (
-        <Animated.View
-          key={`${shown?.id ?? 0}-${piece.key}`}
-          style={[{ position: 'absolute', left: piece.x, top: piece.y }, still ? null : piece.motion]}
-        >
-          <Mark piece={piece} color={colors[piece.slot]} puff={colors.puff} />
-        </Animated.View>
-      ))}
+      {zzz ? <ZzzLayer size={size} animate={!still} color={color} at={zzzAt} /> : null}
+      {dots !== null
+        ? dotLooks.map((look, i) => (
+            <Animated.View
+              key={`${dots}-${i}`}
+              style={[
+                {
+                  position: 'absolute',
+                  left: ax + (i - 1) * 14 * u - dim / 2,
+                  top: ay,
+                  width: dim,
+                  height: dim,
+                  borderRadius: dim / 2,
+                  backgroundColor: color,
+                },
+                still ? null : look,
+              ]}
+            />
+          ))
+        : null}
     </View>
   );
 });

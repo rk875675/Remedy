@@ -9,7 +9,16 @@ import {
   type PetMoodInput,
   type PetState,
 } from '../lib/pet';
-import { createPatience, petSleepReason, type Patience } from '../lib/petTemper';
+import {
+  ANGRY_HOLD_MS,
+  STORM_TAPS,
+  createLadder,
+  createPatience,
+  ladderTap,
+  ladderTick,
+  petSleepReason,
+  type Patience,
+} from '../lib/petTemper';
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: string) {
@@ -227,6 +236,71 @@ console.log('createPatience');
   feed(reset, [0, 200, 400, 600]);
   reset.reset();
   check('reset() clears the count', feed(reset, [700, 800, 900]).every((v) => v === 'fine'));
+}
+
+console.log('ladder (warn -> angry -> storm, soften)');
+{
+  // Drive the patience counter and the ladder together, as the Home screen does.
+  const run = (times: number[]) => {
+    const p = createPatience();
+    let state = createLadder();
+    const actions: string[] = [];
+    for (const t of times) {
+      const verdict = state.phase === 'calm' ? p.tap(t) : 'fine';
+      const step = ladderTap(state, t, verdict);
+      state = step.state;
+      if (step.action !== 'none') actions.push(`${step.action}@${t}`);
+      // The pet is gone after a storm: later taps on the empty hill do nothing.
+      if (step.action === 'storm') break;
+    }
+    return { actions, state };
+  };
+  const burst = (count: number, gap: number, start = 0) =>
+    Array.from({ length: count }, (_, i) => Math.round(start + i * gap));
+
+  const r20 = run(burst(20, 1000 / 6));
+  check(
+    'a 20-tap burst at 6 taps/s: warn, angry, storm, in that order, once each',
+    r20.actions.length === 3 &&
+      r20.actions[0]?.startsWith('warn@') === true &&
+      r20.actions[1]?.startsWith('angry@') === true &&
+      r20.actions[2]?.startsWith('storm@') === true,
+    r20.actions.join(' '),
+  );
+  check('warn is the 4th tap (500 ms)', r20.actions[0] === 'warn@500', r20.actions[0]);
+  check('angry is the 7th tap (1000 ms)', r20.actions[1] === 'angry@1000', r20.actions[1]);
+  check('storm is 8 angry taps later (tap 15)', r20.actions[2] === 'storm@2333', r20.actions[2]);
+  check('the storm hands back a fresh ladder', r20.state.phase === 'calm');
+
+  const calmTaps = run([0, 3000, 6000, 9000, 12000]);
+  check('calm taps never climb the ladder', calmTaps.actions.length === 0);
+
+  const stopsAtAngry = run([...burst(7, 160), 3000, 6000]);
+  check(
+    'stop after 7 taps: warn then angry, no storm from slow taps',
+    stopsAtAngry.actions.length === 2 && stopsAtAngry.actions[1]?.startsWith('angry@') === true,
+    stopsAtAngry.actions.join(' '),
+  );
+  check('and it is still angry', stopsAtAngry.state.phase === 'angry');
+
+  // The long way round: angry, then steady tapping for 5 s (taps 1.2 s apart).
+  const slowStorm = run([...burst(7, 160), ...burst(7, 1200, 2000)]);
+  check(
+    'continued tapping for 5 s while angry also sends it off',
+    slowStorm.actions.some((a) => a.startsWith('storm@')),
+    slowStorm.actions.join(' '),
+  );
+
+  const angry = ladderTap(createLadder(), 0, 'snap');
+  check('snap enters angry', angry.action === 'angry' && angry.state.phase === 'angry');
+  check('angry does not soften early', ladderTick(angry.state, ANGRY_HOLD_MS - 1).action === 'none');
+  check('angry softens after the hold', ladderTick(angry.state, ANGRY_HOLD_MS).action === 'soften');
+  const poked = ladderTap(angry.state, 6000, 'fine');
+  check('a tap while angry restarts the hold', ladderTick(poked.state, 6000 + ANGRY_HOLD_MS - 1).action === 'none');
+  check('and it softens 12 s after that last tap', ladderTick(poked.state, 6000 + ANGRY_HOLD_MS).action === 'soften');
+  check('calm never softens', ladderTick(createLadder(), 1e9).action === 'none');
+  check('the hold is 12 s', ANGRY_HOLD_MS === 12000);
+  check('a storm needs 8 taps', STORM_TAPS === 8);
 }
 
 if (failures > 0) {

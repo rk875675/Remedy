@@ -89,3 +89,62 @@ export function createPatience(): Patience {
     },
   };
 }
+
+// The ladder: warn, then angry, then storm off. Pure, so it can be checked.
+// Rung 1 (warn) and rung 2 (angry) come from `createPatience`; this adds what
+// happens while it is angry.
+
+/** Angry stays at least this long after the last tap. */
+export const ANGRY_HOLD_MS = 12000;
+/** While angry, this many taps in one run of spamming sends it off. */
+export const STORM_TAPS = 8;
+/** Or this long of continued tapping (at least STORM_MIN_TAPS taps). */
+export const STORM_STREAK_MS = 5000;
+export const STORM_MIN_TAPS = 3;
+/** Taps further apart than this are not one run of spamming. */
+export const STREAK_GAP_MS = 1500;
+
+export type Ladder = {
+  phase: 'calm' | 'angry';
+  angrySince: number;
+  lastTapAt: number;
+  streakStart: number;
+  streakTaps: number;
+};
+export type LadderAction = 'none' | 'warn' | 'angry' | 'storm' | 'soften';
+export type LadderStep = { state: Ladder; action: LadderAction };
+
+export function createLadder(): Ladder {
+  return { phase: 'calm', angrySince: 0, lastTapAt: 0, streakStart: 0, streakTaps: 0 };
+}
+
+/** A tap. `verdict` is what the patience counter said (only used while calm). */
+export function ladderTap(state: Ladder, now: number, verdict: PatienceVerdict): LadderStep {
+  if (state.phase === 'calm') {
+    if (verdict === 'snap') {
+      return {
+        state: { phase: 'angry', angrySince: now, lastTapAt: now, streakStart: now, streakTaps: 0 },
+        action: 'angry',
+      };
+    }
+    return { state: { ...state, lastTapAt: now }, action: verdict === 'warn' ? 'warn' : 'none' };
+  }
+  const continuing = state.streakTaps > 0 && now - state.lastTapAt <= STREAK_GAP_MS;
+  const streakStart = continuing ? state.streakStart : now;
+  const streakTaps = (continuing ? state.streakTaps : 0) + 1;
+  if (
+    streakTaps >= STORM_TAPS ||
+    (streakTaps >= STORM_MIN_TAPS && now - streakStart >= STORM_STREAK_MS)
+  ) {
+    return { state: createLadder(), action: 'storm' };
+  }
+  return { state: { ...state, lastTapAt: now, streakStart, streakTaps }, action: 'none' };
+}
+
+/** Time passing: angry softens once it has been left alone long enough. */
+export function ladderTick(state: Ladder, now: number): LadderStep {
+  if (state.phase === 'angry' && now - state.lastTapAt >= ANGRY_HOLD_MS) {
+    return { state: createLadder(), action: 'soften' };
+  }
+  return { state, action: 'none' };
+}

@@ -10,6 +10,13 @@ export const PET_MOODS = [
   'concerned',
   // Only ever chosen on the device (poked too much); the server never sends it.
   'angry',
+  'sad',
+  'happy',
+  // Things it gets up to on Home when left alone.
+  'reading',
+  'stretching',
+  // Asleep at night, tucked in. One drawing for every stage.
+  'bed',
 ] as const;
 
 export type PetMood = (typeof PET_MOODS)[number];
@@ -30,6 +37,11 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s2_sleepy: require('../assets/pet/s2_sleepy.png'),
   s2_concerned: require('../assets/pet/s2_concerned.png'),
   s2_angry: require('../assets/pet/s2_angry.png'),
+  s2_sad: require('../assets/pet/s2_sad.png'),
+  s2_happy: require('../assets/pet/s2_happy.png'),
+  s2_reading: require('../assets/pet/s2_reading.png'),
+  s2_stretching: require('../assets/pet/s2_stretching.png'),
+  s2_bed: require('../assets/pet/bed.png'),
 
   s3_idle: require('../assets/pet/s3_idle.png'),
   s3_ready: require('../assets/pet/s3_ready.png'),
@@ -39,6 +51,11 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s3_stiff: require('../assets/pet/s3_stiff.png'),
   s3_concerned: require('../assets/pet/s3_concerned.png'),
   s3_angry: require('../assets/pet/s3_angry.png'),
+  s3_sad: require('../assets/pet/s3_sad.png'),
+  s3_happy: require('../assets/pet/s3_happy.png'),
+  s3_reading: require('../assets/pet/s3_reading.png'),
+  s3_stretching: require('../assets/pet/s3_stretching.png'),
+  s3_bed: require('../assets/pet/bed.png'),
 
   s4_idle: require('../assets/pet/s4_idle.png'),
   s4_ready: require('../assets/pet/s4_ready.png'),
@@ -48,6 +65,11 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s4_stiff: require('../assets/pet/s4_stiff.png'),
   s4_concerned: require('../assets/pet/s4_concerned.png'),
   s4_angry: require('../assets/pet/s4_angry.png'),
+  s4_sad: require('../assets/pet/s4_sad.png'),
+  s4_happy: require('../assets/pet/s4_happy.png'),
+  s4_reading: require('../assets/pet/s4_reading.png'),
+  s4_stretching: require('../assets/pet/s4_stretching.png'),
+  s4_bed: require('../assets/pet/bed.png'),
 
   s5_idle: require('../assets/pet/s5_idle.png'),
   s5_ready: require('../assets/pet/s5_ready.png'),
@@ -57,11 +79,25 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s5_stiff: require('../assets/pet/s5_stiff.png'),
   s5_concerned: require('../assets/pet/s5_concerned.png'),
   s5_angry: require('../assets/pet/s5_angry.png'),
+  s5_sad: require('../assets/pet/s5_sad.png'),
+  s5_happy: require('../assets/pet/s5_happy.png'),
+  s5_reading: require('../assets/pet/s5_reading.png'),
+  s5_stretching: require('../assets/pet/s5_stretching.png'),
+  s5_bed: require('../assets/pet/bed.png'),
 };
 
 /** Poses the early stages were never drawn in. */
 const POSE_FALLBACKS: Partial<Record<PetStage, Partial<Record<PetMood, PetMood>>>> = {
-  1: { proud: 'celebrating', sleepy: 'idle', angry: 'stiff' },
+  1: {
+    proud: 'celebrating',
+    sleepy: 'idle',
+    angry: 'stiff',
+    sad: 'concerned',
+    happy: 'celebrating',
+    reading: 'idle',
+    stretching: 'idle',
+    bed: 'idle',
+  },
   2: { proud: 'celebrating', stiff: 'sleepy' },
 };
 
@@ -82,6 +118,20 @@ export const PET_POSE_SCALE: Partial<Record<PetPoseKey, number>> = {
   s3_celebrating: 1.06,
   s4_celebrating: 1.06,
   s5_celebrating: 1.06,
+  s2_sad: 0.9,
+  s3_sad: 0.9,
+  s4_sad: 0.88,
+  s5_sad: 0.9,
+  s4_reading: 0.9,
+  s5_reading: 0.86,
+  s4_stretching: 1.06,
+  s5_stretching: 1.0,
+  s2_stretching: 1.04,
+  // The bed is the same size whatever the stage.
+  s2_bed: 0.95 / 0.8,
+  s3_bed: 0.95 / 0.88,
+  s4_bed: 0.95 / 0.94,
+  s5_bed: 0.95,
 };
 
 /** The mood actually drawn for a stage, after fallbacks. */
