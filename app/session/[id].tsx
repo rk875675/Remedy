@@ -68,6 +68,10 @@ import { PetBadge } from '../../components/pet/PetBadge';
 import { PetGrow } from '../../components/pet/PetGrow';
 import { PetSays } from '../../components/pet/PetSays';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
+import { PetCoach, type CoachExercise } from '../../components/pet/PetCoach';
+import { createCoachMemory } from '../../lib/petCoach';
+import { PET_COMPLETE } from '../../constants/petSessionLines';
+import { fillPetLine } from '../../constants/petOnboardingLines';
 import { fetchPetState } from '../../lib/petApi';
 import { petGrowthCopy, type PetState } from '../../lib/pet';
 import { markPetStageSeen, takePetGrowth } from '../../lib/petGrowth';
@@ -260,6 +264,12 @@ export default function SessionPlayerScreen() {
   const mountPetPromise = useRef<Promise<PetState | null> | null>(null);
   const petWarmCopyRef = useRef<string | null>(null);
   const restPetLineRef = useRef<string>(PET_REST_LINES[0]);
+  // The pet's memory of this session (cues given, last bubble) across exercise and rest screens.
+  const coachMemory = useRef(createCoachMemory()).current;
+  const [exitOpen, setExitOpen] = useState(false);
+  // Complete screen: celebrate first, then the thumbs-up, once any growth moment is over.
+  const [growDone, setGrowDone] = useState(false);
+  const [completeCheer, setCompleteCheer] = useState(false);
   const mountedRef = useRef(true);
 
   const player = useSilentVideoPlayer(null, (p) => {
@@ -717,6 +727,14 @@ export default function SessionPlayerScreen() {
     }
   }, [phase]);
 
+  // The pet celebrates, then gives its thumbs-up. Never mid growth moment, so only one move runs.
+  useEffect(() => {
+    if (phase !== 'complete' || completeCheer || badgePinned) return;
+    if (grewFrom !== null && !growDone) return;
+    const timer = setTimeout(() => setCompleteCheer(true), 2600);
+    return () => clearTimeout(timer);
+  }, [phase, completeCheer, badgePinned, grewFrom, growDone]);
+
   const fetchNextSession = useCallback(async () => {
     if (!user || !id) return;
     const { data: up } = await supabase
@@ -919,11 +937,12 @@ export default function SessionPlayerScreen() {
     // unguarded completion for an unfinished session (inflating counts and creating a
     // duplicate-completion vector). The pointer is untouched, so this session stays
     // current and can simply be resumed.
+    setExitOpen(true);
     Alert.alert(
       'Exit session?',
       'This session isn\u2019t finished yet \u2014 you can resume it anytime.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => setExitOpen(false) },
         {
           text: 'Exit',
           style: 'destructive',
@@ -935,6 +954,7 @@ export default function SessionPlayerScreen() {
           },
         },
       ],
+      { cancelable: true, onDismiss: () => setExitOpen(false) },
     );
   }
 
@@ -1246,6 +1266,16 @@ export default function SessionPlayerScreen() {
   }
 
   const currentExercise = exercises[exerciseIndex];
+  const coachExercise: CoachExercise | null = currentExercise
+    ? {
+        id: currentExercise.id,
+        name: currentExercise.name,
+        instructions: currentExercise.instructions,
+        description: currentExercise.description,
+        holdSeconds: currentExercise.duration_seconds,
+      }
+    : null;
+  const smallPhone = SCREEN_HEIGHT < 720;
 
   // --- SESSION PREVIEW ---
   if (phase === 'preview') {
@@ -1297,12 +1327,31 @@ export default function SessionPlayerScreen() {
           <RestRing
             seconds={restSeconds}
             total={restTotal}
-            petBelow={pet !== null && SCREEN_HEIGHT >= 720}
+            petBelow={pet !== null}
           />
 
-          {pet !== null && SCREEN_HEIGHT >= 720 ? (
+          {/* The buddy takes its own break (towel, water bottle) beside the ring. */}
+          {pet !== null && coachExercise ? (
             <View style={styles.restPet}>
-              <PetSays stage={pet.stage} mood="idle" line={restPetLineRef.current} size={64} />
+              <PetCoach
+                pet={pet}
+                phase="rest"
+                exercise={coachExercise}
+                exerciseIndex={exerciseIndex}
+                exerciseCount={exercises.length}
+                setIndex={setIndex}
+                totalSets={currentExercise?.sets && currentExercise.sets > 0 ? currentExercise.sets : 1}
+                restKind={restKind}
+                restSeconds={restSeconds}
+                restTotal={restTotal}
+                countdown={0}
+                holdRep={1}
+                holdReps={1}
+                exiting={exitOpen}
+                size={SCREEN_HEIGHT < 720 ? 104 : 136}
+                layout="row"
+                memory={coachMemory}
+              />
             </View>
           ) : null}
 
@@ -1439,10 +1488,40 @@ export default function SessionPlayerScreen() {
           ) : null}
 
           {currentExercise.instructions && (
-            <Text style={styles.exerciseInstructions}>
+            <Text
+              style={[
+                styles.exerciseInstructions,
+                // On a small phone the buddy stands beside the caption, never over it.
+                pet !== null && smallPhone ? { marginRight: 84 } : null,
+              ]}
+            >
               {currentExercise.instructions}
             </Text>
           )}
+
+          {/* The workout buddy: bottom right of this area, bubble to its left. It never
+              covers the video, the timer or the buttons, and adds no height. */}
+          {pet !== null && coachExercise ? (
+            <PetCoach
+              pet={pet}
+              phase="exercise"
+              exercise={coachExercise}
+              exerciseIndex={exerciseIndex}
+              exerciseCount={exercises.length}
+              setIndex={setIndex}
+              totalSets={currentExercise.sets && currentExercise.sets > 0 ? currentExercise.sets : 1}
+              restKind={restKind}
+              restSeconds={0}
+              restTotal={1}
+              countdown={countdown}
+              holdRep={holdRep}
+              holdReps={currentExercise.reps && currentExercise.reps > 0 ? currentExercise.reps : 1}
+              exiting={exitOpen}
+              size={smallPhone ? 76 : 124}
+              layout="corner"
+              memory={coachMemory}
+            />
+          ) : null}
         </View>
 
         {/* Always available — on timed exercises it ends the current set early
@@ -1491,13 +1570,17 @@ export default function SessionPlayerScreen() {
   }
   const warmCopy = warmCopyRef.current;
   if (petWarmCopyRef.current === null) {
-    petWarmCopyRef.current =
-      PET_SESSION_COMPLETE_LINES[Math.floor(Math.random() * PET_SESSION_COMPLETE_LINES.length)] ?? '';
+    // The pet congratulates by name, with the number of exercises done.
+    petWarmCopyRef.current = fillPetLine(
+      PET_COMPLETE[Math.floor(Math.random() * PET_COMPLETE.length)] ?? '',
+      { n: completedCount },
+    );
   }
   const petWarmCopy = petWarmCopyRef.current;
-  const petCompleteMood: PetMood = painAfter > painBefore ? 'concerned' : 'celebrating';
+  const petCompleteMood: PetMood =
+    painAfter > painBefore ? 'concerned' : completeCheer ? 'cheer' : 'celebrating';
   const compactHeight = SCREEN_HEIGHT < 720;
-  const badgeSize = compactHeight ? 132 : 176;
+  const badgeSize = compactHeight ? 132 : 200;
   const showNextSession = nextSession !== null && !isProgramCompleted;
   const showPetStrip = pet !== null && !(compactHeight && showNextSession);
   const petStage = pet?.stage;
@@ -1518,7 +1601,13 @@ export default function SessionPlayerScreen() {
       >
         {pet ? (
           grewFrom !== null ? (
-            <PetGrow from={grewFrom} to={pet.stage} mood={petCompleteMood} size={badgeSize} />
+            <PetGrow
+              from={grewFrom}
+              to={pet.stage}
+              mood={petCompleteMood}
+              size={badgeSize}
+              onDone={() => setGrowDone(true)}
+            />
           ) : badgeStage !== null ? (
             <PetBadge stage={badgeStage} mood={petCompleteMood} size={badgeSize} />
           ) : (
@@ -1693,7 +1782,7 @@ function SessionPreviewScreen({
         <View style={previewStyles.hero}>
           {pet ? (
             <View style={previewStyles.petWrap}>
-              <PetBadge stage={pet.stage} mood="ready" size={SCREEN_HEIGHT < 720 ? 88 : 120} />
+              <PetBadge stage={pet.stage} mood="coach" size={SCREEN_HEIGHT < 720 ? 88 : 120} />
             </View>
           ) : null}
           <Text style={previewStyles.preLabel}>

@@ -10,6 +10,18 @@ import {
   type PetState,
 } from '../lib/pet';
 import {
+  MAX_CUES,
+  MAX_CUE_CHARS,
+  createCoachMemory,
+  exerciseCues,
+  holdMoment,
+  isHalfway,
+  lineAllowed,
+  nextIsFinal,
+  takeCue,
+} from '../lib/petCoach';
+import { PET_GENERIC_CUES } from '../constants/petSessionLines';
+import {
   ANGRY_HOLD_MS,
   STORM_TAPS,
   createLadder,
@@ -301,6 +313,70 @@ console.log('ladder (warn -> angry -> storm, soften)');
   check('calm never softens', ladderTick(createLadder(), 1e9).action === 'none');
   check('the hold is 12 s', ANGRY_HOLD_MS === 12000);
   check('a storm needs 8 taps', STORM_TAPS === 8);
+}
+
+console.log('petCoach (cues from the exercise text)');
+{
+  const birdDog = exerciseCues('Reach opposite arm and leg. Keep the back still and the hips level.', null);
+  check(
+    'two sentences become two cues',
+    birdDog.length === 2 &&
+      birdDog[0] === 'Reach opposite arm and leg.' &&
+      birdDog[1] === 'Keep the back still and the hips level.',
+    JSON.stringify(birdDog),
+  );
+  const catCow = exerciseCues('Inhale and arch; exhale and round. Let your head follow your spine.', null);
+  check(
+    'a semicolon splits a step, capitals and full stops are tidied',
+    catCow.length === 3 && catCow[0] === 'Inhale and arch.' && catCow[1] === 'Exhale and round.',
+    JSON.stringify(catCow),
+  );
+  const dash = exerciseCues(
+    'Hands behind your head. Arch only the upper back over the chair \u2014 not the low back.',
+    null,
+  );
+  check('a dash inside a short sentence is kept whole', dash.length === 2 && dash[1]?.includes('\u2014') === true, JSON.stringify(dash));
+  const long = exerciseCues(
+    'Stand tall with your feet hip width apart and slowly shift your weight forward onto the balls of both feet while keeping the chest open, then hold.',
+    null,
+  );
+  check(
+    'a too-long sentence is split at the comma or dropped, never over 70 characters',
+    long.every((c) => c.length <= MAX_CUE_CHARS),
+    JSON.stringify(long),
+  );
+  check('every cue is within 6-70 characters', [...birdDog, ...catCow, ...dash, ...long].every((c) => c.length >= 6 && c.length <= MAX_CUE_CHARS));
+  check('never more than 4 cues', exerciseCues('One thing. Two things. Three things. Four things. Five things. Six things.', null).length === MAX_CUES);
+  check('duplicates are dropped', exerciseCues('Breathe out. Breathe out. Breathe in.', null).length === 2);
+  check('empty text falls back to generic reminders', exerciseCues(null, null).join('|') === PET_GENERIC_CUES.join('|'));
+  check('blank text falls back too', exerciseCues('   ', '')[0] === 'Slow and smooth.');
+  check(
+    'description is used when there are no instructions',
+    exerciseCues(null, 'Keep your neck long.')[0] === 'Keep your neck long.',
+  );
+  check('junk fragments are dropped', exerciseCues('Ok. Go. Keep your ribs down.', null).join('|') === 'Keep your ribs down.');
+
+  const memory = createCoachMemory();
+  const cycle = ['A one.', 'B two.', 'C three.'];
+  check(
+    'cues cycle in order and wrap',
+    [takeCue(memory, cycle), takeCue(memory, cycle), takeCue(memory, cycle), takeCue(memory, cycle)].join(' ') ===
+      'A one. B two. C three. A one.',
+  );
+
+  check('a normal line waits 6 s', !lineAllowed(5999, 0, false) && lineAllowed(6000, 0, false));
+  check('a well-timed line waits 2 s', !lineAllowed(1999, 0, true) && lineAllowed(2000, 0, true));
+
+  check('last 5 s of a 10 s hold', holdMoment(5, 10, 1, 3) === 'last-seconds');
+  check('no countdown line on a short hold', holdMoment(5, 6, 1, 3) === null);
+  check('last hold announced at its start', holdMoment(10, 10, 3, 3) === 'last-hold');
+  check('not announced when there is only one hold', holdMoment(10, 10, 1, 1) === null);
+  check('halfway through a long hold', holdMoment(15, 30, 1, 1) === 'halfway');
+  check('nothing at zero', holdMoment(0, 10, 1, 1) === null);
+  check('halfway through a 6-exercise session', isHalfway(2, 6) && !isHalfway(1, 6) && !isHalfway(3, 6));
+  check('no halfway in a short session', !isHalfway(0, 3) && !isHalfway(1, 3));
+  check('the rest before the last of 5 exercises', nextIsFinal(3, 5) && !nextIsFinal(2, 5));
+  check('no final-next for a single exercise', !nextIsFinal(0, 1));
 }
 
 if (failures > 0) {

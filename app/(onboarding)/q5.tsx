@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 8,
+    paddingBottom: 24,
   },
   heading: {
     ...type.question,

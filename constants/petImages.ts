@@ -17,6 +17,10 @@ export const PET_MOODS = [
   'stretching',
   // Asleep at night, tucked in. One drawing for every stage.
   'bed',
+  // In a session: giving a tip, cheering, and resting between sets.
+  'coach',
+  'cheer',
+  'rest',
 ] as const;
 
 export type PetMood = (typeof PET_MOODS)[number];
@@ -42,6 +46,9 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s2_reading: require('../assets/pet/s2_reading.png'),
   s2_stretching: require('../assets/pet/s2_stretching.png'),
   s2_bed: require('../assets/pet/bed.png'),
+  s2_coach: require('../assets/pet/s2_coach.png'),
+  s2_cheer: require('../assets/pet/s2_cheer.png'),
+  s2_rest: require('../assets/pet/s2_rest.png'),
 
   s3_idle: require('../assets/pet/s3_idle.png'),
   s3_ready: require('../assets/pet/s3_ready.png'),
@@ -56,6 +63,9 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s3_reading: require('../assets/pet/s3_reading.png'),
   s3_stretching: require('../assets/pet/s3_stretching.png'),
   s3_bed: require('../assets/pet/bed.png'),
+  s3_coach: require('../assets/pet/s3_coach.png'),
+  s3_cheer: require('../assets/pet/s3_cheer.png'),
+  s3_rest: require('../assets/pet/s3_rest.png'),
 
   s4_idle: require('../assets/pet/s4_idle.png'),
   s4_ready: require('../assets/pet/s4_ready.png'),
@@ -70,6 +80,9 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s4_reading: require('../assets/pet/s4_reading.png'),
   s4_stretching: require('../assets/pet/s4_stretching.png'),
   s4_bed: require('../assets/pet/bed.png'),
+  s4_coach: require('../assets/pet/s4_coach.png'),
+  s4_cheer: require('../assets/pet/s4_cheer.png'),
+  s4_rest: require('../assets/pet/s4_rest.png'),
 
   s5_idle: require('../assets/pet/s5_idle.png'),
   s5_ready: require('../assets/pet/s5_ready.png'),
@@ -84,6 +97,9 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s5_reading: require('../assets/pet/s5_reading.png'),
   s5_stretching: require('../assets/pet/s5_stretching.png'),
   s5_bed: require('../assets/pet/bed.png'),
+  s5_coach: require('../assets/pet/s5_coach.png'),
+  s5_cheer: require('../assets/pet/s5_cheer.png'),
+  s5_rest: require('../assets/pet/s5_rest.png'),
 };
 
 /** Poses the early stages were never drawn in. */
@@ -97,6 +113,9 @@ const POSE_FALLBACKS: Partial<Record<PetStage, Partial<Record<PetMood, PetMood>>
     reading: 'idle',
     stretching: 'idle',
     bed: 'idle',
+    coach: 'ready',
+    cheer: 'celebrating',
+    rest: 'idle',
   },
   2: { proud: 'celebrating', stiff: 'sleepy' },
 };
