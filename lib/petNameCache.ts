@@ -42,6 +42,18 @@ export async function rememberPetName(name: string | null): Promise<void> {
   }
 }
 
+/** Drop the device copy on sign-out so the next account cannot inherit it. */
+export async function clearRememberedPetName(): Promise<void> {
+  loaded = true;
+  current = null;
+  listeners.forEach((listener) => listener());
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Memory is already clear; a failed delete must not block sign-out.
+  }
+}
+
 export async function getRememberedPetName(): Promise<string | null> {
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEY);

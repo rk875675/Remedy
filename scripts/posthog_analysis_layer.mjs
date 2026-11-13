@@ -92,6 +92,8 @@ const SQL_EXCLUDE_INTERSTITIALS = ONBOARDING_INTERSTITIALS.length
 /** Exact on-screen headings. Bars stay `q5`; this is what you see after opening the tile. */
 const ONBOARDING_STEP_QUESTIONS = {
   welcome: 'Welcome',
+  pet: 'Name your armadillo',
+  grow: 'Every session, {name} uncurls a little',
   founder: 'Your back is stronger than it feels',
   education: 'The good news',
   proof: 'Why Remedy works (+ Agree & continue)',
@@ -124,6 +126,8 @@ function hogqlStepQuestion(expr = 'toString(properties.step_key)') {
 /** Monday-readable labels for $screen_name / screen_exited.screen_name. */
 const SCREEN_LABELS = {
   '/(onboarding)': 'Onboarding — Welcome',
+  '/(onboarding)/pet': 'Onboarding — Pet',
+  '/(onboarding)/grow': 'Onboarding — Grow',
   '/(onboarding)/founder': 'Onboarding — Founder',
   '/(onboarding)/education': 'Onboarding — Education',
   '/(onboarding)/proof': 'Onboarding — Why Remedy works',
@@ -449,7 +453,7 @@ const byPersonProp = (prop) => ({ breakdownFilter: { breakdown: prop, breakdown_
 const BAR = 'ActionsBarValue';
 
 const FULL_PATH_STEPS = [
-  'welcome', 'founder', 'education', 'proof', 'q0', 'q9', 'recognize', 'seen',
+  'welcome', 'pet', 'grow', 'founder', 'education', 'proof', 'q0', 'q9', 'recognize', 'seen',
   'q6', 'q1', 'q2', 'q3', 'q4', 'q5', 'q7', 'q8', 'commit', 'finalizing', 'match',
 ];
 

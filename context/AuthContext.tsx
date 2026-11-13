@@ -6,6 +6,7 @@ import { clearPendingPromo } from '../lib/pendingPromo';
 import { clearCachedGateState } from '../lib/entitlements';
 import { flushLegalAcceptances } from '../lib/legalAcceptance';
 import { clearRememberedDisplayName } from '../lib/greeting';
+import { clearRememberedPetName } from '../lib/petNameCache';
 import { clearCheckinDraft } from '../lib/nextProgram';
 
 // Upper bound on the initial session restore before the app stops blocking on it. Long
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
         if (event === 'SIGNED_OUT') {
           clearRememberedDisplayName();
+          void clearRememberedPetName();
           return;
         }
         if (event === 'TOKEN_REFRESHED') return;
@@ -189,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearPendingPromo();
     // An unsent program check-in can hold free-text feedback.
     await clearCheckinDraft();
+    await clearRememberedPetName();
     // AnalyticsBridge resets analytics identity off the session change below.
     setSession(null);
   }
@@ -220,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     await clearPendingPurchase();
     await clearCheckinDraft();
+    await clearRememberedPetName();
     if (deletedUserId) await clearCachedGateState(deletedUserId);
     // AnalyticsBridge resets analytics identity off the session change below.
     setSession(null);

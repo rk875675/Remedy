@@ -13,6 +13,7 @@ import { shadows } from '../../constants/shadows';
 import { hapticHeavy, hapticPrimaryAction, hapticSuccess } from '../../lib/haptics';
 
 const HOLD_MS = 1100;
+const AFTER_COMMIT_MS = 1100;
 const PULSE_MS = 90;
 
 export default function CommitScreen() {
@@ -26,29 +27,52 @@ export default function CommitScreen() {
   const petMood = committed ? petPresent.mood : holding ? 'stiff' : petPresent.mood;
   const fill = useRef(new Animated.Value(committed ? 1 : 0)).current;
   const pulse = useRef<ReturnType<typeof setInterval> | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigated = useRef(false);
+  const alive = useRef(true);
+  const finishing = useRef(false);
 
   function stopPulse() {
     if (pulse.current) clearInterval(pulse.current);
     pulse.current = null;
   }
 
-  useEffect(() => stopPulse, []);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      if (pulse.current) clearInterval(pulse.current);
+      pulse.current = null;
+      if (leaveTimer.current) clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    };
+  }, []);
 
   function goNext() {
+    if (navigated.current || !alive.current) return;
+    navigated.current = true;
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
     router.push('/(onboarding)/finalizing');
   }
 
   function complete() {
     stopPulse();
-    if (committed) return;
+    if (committed || finishing.current) return;
+    finishing.current = true;
     fill.setValue(1);
     hapticSuccess();
     setLocalAnswer('committed_at', new Date().toISOString());
-    goNext();
+    leaveTimer.current = setTimeout(() => {
+      leaveTimer.current = null;
+      goNext();
+    }, AFTER_COMMIT_MS);
   }
 
   function handlePressIn() {
-    if (committed) return;
+    if (committed || finishing.current) return;
     setHolding(true);
     hapticHeavy();
     stopPulse();
@@ -64,7 +88,7 @@ export default function CommitScreen() {
   }
 
   function handlePressOut() {
-    if (committed) return;
+    if (committed || finishing.current) return;
     setHolding(false);
     stopPulse();
     Animated.timing(fill, {

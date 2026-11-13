@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { petStateSchema, type PetState } from './pet';
 import { rememberPetName } from './petNameCache';
+import { refreshScheduledRemindersForPetName } from './notifications';
 
 /** Null on any failure: the pet must never break the screen it sits on. */
 export async function fetchPetState(): Promise<PetState | null> {
@@ -24,7 +25,11 @@ export async function setPetName(
       return { ok: false, reason: error.message.includes('invalid_pet_name') ? 'invalid' : 'failed' };
     }
     const parsed = petStateSchema.safeParse(data);
-    if (parsed.success) void rememberPetName(parsed.data.name);
+    if (parsed.success) {
+      // Memory updates before the first await, so the refresh below reads the new name.
+      void rememberPetName(parsed.data.name);
+      refreshScheduledRemindersForPetName();
+    }
     return parsed.success ? { ok: true, state: parsed.data } : { ok: false, reason: 'failed' };
   } catch {
     return { ok: false, reason: 'failed' };

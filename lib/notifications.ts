@@ -238,6 +238,96 @@ export async function cancelStretchReminders(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_STRETCH_IDS);
 }
 
+// Profile / Home persist these. Duplicated so a rename can refresh reminder copy
+// without importing those screens (they already import this module).
+const STORAGE_NOTIF_ENABLED = 'remedy_notifications_enabled';
+const STORAGE_NOTIF_TIME = 'remedy_notification_time';
+const STORAGE_WORKOUT_DAYS = 'remedy_workout_days';
+const STORAGE_STRETCH_ENABLED = 'remedy_stretch_enabled';
+const STORAGE_STRETCH_INTERVAL = 'remedy_stretch_interval';
+const STORAGE_STRETCH_START = 'remedy_stretch_start_hour';
+const STORAGE_STRETCH_END = 'remedy_stretch_end_hour';
+const STORAGE_STRETCH_PAUSED = 'remedy_stretch_paused';
+
+function parseWorkoutDays(raw: string | null): number[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((day): day is number => typeof day === 'number' && Number.isFinite(day));
+  } catch {
+    return [];
+  }
+}
+
+function parseReminderTime(raw: string | null): { hour: number; minute: number } {
+  if (!raw) return { hour: 9, minute: 0 };
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return { hour: 9, minute: 0 };
+    const hour = 'hour' in parsed ? parsed.hour : undefined;
+    const minute = 'minute' in parsed ? parsed.minute : undefined;
+    if (typeof hour !== 'number' || typeof minute !== 'number') return { hour: 9, minute: 0 };
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return { hour: 9, minute: 0 };
+    return { hour, minute };
+  } catch {
+    return { hour: 9, minute: 0 };
+  }
+}
+
+function parseStoredInt(raw: string | null, fallback: number): number | null {
+  if (!raw) return fallback;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Rewrite workout and stretch reminders so their text uses the current pet name.
+ * No-op unless that reminder is already enabled (stretch also skipped while paused).
+ * Never asks for notification permission. Never throws.
+ */
+export function refreshScheduledRemindersForPetName(): void {
+  void refreshScheduledRemindersForPetNameAsync().catch(() => {});
+}
+
+async function refreshScheduledRemindersForPetNameAsync(): Promise<void> {
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    if ((existing as { granted?: boolean }).granted !== true) return;
+
+    const pairs = await AsyncStorage.multiGet([
+      STORAGE_NOTIF_ENABLED,
+      STORAGE_NOTIF_TIME,
+      STORAGE_WORKOUT_DAYS,
+      STORAGE_STRETCH_ENABLED,
+      STORAGE_STRETCH_INTERVAL,
+      STORAGE_STRETCH_START,
+      STORAGE_STRETCH_END,
+      STORAGE_STRETCH_PAUSED,
+    ]);
+    const stored = Object.fromEntries(pairs);
+
+    if (stored[STORAGE_NOTIF_ENABLED] === 'true') {
+      const days = parseWorkoutDays(stored[STORAGE_WORKOUT_DAYS] ?? null);
+      if (days.length > 0) {
+        const time = parseReminderTime(stored[STORAGE_NOTIF_TIME] ?? null);
+        await scheduleWorkoutReminders(days, time.hour, time.minute);
+      }
+    }
+
+    if (stored[STORAGE_STRETCH_ENABLED] === 'true' && stored[STORAGE_STRETCH_PAUSED] !== 'true') {
+      const interval = parseStoredInt(stored[STORAGE_STRETCH_INTERVAL] ?? null, 60);
+      const start = parseStoredInt(stored[STORAGE_STRETCH_START] ?? null, 9);
+      const end = parseStoredInt(stored[STORAGE_STRETCH_END] ?? null, 18);
+      if (interval !== null && start !== null && end !== null) {
+        await scheduleStretchReminders(interval, start, end);
+      }
+    }
+  } catch {
+    // A rename must succeed even when reminders cannot be rewritten.
+  }
+}
+
 // Returns the soonest future stretch reminder time, or null if none remain.
 export async function getNextStretchTime(): Promise<Date | null> {
   const raw = await AsyncStorage.getItem(STORAGE_STRETCH_IDS);
