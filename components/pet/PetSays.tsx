@@ -16,6 +16,7 @@ import { usePetName } from '../../lib/petNameCache';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import { Dust, easedTimeAt, type DustHandle } from './Dust';
 import { PetBadge } from './PetBadge';
+import { PET_UNFURL_MS } from './Pet';
 import {
   call,
   createPetBody,
@@ -74,7 +75,7 @@ const ROLL_PAST = 1.04;
 const DROP_MS = 300;
 const DROP_FROM = -220;
 // The unfurl from the ball (see Pet.tsx) takes about this long.
-const POSE_WAIT_MS = 1300;
+const POSE_WAIT_MS = PET_UNFURL_MS;
 const TALK_MS = 260;
 const outCubic = Easing.out(Easing.cubic);
 

@@ -16,7 +16,7 @@ import { hapticSelection } from '../../lib/haptics';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import { Dust, DUST_PALE, easedTimeAt, type DustHandle, type DustPoint } from './Dust';
-import { Pet } from './Pet';
+import { Pet, PET_CURL_MS, PET_UNFURL_MS } from './Pet';
 import {
   call,
   createPetBody,
@@ -47,6 +47,10 @@ const ROLL_START = -1.75;
 const ARRIVE_PAST = 12;
 const ROLL_PAST = 8;
 const POSE_GAP = 260;
+// Pet plays frames when leaving or entering the ball (stage 2 and up); wait them out.
+const curlGap = (stage: PetStage | undefined): number => (stage !== undefined && stage > 1 ? PET_CURL_MS : POSE_GAP);
+const unfurlGap = (stage: PetStage | undefined): number =>
+  stage !== undefined && stage > 1 ? PET_UNFURL_MS : POSE_GAP;
 /** moveHop is on the ground after the crouch, the rise and the fall. */
 const HOP_LAND_MS = 410;
 
@@ -226,7 +230,7 @@ export function PetScene({
         call(() => {
           if (mounted.current) setCurled(true);
         }),
-        Animated.delay(POSE_GAP),
+        Animated.delay(curlGap(pet?.stage)),
         Animated.parallel([
           rollTo(1, rightMs, rightEase),
           call(() => {
@@ -258,7 +262,7 @@ export function PetScene({
         call(() => {
           if (mounted.current) setCurled(false);
         }),
-        Animated.delay(POSE_GAP),
+        Animated.delay(unfurlGap(pet?.stage)),
         moveWiggle(body),
       ]),
       (finished) => {
@@ -381,7 +385,7 @@ export function PetScene({
         call(() => {
           if (mounted.current) setCurled(false);
         }),
-        Animated.delay(POSE_GAP),
+        Animated.delay(unfurlGap(pet?.stage)),
         Animated.parallel([
           moveHop(body, 0.6),
           Animated.sequence([

@@ -1,9 +1,17 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
-import { petImage, petScale, type PetMood, type PetStage } from '../../constants/petImages';
+import {
+  petImage,
+  petScale,
+  petUnfurlFrames,
+  type PetFrame,
+  type PetMood,
+  type PetStage,
+} from '../../constants/petImages';
 import {
   createPetBody,
   moveHop,
+  moveLand,
   moveNod,
   petBodyStyles,
   restBody,
@@ -50,20 +58,31 @@ function settleSquash(value: Animated.Value): Animated.CompositeAnimation {
 }
 
 /**
- * Poses to pass through, ending on `to`. The ball is stage 1: opening it goes
- * via the peeking stage and the sitting stage, and curling up is the same
- * walk backwards. Any other change is a single step.
+ * Leaving or entering the ball plays hand-drawn frames: `pictures` runs from
+ * the outgoing pose to the incoming one, every in-between drawing included.
+ * `open` is the stage that is not the ball.
  */
-function buildPath(from: Pose, to: Pose): Pose[] {
-  const through: PetStage[] = [];
-  if (from.stage === 1 && to.stage > 1) {
-    for (const s of [2, 3] as const) if (s < to.stage) through.push(s);
-  } else if (to.stage === 1 && from.stage > 1) {
-    for (const s of [3, 2] as const) if (s < from.stage) through.push(s);
-  }
-  return [...through.map((s): Pose => ({ stage: s, mood: 'idle' })), to];
-}
+type Sequence = { unfurl: boolean; open: PetStage; pictures: PetFrame[] };
 
+const smooth = Easing.inOut(Easing.sin);
+// A gentle ease in and out that stays close to linear in the middle.
+const frameEase = Easing.bezier(0.3, 0.15, 0.7, 0.85);
+
+const UNFURL_STEP_MS = 105;
+const CURL_STEP_MS = 80;
+const WOBBLE_MS = 350;
+const CROUCH_MS = 120;
+// Squash into the landing (60) plus the spring that settles it.
+const LAND_MS = 60 + 450;
+// Each frame hands over to the next over this much of a frame, either side.
+const HANDOVER = 0.15;
+const MOST_STEPS = petUnfurlFrames(5).length + 1;
+const upTo50 = (ms: number): number => Math.ceil(ms / 50) * 50;
+
+/** The longest unfurl (anticipation, frames, landing), for callers that wait on it. */
+export const PET_UNFURL_MS = upTo50(WOBBLE_MS + MOST_STEPS * UNFURL_STEP_MS + LAND_MS);
+/** The longest curl up (crouch, frames, settle). */
+export const PET_CURL_MS = upTo50(CROUCH_MS + MOST_STEPS * CURL_STEP_MS + LAND_MS);
 export function Pet({
   stage,
   mood,
@@ -82,12 +101,9 @@ export function Pet({
   const poseToken = useRef(0);
   const swapping = useRef(false);
   const swapAnim = useRef<Animated.CompositeAnimation | null>(null);
-  // The pose being drawn. It lags the props while a ball unfurls or curls up
-  // through the stages in between.
   const [shown, setShown] = useState<Pose>({ stage, mood });
-  const shownRef = useRef<Pose>({ stage, mood });
-  const queue = useRef<Pose[]>([]);
-  const opening = useRef(false);
+  // Set while the ball unfurls or curls up frame by frame.
+  const [sequence, setSequence] = useState<Sequence | null>(null);
   const motionAnim = useRef<Animated.CompositeAnimation | null>(null);
   const motionKind = useRef<MotionKind | null>(null);
 
@@ -97,6 +113,8 @@ export function Pet({
 
   const breath = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(1)).current;
+  // 0 = outgoing pose ... n = incoming pose, one step per drawing.
+  const frame = useRef(new Animated.Value(0)).current;
 
   const drawn = size * petScale(stage, mood);
 
@@ -113,6 +131,20 @@ export function Pet({
     () => fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
     [fade],
   );
+  // One per picture of a sequence, built once per sequence (never mid-animation).
+  const frameOpacities = useMemo(() => {
+    if (!sequence) return null;
+    const n = sequence.pictures.length - 1;
+    return sequence.pictures.map((_, i) => {
+      const lo = i - 0.5 - HANDOVER;
+      const hi = i - 0.5 + HANDOVER;
+      const lo2 = i + 0.5 - HANDOVER;
+      const hi2 = i + 0.5 + HANDOVER;
+      const inputRange = i === 0 ? [lo2, hi2] : i === n ? [lo, hi] : [lo, hi, lo2, hi2];
+      const outputRange = i === 0 ? [1, 0] : i === n ? [0, 1] : [0, 1, 1, 0];
+      return frame.interpolate({ inputRange, outputRange, extrapolate: 'clamp' });
+    });
+  }, [sequence, frame]);
   const breathY = useMemo(
     () => breath.interpolate({ inputRange: [0, 1], outputRange: [0, (-size * BREATH_Y) / 2] }),
     [breath, size],
@@ -190,67 +222,56 @@ export function Pet({
 
     if (sameImage || swapping.current) {
       swapping.current = false;
-      queue.current = [];
-      shownRef.current = { stage, mood };
       setShown({ stage, mood });
       fade.setValue(1);
       setPrevious(null);
+      setSequence(null);
       if (prevPose.mood === mood) startHops();
       return;
     }
 
-    // Leaving or entering the ball goes through the stages in between.
-    const path = buildPath(prevPose, { stage, mood });
-    const first = path[0] ?? { stage, mood };
-    queue.current = path.slice(1);
-    opening.current = prevPose.stage === 1 && stage > 1;
-    shownRef.current = first;
-    setShown(first);
+    // Leaving or entering the ball plays the drawings in between.
+    const unfurl = prevPose.stage === 1 && stage > 1;
+    if (unfurl || (stage === 1 && prevPose.stage > 1)) {
+      const open = unfurl ? stage : prevPose.stage;
+      const between = petUnfurlFrames(open);
+      const from: PetFrame = { source: petImage(prevPose.stage, prevPose.mood), scale: petScale(prevPose.stage, prevPose.mood) };
+      const to: PetFrame = { source: petImage(stage, mood), scale: petScale(stage, mood) };
+      frame.setValue(0);
+      fade.setValue(1);
+      setShown({ stage, mood });
+      swapping.current = true;
+      setSequence({
+        unfurl,
+        open,
+        pictures: [from, ...(unfurl ? between : [...between].reverse()), to],
+      });
+      return;
+    }
+
+    setShown({ stage, mood });
     swapping.current = true;
     fade.setValue(0);
     setPrevious(prevPose);
-  }, [stage, mood, fade, body]);
+  }, [stage, mood, fade, frame, body]);
 
   useEffect(() => {
     if (!previous || !swapping.current) return;
     const token = poseToken.current;
     let live = true;
     // Squash down, crossfade at the bottom, spring up taller than rest, settle.
-    // Steps on the way are gentler; the last one is the full move.
-    const isLast = queue.current.length === 0;
-    const power = isLast ? 1 : 0.6;
-    const swap = Animated.sequence([
-      timing(body.squash, 0.85 * power, 110, fall),
+    const anim = Animated.sequence([
+      timing(body.squash, 0.85, 110, fall),
       Animated.parallel([
         timing(fade, 1, 100, rise),
-        Animated.sequence([timing(body.squash, -0.55 * power, 130, rise), settleSquash(body.squash)]),
+        Animated.sequence([timing(body.squash, -0.55, 130, rise), settleSquash(body.squash)]),
       ]),
     ]);
-    // The ball shakes with effort, harder each time, before it gives way.
-    const wobble = Animated.sequence([
-      timing(body.tilt, 0.4, 90, rise),
-      timing(body.tilt, -0.6, 110, rise),
-      timing(body.tilt, 0.8, 110, rise),
-      timing(body.tilt, -1, 110, rise),
-      Animated.parallel([timing(body.tilt, 0, 90, rise), timing(body.squash, 0.5, 90, fall)]),
-    ]);
-    const anim = opening.current ? Animated.sequence([wobble, swap]) : swap;
-    opening.current = false;
     swapAnim.current = anim;
     anim.start(({ finished }) => {
       if (!live || poseToken.current !== token) return;
       if (swapAnim.current === anim) swapAnim.current = null;
       if (!finished || !mounted.current) return;
-      const next = queue.current.shift();
-      if (next) {
-        // The next stage on the way: the one just drawn becomes the outgoing pose.
-        const drawnNow = shownRef.current;
-        shownRef.current = next;
-        fade.setValue(0);
-        setShown(next);
-        setPrevious({ ...drawnNow });
-        return;
-      }
       swapping.current = false;
       setPrevious(null);
       startHops();
@@ -264,6 +285,69 @@ export function Pet({
       }
     };
   }, [previous, fade, body]);
+
+  // Frame-by-frame unfurl / curl. Starts once the stack of pictures has mounted.
+  useEffect(() => {
+    if (!sequence || !swapping.current) return;
+    const token = poseToken.current;
+    let live = true;
+    const steps = sequence.pictures.length - 1;
+    const framesMs = steps * (sequence.unfurl ? UNFURL_STEP_MS : CURL_STEP_MS);
+    const frames = Animated.timing(frame, {
+      toValue: steps,
+      duration: framesMs,
+      easing: frameEase,
+      useNativeDriver: true,
+    });
+    let anim: Animated.CompositeAnimation;
+    if (sequence.unfurl) {
+      // The ball trembles with effort, then the drawings play with a stretch
+      // (and, for the tall stages, a lift as it gets to its feet), then it lands.
+      const wobble = Animated.parallel([
+        Animated.sequence([
+          timing(body.tilt, 0.3, 70, rise),
+          timing(body.tilt, -0.5, 80, rise),
+          timing(body.tilt, 0.7, 80, rise),
+          timing(body.tilt, -1, 80, rise),
+          timing(body.tilt, 0, WOBBLE_MS - 310, rise),
+        ]),
+        timing(body.squash, 0.35, WOBBLE_MS, fall),
+      ]);
+      const play: Animated.CompositeAnimation[] = [frames, timing(body.squash, -0.25, framesMs, smooth)];
+      if (sequence.open >= 4) {
+        play.push(
+          Animated.sequence([
+            Animated.delay(framesMs / 2),
+            timing(body.lift, 0.5, framesMs / 4, rise),
+            timing(body.lift, 0, framesMs / 4, fall),
+          ]),
+        );
+      }
+      anim = Animated.sequence([wobble, Animated.parallel(play), moveLand(body, 0.9)]);
+    } else {
+      anim = Animated.sequence([
+        timing(body.squash, 0.6, CROUCH_MS, fall),
+        Animated.parallel([frames, timing(body.squash, 0.15, framesMs, smooth)]),
+        moveLand(body, 0.7),
+      ]);
+    }
+    swapAnim.current = anim;
+    anim.start(({ finished }) => {
+      if (!live || poseToken.current !== token) return;
+      if (swapAnim.current === anim) swapAnim.current = null;
+      if (!finished || !mounted.current) return;
+      swapping.current = false;
+      setSequence(null);
+      startHops();
+    });
+    return () => {
+      live = false;
+      if (swapAnim.current === anim) {
+        anim.stop();
+        swapAnim.current = null;
+      }
+    };
+  }, [sequence, frame, body]);
 
   useEffect(() => {
     breath.setValue(0);
@@ -310,10 +394,9 @@ export function Pet({
     restBody(body);
     fade.setValue(1);
     swapping.current = false;
-    queue.current = [];
-    shownRef.current = lastPose.current;
     setShown(lastPose.current);
     setPrevious(null);
+    setSequence(null);
   }, [reduceMotion, body, fade]);
 
   function handlePress() {
@@ -324,11 +407,12 @@ export function Pet({
       restBody(body);
       if (wasSwapping) {
         swapping.current = false;
-        queue.current = [];
-        shownRef.current = lastPose.current;
         setShown(lastPose.current);
         fade.setValue(1);
-        if (mounted.current) setPrevious(null);
+        if (mounted.current) {
+          setPrevious(null);
+          setSequence(null);
+        }
       }
       motionKind.current = 'nod';
       const anim = moveNod(body);
@@ -377,8 +461,22 @@ export function Pet({
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { transform: breathTransform }]}>
         <Animated.View style={[bodyStyles.mover, StyleSheet.absoluteFill]}>
           <Animated.View style={[bodyStyles.squash, StyleSheet.absoluteFill]}>
-            {previous ? <PoseImage pose={previous} size={size} opacity={prevOpacity} /> : null}
-            <PoseImage pose={shown} size={size} opacity={fade} />
+            {sequence && frameOpacities ? (
+              sequence.pictures.map((picture, i) => (
+                <PictureImage
+                  key={i}
+                  source={picture.source}
+                  drawn={size * picture.scale}
+                  size={size}
+                  opacity={frameOpacities[i] ?? fade}
+                />
+              ))
+            ) : (
+              <>
+                {previous ? <PoseImage pose={previous} size={size} opacity={prevOpacity} /> : null}
+                <PoseImage pose={shown} size={size} opacity={fade} />
+              </>
+            )}
           </Animated.View>
         </Animated.View>
       </Animated.View>
@@ -406,10 +504,30 @@ function PoseImage({
   size: number;
   opacity: Animated.AnimatedInterpolation<number> | Animated.Value;
 }) {
-  const drawn = size * petScale(pose.stage, pose.mood);
+  return (
+    <PictureImage
+      source={petImage(pose.stage, pose.mood)}
+      drawn={size * petScale(pose.stage, pose.mood)}
+      size={size}
+      opacity={opacity}
+    />
+  );
+}
+
+function PictureImage({
+  source,
+  drawn,
+  size,
+  opacity,
+}: {
+  source: PetFrame['source'];
+  drawn: number;
+  size: number;
+  opacity: Animated.AnimatedInterpolation<number> | Animated.Value;
+}) {
   return (
     <Animated.Image
-      source={petImage(pose.stage, pose.mood)}
+      source={source}
       resizeMode="contain"
       style={{
         position: 'absolute',
@@ -422,7 +540,6 @@ function PoseImage({
     />
   );
 }
-
 const styles = StyleSheet.create({
   shadow: {
     position: 'absolute',

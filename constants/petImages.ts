@@ -92,3 +92,37 @@ export function petScale(stage: PetStage, mood: PetMood): number {
   const key: PetPoseKey = `s${stage}_${displayedPetMood(stage, mood)}`;
   return PET_STAGE_SCALE[stage] * (PET_POSE_SCALE[key] ?? 1);
 }
+
+/** One drawing in a frame-by-frame animation, with how much of the box it fills. */
+export type PetFrame = { source: ImageSourcePropType; scale: number };
+
+const UNFURL = {
+  crack: require('../assets/pet/s1_ua.png'), // the ball opens, eyes and ear tips out
+  climb: require('../assets/pet/s1_ub.png'), // head and arms out, climbing out of the curl
+  tumble: require('../assets/pet/s1_uc.png'), // rolled open onto its back, legs in the air
+  crouch: require('../assets/pet/s1_ud.png'), // on all fours, getting up
+  rise: require('../assets/pet/s1_ue.png'), // nearly upright, arms out in a stretch
+} as const;
+
+/**
+ * The drawings between the curled ball and a stage's pose, in order, not
+ * including either end. Play them forwards to unfurl, backwards to curl up.
+ * Stage 1 is the ball itself, so it has none.
+ */
+export function petUnfurlFrames(to: PetStage): PetFrame[] {
+  if (to === 1) return [];
+  const frames: PetFrame[] = [{ source: UNFURL.crack, scale: to === 2 ? 0.8 : 0.86 }];
+  if (to === 2) return frames;
+  frames.push(
+    { source: PET_IMAGES.s2_idle ?? UNFURL.crack, scale: 0.9 },
+    { source: UNFURL.climb, scale: 0.92 },
+    { source: UNFURL.tumble, scale: 0.9 },
+  );
+  if (to === 3) return frames;
+  const grown = PET_STAGE_SCALE[to];
+  frames.push(
+    { source: UNFURL.crouch, scale: 0.76 * grown },
+    { source: UNFURL.rise, scale: 0.96 * grown },
+  );
+  return frames;
+}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  Image,
   Animated,
   Easing,
 } from 'react-native';
@@ -14,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart, BarChart } from 'react-native-gifted-charts';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
@@ -26,7 +25,10 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { MiniRing } from '../../components/ui/MiniRing';
 import { progressRangeChanged } from '../../lib/analytics/events/engagement';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
-import { PET_STAGE_SCALE, petImage, type PetStage } from '../../constants/petImages';
+import { PET_STAGE_SCALE } from '../../constants/petImages';
+import { Dust, DUST_PALE, easedTimeAt, type DustHandle } from '../../components/pet/Dust';
+import { JourneyPet, type JourneyPetHandle } from '../../components/pet/JourneyPet';
+import { PET_UNFURL_MS } from '../../components/pet/Pet';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
 import { useReduceMotion } from '../../lib/useReduceMotion';
@@ -101,309 +103,801 @@ const JOURNEY_TRACK_W = 180;
 const STAGE_SLOT = 52;
 const PATH_LINE = 'rgba(255, 255, 255, 0.35)';
 
-// The program as a route: one stop per week on a gently rolling line.
-// Covered ground is solid, what's ahead is dashed, and the pet stands on today.
-function ProgramPath({
+// The program as a route. The intro plays once per route per app session.
+let journeyPlayedKey: string | null = null;
+
+const ROLL_EASE = Easing.inOut(Easing.quad);
+const PAST = 6;
+const CURVE_STEPS = 8;
+const BALL_DRAWN = PET_ON_NODE * PET_STAGE_SCALE[1];
+const BALL_RADIUS = BALL_DRAWN / 2;
+const LEAD_MS = 300;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+type Pt = { x: number; y: number };
+type Sample = { d: number; x: number; y: number };
+type Seg = { d: string; dash: number; from: number; to: number };
+type Geom = {
+  stops: Pt[];
+  goal: number;
+  length: number;
+  turn: number;
+  samples: Sample[];
+  segments: Seg[];
+  ahead: string[];
+  pops: { i: number; f: number }[];
+  dust: { x: number; f: number }[];
+};
+
+type Gate = { alive: boolean; cancel: Array<() => void> };
+
+function makeGate(): Gate {
+  return { alive: true, cancel: [] };
+}
+
+function shut(gate: Gate) {
+  gate.alive = false;
+  const fns = gate.cancel.splice(0);
+  for (const fn of fns) fn();
+}
+
+function wait(ms: number, gate: Gate): Promise<boolean> {
+  if (!gate.alive) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const id = setTimeout(() => resolve(gate.alive), ms);
+    gate.cancel.push(() => {
+      clearTimeout(id);
+      resolve(false);
+    });
+  });
+}
+
+function playAnim(anim: Animated.CompositeAnimation, gate: Gate): Promise<boolean> {
+  if (!gate.alive) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok: boolean) => {
+      if (done) return;
+      done = true;
+      resolve(ok);
+    };
+    gate.cancel.push(() => {
+      anim.stop();
+      finish(false);
+    });
+    anim.start(({ finished }) => finish(finished && gate.alive));
+  });
+}
+
+function routeKey(weeks: number, week: number, complete: boolean): string {
+  return complete ? `${weeks}:done` : `${weeks}:${week}`;
+}
+
+function curvePoint(a: Pt, b: Pt, u: number): Pt {
+  const dx = (b.x - a.x) / 2;
+  const m = 1 - u;
+  const mm = m * m;
+  const uu = u * u;
+  return {
+    x: mm * m * a.x + 3 * mm * u * (a.x + dx) + 3 * m * uu * (b.x - dx) + uu * u * b.x,
+    y: mm * m * a.y + 3 * mm * u * a.y + 3 * m * uu * b.y + uu * u * b.y,
+  };
+}
+
+function curvePath(a: Pt, b: Pt): string {
+  const dx = (b.x - a.x) / 2;
+  return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+}
+
+function faceTurn(length: number): number {
+  if (length <= 0) return 0;
+  const deg = (length / BALL_RADIUS) * (180 / Math.PI);
+  const rem = ((deg % 360) + 360) % 360;
+  return rem <= 180 ? -rem : 360 - rem;
+}
+
+function pointAt(samples: Sample[], distance: number): Pt {
+  const first = samples[0];
+  if (!first) return { x: 0, y: 0 };
+  if (distance <= first.d) return first;
+  for (let i = 1; i < samples.length; i++) {
+    const b = samples[i];
+    const a = samples[i - 1];
+    if (!a || !b) continue;
+    if (distance <= b.d) {
+      const span = b.d - a.d || 1;
+      const u = (distance - a.d) / span;
+      return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u };
+    }
+  }
+  const last = samples[samples.length - 1];
+  return last ?? first;
+}
+
+function emptyGeom(): Geom {
+  return {
+    stops: [],
+    goal: -1,
+    length: 0,
+    turn: 0,
+    samples: [],
+    segments: [],
+    ahead: [],
+    pops: [],
+    dust: [],
+  };
+}
+
+function buildGeom(width: number, weeks: number, currentWeek: number, complete: boolean): Geom {
+  if (width <= 0 || weeks <= 0) return emptyGeom();
+  const span = Math.max(0, width - PATH_PAD * 2);
+  const stops: Pt[] = Array.from({ length: weeks }, (_, i) => {
+    const t = weeks > 1 ? i / (weeks - 1) : 0.5;
+    return {
+      x: PATH_PAD + span * t,
+      y: PATH_MID + Math.sin(t * Math.PI * 2) * 6,
+    };
+  });
+  const rawGoal = complete ? weeks - 1 : currentWeek - 1;
+  const goal = Math.max(-1, Math.min(weeks - 1, rawGoal));
+  const samples: Sample[] = [];
+  const nodeD: number[] = [];
+  const rawSeg: { d: string; start: number; end: number }[] = [];
+  const ahead: string[] = [];
+  const first = stops[0];
+  if (!first) return emptyGeom();
+  samples.push({ d: 0, x: first.x, y: first.y });
+  nodeD.push(0);
+  let travelled = 0;
+
+  for (let i = 0; i < stops.length - 1; i++) {
+    const a = stops[i];
+    const b = stops[i + 1];
+    if (!a || !b) continue;
+    const path = curvePath(a, b);
+    if (i < goal) {
+      const start = travelled;
+      let prev = a;
+      for (let k = 1; k <= CURVE_STEPS; k++) {
+        const p = curvePoint(a, b, k / CURVE_STEPS);
+        travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
+        const last = samples[samples.length - 1];
+        const d = last && travelled <= last.d ? last.d + 0.001 : travelled;
+        travelled = d;
+        samples.push({ d, x: p.x, y: p.y });
+        prev = p;
+      }
+      nodeD.push(travelled);
+      rawSeg.push({ d: path, start, end: travelled });
+    } else {
+      ahead.push(path);
+    }
+  }
+
+  const length = goal > 0 ? (nodeD[goal] ?? 0) : 0;
+  if (length > 0) {
+    const end = stops[goal];
+    if (end) samples.push({ d: length + PAST, x: end.x + PAST, y: end.y });
+  }
+
+  const segments: Seg[] = rawSeg.map((seg, index) => {
+    let from = length > 0 ? seg.start / length : 0;
+    let to = index === rawSeg.length - 1 ? 1 : length > 0 ? seg.end / length : 1;
+    if (from < 0) from = 0;
+    if (from >= 1) from = 0.999;
+    if (to > 1) to = 1;
+    if (to <= from) to = Math.min(1, from + 0.0001);
+    const len = Math.max(1, seg.end - seg.start);
+    return { d: seg.d, dash: len + 1, from, to };
+  });
+
+  const pops: { i: number; f: number }[] = [];
+  if (length > 0 && goal > 0) {
+    for (let i = 0; i <= goal; i++) {
+      const d = nodeD[i] ?? 0;
+      pops.push({ i, f: i === goal ? 1 : Math.min(1, d / length) });
+    }
+  }
+
+  const dust: { x: number; f: number }[] = [];
+  if (length > 36) {
+    for (let d = 28; d < length - 8 && dust.length < 8; d += 42) {
+      dust.push({ x: pointAt(samples, d).x, f: d / length });
+    }
+  }
+
+  return { stops, goal, length, turn: faceTurn(length), samples, segments, ahead, pops, dust };
+}
+
+function JourneyRoute({
   weeks,
   currentWeek,
   complete,
   finishLabel,
   pet,
+  petSettled,
 }: {
   weeks: number;
   currentWeek: number;
   complete: boolean;
   finishLabel: string;
   pet: PetState | null;
+  /** The pet lookup has answered (with or without a pet), so the intro can start. */
+  petSettled: boolean;
 }) {
-  const [width, setWidth] = useState(0);
   const reduceMotion = useReduceMotion();
-  const span = width - PATH_PAD * 2;
-  const stops = Array.from({ length: weeks }, (_, i) => {
-    const t = weeks > 1 ? i / (weeks - 1) : 0.5;
-    return {
-      x: PATH_PAD + span * t,
-      y: PATH_MID + Math.sin(t * Math.PI * 2) * 6,
-      reached: complete || i + 1 <= currentWeek,
-      current: !complete && i + 1 === currentWeek,
-    };
-  });
-  const currentIdx = complete ? weeks - 1 : currentWeek - 1;
-  const lastIdx = weeks - 1;
-  const here =
-    !complete && currentIdx >= 0 && currentIdx < stops.length
-      ? stops[currentIdx]
-      : undefined;
+  const [width, setWidth] = useState(0);
+  const keyNow = routeKey(weeks, currentWeek, complete);
+  const settleFirst = reduceMotion === true || journeyPlayedKey === keyNow;
+  const [curled, setCurled] = useState(!settleFirst);
+  const [poseEpoch, setPoseEpoch] = useState(0);
+  const [live, setLive] = useState(false);
+  const [settledStamp, setSettledStamp] = useState(0);
 
-  // The walk: each time the tab is opened the covered route draws itself and
-  // the pet hops along it, week by week, to where it is now. `walk` runs 0..1
-  // over the covered segments; it is JS-driven because SVG props are.
-  const segments = Math.max(0, currentIdx);
-  const walk = useRef(new Animated.Value(0)).current;
-  const land = useRef(new Animated.Value(0)).current;
-  const [focusRun, setFocusRun] = useState(0);
-  useFocusEffect(
-    useCallback(() => {
-      setFocusRun((n) => n + 1);
-    }, []),
+  const dist = useRef(new Animated.Value(0)).current;
+  const line = useRef(new Animated.Value(0)).current;
+  const unwind = useRef(new Animated.Value(0)).current;
+  const bar = useRef(new Animated.Value(0)).current;
+  const pill = useRef(new Animated.Value(1)).current;
+  const scalesRef = useRef<Animated.Value[]>([]);
+  const ripplesRef = useRef<Animated.Value[]>([]);
+  while (scalesRef.current.length < weeks) {
+    scalesRef.current.push(new Animated.Value(0));
+    ripplesRef.current.push(new Animated.Value(0));
+  }
+
+  const geom = useMemo(
+    () => buildGeom(width, weeks, currentWeek, complete),
+    [width, weeks, currentWeek, complete],
   );
-  useEffect(() => {
-    if (width <= 0 || reduceMotion === null) return;
-    land.setValue(0);
-    if (reduceMotion || segments === 0) {
-      walk.setValue(1);
+  const geomRef = useRef(geom);
+  geomRef.current = geom;
+  const petDataRef = useRef(pet);
+  petDataRef.current = pet;
+  const progressRef = useRef(0);
+  progressRef.current = pet ? stageProgress(pet) : 0;
+  const petRef = useRef<JourneyPetHandle | null>(null);
+  const dustRef = useRef<DustHandle>(null);
+  const curledRef = useRef(!settleFirst);
+  const openingRef = useRef(false);
+  const settledRef = useRef(false);
+  const focusedRef = useRef(false);
+  const hoppingRef = useRef(false);
+  const mounted = useRef(true);
+  const runRef = useRef(0);
+  const sigRef = useRef<string | null>(null);
+
+  const ready = width > 0 && reduceMotion !== null && petSettled;
+  const focusSig = `${ready ? 1 : 0}|${reduceMotion === null ? 'n' : reduceMotion ? '1' : '0'}|${weeks}|${currentWeek}|${complete ? 1 : 0}`;
+
+  const motion = useMemo(() => {
+    if (complete || geom.goal < 0 || geom.length <= 0 || geom.samples.length < 2) return null;
+    const anchor = geom.stops[geom.goal];
+    if (!anchor) return null;
+    const inputRange = geom.samples.map((s) => s.d);
+    for (let i = 1; i < inputRange.length; i++) {
+      if ((inputRange[i] ?? 0) <= (inputRange[i - 1] ?? 0)) return null;
+    }
+    const rollDeg = dist.interpolate({
+      inputRange,
+      outputRange: geom.samples.map((s) => (s.d / BALL_RADIUS) * (180 / Math.PI)),
+      extrapolate: 'clamp',
+    });
+    return {
+      x: dist.interpolate({
+        inputRange,
+        outputRange: geom.samples.map((s) => s.x - anchor.x),
+        extrapolate: 'clamp',
+      }),
+      y: dist.interpolate({
+        inputRange,
+        outputRange: geom.samples.map((s) => s.y - anchor.y),
+        extrapolate: 'clamp',
+      }),
+      spin: Animated.add(rollDeg, unwind).interpolate({
+        inputRange: [-8000, 8000],
+        outputRange: ['-8000deg', '8000deg'],
+        extrapolate: 'clamp',
+      }),
+    };
+  }, [geom, complete, dist, unwind]);
+
+  const reveal = useMemo(
+    () =>
+      geom.segments.map((seg) => ({
+        d: seg.d,
+        dash: seg.dash,
+        offset: line.interpolate({
+          inputRange: [seg.from, seg.to],
+          outputRange: [seg.dash, 0],
+          extrapolate: 'clamp',
+        }),
+      })),
+    [geom, line],
+  );
+
+  const nodeLooks = useMemo(
+    () =>
+      Array.from({ length: weeks }, (_, i) => {
+        const ripple = ripplesRef.current[i];
+        if (!ripple) return null;
+        return {
+          ringScale: ripple.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 2.6],
+            extrapolate: 'clamp',
+          }),
+          ringOpacity: ripple.interpolate({
+            inputRange: [0, 0.12, 1],
+            outputRange: [0, 0.7, 0],
+            extrapolate: 'clamp',
+          }),
+        };
+      }),
+    [weeks],
+  );
+
+  const barX = useMemo(
+    () =>
+      bar.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-JOURNEY_TRACK_W, 0],
+        extrapolate: 'clamp',
+      }),
+    [bar],
+  );
+
+  const paintNodes = useCallback((filledCount: number) => {
+    for (let i = 0; i < scalesRef.current.length; i++) {
+      scalesRef.current[i]?.setValue(i < filledCount ? 1 : 0);
+      ripplesRef.current[i]?.setValue(0);
+    }
+  }, []);
+
+  const showBallNow = useCallback(() => {
+    dist.setValue(0);
+    line.setValue(0);
+    unwind.setValue(0);
+    bar.setValue(0);
+    pill.setValue(1);
+    paintNodes(0);
+    petRef.current?.stop();
+    openingRef.current = false;
+    settledRef.current = false;
+    if (!curledRef.current) setPoseEpoch((n) => n + 1);
+    curledRef.current = true;
+    setCurled(true);
+    setLive(false);
+  }, [dist, line, unwind, bar, pill, paintNodes]);
+
+  const showFinalNow = useCallback(() => {
+    const g = geomRef.current;
+    dist.setValue(g.length);
+    line.setValue(1);
+    unwind.setValue(g.turn);
+    bar.setValue(progressRef.current);
+    pill.setValue(1);
+    paintNodes(g.goal >= 0 ? g.goal + 1 : 0);
+    petRef.current?.stop();
+    const stage = petDataRef.current?.stage ?? 1;
+    if ((curledRef.current && stage > 1) || openingRef.current) setPoseEpoch((n) => n + 1);
+    openingRef.current = false;
+    curledRef.current = false;
+    setCurled(false);
+    setLive(false);
+    settledRef.current = true;
+  }, [dist, line, unwind, bar, pill, paintNodes]);
+
+  useLayoutEffect(() => {
+    if (sigRef.current !== focusSig) {
+      if (sigRef.current !== null) runRef.current += 1;
+      sigRef.current = focusSig;
+    }
+    if (!ready || reduceMotion === null) return;
+    const key = routeKey(weeks, currentWeek, complete);
+    const full = reduceMotion === false && journeyPlayedKey !== key;
+    if (!full) {
+      journeyPlayedKey = key;
+      showFinalNow();
       return;
     }
-    walk.setValue(0);
-    const anim = Animated.sequence([
-      Animated.delay(250),
-      Animated.timing(walk, {
-        toValue: 1,
-        duration: Math.min(2200, 520 * segments + 300),
-        easing: Easing.inOut(Easing.sin),
-        useNativeDriver: false,
-      }),
-    ]);
-    anim.start(({ finished }) => {
-      if (!finished || !here) return;
-      // Arriving: a little squash and spring (inner view, native driven).
-      Animated.sequence([
-        Animated.timing(land, { toValue: 1, duration: 90, useNativeDriver: true }),
-        Animated.spring(land, { toValue: 0, speed: 16, bounciness: 14, useNativeDriver: true }),
-      ]).start();
-    });
-    return () => anim.stop();
-    // `here` only matters for the landing; the walk restarts on layout, tab focus and week change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [width, reduceMotion, segments, focusRun, currentWeek, complete]);
+    showBallNow();
+  }, [focusSig, ready, reduceMotion, weeks, currentWeek, complete, showFinalNow, showBallNow]);
 
-  const walkLook = useMemo(() => {
-    const pts = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-      const dx = (b.x - a.x) / 2;
-      return (u: number) => {
-        const m = 1 - u;
-        const x = m ** 3 * a.x + 3 * m * m * u * (a.x + dx) + 3 * m * u * u * (b.x - dx) + u ** 3 * b.x;
-        const y = m ** 3 * a.y + 3 * m * m * u * a.y + 3 * m * u * u * b.y + u ** 3 * b.y;
-        return { x, y };
-      };
-    };
-    const reveal = Array.from({ length: segments }, (_, i) => {
-      const a = stops[i];
-      const b = stops[i + 1];
-      const len = a && b ? Math.hypot(b.x - a.x, b.y - a.y) * 1.12 + 4 : 0;
-      const drawn = walk.interpolate({
-        inputRange: [i / segments, (i + 1) / segments],
-        outputRange: [len, 0],
-        extrapolate: 'clamp',
-      });
-      return { len, drawn };
-    });
-    // The pet's route, sampled along the curves with a little hop each week.
-    const inputRange: number[] = [];
-    const xs: number[] = [];
-    const ys: number[] = [];
-    const per = 10;
-    for (let i = 0; i < segments; i++) {
-      const a = stops[i];
-      const b = stops[i + 1];
-      if (!a || !b) continue;
-      const at = pts(a, b);
-      for (let k = 0; k <= per; k++) {
-        if (i > 0 && k === 0) continue;
-        const u = k / per;
-        const p = at(u);
-        inputRange.push((i + u) / segments);
-        xs.push(p.x - b.x);
-        ys.push(p.y - b.y - Math.sin(u * Math.PI) * 9);
-      }
-    }
-    const route =
-      inputRange.length > 1
-        ? {
-            x: walk.interpolate({ inputRange, outputRange: xs }),
-            y: walk.interpolate({ inputRange, outputRange: ys }),
+  useLayoutEffect(() => {
+    if (width <= 0 || !settledRef.current) return;
+    const g = geomRef.current;
+    dist.setValue(g.length);
+    line.setValue(1);
+    unwind.setValue(g.turn);
+  }, [width, weeks, currentWeek, complete, dist, line, unwind]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const my = runRef.current;
+      if (!ready || reduceMotion === null) return;
+      const key = routeKey(weeks, currentWeek, complete);
+      const full = reduceMotion === false && journeyPlayedKey !== key;
+      const gate = makeGate();
+      focusedRef.current = true;
+
+      const alive = () => gate.alive && my === runRef.current && mounted.current;
+
+      if (!full) {
+        // Stop ran in the previous cleanup and can leave a value mid-way.
+        showFinalNow();
+        void (async () => {
+          hoppingRef.current = true;
+          const actor = petRef.current;
+          if (reduceMotion === true || complete || !actor || !petDataRef.current) {
+            hoppingRef.current = false;
+            return;
           }
-        : null;
-    return { reveal, route };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walk, segments, width, weeks]);
+          const ok = await actor.hop(1);
+          hoppingRef.current = false;
+          if (!ok || !alive()) return;
+          setLive(true);
+        })();
+        return () => {
+          focusedRef.current = false;
+          hoppingRef.current = false;
+          shut(gate);
+          petRef.current?.stop();
+          if (my === runRef.current && mounted.current) showFinalNow();
+        };
+      }
+
+      journeyPlayedKey = key;
+      showBallNow();
+
+      function popNode(index: number) {
+        const scale = scalesRef.current[index];
+        const ripple = ripplesRef.current[index];
+        if (!scale || !ripple || !gate.alive) return;
+        scale.setValue(0);
+        ripple.setValue(0);
+        const anim = Animated.parallel([
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 1.3,
+              duration: 150,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+            Animated.spring(scale, { toValue: 1, speed: 16, bounciness: 8, useNativeDriver: true }),
+          ]),
+          Animated.timing(ripple, {
+            toValue: 1,
+            duration: 540,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]);
+        gate.cancel.push(() => anim.stop());
+        anim.start();
+        hapticSelection();
+      }
+
+      void (async () => {
+        const led = await wait(LEAD_MS, gate);
+        if (!led || !alive()) return;
+
+        let g = geomRef.current;
+        let canRoll = g.length > 0 && g.goal > 0;
+        if (canRoll && !complete && petRef.current) {
+          const leaned = await petRef.current.anticipate();
+          if (!leaned || !alive()) return;
+          g = geomRef.current;
+          canRoll = g.length > 0 && g.goal > 0;
+        }
+
+        if (canRoll) {
+          const duration = Math.min(2400, Math.round(450 * g.goal));
+          for (const pop of g.pops) {
+            const delay = Math.round(easedTimeAt(ROLL_EASE, pop.f) * duration);
+            const id = setTimeout(() => {
+              if (gate.alive) popNode(pop.i);
+            }, delay);
+            gate.cancel.push(() => clearTimeout(id));
+          }
+          if (!complete && g.dust.length > 0) {
+            dustRef.current?.play(
+              g.dust.map((spot) => ({
+                x: spot.x,
+                delay: Math.round(easedTimeAt(ROLL_EASE, spot.f) * duration),
+                size: 9,
+              })),
+            );
+          }
+          const rolled = await playAnim(
+            Animated.parallel([
+              Animated.timing(dist, {
+                toValue: g.length,
+                duration,
+                easing: ROLL_EASE,
+                useNativeDriver: true,
+              }),
+              Animated.timing(line, {
+                toValue: 1,
+                duration,
+                easing: ROLL_EASE,
+                useNativeDriver: false,
+              }),
+            ]),
+            gate,
+          );
+          if (!rolled || !alive()) return;
+
+          if (!complete && petRef.current) {
+            const past = await playAnim(
+              Animated.timing(dist, {
+                toValue: g.length + PAST,
+                duration: 200,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+              }),
+              gate,
+            );
+            if (!past || !alive()) return;
+            const back = await playAnim(
+              Animated.timing(dist, {
+                toValue: g.length,
+                duration: 250,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: true,
+              }),
+              gate,
+            );
+            if (!back || !alive()) return;
+            if (Math.abs(g.turn) > 4) {
+              const spun = await playAnim(
+                Animated.timing(unwind, {
+                  toValue: g.turn,
+                  duration: Math.round(Math.min(280, 120 + Math.abs(g.turn) * 0.7)),
+                  easing: Easing.out(Easing.quad),
+                  useNativeDriver: true,
+                }),
+                gate,
+              );
+              if (!spun || !alive()) return;
+            }
+            const rocked = await petRef.current.rock();
+            if (!rocked || !alive()) return;
+          }
+        } else if (g.goal >= 0 && !complete) {
+          scalesRef.current[g.goal]?.setValue(1);
+        } else if (g.goal >= 0 && complete) {
+          popNode(g.goal);
+        }
+
+        const actor = !complete ? petRef.current : null;
+        const stage = petDataRef.current?.stage ?? 1;
+        if (actor && petDataRef.current) {
+          openingRef.current = stage > 1;
+          curledRef.current = false;
+          if (mounted.current) setCurled(false);
+          if (stage > 1) {
+            const opened = await wait(PET_UNFURL_MS, gate);
+            openingRef.current = false;
+            if (!opened || !alive()) return;
+          }
+          const hopped = await actor.hop(1);
+          if (!hopped || !alive()) return;
+        } else if (canRoll) {
+          const paused = await wait(180, gate);
+          if (!paused || !alive()) return;
+        }
+
+        if (!actor) {
+          // No pet yet (it may arrive later): never leave the ball curled.
+          curledRef.current = false;
+          if (mounted.current) setCurled(false);
+        }
+
+        const grown = petDataRef.current;
+        if (grown && alive()) {
+          if (grown.stage < 5) {
+            const filled = await playAnim(
+              Animated.timing(bar, {
+                toValue: stageProgress(grown),
+                duration: 700,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+              }),
+              gate,
+            );
+            if (!filled || !alive()) return;
+          }
+          const pulsed = await playAnim(
+            Animated.sequence([
+              Animated.timing(pill, {
+                toValue: 1.045,
+                duration: 160,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+              }),
+              Animated.spring(pill, { toValue: 1, speed: 14, bounciness: 6, useNativeDriver: true }),
+            ]),
+            gate,
+          );
+          if (!pulsed || !alive()) return;
+        }
+
+        if (!alive()) return;
+        settledRef.current = true;
+        setSettledStamp((n) => n + 1);
+      })();
+
+      return () => {
+        focusedRef.current = false;
+        hoppingRef.current = false;
+        shut(gate);
+        petRef.current?.stop();
+        if (my === runRef.current && mounted.current) showFinalNow();
+      };
+    }, [ready, reduceMotion, weeks, currentWeek, complete, showBallNow, showFinalNow, dist, line, unwind, bar, pill]),
+  );
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pet || !settledRef.current || hoppingRef.current) return;
+    bar.setValue(stageProgress(pet));
+    if (!focusedRef.current || reduceMotion !== false || complete) return;
+    setLive(true);
+  }, [pet, complete, reduceMotion, settledStamp, bar]);
+
+  const stops = geom.stops;
+  const currentIdx = geom.goal;
+  const lastIdx = stops.length - 1;
+  const here =
+    !complete && currentIdx >= 0 && currentIdx < stops.length ? stops[currentIdx] : undefined;
 
   return (
-    <View
-      style={styles.pathWrap}
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-      accessibilityLabel={
-        complete ? 'Program complete' : `Week ${currentWeek} of ${weeks}`
-      }
-    >
-      <View style={styles.pathShift}>
-        {width > 0 ? (
+    <>
+      <View
+        style={styles.pathWrap}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        accessibilityLabel={complete ? 'Program complete' : `Week ${currentWeek} of ${weeks}`}
+      >
+        <View style={styles.pathShift}>
+          {width > 0 ? (
             <Svg width={width} height={PATH_H}>
-              {stops.slice(0, -1).map((a, i) => {
-                const b = stops[i + 1]!;
-                const dx = (b.x - a.x) / 2;
-                const walked = b.reached;
-                const drawing = walkLook.reveal[i];
-                if (walked && drawing) {
-                  return (
-                    <AnimatedPath
-                      key={`seg-${i}`}
-                      d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
-                      fill="none"
-                      strokeLinecap="round"
-                      stroke={PATH_LINE}
-                      strokeWidth={3}
-                      strokeDasharray={[drawing.len, drawing.len]}
-                      strokeDashoffset={drawing.drawn}
-                    />
-                  );
-                }
-                return (
-                  <Path
-                    key={`seg-${i}`}
-                    d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
-                    fill="none"
-                    strokeLinecap="round"
-                    stroke={PATH_LINE}
-                    strokeWidth={walked ? 3 : 2}
-                    strokeDasharray={walked ? undefined : '1 7'}
-                  />
-                );
-              })}
-              {stops.map((s, i) => {
-                if (s.current) {
-                  if (!pet) {
-                    return (
-                      <Circle
-                        key={`stop-${i}`}
-                        cx={s.x}
-                        cy={s.y}
-                        r={6.5}
-                        fill={colors.background}
-                      />
-                    );
-                  }
-                  return null;
-                }
-                if (s.reached) {
-                  const isEnd = complete && i === lastIdx;
-                  return (
-                    <React.Fragment key={`stop-${i}`}>
-                      {isEnd ? (
-                        <Circle cx={s.x} cy={s.y} r={15} fill="#FFFFFF" fillOpacity={0.2} />
-                      ) : null}
-                      <Circle cx={s.x} cy={s.y} r={6.5} fill={colors.background} />
-                      <Circle cx={s.x} cy={s.y} r={2} fill={colors.surface} />
-                    </React.Fragment>
-                  );
-                }
-                return (
-                  <Circle
-                    key={`stop-${i}`}
-                    cx={s.x}
-                    cy={s.y}
-                    r={5.5}
-                    fill={PATH_LINE}
-                    stroke={PATH_LINE}
-                    strokeWidth={2}
-                  />
-                );
-              })}
+              {reveal.map((seg, i) => (
+                <AnimatedPath
+                  key={`seg-${i}`}
+                  d={seg.d}
+                  fill="none"
+                  stroke={PATH_LINE}
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeDasharray={[seg.dash, seg.dash]}
+                  strokeDashoffset={seg.offset}
+                />
+              ))}
+              {geom.ahead.map((d, i) => (
+                <Path
+                  key={`ahead-${i}`}
+                  d={d}
+                  fill="none"
+                  stroke={PATH_LINE}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeDasharray="1 7"
+                />
+              ))}
             </Svg>
-        ) : null}
-      </View>
-      {width > 0 ? (
-        <View style={styles.pathLabels}>
-          {currentIdx !== 0 ? (
-            <Text style={[styles.pathLabel, styles.pathLabelStart]}>Start</Text>
-          ) : null}
-          {currentIdx !== lastIdx ? (
-            <Text style={[styles.pathLabel, styles.pathLabelEnd]}>{finishLabel}</Text>
-          ) : null}
-          {complete ? (
-            <Text
-              style={[
-                styles.pathLabel,
-                currentIdx === 0
-                  ? styles.pathLabelStart
-                  : currentIdx === lastIdx
-                  ? styles.pathLabelEnd
-                  : { left: (stops[currentIdx]?.x ?? 0) - 45, width: 90, textAlign: 'center' as const },
-              ]}
-            >
-              Finished
-            </Text>
           ) : null}
         </View>
+        {width > 0
+          ? stops.map((s, i) => {
+              const reached = currentIdx >= 0 && i <= currentIdx;
+              const look = nodeLooks[i];
+              const end = complete && i === lastIdx;
+              const plain = !complete && !pet && i === currentIdx;
+              const scale = scalesRef.current[i];
+              return (
+                <View
+                  key={`node-${i}`}
+                  pointerEvents="none"
+                  style={[styles.nodeSpot, { left: s.x - 16, top: PATH_PET_PAD + s.y - 16 }]}
+                >
+                  <View style={styles.nodeAhead} />
+                  {reached && look && scale ? (
+                    <>
+                      <Animated.View
+                        style={[
+                          styles.nodeRing,
+                          { opacity: look.ringOpacity, transform: [{ scale: look.ringScale }] },
+                        ]}
+                      />
+                      <Animated.View style={[styles.nodeFill, { transform: [{ scale }] }]}>
+                        {end ? <View style={styles.nodeHalo} /> : null}
+                        <View style={styles.nodeDisk}>{plain ? null : <View style={styles.nodeDot} />}</View>
+                      </Animated.View>
+                    </>
+                  ) : null}
+                </View>
+              );
+            })
+          : null}
+        {width > 0 ? (
+          <View pointerEvents="none" style={styles.dustLane}>
+            <Dust ref={dustRef} color={DUST_PALE} />
+          </View>
+        ) : null}
+        {width > 0 ? (
+          <View style={styles.pathLabels}>
+            {currentIdx !== 0 ? (
+              <Text style={[styles.pathLabel, styles.pathLabelStart]}>Start</Text>
+            ) : null}
+            {currentIdx !== lastIdx ? (
+              <Text style={[styles.pathLabel, styles.pathLabelEnd]}>{finishLabel}</Text>
+            ) : null}
+            {complete ? (
+              <Text
+                style={[
+                  styles.pathLabel,
+                  currentIdx === 0
+                    ? styles.pathLabelStart
+                    : currentIdx === lastIdx
+                    ? styles.pathLabelEnd
+                    : { left: (stops[currentIdx]?.x ?? 0) - 45, width: 90, textAlign: 'center' as const },
+                ]}
+              >
+                Finished
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+        {width > 0 && pet && here ? (
+          <Animated.View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              left: here.x - PET_ON_NODE / 2,
+              top: PATH_PET_PAD + here.y - PET_ON_NODE,
+              width: PET_ON_NODE,
+              height: PET_ON_NODE,
+              transform: motion ? [{ translateX: motion.x }, { translateY: motion.y }] : undefined,
+            }}
+          >
+            <JourneyPet
+              ref={petRef}
+              stage={pet.stage}
+              curled={curled}
+              poseKey={poseEpoch}
+              roll={motion?.spin ?? null}
+              live={live}
+              size={PET_ON_NODE}
+            />
+          </Animated.View>
+        ) : null}
+      </View>
+      {pet ? (
+        <View style={styles.growthPillWrap}>
+          <Animated.View style={[styles.growthPill, { transform: [{ scale: pill }] }]}>
+            <Text style={styles.growthPillText}>{petGrowthCopy(pet)}</Text>
+            {pet.stage < 5 ? (
+              <View style={styles.growthTrack}>
+                <Animated.View
+                  style={[
+                    styles.growthTrackFill,
+                    { width: JOURNEY_TRACK_W, transform: [{ translateX: barX }] },
+                  ]}
+                />
+              </View>
+            ) : null}
+          </Animated.View>
+        </View>
       ) : null}
-      {width > 0 && pet && here ? (
-        <NodePet x={here.x} y={here.y} stage={pet.stage} route={walkLook.route} land={land} />
-      ) : null}
-    </View>
-  );
-}
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
-function NodePet({
-  x,
-  y,
-  stage,
-  route,
-  land,
-}: {
-  x: number;
-  y: number;
-  stage: PetStage;
-  route: { x: Animated.AnimatedInterpolation<number>; y: Animated.AnimatedInterpolation<number> } | null;
-  land: Animated.Value;
-}) {
-  const drawn = PET_ON_NODE * PET_STAGE_SCALE[stage];
-  const shadowW = drawn * 0.55;
-  const shadowH = Math.max(4, drawn * 0.08);
-  const squash = useMemo(
-    () => ({
-      transform: [
-        { translateY: land.interpolate({ inputRange: [0, 1], outputRange: [0, drawn * 0.1] }) },
-        { scaleX: land.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
-        { scaleY: land.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }) },
-      ],
-    }),
-    [land, drawn],
-  );
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left: x - drawn / 2,
-        top: PATH_PET_PAD + y - drawn,
-        width: drawn,
-        height: drawn + shadowH / 2,
-        overflow: 'visible',
-        transform: route ? [{ translateX: route.x }, { translateY: route.y }] : [],
-      }}
-    >
-      <View
-        style={{
-          position: 'absolute',
-          left: (drawn - shadowW) / 2,
-          top: drawn - shadowH / 2,
-          width: shadowW,
-          height: shadowH,
-          borderRadius: shadowW / 2,
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        }}
-      />
-      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, width: drawn, height: drawn }, squash]}>
-        <Image
-          source={petImage(stage, 'idle')}
-          resizeMode="contain"
-          accessible={false}
-          style={{ width: drawn, height: drawn }}
-        />
-      </Animated.View>
-    </Animated.View>
+    </>
   );
 }
 
@@ -449,6 +943,7 @@ export default function ProgressScreen() {
   const [workoutDays, setWorkoutDays] = useState<number[]>([]);
   const [daysSince, setDaysSince] = useState<string | null>(null);
   const [pet, setPet] = useState<PetState | null>(null);
+  const [petSettled, setPetSettled] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -527,6 +1022,7 @@ export default function ProgressScreen() {
     beginTabRefresh('progress');
     void fetchPetState().then((p) => {
       if (p) setPet(p);
+      setPetSettled(true);
     });
     const since = historyWindowStartISO(PROGRESS_HISTORY_DAYS);
     try {
@@ -698,15 +1194,15 @@ export default function ProgressScreen() {
             </Text>
           ) : null}
           {userProgram ? (
-            <ProgramPath
+            <JourneyRoute
               weeks={durationWeeks}
               currentWeek={programWeek}
               complete={isProgramComplete}
               finishLabel={`Week ${durationWeeks}`}
               pet={pet}
+              petSettled={petSettled}
             />
-          ) : null}
-          {pet ? (
+          ) : pet ? (
             <View style={styles.growthPillWrap}>
               <View style={styles.growthPill}>
                 <Text style={styles.growthPillText}>{petGrowthCopy(pet)}</Text>
@@ -1028,6 +1524,71 @@ const styles = StyleSheet.create({
   pathLabelEnd: {
     right: 0,
     textAlign: 'right',
+  },
+  dustLane: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: PATH_PET_PAD + PATH_MID - 14,
+    height: 14,
+  },
+  nodeSpot: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nodeAhead: {
+    position: 'absolute',
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    backgroundColor: PATH_LINE,
+    left: 9.5,
+    top: 9.5,
+  },
+  nodeRing: {
+    position: 'absolute',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    left: 7,
+    top: 7,
+  },
+  nodeFill: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    left: 1,
+    top: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nodeHalo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  nodeDisk: {
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nodeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surface,
   },
   growthPillWrap: {
     alignItems: 'center',
