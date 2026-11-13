@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -75,12 +75,12 @@ function isClipStage(s: PetStage): s is ClipStage {
   return s !== 1;
 }
 
-const UNFURL_FRAME_MS = 42;
-const CURL_FRAME_MS = 34;
+const UNFURL_FRAME_MS = 30;
+const CURL_FRAME_MS = 24;
 const HANDOVER_MS = 80;
 // Waiting for the sheet to load, plus the two hand-over fades.
 const CLIP_ALLOWANCE_MS = 150;
-const SHEET_TIMEOUT_MS = 500;
+const SHEET_TIMEOUT_MS = 250;
 // Frame i shows while `frame` is in [i, i + FRAME_HOLD]; never a half-way slide.
 const FRAME_HOLD = 0.999;
 const FRAME_EDGE = 0.001;
@@ -153,11 +153,13 @@ export function Pet({
     [fade],
   );
   const outgoingOpacity = useMemo(
-    () => mix.interpolate({ inputRange: [0, 1, 2], outputRange: [1, 0, 0] }),
+    // Each picture stays solid until the next one fully covers it: fading one out
+    // while the other fades in lets the background show through, which reads as a flash.
+    () => mix.interpolate({ inputRange: [0, 0.999, 1, 2], outputRange: [1, 1, 0, 0] }),
     [mix],
   );
   const clipOpacity = useMemo(
-    () => mix.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 0] }),
+    () => mix.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 1] }),
     [mix],
   );
   const targetOpacity = useMemo(
@@ -372,15 +374,12 @@ export function Pet({
       });
     };
 
+    // The sheet is a bundled image; if its load event is late or never comes, play anyway.
     const giveUp = () => {
       timer = null;
       if (!live || !mounted.current) return;
       startClip.current = null;
-      swapping.current = false;
-      fade.setValue(1);
-      setPrevious(null);
-      setClip(null);
-      startHops();
+      play();
     };
 
     if (loadedToken.current === token) {
@@ -494,6 +493,8 @@ export function Pet({
     { scaleY: breathScaleY },
   ];
 
+  const playing = clip !== null && cellOffsets !== null;
+
   const art = (
     <View
       style={{ width: size, height: size }}
@@ -519,26 +520,33 @@ export function Pet({
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { transform: breathTransform }]}>
         <Animated.View style={[bodyStyles.mover, StyleSheet.absoluteFill]}>
           <Animated.View style={[bodyStyles.squash, StyleSheet.absoluteFill]}>
-            {clip && cellOffsets ? (
-              <>
-                {previous ? <PoseImage pose={previous} size={size} opacity={outgoingOpacity} /> : null}
-                <ClipView
-                  key={clip.token}
-                  clip={PET_UNFURL_CLIPS[clip.stage]}
-                  size={size}
-                  side={side}
-                  offsets={cellOffsets}
-                  opacity={clipOpacity}
-                  onLoad={() => handleSheetLoad(clip.token)}
-                />
-                <PoseImage pose={shown} size={size} opacity={targetOpacity} />
-              </>
-            ) : (
-              <>
-                {previous ? <PoseImage pose={previous} size={size} opacity={prevOpacity} /> : null}
-                <PoseImage pose={shown} size={size} opacity={fade} />
-              </>
-            )}
+            {/* Keyed by pose alone, so the picture on screen keeps its view when it
+                becomes the outgoing one: a remount blanks it for a frame. */}
+            {previous ? (
+              <PoseImage
+                key={`${previous.stage}-${previous.mood}`}
+                pose={previous}
+                size={size}
+                opacity={playing ? outgoingOpacity : prevOpacity}
+              />
+            ) : null}
+            {playing && clip && cellOffsets ? (
+              <ClipView
+                key={`clip-${clip.token}`}
+                clip={PET_UNFURL_CLIPS[clip.stage]}
+                size={size}
+                side={side}
+                offsets={cellOffsets}
+                opacity={clipOpacity}
+                onLoad={() => handleSheetLoad(clip.token)}
+              />
+            ) : null}
+            <PoseImage
+              key={`${shown.stage}-${shown.mood}`}
+              pose={shown}
+              size={size}
+              opacity={playing ? targetOpacity : fade}
+            />
           </Animated.View>
         </Animated.View>
       </Animated.View>
