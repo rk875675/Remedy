@@ -74,10 +74,14 @@ export type CoachMemory = {
   cueIndex: number;
   /** When the last bubble went up (ms). */
   lastLineAt: number;
+  /** Where he was, how he came in, and when he last travelled, so he varies. */
+  lastSpot: string | null;
+  lastEntrance: string | null;
+  lastMoveAt: number;
 };
 
 export function createCoachMemory(): CoachMemory {
-  return { introduced: null, cueIndex: 0, lastLineAt: 0 };
+  return { introduced: null, cueIndex: 0, lastLineAt: 0, lastSpot: null, lastEntrance: null, lastMoveAt: 0 };
 }
 
 /** Next cue, cycling. Advances the memory. */

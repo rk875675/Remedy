@@ -10,6 +10,7 @@ import {
   AppState,
   Easing,
   InteractionManager,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useEvent, useEventListener } from 'expo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -66,9 +67,13 @@ import { orderedEquipmentForExercises } from '../../lib/equipment';
 import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import { PetBadge } from '../../components/pet/PetBadge';
 import { PetGrow } from '../../components/pet/PetGrow';
+import { Dust, type DustHandle } from '../../components/pet/Dust';
+import { call } from '../../components/pet/petMotion';
+import { useReduceMotion } from '../../lib/useReduceMotion';
 import { PetSays } from '../../components/pet/PetSays';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
-import { PetCoach, type CoachExercise } from '../../components/pet/PetCoach';
+import { PetCoach, type CoachExercise, type CoachRects } from '../../components/pet/PetCoach';
+import type { Rect } from '../../lib/petSpots';
 import { createCoachMemory } from '../../lib/petCoach';
 import { PET_COMPLETE } from '../../constants/petSessionLines';
 import { fillPetLine } from '../../constants/petOnboardingLines';
@@ -119,10 +124,12 @@ function RestRing({
   seconds,
   total,
   petBelow = false,
+  onLayout,
 }: {
   seconds: number;
   total: number;
   petBelow?: boolean;
+  onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const progress = useRef(new Animated.Value(Math.min(seconds / total, 1))).current;
 
@@ -142,7 +149,7 @@ function RestRing({
   });
 
   return (
-    <View style={[styles.restRingWrap, petBelow && styles.restRingAbovePet]}>
+    <View style={[styles.restRingWrap, petBelow && styles.restRingAbovePet]} onLayout={onLayout}>
       <Svg width={REST_RING_SIZE} height={REST_RING_SIZE}>
         <Circle
           cx={REST_RING_SIZE / 2}
@@ -176,6 +183,9 @@ function RestRing({
 type Phase = 'preview' | 'checkin_before' | 'exercise' | 'rest' | 'checkin_after' | 'complete';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+/** The pet on the complete screen, and how far above his spot he drops from. */
+const COMPLETE_BADGE_SIZE = SCREEN_HEIGHT < 720 ? 132 : 200;
+const COMPLETE_DROP_FROM = 420;
 
 const WARM_COPY = [
   'Consistency is what changes things.',
@@ -267,9 +277,57 @@ export default function SessionPlayerScreen() {
   // The pet's memory of this session (cues given, last bubble) across exercise and rest screens.
   const coachMemory = useRef(createCoachMemory()).current;
   const [exitOpen, setExitOpen] = useState(false);
+  // Measured layout for the pet's floating layer (in screen-root coordinates), and a tick for video touches.
+  const [rects, setRects] = useState<Partial<Record<string, Rect>>>({});
+  const [videoTouchTick, setVideoTouchTick] = useState(0);
+  const trackRect = useCallback(
+    (key: string) => (e: LayoutChangeEvent) => {
+      const { x, y, width, height } = e.nativeEvent.layout;
+      setRects((prev) => {
+        const old = prev[key];
+        if (old && old.x === x && old.y === y && old.w === width && old.h === height) return prev;
+        return { ...prev, [key]: { x, y, w: width, h: height } };
+      });
+    },
+    [],
+  );
+  const coachRects = useMemo<CoachRects>(() => {
+    const info = rects.info;
+    const text = rects.infoText;
+    const body = rects.restBody;
+    const inBody = (r: Rect | undefined): Rect | undefined =>
+      r && body ? { x: body.x + r.x, y: body.y + r.y, w: r.w, h: r.h } : undefined;
+    return {
+      topBar: rects.topBar,
+      video: rects.video,
+      button: rects.button,
+      infoText: info && text ? { x: info.x + text.x, y: info.y + text.y, w: text.w, h: text.h } : null,
+      exit: rects.restExit,
+      ring: inBody(rects.ring),
+      skip: inBody(rects.skipRest),
+    };
+  }, [rects]);
   // Complete screen: celebrate first, then the thumbs-up, once any growth moment is over.
   const [growDone, setGrowDone] = useState(false);
   const [completeCheer, setCompleteCheer] = useState(false);
+  // Complete screen: he drops in from above and lands with weight before celebrating.
+  const reduceMotion = useReduceMotion();
+  const [landed, setLanded] = useState(false);
+  const completeDrop = useRef(new Animated.Value(-COMPLETE_DROP_FROM)).current;
+  const completeLand = useRef(new Animated.Value(0)).current;
+  const completeDust = useRef<DustHandle>(null);
+  const completeDropStyle = useMemo(
+    () => ({
+      transform: [
+        { translateY: completeDrop },
+        // Squash about the centre, feet kept on the ground.
+        { translateY: completeLand.interpolate({ inputRange: [0, 1], outputRange: [0, COMPLETE_BADGE_SIZE * 0.08] }) },
+        { scaleX: completeLand.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
+        { scaleY: completeLand.interpolate({ inputRange: [0, 1], outputRange: [1, 0.84] }) },
+      ],
+    }),
+    [completeDrop, completeLand],
+  );
   const mountedRef = useRef(true);
 
   const player = useSilentVideoPlayer(null, (p) => {
@@ -727,13 +785,51 @@ export default function SessionPlayerScreen() {
     }
   }, [phase]);
 
+  // Drop in, squash on landing with a puff of dust, then (and only then) celebrate.
+  useEffect(() => {
+    if (phase !== 'complete') return;
+    if (reduceMotion !== false) {
+      completeDrop.setValue(0);
+      setLanded(true);
+      return;
+    }
+    completeDrop.setValue(-COMPLETE_DROP_FROM);
+    const anim = Animated.sequence([
+      Animated.delay(150),
+      Animated.timing(completeDrop, {
+        toValue: 0,
+        duration: 440,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      call(() => {
+        completeDust.current?.play([
+          { x: COMPLETE_BADGE_SIZE * 0.22, delay: 0, size: 16 },
+          { x: COMPLETE_BADGE_SIZE * 0.78, delay: 30, size: 16 },
+          { x: COMPLETE_BADGE_SIZE * 0.5, delay: 60, size: 12 },
+        ]);
+      }),
+      Animated.timing(completeLand, { toValue: 1, duration: 80, useNativeDriver: true }),
+      Animated.spring(completeLand, {
+        toValue: 0,
+        speed: 16,
+        bounciness: 14,
+        useNativeDriver: true,
+      }),
+    ]);
+    anim.start(({ finished }) => {
+      if (finished) setLanded(true);
+    });
+    return () => anim.stop();
+  }, [phase, reduceMotion, completeDrop, completeLand]);
+
   // The pet celebrates, then gives its thumbs-up. Never mid growth moment, so only one move runs.
   useEffect(() => {
-    if (phase !== 'complete' || completeCheer || badgePinned) return;
+    if (phase !== 'complete' || completeCheer || badgePinned || !landed) return;
     if (grewFrom !== null && !growDone) return;
     const timer = setTimeout(() => setCompleteCheer(true), 2600);
     return () => clearTimeout(timer);
-  }, [phase, completeCheer, badgePinned, grewFrom, growDone]);
+  }, [phase, completeCheer, badgePinned, landed, grewFrom, growDone]);
 
   const fetchNextSession = useCallback(async () => {
     if (!user || !id) return;
@@ -1318,42 +1414,24 @@ export default function SessionPlayerScreen() {
     const nextSetNumber = setIndex + 1;
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={handleExit} style={[styles.exitButton, styles.restExitButton]}>
+        <TouchableOpacity
+          onPress={handleExit}
+          style={[styles.exitButton, styles.restExitButton]}
+          onLayout={trackRect('restExit')}
+        >
           <Text style={styles.exitButtonText}>✕</Text>
         </TouchableOpacity>
 
-        <View style={[styles.centered, styles.restBody, { paddingBottom: insets.bottom }]}>
+        <View
+          style={[styles.centered, styles.restBody, { paddingBottom: insets.bottom }]}
+          onLayout={trackRect('restBody')}
+        >
           <Text style={styles.restLabel}>Rest</Text>
           <RestRing
             seconds={restSeconds}
             total={restTotal}
-            petBelow={pet !== null}
+            onLayout={trackRect('ring')}
           />
-
-          {/* The buddy takes its own break (towel, water bottle) beside the ring. */}
-          {pet !== null && coachExercise ? (
-            <View style={styles.restPet}>
-              <PetCoach
-                pet={pet}
-                phase="rest"
-                exercise={coachExercise}
-                exerciseIndex={exerciseIndex}
-                exerciseCount={exercises.length}
-                setIndex={setIndex}
-                totalSets={currentExercise?.sets && currentExercise.sets > 0 ? currentExercise.sets : 1}
-                restKind={restKind}
-                restSeconds={restSeconds}
-                restTotal={restTotal}
-                countdown={0}
-                holdRep={1}
-                holdReps={1}
-                exiting={exitOpen}
-                size={SCREEN_HEIGHT < 720 ? 104 : 136}
-                layout="row"
-                memory={coachMemory}
-              />
-            </View>
-          ) : null}
 
           {nextEx && (
             <View style={styles.nextExCard}>
@@ -1369,10 +1447,37 @@ export default function SessionPlayerScreen() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.skipButton} onPress={skipRest}>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={skipRest}
+            onLayout={trackRect('skipRest')}
+          >
             <Text style={styles.skipButtonText}>Skip Rest</Text>
           </TouchableOpacity>
         </View>
+
+        {/* The buddy lives on a layer above everything, in front of the ring. */}
+        {pet !== null && coachExercise ? (
+          <PetCoach
+            pet={pet}
+            phase="rest"
+            exercise={coachExercise}
+            exerciseIndex={exerciseIndex}
+            exerciseCount={exercises.length}
+            setIndex={setIndex}
+            restKind={restKind}
+            restSeconds={restSeconds}
+            restTotal={restTotal}
+            countdown={0}
+            holdRep={1}
+            holdReps={1}
+            exiting={exitOpen}
+            size={smallPhone ? 150 : 200}
+            rects={coachRects}
+            videoTouchTick={videoTouchTick}
+            memory={coachMemory}
+          />
+        ) : null}
       </View>
     );
   }
@@ -1381,7 +1486,7 @@ export default function SessionPlayerScreen() {
   if (phase === 'exercise' && currentExercise) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.exerciseTopBar}>
+        <View style={styles.exerciseTopBar} onLayout={trackRect('topBar')}>
           <View style={styles.exerciseTopRow}>
             <TouchableOpacity onPress={handleExit} style={styles.exitButton}>
               <Text style={styles.exitButtonText}>✕</Text>
@@ -1406,7 +1511,7 @@ export default function SessionPlayerScreen() {
           </View>
         </View>
 
-        <View style={styles.videoContainer}>
+        <View style={styles.videoContainer} onLayout={trackRect('video')}>
           {videoUrl ? (
             <>
               <VideoView
@@ -1418,7 +1523,11 @@ export default function SessionPlayerScreen() {
               />
               <TouchableOpacity
                 style={styles.videoHitArea}
-                onPress={toggleVideoPlayback}
+                onPress={() => {
+                  toggleVideoPlayback();
+                  // A perched buddy hops off the picture when the video is touched.
+                  setVideoTouchTick((n) => n + 1);
+                }}
                 activeOpacity={1}
                 accessibilityRole="button"
                 accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
@@ -1468,71 +1577,69 @@ export default function SessionPlayerScreen() {
           )}
         </View>
 
-        <View style={styles.exerciseInfo}>
-          <Text style={styles.exerciseName}>{currentExercise.name}</Text>
+        <View style={styles.exerciseInfo} onLayout={trackRect('info')}>
+          {/* Name, set counter and countdown: measured so the buddy never stands on them. */}
+          <View style={{ alignSelf: 'flex-start' }} onLayout={trackRect('infoText')}>
+            <Text style={styles.exerciseName}>{currentExercise.name}</Text>
 
-          {(currentExercise.sets ?? 1) > 1 && (
-            <Text style={styles.setIndicator}>
-              Set {setIndex} of {currentExercise.sets}
-            </Text>
-          )}
+            {(currentExercise.sets ?? 1) > 1 && (
+              <Text style={styles.setIndicator}>
+                Set {setIndex} of {currentExercise.sets}
+              </Text>
+            )}
 
-          {currentExercise.duration_seconds ? (
-            <Text style={styles.countdownText}>
-              {currentExercise.reps
-                ? `Hold ${holdRep} of ${currentExercise.reps} · ${countdown}s`
-                : `${countdown}s remaining`}
-            </Text>
-          ) : currentExercise.reps ? (
-            <Text style={styles.countdownText}>{currentExercise.reps} reps</Text>
-          ) : null}
+            {currentExercise.duration_seconds ? (
+              <Text style={styles.countdownText}>
+                {currentExercise.reps
+                  ? `Hold ${holdRep} of ${currentExercise.reps} · ${countdown}s`
+                  : `${countdown}s remaining`}
+              </Text>
+            ) : currentExercise.reps ? (
+              <Text style={styles.countdownText}>{currentExercise.reps} reps</Text>
+            ) : null}
+          </View>
 
           {currentExercise.instructions && (
-            <Text
-              style={[
-                styles.exerciseInstructions,
-                // On a small phone the buddy stands beside the caption, never over it.
-                pet !== null && smallPhone ? { marginRight: 84 } : null,
-              ]}
-            >
-              {currentExercise.instructions}
-            </Text>
+            <Text style={styles.exerciseInstructions}>{currentExercise.instructions}</Text>
           )}
-
-          {/* The workout buddy: bottom right of this area, bubble to its left. It never
-              covers the video, the timer or the buttons, and adds no height. */}
-          {pet !== null && coachExercise ? (
-            <PetCoach
-              pet={pet}
-              phase="exercise"
-              exercise={coachExercise}
-              exerciseIndex={exerciseIndex}
-              exerciseCount={exercises.length}
-              setIndex={setIndex}
-              totalSets={currentExercise.sets && currentExercise.sets > 0 ? currentExercise.sets : 1}
-              restKind={restKind}
-              restSeconds={0}
-              restTotal={1}
-              countdown={countdown}
-              holdRep={holdRep}
-              holdReps={currentExercise.reps && currentExercise.reps > 0 ? currentExercise.reps : 1}
-              exiting={exitOpen}
-              size={smallPhone ? 76 : 124}
-              layout="corner"
-              memory={coachMemory}
-            />
-          ) : null}
         </View>
 
         {/* Always available — on timed exercises it ends the current set early
             (finish ahead of the timer) without skipping the whole exercise. */}
-        <View style={[styles.bottomButtonWrap, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <View
+          style={[styles.bottomButtonWrap, { paddingBottom: Math.max(insets.bottom, 24) }]}
+          onLayout={trackRect('button')}
+        >
           <TouchableOpacity style={styles.primaryButton} onPress={() => { hapticPrimaryAction(); handleSetDone(); }}>
             <Text style={styles.primaryButtonText}>
               {setIndex < (currentExercise.sets ?? 1) ? `Set ${setIndex} Done` : 'Done'}
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* The workout buddy lives on a layer above everything: perched on the video's edge,
+            standing in front of the info, leaning in from the side. */}
+        {pet !== null && coachExercise ? (
+          <PetCoach
+            pet={pet}
+            phase="exercise"
+            exercise={coachExercise}
+            exerciseIndex={exerciseIndex}
+            exerciseCount={exercises.length}
+            setIndex={setIndex}
+            restKind={restKind}
+            restSeconds={0}
+            restTotal={1}
+            countdown={countdown}
+            holdRep={holdRep}
+            holdReps={currentExercise.reps && currentExercise.reps > 0 ? currentExercise.reps : 1}
+            exiting={exitOpen}
+            size={smallPhone ? 136 : 184}
+            rects={coachRects}
+            videoTouchTick={videoTouchTick}
+            memory={coachMemory}
+          />
+        ) : null}
       </View>
     );
   }
@@ -1578,9 +1685,15 @@ export default function SessionPlayerScreen() {
   }
   const petWarmCopy = petWarmCopyRef.current;
   const petCompleteMood: PetMood =
-    painAfter > painBefore ? 'concerned' : completeCheer ? 'cheer' : 'celebrating';
+    painAfter > painBefore
+      ? 'concerned'
+      : !landed
+        ? 'ready'
+        : completeCheer
+          ? 'cheer'
+          : 'celebrating';
   const compactHeight = SCREEN_HEIGHT < 720;
-  const badgeSize = compactHeight ? 132 : 200;
+  const badgeSize = COMPLETE_BADGE_SIZE;
   const showNextSession = nextSession !== null && !isProgramCompleted;
   const showPetStrip = pet !== null && !(compactHeight && showNextSession);
   const petStage = pet?.stage;
@@ -1596,11 +1709,13 @@ export default function SessionPlayerScreen() {
       <Animated.View
         style={[
           pet ? styles.completePetWrap : styles.completeIconWrap,
-          { transform: [{ scale: completionScale }] },
+          // The pet does not grow in from nothing: he drops in from above and lands.
+          pet ? null : { transform: [{ scale: completionScale }] },
         ]}
       >
         {pet ? (
-          grewFrom !== null ? (
+          <Animated.View style={completeDropStyle}>
+          {grewFrom !== null && landed ? (
             <PetGrow
               from={grewFrom}
               to={pet.stage}
@@ -1609,10 +1724,14 @@ export default function SessionPlayerScreen() {
               onDone={() => setGrowDone(true)}
             />
           ) : badgeStage !== null ? (
-            <PetBadge stage={badgeStage} mood={petCompleteMood} size={badgeSize} />
+            <PetBadge stage={grewFrom ?? badgeStage} mood={petCompleteMood} size={badgeSize} />
           ) : (
             <View style={{ width: badgeSize, height: badgeSize }} />
-          )
+          )}
+          <View pointerEvents="none" style={styles.completeDust}>
+            <Dust ref={completeDust} color="rgba(190, 160, 125, 0.6)" />
+          </View>
+          </Animated.View>
         ) : (
           <Text style={styles.completeIcon}>✓</Text>
         )}
@@ -2509,6 +2628,14 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  // Where the landing dust is drawn: along the bottom of the pet's box.
+  completeDust: {
+    position: 'absolute',
+    left: 0,
+    bottom: 6,
+    width: 1,
+    height: 24,
   },
   completePetWrap: {
     marginBottom: 16,

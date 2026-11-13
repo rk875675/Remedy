@@ -22,6 +22,16 @@ import {
 } from '../lib/petCoach';
 import { PET_GENERIC_CUES } from '../constants/petSessionLines';
 import {
+  exerciseClearRects,
+  exerciseSpots,
+  nextSpot,
+  rectsIntersect,
+  restClearRects,
+  restSpots,
+  type Rect,
+  type Spot,
+} from '../lib/petSpots';
+import {
   ANGRY_HOLD_MS,
   STORM_TAPS,
   createLadder,
@@ -377,6 +387,155 @@ console.log('petCoach (cues from the exercise text)');
   check('no halfway in a short session', !isHalfway(0, 3) && !isHalfway(1, 3));
   check('the rest before the last of 5 exercises', nextIsFinal(3, 5) && !nextIsFinal(2, 5));
   check('no final-next for a single exercise', !nextIsFinal(0, 1));
+}
+
+console.log('petSpots (the buddy stays clear of what must not be covered)');
+{
+  type Phone = { name: string; w: number; h: number; top: number; bottom: number; size: number; restSize: number };
+  const phones: Phone[] = [
+    { name: '375x667', w: 375, h: 667, top: 20, bottom: 0, size: 136, restSize: 150 },
+    { name: '393x852', w: 393, h: 852, top: 59, bottom: 34, size: 184, restSize: 200 },
+  ];
+  // Measured the way the session screen lays itself out.
+  const layoutFor = (p: Phone, infoText: { w: number; h: number }) => {
+    const topBar: Rect = { x: 0, y: p.top, w: p.w, h: 72 };
+    const video: Rect = { x: 0, y: topBar.y + topBar.h, w: p.w, h: p.w * 0.65 };
+    const buttonH = 8 + 52 + Math.max(p.bottom, 24);
+    const button: Rect = { x: 0, y: p.h - buttonH, w: p.w, h: buttonH };
+    const text: Rect = { x: 24, y: video.y + video.h + 24, w: infoText.w, h: infoText.h };
+    return { topBar, video, button, text };
+  };
+  const inScreen = (r: Rect, p: Phone) => r.x >= 0 && r.y >= 0 && r.x + r.w <= p.w && r.y + r.h <= p.h;
+
+  for (const p of phones) {
+    for (const stage of [2, 3, 5]) {
+      for (const [label, text] of [
+        ['short name', { w: 120, h: 98 }],
+        ['long name', { w: 327, h: 132 }],
+      ] as const) {
+        const { topBar, video, button, text: infoText } = layoutFor(p, text);
+        const perchSits = stage >= 3;
+        const spots = exerciseSpots({
+          screen: { w: p.w, h: p.h },
+          size: p.size,
+          standScale: stage === 5 ? 1 : stage === 4 ? 0.94 : stage === 3 ? 0.88 : 0.8,
+          perchScale: stage === 5 ? 1 : stage === 3 ? 0.88 : 0.8,
+          perchSits,
+          video,
+          topBar,
+          button,
+          infoText,
+        });
+        const clear = exerciseClearRects({ video, topBar, infoText, button });
+        const tag = `${p.name} stage ${stage}, ${label}`;
+        check(`${tag}: has a perch spot to start from`, spots.some((s) => s.kind === 'perch'));
+        check(
+          `${tag}: no pet rect touches the exit, the countdown text, the button or the video's lower 86%`,
+          spots.every((s) => clear.art.every((c) => !rectsIntersect(s.art, c))),
+        );
+        check(
+          `${tag}: no bubble touches them either, and every bubble is fully on screen`,
+          spots.every((s) => s.bubble === null || (clear.bubble.every((c) => !rectsIntersect(s.bubble!.rect, c)) && inScreen(s.bubble!.rect, p))),
+        );
+        check(
+          `${tag}: perched pets stay on screen and hang no more than the top 14% over the video`,
+          spots
+            .filter((s) => s.kind === 'perch')
+            .every((s) => s.art.y >= 0 && s.art.y + s.art.h <= video.y + 0.14 * video.h),
+        );
+        check(
+          `${tag}: nothing is taller than the screen allows (head on screen)`,
+          spots.every((s) => s.art.y >= 0 && s.art.y + s.art.h <= p.h),
+        );
+        check(
+          `${tag}: floor and side spots are bigger than perch spots (distance scale)`,
+          spots.filter((s) => s.kind === 'floor').every((s) => s.scale > 1) &&
+            spots.filter((s) => s.kind === 'perch').every((s) => s.scale <= 0.92),
+        );
+        check(
+          `${tag}: perch left has room for a bubble`,
+          spots.find((s) => s.name === 'videoTopLeft')?.bubble != null,
+        );
+        check(`${tag}: spot names are unique`, new Set(spots.map((s) => s.name)).size === spots.length);
+      }
+    }
+    // Plenty of places to go on a short name, so he can keep moving.
+    {
+      const { topBar, video, button, text } = layoutFor(p, { w: 120, h: 98 });
+      const spots = exerciseSpots({
+        screen: { w: p.w, h: p.h },
+        size: p.size,
+        standScale: 1,
+        perchScale: 1,
+        perchSits: true,
+        video,
+        topBar,
+        button,
+        infoText: text,
+      });
+      check(`${p.name}: at least 3 exercise spots with a short name`, spots.length >= 3, spots.map((s) => s.name).join(','));
+    }
+    // Rest.
+    {
+      const ring: Rect = { x: (p.w - 220) / 2, y: p.top + 96, w: 220, h: 220 };
+      const exit: Rect = { x: 16, y: p.top + 12, w: 36, h: 36 };
+      const skip: Rect = { x: (p.w - 150) / 2, y: ring.y + 220 + 150, w: 150, h: 46 };
+      const spots = restSpots({
+        screen: { w: p.w, h: p.h },
+        size: p.restSize,
+        standScale: 1,
+        perchScale: 1,
+        perchSits: true,
+        ring,
+        exit,
+        skip,
+      });
+      const clear = restClearRects({ ring, exit, skip });
+      check(`${p.name} rest: two spots beside the ring`, spots.length === 2, spots.map((s) => s.name).join(','));
+      check(
+        `${p.name} rest: pet and bubble clear of the digits, exit and Skip Rest`,
+        spots.every(
+          (s) =>
+            clear.every((c) => !rectsIntersect(s.art, c)) &&
+            (s.bubble === null || (clear.every((c) => !rectsIntersect(s.bubble!.rect, c)) && inScreen(s.bubble!.rect, p))),
+        ),
+      );
+    }
+  }
+
+  // Choosing where to go next.
+  {
+    const base = {
+      kind: 'floor' as const,
+      cx: 0,
+      groundY: 0,
+      scale: 1,
+      faceRight: true,
+      art: { x: 0, y: 0, w: 1, h: 1 },
+      drawn: 1,
+      sits: false,
+      bubble: null,
+    };
+    const spots: Spot[] = [
+      { ...base, name: 'videoTopLeft', kind: 'perch' },
+      { ...base, name: 'floorLeft' },
+      { ...base, name: 'floorRight' },
+      { ...base, name: 'sideLeft', kind: 'side' },
+    ];
+    let never = true;
+    let covers = new Set<string>();
+    for (let i = 0; i < 300; i += 1) {
+      const next = nextSpot(spots, 'floorLeft', 'videoTopLeft', [], Math.random);
+      if (!next || next.name === 'floorLeft' || next.name === 'videoTopLeft') never = false;
+      if (next) covers.add(next.name);
+    }
+    check('never the same spot as now, never the one before that', never);
+    check('and it does visit every other spot', covers.has('floorRight') && covers.has('sideLeft'));
+    check('prefers the asked-for kind', nextSpot(spots, 'videoTopLeft', null, ['side'], () => 0)?.name === 'sideLeft');
+    check('falls back to another spot when the preferred kind is missing', nextSpot(spots, 'videoTopLeft', null, ['rest'], () => 0) !== null);
+    check('one spot only: nowhere else to go', nextSpot([spots[0]!], 'videoTopLeft', null) === null);
+    check('rectsIntersect is strict', !rectsIntersect({ x: 0, y: 0, w: 10, h: 10 }, { x: 10, y: 0, w: 5, h: 5 }));
+  }
 }
 
 if (failures > 0) {
