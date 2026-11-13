@@ -19,6 +19,8 @@ type PersonalizingLayoutProps = {
    */
   currentStep: PersonalizingStep;
   compact?: boolean;
+  /** Shorter plan card. Used on the question that also shows a note under the options. */
+  cardTight?: boolean;
   /** Pet line above the plan card. Omitted on screens that do not show the pet. */
   say?: { line: string; mood: PetMood };
 };
@@ -144,6 +146,7 @@ export function PersonalizingLayout({
   children,
   currentStep,
   compact = false,
+  cardTight = false,
   say,
 }: PersonalizingLayoutProps) {
   const { answers } = useOnboarding();
@@ -173,7 +176,7 @@ export function PersonalizingLayout({
   return (
     <View style={styles.container}>
       {say ? (
-        <View style={styles.say}>
+        <View style={[styles.say, cardTight && styles.sayTight]}>
           <PetSays
             line={say.line}
             mood={say.mood}
@@ -184,9 +187,9 @@ export function PersonalizingLayout({
           />
         </View>
       ) : null}
-      <View style={[styles.card, (compact || say != null) && styles.cardCompact]}>
+      <View style={[styles.card, (compact || say != null) && styles.cardCompact, cardTight && styles.cardTight]}>
         <Text style={styles.header}>Your plan</Text>
-        <View style={styles.slots}>
+        <View style={[styles.slots, cardTight && styles.slotsTight]}>
           {slots.map((slot) => (
             <View key={slot.label} style={styles.slot}>
               <Text style={styles.slotLabel}>{slot.label}</Text>
@@ -227,6 +230,17 @@ const styles = StyleSheet.create({
   },
   cardCompact: {
     marginBottom: 16,
+  },
+  sayTight: {
+    marginBottom: 8,
+  },
+  cardTight: {
+    paddingTop: 8,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  slotsTight: {
+    marginBottom: 8,
   },
   header: {
     fontSize: 11,

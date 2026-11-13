@@ -29,6 +29,7 @@ import {
 } from '../../lib/petCoach';
 import {
   exerciseSpots,
+  fitSpots,
   nextSpot,
   restSpots,
   type Rect,
@@ -67,6 +68,8 @@ export type CoachRects = {
   video?: Rect;
   /** Name, set counter and hold countdown. */
   infoText?: Rect | null;
+  /** The instruction caption. */
+  caption?: Rect | null;
   /** The primary button's strip. */
   button?: Rect;
   // Rest screen
@@ -93,11 +96,9 @@ export type PetCoachProps = {
   holdReps: number;
   /** The exit prompt is open: the pet is kind and quiet. */
   exiting: boolean;
-  /** Size of the pet's box. */
-  size: number;
+  /** The pet's box size; stepped down (not below ~120) until a spot fits without covering anything. */
+  maxSize: number;
   rects: CoachRects;
-  /** Goes up every time the user touches the video controls: a perched pet hops off. */
-  videoTouchTick: number;
   /** Kept by the session screen so the pet remembers across the exercise and rest screens. */
   memory: CoachMemory;
 };
@@ -123,8 +124,8 @@ function clamp(v: number, lo: number, hi: number): number {
 
 /**
  * The user's own armadillo, as their workout buddy, living on a layer above the
- * whole session screen: perched on the video's edge, standing in front of the
- * info, leaning in from the side. The layer takes no touches except on the pet
+ * whole session screen: standing on the floor in front of the info, or beside the
+ * rest ring, never over any text. The layer takes no touches except on the pet
  * himself. It only reads props and never touches the session's timers or flow.
  */
 export function PetCoach(props: PetCoachProps) {
@@ -160,9 +161,8 @@ function CoachBody({
   holdRep,
   holdReps,
   exiting,
-  size,
+  maxSize,
   rects,
-  videoTouchTick,
   memory,
 }: Omit<PetCoachProps, 'pet'> & { pet: PetState; layer: Rect }) {
   const reduceMotion = useReduceMotion();
@@ -174,25 +174,27 @@ function CoachBody({
 
   // ---- geometry: spots from the measured layout, in the layer's own coordinates ----
   const standK = petScale(pet.stage, 'coach');
-  const perchK = petScale(pet.stage, 'perch');
-  const spots = useMemo<Spot[]>(() => {
+  const fitted = useMemo<{ spots: Spot[]; size: number }>(() => {
     const shift = (r: Rect | undefined | null): Rect | undefined =>
       r ? { x: r.x - layer.x, y: r.y - layer.y, w: r.w, h: r.h } : undefined;
     const screen = { w: layer.w, h: layer.h };
-    const common = { screen, size, standScale: standK, perchScale: perchK, perchSits: pet.stage >= 3 };
+    const common = { screen, size: maxSize, standScale: standK };
     if (phase === 'exercise') {
       const video = shift(rects.video);
       const topBar = shift(rects.topBar);
       const button = shift(rects.button);
-      if (!video || !topBar || !button) return [];
-      return exerciseSpots({ ...common, video, topBar, button, infoText: shift(rects.infoText) ?? null });
+      if (!video || !topBar || !button) return { spots: [], size: maxSize };
+      const infoText = shift(rects.infoText) ?? null;
+      const caption = shift(rects.caption) ?? null;
+      return fitSpots({ ...common, video, topBar, button, infoText, caption }, exerciseSpots);
     }
     const ring = shift(rects.ring);
     const skip = shift(rects.skip);
     const exit = shift(rects.exit);
-    if (!ring || !skip || !exit) return [];
-    return restSpots({ ...common, ring, skip, exit });
-  }, [phase, rects, layer, size, standK, perchK, pet.stage]);
+    if (!ring || !skip || !exit) return { spots: [], size: maxSize };
+    return fitSpots({ ...common, ring, skip, exit }, restSpots);
+  }, [phase, rects, layer, maxSize, standK]);
+  const { spots, size } = fitted;
   const spotsRef = useRef(spots);
   spotsRef.current = spots;
 
@@ -264,9 +266,9 @@ function CoachBody({
   const lastTapAt = useRef(0);
   const lastFaceAt = useRef(0);
   const tapCue = useRef(false);
+  const inPlaceFlip = useRef(false);
   const readySaid = useRef(false);
   const prevCountdown = useRef<number | null>(null);
-  const prevVideoTick = useRef(videoTouchTick);
   const exitingRef = useRef(exiting);
   exitingRef.current = exiting;
 
@@ -573,14 +575,16 @@ function CoachBody({
       return;
     }
     const here = spotRef.current;
-    const prefer: Spot['kind'][] =
-      here?.kind === 'perch' ? ['floor', 'side'] : here?.kind === 'floor' ? ['side', 'perch'] : ['floor', 'perch'];
-    const target = nextSpot(spotsRef.current, here?.name ?? null, previousSpot.current, prefer);
+    const target = nextSpot(spotsRef.current, here?.name ?? null, previousSpot.current);
     if (!target) {
+      // Only one place to stand: he stays and varies what he does there.
+      play(inPlaceFlip.current ? moveBigStretch(body) : moveHop(body, 0.7));
+      inPlaceFlip.current = !inPlaceFlip.current;
+      later(() => sayRef.current(() => takeCue(memory, cuesRef.current), true), 900);
       scheduleDwell();
       return;
     }
-    const roll = here?.kind === 'floor' && target.kind === 'floor' && Math.random() < 0.4;
+    const roll = Math.random() < 0.4;
     runTravel(target, roll ? 'roll' : 'hop', false, () => {
       later(() => sayRef.current(() => takeCue(memory, cuesRef.current), true), 450);
       scheduleDwell();
@@ -630,12 +634,9 @@ function CoachBody({
     const list = spotsRef.current;
     let target: Spot | null;
     if (phase === 'exercise') {
-      target =
-        list.find((s) => s.name === 'videoTopLeft') ??
-        list.find((s) => s.kind === 'perch') ??
-        nextSpot(list, null, memory.lastSpot as Spot['name'] | null, ['floor']);
+      target = nextSpot(list, null, memory.lastSpot as Spot['name'] | null);
     } else {
-      target = nextSpot(list, null, memory.lastSpot as Spot['name'] | null, ['rest']);
+      target = nextSpot(list, null, memory.lastSpot as Spot['name'] | null);
     }
     if (!target) return;
     if (stillRef.current) {
@@ -644,8 +645,7 @@ function CoachBody({
       afterArrive();
       return;
     }
-    const styles: TravelStyle[] =
-      target.kind === 'perch' ? ['drop', 'peek'] : phase === 'rest' ? ['peek', 'roll', 'drop'] : ['drop', 'peek', 'roll'];
+    const styles: TravelStyle[] = phase === 'rest' ? ['peek', 'roll', 'drop'] : ['drop', 'peek', 'roll'];
     const pool = styles.filter((s) => s !== memory.lastEntrance);
     const style = pool[Math.floor(Math.random() * pool.length)] ?? 'drop';
     memory.lastEntrance = style;
@@ -667,22 +667,6 @@ function CoachBody({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [haveSpots, key]);
-
-  // Touching the video controls: a perched pet hops off the picture.
-  useEffect(() => {
-    if (prevVideoTick.current === videoTouchTick) return;
-    prevVideoTick.current = videoTouchTick;
-    const here = spotRef.current;
-    if (!here || here.kind !== 'perch' || stillRef.current) return;
-    const target = nextSpot(spotsRef.current, here.name, previousSpot.current, ['floor', 'side']);
-    if (!target || target.kind === 'perch') return;
-    clearDirTimers();
-    runTravel(target, 'hop', false, () => {
-      scheduleDwell();
-      later(() => sayRef.current(() => takeCue(memory, cuesRef.current), false), 450);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoTouchTick]);
 
   // Natural points inside a timed hold.
   useEffect(() => {
@@ -743,15 +727,10 @@ function CoachBody({
     ? 'concerned'
     : phase === 'rest' && !readySoon
       ? 'rest'
-      : spot?.kind === 'perch'
-        ? 'perch'
-        : 'coach';
+      : 'coach';
   const shown: PetMood = face ?? baseMood;
   const drawnNow = size * (curled ? PET_STAGE_SCALE[1] : petScale(pet.stage, shown));
-  // A seated pet's legs hang below the seat line; the contact line sits on the surface at the seat line.
-  const seated = spot?.kind === 'perch' && spot.sits && !curled && shown === 'perch';
-  const seatLift = seated ? drawnNow * 0.18 : 0;
-  const shadowW = drawnNow * (seated ? 0.5 : 0.55);
+  const shadowW = drawnNow * 0.55;
   const shadowH = Math.max(6, drawnNow * 0.07);
   const tail = spot?.bubble?.tail ?? 'left';
   const rect = spot?.bubble?.rect ?? null;
@@ -773,28 +752,15 @@ function CoachBody({
       >
         <Animated.View style={{ flex: 1, opacity: shadowArc }}>
           <Animated.View style={[{ flex: 1 }, bodyLook.shadow]}>
-            {seated ? (
-              <View
-                style={{
-                  position: 'absolute',
-                  left: (size - shadowW) / 2 - drawnNow * 0.06,
-                  bottom: seatLift - 1,
-                  width: shadowW,
-                  height: 3,
-                  borderRadius: 2,
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                }}
-              />
-            ) : null}
             <View
               style={{
                 position: 'absolute',
-                left: (size - shadowW) / 2 - (seated ? drawnNow * 0.06 : 0),
-                bottom: seatLift - (seated ? shadowH * 0.2 : shadowH * 0.35),
+                left: (size - shadowW) / 2,
+                bottom: -shadowH * 0.35,
                 width: shadowW,
                 height: shadowH,
                 borderRadius: shadowW / 2,
-                backgroundColor: seated ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.26)',
+                backgroundColor: 'rgba(0,0,0,0.26)',
               }}
             />
           </Animated.View>
@@ -902,19 +868,19 @@ const styles = StyleSheet.create({
     borderWidth: BORDER,
     borderColor: colors.textPrimary,
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   bubbleText: {
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 17,
+    lineHeight: 23,
     fontWeight: '600',
     color: colors.textPrimary,
   },
   tailLeft: {
     position: 'absolute',
     left: -TAIL / 2 + BORDER / 2,
-    top: 16,
+    top: 20,
     width: TAIL,
     height: TAIL,
     backgroundColor: colors.surface,
@@ -926,7 +892,7 @@ const styles = StyleSheet.create({
   tailRight: {
     position: 'absolute',
     right: -TAIL / 2 + BORDER / 2,
-    top: 16,
+    top: 20,
     width: TAIL,
     height: TAIL,
     backgroundColor: colors.surface,

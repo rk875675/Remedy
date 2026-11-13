@@ -22,7 +22,6 @@ export const PET_MOODS = [
   'cheer',
   'rest',
   // Sitting on a ledge, legs dangling (the bottom ~18% of the drawing hangs below the seat).
-  'perch',
 ] as const;
 
 export type PetMood = (typeof PET_MOODS)[number];
@@ -68,7 +67,6 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s3_coach: require('../assets/pet/s3_coach.png'),
   s3_cheer: require('../assets/pet/s3_cheer.png'),
   s3_rest: require('../assets/pet/s3_rest.png'),
-  s3_perch: require('../assets/pet/s3_perch.png'),
 
   s4_idle: require('../assets/pet/s4_idle.png'),
   s4_ready: require('../assets/pet/s4_ready.png'),
@@ -86,7 +84,6 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s4_coach: require('../assets/pet/s4_coach.png'),
   s4_cheer: require('../assets/pet/s4_cheer.png'),
   s4_rest: require('../assets/pet/s4_rest.png'),
-  s4_perch: require('../assets/pet/s4_perch.png'),
 
   s5_idle: require('../assets/pet/s5_idle.png'),
   s5_ready: require('../assets/pet/s5_ready.png'),
@@ -104,7 +101,6 @@ const PET_IMAGES: Partial<Record<PetPoseKey, ImageSourcePropType>> = {
   s5_coach: require('../assets/pet/s5_coach.png'),
   s5_cheer: require('../assets/pet/s5_cheer.png'),
   s5_rest: require('../assets/pet/s5_rest.png'),
-  s5_perch: require('../assets/pet/s5_perch.png'),
 };
 
 /** Poses the early stages were never drawn in. */
@@ -121,9 +117,8 @@ const POSE_FALLBACKS: Partial<Record<PetStage, Partial<Record<PetMood, PetMood>>
     coach: 'ready',
     cheer: 'celebrating',
     rest: 'idle',
-    perch: 'idle',
   },
-  2: { proud: 'celebrating', stiff: 'sleepy', perch: 'idle' },
+  2: { proud: 'celebrating', stiff: 'sleepy' },
 };
 
 /** Fraction of its box each stage fills, so the pet visibly grows. */

@@ -522,6 +522,10 @@ export default function Q8Screen() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
+          scrollEnabled={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.heading}>

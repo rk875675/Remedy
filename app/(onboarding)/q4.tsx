@@ -60,6 +60,10 @@ export default function Q4Screen() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
+          scrollEnabled={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.heading}>How active are you?</Text>
@@ -97,9 +101,10 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    marginBottom: 16,
   },
   scrollContent: {
-    paddingBottom: 8,
+    paddingBottom: 0,
   },
   heading: {
     ...type.question,

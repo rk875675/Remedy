@@ -23,7 +23,9 @@ import {
 import { PET_GENERIC_CUES } from '../constants/petSessionLines';
 import {
   exerciseClearRects,
+  MIN_PET_SIZE,
   exerciseSpots,
+  fitSpots,
   nextSpot,
   rectsIntersect,
   restClearRects,
@@ -389,7 +391,7 @@ console.log('petCoach (cues from the exercise text)');
   check('no final-next for a single exercise', !nextIsFinal(0, 1));
 }
 
-console.log('petSpots (the buddy stays clear of what must not be covered)');
+console.log('petSpots (clear of the video, top bar, buttons, name/set/countdown; the caption only for the bubble)');
 {
   type Phone = { name: string; w: number; h: number; top: number; bottom: number; size: number; restSize: number };
   const phones: Phone[] = [
@@ -397,110 +399,142 @@ console.log('petSpots (the buddy stays clear of what must not be covered)');
     { name: '393x852', w: 393, h: 852, top: 59, bottom: 34, size: 184, restSize: 200 },
   ];
   // Measured the way the session screen lays itself out.
-  const layoutFor = (p: Phone, infoText: { w: number; h: number }) => {
+  const layoutFor = (p: Phone, nameBlock: { w: number; h: number }, captionH: number) => {
     const topBar: Rect = { x: 0, y: p.top, w: p.w, h: 72 };
     const video: Rect = { x: 0, y: topBar.y + topBar.h, w: p.w, h: p.w * 0.65 };
     const buttonH = 8 + 52 + Math.max(p.bottom, 24);
     const button: Rect = { x: 0, y: p.h - buttonH, w: p.w, h: buttonH };
-    const text: Rect = { x: 24, y: video.y + video.h + 24, w: infoText.w, h: infoText.h };
-    return { topBar, video, button, text };
+    const infoText: Rect = { x: 24, y: video.y + video.h + 24, w: nameBlock.w, h: nameBlock.h };
+    const caption: Rect = { x: 24, y: infoText.y + infoText.h, w: p.w - 48, h: captionH };
+    return { topBar, video, button, infoText, caption };
   };
-  const inScreen = (r: Rect, p: Phone) => r.x >= 0 && r.y >= 0 && r.x + r.w <= p.w && r.y + r.h <= p.h;
+  const onScreen = (r: Rect, p: Phone) => r.x >= 0 && r.y >= 0 && r.x + r.w <= p.w && r.y + r.h <= p.h;
+  const stageScale = (stage: number) => (stage === 5 ? 1 : stage === 4 ? 0.94 : stage === 3 ? 0.88 : 0.8);
+  const exerciseSpotsBase = (name: Spot['name']): Spot => ({
+    name,
+    kind: 'floor',
+    cx: 0,
+    groundY: 0,
+    scale: 1,
+    faceRight: true,
+    art: { x: 0, y: 0, w: 1, h: 1 },
+    drawn: 1,
+    bubble: null,
+    coversCaption: false,
+  });
+  const nameCases = [
+    ['short name', { w: 120, h: 98 }],
+    ['long name', { w: 327, h: 132 }],
+  ] as const;
+  const captionCases = [
+    ['1-line caption', 23],
+    ['4-line caption', 92],
+  ] as const;
 
   for (const p of phones) {
     for (const stage of [2, 3, 5]) {
-      for (const [label, text] of [
-        ['short name', { w: 120, h: 98 }],
-        ['long name', { w: 327, h: 132 }],
-      ] as const) {
-        const { topBar, video, button, text: infoText } = layoutFor(p, text);
-        const perchSits = stage >= 3;
-        const spots = exerciseSpots({
-          screen: { w: p.w, h: p.h },
-          size: p.size,
-          standScale: stage === 5 ? 1 : stage === 4 ? 0.94 : stage === 3 ? 0.88 : 0.8,
-          perchScale: stage === 5 ? 1 : stage === 3 ? 0.88 : 0.8,
-          perchSits,
-          video,
-          topBar,
-          button,
-          infoText,
-        });
-        const clear = exerciseClearRects({ video, topBar, infoText, button });
-        const tag = `${p.name} stage ${stage}, ${label}`;
-        check(`${tag}: has a perch spot to start from`, spots.some((s) => s.kind === 'perch'));
-        check(
-          `${tag}: no pet rect touches the exit, the countdown text, the button or the video's lower 86%`,
-          spots.every((s) => clear.art.every((c) => !rectsIntersect(s.art, c))),
-        );
-        check(
-          `${tag}: no bubble touches them either, and every bubble is fully on screen`,
-          spots.every((s) => s.bubble === null || (clear.bubble.every((c) => !rectsIntersect(s.bubble!.rect, c)) && inScreen(s.bubble!.rect, p))),
-        );
-        check(
-          `${tag}: perched pets stay on screen and hang no more than the top 14% over the video`,
-          spots
-            .filter((s) => s.kind === 'perch')
-            .every((s) => s.art.y >= 0 && s.art.y + s.art.h <= video.y + 0.14 * video.h),
-        );
-        check(
-          `${tag}: nothing is taller than the screen allows (head on screen)`,
-          spots.every((s) => s.art.y >= 0 && s.art.y + s.art.h <= p.h),
-        );
-        check(
-          `${tag}: floor and side spots are bigger than perch spots (distance scale)`,
-          spots.filter((s) => s.kind === 'floor').every((s) => s.scale > 1) &&
-            spots.filter((s) => s.kind === 'perch').every((s) => s.scale <= 0.92),
-        );
-        check(
-          `${tag}: perch left has room for a bubble`,
-          spots.find((s) => s.name === 'videoTopLeft')?.bubble != null,
-        );
-        check(`${tag}: spot names are unique`, new Set(spots.map((s) => s.name)).size === spots.length);
+      for (const [nameLabel, nameBlock] of nameCases) {
+        for (const [captionLabel, captionH] of captionCases) {
+          const lay = layoutFor(p, nameBlock, captionH);
+          const { spots, size } = fitSpots(
+            { screen: { w: p.w, h: p.h }, size: p.size, standScale: stageScale(stage), ...lay },
+            exerciseSpots,
+          );
+          const clear = exerciseClearRects(lay);
+          const tag = `${p.name} stage ${stage}, ${nameLabel}, ${captionLabel}`;
+          check(
+            `${tag}: no pet rect touches the name, set/countdown, counter, progress bar, Skip, exit, buttons or video`,
+            spots.every((s) => clear.art.every((c) => !rectsIntersect(s.art, c))),
+          );
+          check(
+            `${tag}: coversCaption is true exactly when he overlaps the caption`,
+            spots.every((s) => s.coversCaption === (clear.caption !== null && rectsIntersect(s.art, clear.caption))),
+          );
+          check(
+            `${tag}: no bubble touches any of them or the caption, and every bubble is fully on screen`,
+            spots.every(
+              (s) => s.bubble === null || (clear.bubble.every((c) => !rectsIntersect(s.bubble!.rect, c)) && onScreen(s.bubble!.rect, p)),
+            ),
+          );
+          check(`${tag}: never cut off by the screen edge`, spots.every((s) => onScreen(s.art, p)));
+          check(
+            `${tag}: size stepped down only as far as 120`,
+            spots.length === 0 || (size <= p.size && size >= MIN_PET_SIZE),
+          );
+          check(
+            `${tag}: spot names are unique, all on the floor`,
+            new Set(spots.map((s) => s.name)).size === spots.length && spots.every((s) => s.kind === 'floor' && s.scale > 1),
+          );
+        }
       }
     }
-    // Plenty of places to go on a short name, so he can keep moving.
-    {
-      const { topBar, video, button, text } = layoutFor(p, { w: 120, h: 98 });
-      const spots = exerciseSpots({
-        screen: { w: p.w, h: p.h },
-        size: p.size,
-        standScale: 1,
-        perchScale: 1,
-        perchSits: true,
-        video,
-        topBar,
-        button,
-        infoText: text,
-      });
-      check(`${p.name}: at least 3 exercise spots with a short name`, spots.length >= 3, spots.map((s) => s.name).join(','));
-    }
-    // Rest.
-    {
-      const ring: Rect = { x: (p.w - 220) / 2, y: p.top + 96, w: 220, h: 220 };
-      const exit: Rect = { x: 16, y: p.top + 12, w: 36, h: 36 };
-      const skip: Rect = { x: (p.w - 150) / 2, y: ring.y + 220 + 150, w: 150, h: 46 };
-      const spots = restSpots({
-        screen: { w: p.w, h: p.h },
-        size: p.restSize,
-        standScale: 1,
-        perchScale: 1,
-        perchSits: true,
-        ring,
-        exit,
-        skip,
-      });
-      const clear = restClearRects({ ring, exit, skip });
-      check(`${p.name} rest: two spots beside the ring`, spots.length === 2, spots.map((s) => s.name).join(','));
-      check(
-        `${p.name} rest: pet and bubble clear of the digits, exit and Skip Rest`,
-        spots.every(
-          (s) =>
-            clear.every((c) => !rectsIntersect(s.art, c)) &&
-            (s.bubble === null || (clear.every((c) => !rectsIntersect(s.bubble!.rect, c)) && inScreen(s.bubble!.rect, p))),
-        ),
+  }
+
+  // The layouts the owner sees most: a normal phone with a short name and a short caption has places to go.
+  {
+    const lay = layoutFor(phones[1]!, { w: 120, h: 98 }, 23);
+    const { spots, size } = fitSpots(
+      { screen: { w: 393, h: 852 }, size: 184, standScale: 1, ...lay },
+      exerciseSpots,
+    );
+    check('393x852 short name, 1-line caption, stage 5: at least 2 spots', spots.length >= 2, spots.map((s) => s.name).join(','));
+    check('and he keeps his full size there', size === 184, String(size));
+    check('at least one of them has a bubble', spots.some((s) => s.bubble !== null));
+  }
+  // Small phone: he may stand over the caption, so a short name still gives him a spot at full size;
+  // a long name fills the space above the button and no spot is left.
+  {
+    const run = (name: { w: number; h: number }) =>
+      fitSpots(
+        { screen: { w: 375, h: 667 }, size: 136, standScale: 1, ...layoutFor(phones[0]!, name, 23) },
+        exerciseSpots,
       );
+    const short = run({ w: 120, h: 98 });
+    check('375x667 short name: a spot at full size (136), over the caption', short.spots.length >= 1 && short.size === 136 && short.spots.every((s) => s.coversCaption));
+    check('375x667 long name: no spot that would cover the name', run({ w: 327, h: 132 }).spots.length === 0);
+  }
+  // Normal phone: always a spot at full size, whatever the name and caption.
+  for (const stage of [2, 5]) {
+    for (const [, nameBlock] of nameCases) {
+      for (const [, captionH] of captionCases) {
+        const r = fitSpots(
+          { screen: { w: 393, h: 852 }, size: 184, standScale: stageScale(stage), ...layoutFor(phones[1]!, nameBlock, captionH) },
+          exerciseSpots,
+        );
+        check(`393x852 stage ${stage} name ${nameBlock.w} caption ${captionH}: full size 184, never hidden`, r.size === 184 && r.spots.length >= 1);
+      }
     }
+  }
+  // The caption overlap is only used when nothing better exists.
+  {
+    const clean = { ...exerciseSpotsBase('floorLeft'), coversCaption: false };
+    const over = { ...exerciseSpotsBase('floorRight'), coversCaption: true };
+    let onlyClean = true;
+    for (let i = 0; i < 100; i += 1) if (nextSpot([clean, over], null, null)?.name !== 'floorLeft') onlyClean = false;
+    check('a spot clear of the caption is preferred', onlyClean);
+    check('a caption-covering spot is used when it is the only one', nextSpot([over], null, null)?.name === 'floorRight');
+  }
+
+  // Rest.
+  for (const p of phones) {
+    const ring: Rect = { x: (p.w - 220) / 2, y: p.top + 96, w: 220, h: 220 };
+    const exit: Rect = { x: 16, y: p.top + 12, w: 36, h: 36 };
+    const skip: Rect = { x: (p.w - 150) / 2, y: ring.y + 220 + 150, w: 150, h: 46 };
+    const { spots } = fitSpots(
+      { screen: { w: p.w, h: p.h }, size: p.restSize, standScale: 1, ring, exit, skip },
+      restSpots,
+    );
+    const clear = restClearRects({ ring, exit, skip });
+    check(`${p.name} rest: two spots beside the ring`, spots.length === 2, spots.map((s) => s.name).join(','));
+    check(
+      `${p.name} rest: pet and bubble clear of the digits, exit and Skip Rest, never cut off`,
+      spots.every(
+        (s) =>
+          clear.art.every((c) => !rectsIntersect(s.art, c)) &&
+          onScreen(s.art, p) &&
+          (s.bubble === null || (clear.bubble.every((c) => !rectsIntersect(s.bubble!.rect, c)) && onScreen(s.bubble!.rect, p))),
+      ),
+    );
   }
 
   // Choosing where to go next.
@@ -513,31 +547,25 @@ console.log('petSpots (the buddy stays clear of what must not be covered)');
       faceRight: true,
       art: { x: 0, y: 0, w: 1, h: 1 },
       drawn: 1,
-      sits: false,
       bubble: null,
+      coversCaption: false,
     };
     const spots: Spot[] = [
-      { ...base, name: 'videoTopLeft', kind: 'perch' },
       { ...base, name: 'floorLeft' },
+      { ...base, name: 'floorMid' },
       { ...base, name: 'floorRight' },
-      { ...base, name: 'sideLeft', kind: 'side' },
     ];
     let never = true;
-    let covers = new Set<string>();
     for (let i = 0; i < 300; i += 1) {
-      const next = nextSpot(spots, 'floorLeft', 'videoTopLeft', [], Math.random);
-      if (!next || next.name === 'floorLeft' || next.name === 'videoTopLeft') never = false;
-      if (next) covers.add(next.name);
+      const next = nextSpot(spots, 'floorMid', 'floorLeft');
+      if (!next || next.name !== 'floorRight') never = false;
     }
     check('never the same spot as now, never the one before that', never);
-    check('and it does visit every other spot', covers.has('floorRight') && covers.has('sideLeft'));
-    check('prefers the asked-for kind', nextSpot(spots, 'videoTopLeft', null, ['side'], () => 0)?.name === 'sideLeft');
-    check('falls back to another spot when the preferred kind is missing', nextSpot(spots, 'videoTopLeft', null, ['rest'], () => 0) !== null);
-    check('one spot only: nowhere else to go', nextSpot([spots[0]!], 'videoTopLeft', null) === null);
+    check('with two spots he alternates', nextSpot(spots.slice(0, 2), 'floorLeft', 'floorMid')?.name === 'floorMid');
+    check('one spot only: nowhere else to go', nextSpot([spots[0]!], 'floorLeft', null) === null);
     check('rectsIntersect is strict', !rectsIntersect({ x: 0, y: 0, w: 10, h: 10 }, { x: 10, y: 0, w: 5, h: 5 }));
   }
 }
-
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed`);
   process.exit(1);

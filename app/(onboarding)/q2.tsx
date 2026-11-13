@@ -68,12 +68,16 @@ export default function Q2Screen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
       <WarmBackground />
       <PersonalizingLayout currentStep="q2" compact say={say}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
+          scrollEnabled={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.heading}>How long have you had it?</Text>
@@ -110,14 +114,15 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    marginBottom: 16,
   },
   scrollContent: {
-    paddingBottom: 8,
+    paddingBottom: 0,
   },
   heading: {
     ...type.question,
     color: colors.textPrimary,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   options: {
     gap: 10,

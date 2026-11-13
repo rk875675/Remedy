@@ -70,12 +70,16 @@ export default function Q6Screen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 4 }]}>
       <WarmBackground />
       <PersonalizingLayout currentStep="q6" compact say={say}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
+          scrollEnabled={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.heading}>What's your main goal?</Text>
@@ -114,19 +118,20 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    marginBottom: 16,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 0,
   },
   heading: {
     ...type.question,
     color: colors.textPrimary,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   subheading: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   options: {
     gap: 10,

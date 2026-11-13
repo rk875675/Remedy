@@ -279,7 +279,6 @@ export default function SessionPlayerScreen() {
   const [exitOpen, setExitOpen] = useState(false);
   // Measured layout for the pet's floating layer (in screen-root coordinates), and a tick for video touches.
   const [rects, setRects] = useState<Partial<Record<string, Rect>>>({});
-  const [videoTouchTick, setVideoTouchTick] = useState(0);
   const trackRect = useCallback(
     (key: string) => (e: LayoutChangeEvent) => {
       const { x, y, width, height } = e.nativeEvent.layout;
@@ -294,6 +293,7 @@ export default function SessionPlayerScreen() {
   const coachRects = useMemo<CoachRects>(() => {
     const info = rects.info;
     const text = rects.infoText;
+    const cap = rects.caption;
     const body = rects.restBody;
     const inBody = (r: Rect | undefined): Rect | undefined =>
       r && body ? { x: body.x + r.x, y: body.y + r.y, w: r.w, h: r.h } : undefined;
@@ -302,11 +302,12 @@ export default function SessionPlayerScreen() {
       video: rects.video,
       button: rects.button,
       infoText: info && text ? { x: info.x + text.x, y: info.y + text.y, w: text.w, h: text.h } : null,
+      caption: info && cap && exercises[exerciseIndex]?.instructions ? { x: info.x + cap.x, y: info.y + cap.y, w: cap.w, h: cap.h } : null,
       exit: rects.restExit,
       ring: inBody(rects.ring),
       skip: inBody(rects.skipRest),
     };
-  }, [rects]);
+  }, [rects, exercises, exerciseIndex]);
   // Complete screen: celebrate first, then the thumbs-up, once any growth moment is over.
   const [growDone, setGrowDone] = useState(false);
   const [completeCheer, setCompleteCheer] = useState(false);
@@ -1472,9 +1473,8 @@ export default function SessionPlayerScreen() {
             holdRep={1}
             holdReps={1}
             exiting={exitOpen}
-            size={smallPhone ? 150 : 200}
+            maxSize={smallPhone ? 150 : 200}
             rects={coachRects}
-            videoTouchTick={videoTouchTick}
             memory={coachMemory}
           />
         ) : null}
@@ -1523,11 +1523,7 @@ export default function SessionPlayerScreen() {
               />
               <TouchableOpacity
                 style={styles.videoHitArea}
-                onPress={() => {
-                  toggleVideoPlayback();
-                  // A perched buddy hops off the picture when the video is touched.
-                  setVideoTouchTick((n) => n + 1);
-                }}
+                onPress={toggleVideoPlayback}
                 activeOpacity={1}
                 accessibilityRole="button"
                 accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
@@ -1600,7 +1596,9 @@ export default function SessionPlayerScreen() {
           </View>
 
           {currentExercise.instructions && (
-            <Text style={styles.exerciseInstructions}>{currentExercise.instructions}</Text>
+            <Text style={styles.exerciseInstructions} onLayout={trackRect('caption')}>
+              {currentExercise.instructions}
+            </Text>
           )}
         </View>
 
@@ -1617,7 +1615,7 @@ export default function SessionPlayerScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* The workout buddy lives on a layer above everything: perched on the video's edge,
+        {/* The workout buddy lives on a layer above everything: standing on the floor in front of the info,
             standing in front of the info, leaning in from the side. */}
         {pet !== null && coachExercise ? (
           <PetCoach
@@ -1634,9 +1632,8 @@ export default function SessionPlayerScreen() {
             holdRep={holdRep}
             holdReps={currentExercise.reps && currentExercise.reps > 0 ? currentExercise.reps : 1}
             exiting={exitOpen}
-            size={smallPhone ? 136 : 184}
+            maxSize={smallPhone ? 136 : 184}
             rects={coachRects}
-            videoTouchTick={videoTouchTick}
             memory={coachMemory}
           />
         ) : null}

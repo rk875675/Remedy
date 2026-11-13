@@ -65,6 +65,10 @@ export default function RecognizeScreen() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
+          scrollEnabled={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.heading}>Which of these sound like you?</Text>
@@ -103,9 +107,10 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    marginBottom: 20,
   },
   scrollContent: {
-    paddingBottom: 8,
+    paddingBottom: 0,
   },
   heading: {
     ...type.question,
