@@ -1,0 +1,7 @@
+name = "remedy-web"
+compatibility_date = "2026-09-08"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "MARKETING_KV"
+id = "2a8eca1bd35644f8b2b211bc2766ce3c"

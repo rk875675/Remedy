@@ -158,7 +158,7 @@ Deno.serve(async (req: Request) => {
         {
           user_id: user.id,
           is_premium: true,
-          subscription_status: 'active',
+          subscription_status: appleResult.inTrialPeriod ? 'trial' : 'active',
           product_id: verifiedProductId,
           original_transaction_id: boundTxId,
           expires_at: expiresAt,

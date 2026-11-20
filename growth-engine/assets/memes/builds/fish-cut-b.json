@@ -1,0 +1,18 @@
+{
+  "id": "fish-cut-b",
+  "clip": "assets/memes/clips/fish-mad.mp4",
+  "seconds": 3.8,
+  "trim": 0.7,
+  "zoom": 1.11,
+  "pan": 0.82,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 2, "h": 180 },
+  "text": [
+    { "lines": ["Your back when you bend", "down for one sock"], "y": 52, "size": 40, "font": "black" }
+  ],
+  "title": "Cut B — back bends for a sock",
+  "caption": "Your back when you bend down for one sock",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — memesource060"
+}

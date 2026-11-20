@@ -1,0 +1,342 @@
+{
+  "templates": [
+    {
+      "id": "office-expects",
+      "format": "pizza-party-office",
+      "background": "pizza-party-office/02-background.jpg",
+      "gif": {
+        "file": "pizza-party-office/03-motion.gif",
+        "x": 18,
+        "y": 773,
+        "width": 1044
+      },
+      "audio": {
+        "file": "pizza-party-office/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 14.25,
+      "textY": 150,
+      "scene": "Empty office cubicle. Two Office coworkers (Stanley in a leather jacket, Oscar in a white shirt) do a stiff, half-hearted dance in front of the desk.",
+      "slot": "How [your back / your body / your spine] expects you to [move or react] after [an everyday back-pain moment]. The stiff, reluctant dance is the punchline.",
+      "examples": [
+        [
+          "How your back expects you",
+          "to stand up after",
+          "sitting all day"
+        ]
+      ],
+      "description": "Cubicle photo, the office reaction, the sound from that format.",
+      "musicCredit": "Sound: original sound — eae_vini058"
+    },
+    {
+      "id": "grocery-caught",
+      "format": "only-one-works-supermarket",
+      "background": "only-one-works-supermarket/02-background.jpg",
+      "gif": {
+        "file": "only-one-works-supermarket/03-motion.gif",
+        "x": 77,
+        "y": 679,
+        "width": 941
+      },
+      "audio": {
+        "file": "only-one-works-supermarket/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 10.35,
+      "textY": 160,
+      "scene": "Grocery store aisle. Beaker from The Muppets in a floral shirt slowly grows, wide-eyed and alarmed, like he just got caught.",
+      "slot": "When you [do something awkward because of back pain, in public] and [someone sees you]. Beaker's caught-in-the-act panic is the punchline.",
+      "examples": [
+        [
+          "When you bend for",
+          "the bottom shelf and",
+          "somebody turns the corner"
+        ]
+      ],
+      "description": "Grocery photo, the caught-in-the-aisle reaction, the sound from that format.",
+      "musicCredit": "Sound: original sound — lizzie222221"
+    },
+    {
+      "id": "doctor-carlton",
+      "format": "DeNAShnIYAy",
+      "background": "DeNAShnIYAy/02-background.jpg",
+      "gif": {
+        "file": "DeNAShnIYAy/gif-carlton.gif",
+        "x": -27,
+        "y": 690,
+        "width": 760
+      },
+      "audio": {
+        "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 12,
+      "textY": 140,
+      "scene": "Exam room, a doctor in a white coat waits by an empty table. Carlton from Fresh Prince does his full Carlton dance next to him.",
+      "slot": "Doctor: [asks what you were doing / how it happened]? then a last line 'Me at [a fun event or moment where you overdid it]:'. Carlton's big dance is what you were doing.",
+      "examples": [
+        [
+          "Doctor: what were you doing",
+          "when your back went out?",
+          "Me at my cousin's wedding:"
+        ]
+      ],
+      "description": "Exam room, Carlton dance, the sound from that format.",
+      "musicCredit": "Sound: original sound — Anthony Fuhrman"
+    },
+    {
+      "id": "doctor-kermit",
+      "format": "DeNAShnIYAy",
+      "background": "DeNAShnIYAy/02-background.jpg",
+      "gif": {
+        "file": "DeNAShnIYAy/gif-kermit.gif",
+        "x": -120,
+        "y": 700,
+        "width": 1100
+      },
+      "audio": {
+        "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 12,
+      "textY": 140,
+      "scene": "Exam room, a doctor in a white coat waits by an empty table. Kermit the Frog flails his arms and legs in a floppy, uncoordinated dance.",
+      "slot": "Doctor: [asks you to show or do a movement, stretch, or routine] then a last line 'Me:'. Kermit's flailing is your attempt.",
+      "examples": [
+        [
+          "Doctor: show me the stretches",
+          "you found online",
+          "Me:"
+        ]
+      ],
+      "description": "Exam room, Kermit dancing, the sound from that format.",
+      "musicCredit": "Sound: original sound — Anthony Fuhrman"
+    },
+    {
+      "id": "duo-always-together",
+      "format": "duo-always-together",
+      "background": "duo-always-together/02-background.jpg",
+      "gif": {
+        "file": "duo-always-together/03-motion.gif",
+        "x": 0,
+        "y": 701,
+        "width": 891
+      },
+      "audio": {
+        "file": "duo-always-together/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 14.0,
+      "textY": 300,
+      "labels": [
+        {
+          "x": 277,
+          "y": 712
+        },
+        {
+          "x": 693,
+          "y": 703
+        }
+      ],
+      "scene": "Cozy living room. Two cats stand on their back legs side by side and dance in sync.",
+      "slot": "Top caption: someone asks the two of you something, in quotes, like \"you two are always together, don't you get bored?\". Tags: Me + the back-pain thing as the bestie. The two dancing together is the punchline.",
+      "examples": [
+        [
+          "\"you and your back",
+          "are always together,",
+          "don't you get bored?\""
+        ]
+      ],
+      "description": "Always together duo room, both cutouts, the sound from that format.",
+      "musicCredit": "Sound: RMB (Ring My Bell) — Aitch"
+    },
+    {
+      "id": "duo-getting-ready",
+      "format": "duo-getting-ready",
+      "background": "duo-getting-ready/02-background.jpg",
+      "gif": {
+        "file": "duo-getting-ready/03-motion.gif",
+        "x": 167,
+        "y": 804,
+        "width": 857
+      },
+      "audio": {
+        "file": "duo-getting-ready/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 10.31,
+      "textY": 317,
+      "labels": [
+        {
+          "x": 197,
+          "y": 951
+        },
+        {
+          "x": 773,
+          "y": 1102
+        }
+      ],
+      "scene": "Pink vanity room. A monkey and a fluffy llama get ready to go out, posing and preening.",
+      "slot": "Me and my [back-pain thing] getting ready to [go do something normal] acting like [it is a huge deal]. Tags: Me + the back-pain thing.",
+      "examples": [
+        [
+          "Me and my back getting",
+          "ready to go out like we",
+          "didn't hear a pop this morning"
+        ]
+      ],
+      "description": "Getting ready duo room, both cutouts, the sound from that format.",
+      "musicCredit": "Sound: original sound - gigolina_ — 💜 𝔾𝕀𝔾𝕆𝕃𝕀ℕ𝔸 💜"
+    },
+    {
+      "id": "duo-barber",
+      "format": "duo-barber",
+      "background": "duo-barber/02-background.jpg",
+      "gif": {
+        "file": "duo-barber/03-motion.gif",
+        "x": -2,
+        "y": 853,
+        "width": 1084
+      },
+      "audio": {
+        "file": "duo-barber/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 9.0,
+      "textY": 375,
+      "labels": [
+        {
+          "x": 212,
+          "y": 913
+        },
+        {
+          "x": 762,
+          "y": 913
+        }
+      ],
+      "scene": "Pink living room. An older man confidently massages a younger man's head like a barber.",
+      "slot": "Two lines of dialogue. [Back-pain thing]: \"[a complaint]\" then Me: \"[a confident reply]\". The Me character works on the other one like they have it handled. Tags: Me (the one massaging) + the back-pain thing.",
+      "examples": [
+        [
+          "My back: \"I can't stop",
+          "thinking about that couch nap.\"",
+          "Me: \"Say less.\""
+        ]
+      ],
+      "description": "Barber duo room, both cutouts, the sound from that format.",
+      "musicCredit": "Sound: original sound - jayjayb1231 — JustJamieThings"
+    },
+    {
+      "id": "duo-first-shot",
+      "format": "duo-first-shot",
+      "background": "duo-first-shot/02-background.jpg",
+      "gif": {
+        "file": "duo-first-shot/03-motion.gif",
+        "x": 41,
+        "y": 735,
+        "width": 1039
+      },
+      "audio": {
+        "file": "duo-first-shot/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 12.9,
+      "textY": 444,
+      "labels": [
+        {
+          "x": 321,
+          "y": 909
+        },
+        {
+          "x": 702,
+          "y": 909
+        }
+      ],
+      "scene": "Magenta neon bar. Two kittens stand at the bar and dance, celebrating.",
+      "slot": "Me and my [back-pain thing] after [a tiny win or treat]. Tags: Me + the back-pain thing.",
+      "examples": [
+        [
+          "Me and my back after",
+          "one good night of sleep"
+        ]
+      ],
+      "description": "First shot duo room, both cutouts, the sound from that format.",
+      "musicCredit": "Sound: original sound - capcut.green.screens — Meme Finder"
+    },
+    {
+      "id": "duo-reunion",
+      "format": "duo-reunion",
+      "background": "duo-reunion/02-background.jpg",
+      "gif": {
+        "file": "duo-reunion/03-motion.gif",
+        "x": 139,
+        "y": 799,
+        "width": 726
+      },
+      "audio": {
+        "file": "duo-reunion/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 10.91,
+      "textY": 270,
+      "labels": [
+        {
+          "x": 703,
+          "y": 750
+        },
+        {
+          "x": 394,
+          "y": 634
+        }
+      ],
+      "scene": "Living room with a big painting. A white cat hugs a meerkat tight, a happy reunion.",
+      "slot": "Me and my [back-pain thing] after [time apart]. Tags: Me + the back-pain thing.",
+      "examples": [
+        [
+          "Me and my back",
+          "after a full day at the desk"
+        ]
+      ],
+      "description": "Reunion duo room, both cutouts, the sound from that format.",
+      "musicCredit": "Sound: original sound - jocrackz — Jack Crackzz ✓"
+    },
+    {
+      "id": "duo-inside-jokes",
+      "format": "duo-inside-jokes",
+      "background": "duo-inside-jokes/02-background.jpg",
+      "gif": {
+        "file": "duo-inside-jokes/03-motion.gif",
+        "x": 0,
+        "y": 712,
+        "width": 1080
+      },
+      "audio": {
+        "file": "duo-inside-jokes/05-audio-original-sound.mp3",
+        "start": 0
+      },
+      "seconds": 12.0,
+      "textY": 412,
+      "labels": [
+        {
+          "x": 214,
+          "y": 909
+        },
+        {
+          "x": 810,
+          "y": 909
+        }
+      ],
+      "scene": "Neutral cream living room. Two women sprawl on the sofa laughing at their phones.",
+      "slot": "When my [back-pain thing] and I are supposed to [do the responsible thing] but we [do the opposite together]. Tags: Me + the back-pain thing.",
+      "examples": [
+        [
+          "When my back and I are",
+          "supposed to rest but we",
+          "both go do the laundry"
+        ]
+      ],
+      "description": "Inside jokes duo room, both cutouts, the sound from that format.",
+      "musicCredit": "Sound: original sound - kirstysedgbeer — Kirsty Sedgbeer"
+    }
+  ]
+}

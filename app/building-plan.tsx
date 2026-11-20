@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { usePremium } from '../context/PremiumContext';
-import { useOnboarding, clearStoredAnswers, clearStoredProgress } from '../context/OnboardingContext';
+import { useOnboarding, clearStoredAnswers, clearStoredIntake, clearStoredProgress } from '../context/OnboardingContext';
 import { supabase } from '../lib/supabase';
 import { isPremium, isDevUser } from '../lib/entitlements';
 import { assignResultSchema, onboardingAnswersInputSchema } from '../lib/schemas';
@@ -34,8 +34,12 @@ import { colors, serifFont } from '../constants/colors';
 import { PetBubble } from '../components/pet/PetSays';
 import { PetRollTrack } from '../components/pet/PetRoll';
 import { PET_PRESENTS, fillPetLine } from '../constants/petOnboardingLines';
+import { persistIntake } from '../lib/intakeApi';
+import { completeIntake } from '../lib/intakeSummary';
 import { setPetName } from '../lib/petApi';
 import { useOnboardingPet } from '../lib/useOnboardingPet';
+import { formatRebuildDate, getRebuildEligibility } from '../lib/programRebuild';
+import { invalidateTabRefresh } from '../lib/tabRefresh';
 import { petNamed } from '../lib/analytics/events/engagement';
 
 type ProgramAssignmentFailureReason = z.infer<typeof programAssignmentFailureReason>;
@@ -61,7 +65,7 @@ export default function BuildingPlanScreen() {
   const isRetake = params.retake === '1';
   const { user, signOut } = useAuth();
   const { refreshPremium } = usePremium();
-  const { answers, endRetake, resetAnswers, hydrated, progress } = useOnboarding();
+  const { answers, intake, endRetake, resetAnswers, hydrated, progress } = useOnboarding();
   const [phase, setPhase] = useState<Phase>('assigning');
   // Human-readable reason the assignment failed. Surfaced on the error screen (debug
   // box) so failures during testing are diagnosable without a device log stream.
@@ -97,20 +101,24 @@ export default function BuildingPlanScreen() {
     setPhase('error');
   }
 
-  async function hasActivePlanForUser(userId: string): Promise<boolean> {
+  async function activePlanIdForUser(userId: string): Promise<string | null> {
     const { data: up } = await supabase
       .from('user_programs')
       .select('active_plan_id')
       .eq('user_id', userId)
       .maybeSingle();
-    if (!up?.active_plan_id) return false;
+    if (!up?.active_plan_id) return null;
     const { data: plan } = await supabase
       .from('user_program_plans')
       .select('id')
       .eq('id', up.active_plan_id)
       .eq('status', 'active')
       .maybeSingle();
-    return !!plan;
+    return plan ? up.active_plan_id : null;
+  }
+
+  async function hasActivePlanForUser(userId: string): Promise<boolean> {
+    return (await activePlanIdForUser(userId)) != null;
   }
 
   // Escape hatch from the error screen. Prefer home when a plan already exists;
@@ -180,6 +188,11 @@ export default function BuildingPlanScreen() {
       if (upsertError) {
         throw new Error(`persist_answers_failed: ${upsertError.message}`);
       }
+      const intakeComplete = completeIntake(parsedAnswers.data, intake);
+      if (intakeComplete) {
+        const intakeSaved = await persistIntake(user.id, intakeComplete);
+        if (!intakeSaved) console.warn('persist_intake_failed');
+      }
       // Best-effort and not awaited: naming the pet must never hold up plan assignment.
       const petName = progress?.pet_name?.trim();
       if (petName && !petNameSent.current) {
@@ -192,6 +205,7 @@ export default function BuildingPlanScreen() {
       }
       // The DB row is now the source of truth; drop the crash-recovery copies.
       await clearStoredAnswers();
+      await clearStoredIntake();
       await clearStoredProgress();
     } else {
       // Context is empty (or still incomplete) after hydration. A returning user or
@@ -390,6 +404,7 @@ export default function BuildingPlanScreen() {
           : undefined;
         programAssignmentStarted({ is_retake: isRetake });
         const assignmentStartedAt = Date.now();
+        const priorPlanId = hasActivePlan ? (up?.active_plan_id ?? null) : null;
         const assignment = await retryWithBackoff(
           async () => {
             const { data, error } = await supabase.functions.invoke('assign-program', {
@@ -402,10 +417,11 @@ export default function BuildingPlanScreen() {
               error || !parsed.success
                 ? await extractInvokeError(invokeErrorBody(data), error)
                 : null;
-            const recovered =
+            const currentPlanId =
               !!reason && !controller.signal.aborted
-                ? await hasActivePlanForUser(user.id)
-                : false;
+                ? await activePlanIdForUser(user.id)
+                : null;
+            const recovered = currentPlanId != null && currentPlanId !== priorPlanId;
             return { data, error, parsed, reason, recovered };
           },
           (result) =>
@@ -417,16 +433,42 @@ export default function BuildingPlanScreen() {
         if (gen !== runGen.current) return;
         const { data, error, parsed } = assignment;
         if ((error || !parsed.success) && !assignment.recovered) {
-          // A previous/concurrent run may have already created the plan. Don't strand the
-          // user on the error screen if they actually have an active plan now. Verify the
-          // pointer references an ACTIVE plan, not merely that active_plan_id is non-null:
-          // assign-program supersedes old plans BEFORE repointing user_programs, so a
-          // failed pointer update (pointer_update_failed) leaves active_plan_id pointing at
-          // a now-superseded snapshot. Treating that as success would route the user into
-          // the app on a stale/broken plan.
-          if (await hasActivePlanForUser(user.id)) {
-            // Fall through to success navigation below.
-          } else {
+          // Recovery means a different active plan than the one this run started with.
+          // A retake already has a plan, so "a plan exists" is not evidence the rebuild
+          // landed. assign-program also supersedes the old plan before repointing, so a
+          // failed pointer update must not count as the old id.
+          if (assignment.reason === 'rebuild_cooldown') {
+            programAssignmentFailed({ reason: 'assign_failed', is_retake: isRetake });
+            const { data: stamp } = await supabase
+              .from('user_programs')
+              .select('last_program_rebuild_at, last_program_rebuild_grace_used')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            if (gen !== runGen.current) return;
+            const eligibility = getRebuildEligibility(
+              stamp?.last_program_rebuild_at ?? null,
+              stamp?.last_program_rebuild_grace_used === true,
+            );
+            const when = eligibility.nextEligibleAt
+              ? formatRebuildDate(eligibility.nextEligibleAt)
+              : null;
+            if (isRetake) endRetake();
+            invalidateTabRefresh('home');
+            invalidateTabRefresh('progress');
+            Alert.alert(
+              'Your program is unchanged',
+              when
+                ? `You can rebuild it again on ${when}.`
+                : 'You can rebuild it again in a few days.',
+            );
+            router.replace('/(tabs)');
+            return;
+          }
+          const nowId = await activePlanIdForUser(user.id);
+          if (gen !== runGen.current) return;
+          if (nowId != null && nowId !== priorPlanId) {
+            // A different run finished the new plan. Fall through.
+          } else if (nowId == null) {
             // If assignment failed because the onboarding answers are incomplete (e.g. a
             // row missing equipment from a half-finished funnel), recover by sending the
             // user back into onboarding rather than stranding them on the error screen.
@@ -454,6 +496,13 @@ export default function BuildingPlanScreen() {
               'assign_failed',
               `assign-program failed. invoke error: ${invokeMsg ?? 'none'}. ` +
                 `response parse: ${zodMsg ?? 'ok'}. response: ${dataPreview ?? 'null'}`,
+            );
+            return;
+          } else {
+            const invokeMsg = assignment.reason;
+            fail(
+              'assign_failed',
+              `assign-program failed and the active plan did not change. invoke error: ${invokeMsg ?? 'none'}.`,
             );
             return;
           }
@@ -489,6 +538,7 @@ export default function BuildingPlanScreen() {
       // Onboarding is complete — drop any funnel-resume record so a finished user is
       // never routed back into the quiz (covers returning users whose answers were
       // already in the DB, so the linkAccount clear above did not run).
+      await clearStoredIntake();
       await clearStoredProgress();
       // Clear in-memory answers so hasPendingAnswers is false when the root guard
       // fires after router.replace below. Without this, the guard sees
@@ -498,6 +548,8 @@ export default function BuildingPlanScreen() {
       // The retake is only complete once the plan is rebuilt — lower the flag here (not
       // on match.tsx) so the root guard can't bounce the user out mid-flow.
       if (isRetake) endRetake();
+      invalidateTabRefresh('home');
+      invalidateTabRefresh('progress');
       // replace (not push) so a failed/hung first-run cannot leave building-plan
       // underneath the tabs stack. dismissTo alone can be a no-op when tabs were
       // never mounted, which is what stranded users on this screen.

@@ -1,0 +1,18 @@
+{
+  "id": "bench-cut-b",
+  "clip": "assets/memes/clips/bench-spot.mp4",
+  "seconds": 6.2,
+  "trim": 1.0,
+  "zoom": 1.11,
+  "pan": 0.18,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 1088, "h": 160 },
+  "text": [
+    { "lines": ["POV: you look up mid lift", "and your back already quit"], "y": 1108, "size": 40, "font": "black" }
+  ],
+  "title": "Cut B — mid lift, back quit",
+  "caption": "POV: you look up mid lift and your back already quit",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — jacked.nate"
+}

@@ -126,6 +126,7 @@ export function checkinFromDraft(draft: CheckinDraft): ProgramCheckinInput | nul
  */
 export type StartNextProgramError =
   | 'already_started'
+  | 'not_finished'
   | 'not_entitled'
   | 'rate_limited'
   | 'network'
@@ -141,7 +142,8 @@ export type StartNextProgramInput =
     };
 
 function mapError(reason: string): StartNextProgramError {
-  if (reason === 'plan_changed' || reason === 'program_not_complete') return 'already_started';
+  if (reason === 'plan_changed') return 'already_started';
+  if (reason === 'program_not_complete') return 'not_finished';
   if (reason === 'not_entitled') return 'not_entitled';
   if (reason === 'rate_limited') return 'rate_limited';
   if (/network|fetch|timed? ?out|abort/i.test(reason)) return 'network';

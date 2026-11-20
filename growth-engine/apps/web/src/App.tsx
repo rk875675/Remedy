@@ -27,13 +27,16 @@ import {
   autoScreenshotDescription,
   cropDescriptionFor,
   APP_STORE_URL,
+  shotSrc,
   shotThumbSrc,
   type StudioMe,
 } from "./api";
 import { EditView } from "./editor/EditView";
 import { UgcView } from "./ugc/UgcView";
+import { AI_UGC_SUBS, AiUgcView, type AiUgcSub } from "./aiugc/AiUgcView";
 import { PinsView } from "./pins/PinsView";
 import { FormatsView } from "./formats/FormatsView";
+import { BitePalView } from "./bitepal/BitePalView";
 import { MemesView } from "./memes/MemesView";
 import { FORMAT_STUDIES } from "./memes/formatLibrary";
 import {
@@ -47,12 +50,12 @@ function appStoreUrl(settings?: Settings | null): string {
   return typeof settings?.appStoreUrl === "string" && settings.appStoreUrl ? settings.appStoreUrl : APP_STORE_URL;
 }
 
-type Tab = "formats" | "memes" | "review" | "edit" | "library" | "insights" | "studio" | "engine" | "images" | "svgs" | "settings" | "ugc";
+type Tab = "formats" | "memes" | "review" | "edit" | "library" | "insights" | "studio" | "engine" | "images" | "bitepal" | "svgs" | "settings" | "ugc" | "aiugc";
 type MemesSub = "review" | "library";
 type ImagesSub = "all" | "ss" | "crop";
 type UgcSub = "sohan" | "ai";
 type InsightsSub = "overview" | "learning";
-const TABS: Tab[] = ["formats", "memes", "review", "edit", "library", "insights", "studio", "engine", "images", "svgs", "settings", "ugc"];
+const TABS: Tab[] = ["formats", "memes", "review", "edit", "library", "insights", "studio", "engine", "images", "bitepal", "svgs", "settings", "ugc", "aiugc"];
 const MEMES_SUBS: MemesSub[] = ["review", "library"];
 const CREATOR_TABS: Tab[] = ["insights", "library", "studio", "ugc"];
 const GREEN = "#33663f";
@@ -76,6 +79,12 @@ function ugcSubFromHash(): UgcSub {
   const parts = window.location.hash.replace(/^#/, "").split("/");
   const sub = parts[1] as UgcSub;
   return parts[0] === "ugc" && UGC_SUBS.includes(sub) ? sub : "sohan";
+}
+
+function aiUgcSubFromHash(): AiUgcSub {
+  const parts = window.location.hash.replace(/^#/, "").split("/");
+  const sub = parts[1] as AiUgcSub;
+  return parts[0] === "aiugc" && AI_UGC_SUBS.includes(sub) ? sub : "workflow";
 }
 
 function insightsSubFromHash(): InsightsSub {
@@ -111,6 +120,10 @@ function hashFor(
 ): string {
   if (tab === "images" && imagesSub !== "all") return `#images/${imagesSub}`;
   if (tab === "ugc" && ugcSub !== "sohan") return `#ugc/${ugcSub}`;
+  if (tab === "aiugc") {
+    const aiSub = aiUgcSubFromHash();
+    return aiSub === "workflow" ? "#aiugc" : `#aiugc/${aiSub}`;
+  }
   if (tab === "insights" && insightsSub !== "overview") return `#insights/${insightsSub}`;
   if (tab === "memes" && memesSub === "library") {
     if (formatId) return `#memes/library/${formatId}`;
@@ -536,6 +549,7 @@ export default function App() {
   const [tab, setTabState] = useState<Tab>(tabFromHash);
   const [imagesSub, setImagesSubState] = useState<ImagesSub>(imagesSubFromHash);
   const [ugcSub, setUgcSubState] = useState<UgcSub>(ugcSubFromHash);
+  const [aiUgcSub, setAiUgcSubState] = useState<AiUgcSub>(aiUgcSubFromHash);
   const [insightsSub, setInsightsSubState] = useState<InsightsSub>(insightsSubFromHash);
   const [memesSub, setMemesSubState] = useState<MemesSub>(memesSubFromHash);
   const [formatId, setFormatIdState] = useState<string | null>(formatIdFromHash);
@@ -619,6 +633,7 @@ export default function App() {
       setTabState(tabFromHash());
       setImagesSubState(imagesSubFromHash());
       setUgcSubState(ugcSubFromHash());
+      setAiUgcSubState(aiUgcSubFromHash());
       setInsightsSubState(insightsSubFromHash());
       setMemesSubState(memesSubFromHash());
       setFormatIdState(formatIdFromHash());
@@ -686,6 +701,12 @@ export default function App() {
     writeHash("ugc", imagesSub, next, insightsSub);
   };
 
+  const setAiUgcSub = (next: AiUgcSub) => {
+    setAiUgcSubState(next);
+    const hash = next === "workflow" ? "#aiugc" : `#aiugc/${next}`;
+    if (window.location.hash !== hash) history.replaceState(null, "", hash);
+  };
+
   const setInsightsSub = (next: InsightsSub) => {
     setInsightsSubState(next);
     writeHash("insights", imagesSub, ugcSub, next);
@@ -706,11 +727,13 @@ export default function App() {
     ["review", `Review (${posts.filter((p) => p.status === "queued" && !p.ctaReview).length})`],
     ["edit", "Edit"],
     ["images", "Images"],
+    ["bitepal", "BITEPAL"],
     ["svgs", "SVGs"],
     ["library", "Library"],
     ["insights", "Insights"],
     ["studio", "Studio"],
     ["ugc", "UGC"],
+    ["aiugc", "AI UGC"],
     ["engine", "Engine"],
     ["settings", "Settings"],
   ];
@@ -764,7 +787,7 @@ export default function App() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-extrabold tracking-tight lg:hidden" style={{ color: GREEN }}>
-                {tab === "ugc" ? "UGC" : tab === "edit" ? "Edit" : tab === "formats" ? "Formats" : tab === "memes" ? "Memes" : "Remedy Growth Engine"}
+                {tab === "ugc" ? "UGC" : tab === "aiugc" ? "AI UGC" : tab === "bitepal" ? "BITEPAL" : tab === "edit" ? "Edit" : tab === "formats" ? "Formats" : tab === "memes" ? "Memes" : "Remedy Growth Engine"}
               </h1>
               <h2 className="hidden lg:block text-2xl font-extrabold tracking-tight" style={{ color: GREEN }}>
                 {tab === "ugc" ? "UGC" : tabs.find(([id]) => id === tab)?.[1] ?? "Studio"}
@@ -774,6 +797,10 @@ export default function App() {
                   ? me.role === "creator"
                     ? "Upload a video. It lands under Your videos."
                     : "Sohan or AI uploads land under Your videos."
+                  : tab === "aiugc"
+                    ? "How we make AI UGC, the proven formats, and what we learned."
+                  : tab === "bitepal"
+                    ? "BitePal, in order. Onboarding, then the paywall, then the app."
                   : tab === "edit"
                     ? "One video can hold several clips. Each file is stored as-is."
                     : tab === "formats"
@@ -807,6 +834,7 @@ export default function App() {
             />
           )}
           {tab === "images" && <ImagesView sub={imagesSub} onSub={setImagesSub} />}
+          {tab === "bitepal" && <BitePalView />}
           {tab === "svgs" && <SvgsView />}
           {tab === "library" && <LibraryView posts={posts} templates={templates} calendar={calendar} onOpen={openStudio} />}
           {tab === "insights" && (
@@ -840,6 +868,7 @@ export default function App() {
             />
           )}
           {tab === "ugc" && <UgcView me={me} sub={ugcSub} onSub={setUgcSub} onMessage={setMessage} />}
+          {tab === "aiugc" && <AiUgcView sub={aiUgcSub} onSub={setAiUgcSub} />}
           {tab === "engine" && (
             <EngineView
               posts={posts}
@@ -3241,13 +3270,24 @@ function ShotCard({
 }) {
   return (
     <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
-      <img
-        src={shotThumbSrc(entry, previewTs)}
-        alt={entry.file}
-        loading="lazy"
-        decoding="async"
-        className="w-full object-contain bg-stone-100"
-      />
+      {/\.(mp4|mov|webm)$/i.test(entry.file) ? (
+        <video
+          src={shotSrc(entry, previewTs)}
+          poster={shotThumbSrc(entry, previewTs)}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full bg-stone-100"
+        />
+      ) : (
+        <img
+          src={shotThumbSrc(entry, previewTs)}
+          alt={entry.file}
+          loading="lazy"
+          decoding="async"
+          className="w-full object-contain bg-stone-100"
+        />
+      )}
       <div className="p-3 space-y-2">
         <p className="text-xs font-bold text-stone-700">{entry.file}</p>
         <DescriptionField

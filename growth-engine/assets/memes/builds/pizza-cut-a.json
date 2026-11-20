@@ -1,0 +1,17 @@
+{
+  "id": "pizza-cut-a",
+  "clip": "assets/memes/clips/pizza-counter.mp4",
+  "seconds": 4.8,
+  "trim": 0.3,
+  "zoom": 1.06,
+  "pan": 0.5,
+  "speed": 1.05,
+  "cover": { "y": 440, "h": 320 },
+  "text": [
+    { "lines": ["Why did I throw my back out"], "y": 575, "size": 64, "font": "impact" }
+  ],
+  "title": "Cut A — zoomed, a little faster",
+  "caption": "Why did I throw my back out",
+  "description": "Black Impact, larger. Starts 0.3s later, 6% closer, 5% faster. The meme's own sound.",
+  "musicCredit": "Sound: original, 5% faster — memesource060"
+}

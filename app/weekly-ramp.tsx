@@ -21,6 +21,7 @@ import { armFriendShareHome, isShareTestAccount } from '../lib/friendShare';
 import { firstNameFromDisplayName, resolveDisplayName } from '../lib/greeting';
 import { hapticCelebration, hapticPrimaryAction, hapticSelection } from '../lib/haptics';
 import { fetchPetState } from '../lib/petApi';
+import { useNamedPet } from '../lib/petNameCache';
 import type { PetState } from '../lib/pet';
 import { takePetGrowth } from '../lib/petGrowth';
 import { PetBadge } from '../components/pet/PetBadge';
@@ -59,9 +60,11 @@ export default function WeeklyRampScreen() {
   const [suggestion, setSuggestion] = useState<Suggestion>('progress');
   const [painDelta, setPainDelta] = useState<number | null>(null);
   const tracked = useRef(false);
+  const confirming = useRef(false);
   // Increment to re-trigger the load effect on manual retry.
   const [retryCount, setRetryCount] = useState(0);
-  const [pet, setPet] = useState<PetState | null>(null);
+  const [petState, setPet] = useState<PetState | null>(null);
+  const pet = useNamedPet(petState);
   const [petGrewHere, setPetGrewHere] = useState(false);
   // Short phones cannot fit the full badge above the suggestion card and both buttons.
   const { height: windowHeight } = useWindowDimensions();
@@ -147,11 +150,15 @@ export default function WeeklyRampScreen() {
       }
 
       // Sessions resolved for the completed week.
-      const { data: weekSessions } = await supabase
+      const { data: weekSessions, error: sessionsError } = await supabase
         .from('user_plan_sessions')
         .select('id')
         .eq('plan_id', pid)
         .eq('week_number', week);
+      if (sessionsError) {
+        if (!cancelled) { setLoadError(true); setLoading(false); }
+        return;
+      }
       const sessionIds = (weekSessions ?? []).map((s) => s.id);
 
       if (sessionIds.length === 0) {
@@ -161,11 +168,15 @@ export default function WeeklyRampScreen() {
 
       let before: number[] = [];
       let after: number[] = [];
-      const { data: comps } = await supabase
+      const { data: comps, error: compsError } = await supabase
         .from('session_completions')
         .select('id, plan_session_id')
         .eq('user_id', user.id)
         .in('plan_session_id', sessionIds);
+      if (compsError) {
+        if (!cancelled) { setLoadError(true); setLoading(false); }
+        return;
+      }
       const completedIds = new Set(
         (comps ?? [])
           .map((c) => c.plan_session_id)
@@ -184,12 +195,16 @@ export default function WeeklyRampScreen() {
         // before/after are both paired to their session via session_completion_id
         // (complete_session links the before check-in at completion time, migration 027).
         // Querying by completion id excludes orphaned `before` rows from abandoned starts.
-        const { data: checkinRows } = await supabase
+        const { data: checkinRows, error: checkinError } = await supabase
           .from('pain_checkins')
           .select('score, type')
           .eq('user_id', user.id)
           .in('type', ['before', 'after'])
           .in('session_completion_id', compIds);
+        if (checkinError) {
+          if (!cancelled) { setLoadError(true); setLoading(false); }
+          return;
+        }
         after = (checkinRows ?? []).filter((r) => r.type === 'after').map((r) => r.score);
         before = (checkinRows ?? []).filter((r) => r.type === 'before').map((r) => r.score);
       }
@@ -222,7 +237,8 @@ export default function WeeklyRampScreen() {
   }, [user, week, retryCount]);
 
   async function confirm(decision: Suggestion) {
-    if (!user || !planId || submitting) return;
+    if (!user || !planId || submitting || confirming.current) return;
+    confirming.current = true;
     hapticPrimaryAction();
     setSubmitting(true);
 
@@ -252,6 +268,7 @@ export default function WeeklyRampScreen() {
     }
 
     if (insertError) {
+      confirming.current = false;
       setSubmitting(false);
       Alert.alert(
         'Could not save your choice',
@@ -324,6 +341,13 @@ export default function WeeklyRampScreen() {
         >
           <Text style={styles.buttonPrimaryText}>Try Again</Text>
         </Pressable>
+        <Pressable
+          style={[styles.buttonGhost, { marginTop: 8 }]}
+          onPress={() => router.dismissTo('/(tabs)')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.buttonGhostText}>Back to Home</Text>
+        </Pressable>
       </View>
     );
   }
@@ -390,7 +414,7 @@ export default function WeeklyRampScreen() {
           </Text>
           <Text style={styles.recHint}>
             {progressRecommended
-              ? 'You are responding well. A small bump in reps and load will keep you progressing.'
+              ? 'You are responding well. Next week raises reps and hold time a little, and shortens the rests.'
               : 'We will keep next week at the same intensity so your body can keep adapting.'}
           </Text>
         </View>

@@ -24,10 +24,10 @@ Living doc for prompts, iteration history, and locked learnings.
 ### Character & camera
 - Upload **character reference** every generation — no appearance text in prompt.
 - **Neutral face always:** relaxed, no smiling, no expressions, eyes soft/downward. Reduces "bad AI" read.
-- **Static camera.** Grey yoga mat, white studio, soft even lighting.
+- **Static camera.** Locked off: no zoom, no pan, no handheld shake. Camera angle and framing come from that exercise's own reference clip, and they change per video. Do not reuse a 90-degree side profile unless that clip is actually side-on.
+- **Swap the person and the room.** Movement stays with the reference. Person is Elara. Background is always a clean white studio, grey yoga mat, soft even lighting. Photorealistic, sharp, no on-screen text.
 - **First frame = start position at rest** (app may use frame 1 as thumbnail).
-- **Silent** — no voiceover, no on-screen text.
-- **Clothing coverage (always):** Include `"wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings"` on every generation. Do not leave clothing unspecified — Kling defaults to a sports bra which shows cleavage. This one line is required on all future and regen prompts.
+- **Silent** — no voiceover, no on-screen text. Do not describe clothing. Elara's reference photos set the outfit.
 
 ### Timing (from Glute Bridge gold standard) — HARD RULES, not suggestions
 - **Total timed movement ≤ 8 seconds.** Sum of all phase counts (up + hold + down + pauses + rep 2…) must be **≤ 8s**. Not hold-only — the whole exercise clock.
@@ -65,7 +65,7 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 | Extra rushed reps at end | `"Only 2 reps total, no additional reps after rep 2"` |
 | Confused with similar exercise | Lead with clinical name + `"NOT a push-up / NOT a kick"` |
 | Face looks uncanny | `"neutral relaxed face, no expressions, no smiling"` |
-| Wrong camera | Use `"pure 90-degree side profile"` — avoid `"facing the camera"` on side-lying work |
+| Wrong camera | Match that clip's reference angle. Static camera. Do not default every video to a 90-degree side profile. |
 | Half-rep / shallow ROM / no lockout | **Always.** Spell start→finish, say `"fully locks out"`, `"full complete ROM from start to finish"`, `"NOT stopping short of lockout"`. Shrink pauses before shrinking ROM |
 | Arms/hands wrong | Always specify hand position (e.g. squat: `"hands clasped together in front of chest"`). Never default to "arms at sides" unless that's the real form |
 | Kling opens facing camera | Expected with generic start-frame refs — trim the intro; or use a start frame already in side-profile start pose |
@@ -75,7 +75,6 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 | Clip too long / complex | Drop to **1 rep** (one side only). Never force 2 reps on stretches, single-leg, or multi-step moves |
 | Total time over 8s | **All phase seconds summed ≤ 8s.** Over budget → cut to 1 rep and shorten holds — never 8s holds plus move-in/out |
 | Loaded / equipment moves | **Start already in the exercise start position with equipment in hands / on body** — no walk-up, no pickup from floor, no setup. Setup eats the clip and cuts the rep short (KB deadlift lesson) |
-| Cleavage / exposed chest | Always specify `"wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings"` — Kling's default clothing is a sports bra. Required on every prompt. |
 
 ---
 
@@ -116,7 +115,7 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 ---
 
 ### ⛔→🔄 Clamshell — `clamshell`
-**Status:** Retrying (2026-08-19) — v3 prompt adds clothing coverage + all v2 form fixes. Kling 3.0 is stronger on human motion than prior attempts. If it still melts, revert to Pexels.
+**Status:** Retrying (2026-08-19) — v3 prompt keeps all v2 form fixes. Kling 3.0 is stronger on human motion than prior attempts. If it still melts, revert to Pexels.
 
 **Confirmed failures:**
 - Luma + Kling text/image-to-video: feet separate / pelvis rolls / becomes leg lift.
@@ -129,19 +128,19 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 - **NOT:** circular leg swing, kicking, bicycling, or separating the feet.
 
 **Locked prompt (v3 — use this):**
-> Clamshell : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Lying on her side on a grey yoga mat, hips stacked directly on top of each other, knees bent at 90 degrees and stacked, feet pressed firmly together. Her feet stay in contact throughout the entire movement — feet never separate, ever. She very slowly opens her top knee upward over 2 full seconds like a clamshell opening — the knee rotates outward at the hip while the feet remain pressed together, the pelvis stays completely still and does NOT roll backward, the top hip stays directly over the bottom hip. She holds completely still at the top open position for 2 full seconds, then very slowly lowers her top knee back down over 2 full seconds until the knees are stacked again. Pauses 1 full second at the bottom. Repeats the exact same movement a second time with identical timing. Only 2 reps total, no additional reps. NOT a circular leg swing, NOT a kick, NOT separating the feet. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Clamshell : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Lying on her side on a grey yoga mat, hips stacked directly on top of each other, knees bent at 90 degrees and stacked, feet pressed firmly together. Her feet stay in contact throughout the entire movement — feet never separate, ever. She very slowly opens her top knee upward over 2 full seconds like a clamshell opening — the knee rotates outward at the hip while the feet remain pressed together, the pelvis stays completely still and does NOT roll backward, the top hip stays directly over the bottom hip. She holds completely still at the top open position for 2 full seconds, then very slowly lowers her top knee back down over 2 full seconds until the knees are stacked again. Pauses 1 full second at the bottom. Repeats the exact same movement a second time with identical timing. Only 2 reps total, no additional reps. NOT a circular leg swing, NOT a kick, NOT separating the feet. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Kling settings:** Subject Binding = Elara · 1080p · 10s · 16:9 · Multi-Shot OFF · Audio OFF. Trim any facing-camera intro.
 
 ---
 
 ### 🔄 Banded Clamshell — `banded_clamshell`
-**Status:** New v1 prompt (2026-08-19) — mirrors Clamshell v3 with band above knees and clothing coverage. Retry Kling; if motion still fails, match outcome of bodyweight Clamshell.
+**Status:** New v1 prompt (2026-08-19) — mirrors Clamshell v3 with band above knees. Retry Kling; if motion still fails, match outcome of bodyweight Clamshell.
 
 **Clinical form:** Same as Clamshell with a light loop resistance band positioned just above both knees adding external-rotation resistance.
 
 **Locked prompt (v1):**
-> Banded Clamshell : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Lying on her side on a grey yoga mat, a light loop resistance band positioned just above both knees, hips stacked directly on top of each other, knees bent at 90 degrees and stacked, feet pressed firmly together. Her feet stay in contact throughout the entire movement — feet never separate, ever. She very slowly opens her top knee upward against the band resistance over 2 full seconds — the knee rotates outward at the hip while the feet remain pressed together, the pelvis stays completely still and does NOT roll backward, the top hip stays directly over the bottom hip. She holds completely still at the top open position for 2 full seconds, then very slowly lowers her top knee back down over 2 full seconds against the band until the knees are stacked again. Pauses 1 full second at the bottom. Repeats the exact same movement a second time with identical timing. Only 2 reps total, no additional reps. NOT a circular leg swing, NOT a kick, NOT separating the feet. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Banded Clamshell : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Lying on her side on a grey yoga mat, a light loop resistance band positioned just above both knees, hips stacked directly on top of each other, knees bent at 90 degrees and stacked, feet pressed firmly together. Her feet stay in contact throughout the entire movement — feet never separate, ever. She very slowly opens her top knee upward against the band resistance over 2 full seconds — the knee rotates outward at the hip while the feet remain pressed together, the pelvis stays completely still and does NOT roll backward, the top hip stays directly over the bottom hip. She holds completely still at the top open position for 2 full seconds, then very slowly lowers her top knee back down over 2 full seconds against the band until the knees are stacked again. Pauses 1 full second at the bottom. Repeats the exact same movement a second time with identical timing. Only 2 reps total, no additional reps. NOT a circular leg swing, NOT a kick, NOT separating the feet. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Kling settings:** Subject Binding = Elara · 1080p · 10s · 16:9 · Multi-Shot OFF · Audio OFF.
 
@@ -160,24 +159,24 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 ---
 
 ### ⬜ Side Plank (Knees) — `side_plank_knees`
-**Status:** Ready to send — hold-based, use extend feature for true 10s hold. v2 adds clothing coverage.
+**Status:** Ready to send — hold-based, use extend feature for true 10s hold.
 
 **Clinical form (shot list, McGill dosing):** Side-lying, forearm down, knees bent and stacked. Lifts hips off the mat into a straight line from ear through shoulder, hip, and knee. Holds ~10 seconds (real duration, not compressed), then lowers with control. No hip sag.
 
 **Locked prompt (v2 — clothing added):**
-> Side plank exercise, 45-degree front-side angle, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Lying on her side on a grey yoga mat, propped up on her forearm which is directly under her shoulder, knees bent and stacked on top of each other. She very slowly lifts her hips off the mat over 2 full seconds until her body forms one straight line from her ear through her shoulder, hip, and knee — full deep range, hips high, NOT a tiny lift, no sagging. She holds this exact position completely still for 4 full seconds, motionless, hips lifted and in line. Then she very slowly lowers her hips back down to the mat over 2 full seconds. Only 1 hold, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Side plank exercise, 45-degree front-side angle, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Lying on her side on a grey yoga mat, propped up on her forearm which is directly under her shoulder, knees bent and stacked on top of each other. She very slowly lifts her hips off the mat over 2 full seconds until her body forms one straight line from her ear through her shoulder, hip, and knee — full deep range, hips high, NOT a tiny lift, no sagging. She holds this exact position completely still for 4 full seconds, motionless, hips lifted and in line. Then she very slowly lowers her hips back down to the mat over 2 full seconds. Only 1 hold, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Note:** 2s up + 4s hold + 2s down = 8s total. 1 hold only.
 
 ---
 
 ### ⬜ Side Plank (Full) — `side_plank_full`
-**Status:** Ready to send — hold-based, same treatment as Side Plank (Knees). v2 adds clothing coverage.
+**Status:** Ready to send — hold-based, same treatment as Side Plank (Knees).
 
 **Clinical form (shot list, McGill dosing):** Side-lying, legs straight, feet stacked, forearm down. Lifts hips into a straight line from ankles through shoulders (full-body line, not just knees-to-shoulder). Holds ~10 seconds, lowers with control.
 
 **Locked prompt (v2 — clothing added):**
-> Side plank exercise, full body straight line, 45-degree front-side angle, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Lying on her side on a grey yoga mat, propped up on her forearm directly under her shoulder, legs fully extended straight and feet stacked on top of each other. She very slowly lifts her hips off the mat over 2 full seconds until her entire body forms one straight line from her ankles through her hips and shoulders — full deep range, hips high, NOT a tiny lift, no sagging, legs stay straight. She holds this exact position completely still for 4 full seconds, motionless, hips lifted, feet stacked. Then she very slowly lowers her hips back down to the mat over 2 full seconds. Only 1 hold, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Side plank exercise, full body straight line, 45-degree front-side angle, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Lying on her side on a grey yoga mat, propped up on her forearm directly under her shoulder, legs fully extended straight and feet stacked on top of each other. She very slowly lifts her hips off the mat over 2 full seconds until her entire body forms one straight line from her ankles through her hips and shoulders — full deep range, hips high, NOT a tiny lift, no sagging, legs stay straight. She holds this exact position completely still for 4 full seconds, motionless, hips lifted, feet stacked. Then she very slowly lowers her hips back down to the mat over 2 full seconds. Only 1 hold, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Note:** 2s up + 4s hold + 2s down = 8s total. 1 hold only.
 
@@ -268,7 +267,7 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 ---
 
 ### 🔄 Banded Romanian Deadlift — `banded_rdl`
-**Status:** v2 prompt (2026-08-19) — fixes knees-too-straight and ROM-too-deep failures from v1. Clothing coverage added.
+**Status:** v2 prompt (2026-08-19) — fixes knees-too-straight and ROM-too-deep failures from v1.
 
 **Previous failures:**
 - v1: knees locked straight throughout — needs explicit constant soft-bend language.
@@ -281,14 +280,14 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 - Flat neutral back throughout.
 
 **Locked prompt (v2 — use this):**
-> Banded Romanian Deadlift : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Standing on a grey yoga mat in side profile, feet hip-width apart, standing on a looped resistance band, holding both ends of the band in her hands at hip height. Soft slight bend in both knees maintained throughout the entire movement — knees must never lock straight and never deeply bend; this soft bend is constant from start to finish on both reps. She very slowly hinges at the hips over 3 full seconds, pushing her hips backward and sliding her hands down the front of her thighs while keeping her back completely flat and neutral — NOT a squat, NOT rounding the spine. She stops when her torso is roughly parallel to the floor — a full but moderate RDL depth, NOT tilting the torso past horizontal, NOT touching the floor. She holds completely still at this bottom position for 1 full second, then very slowly drives her hips forward over 3 full seconds to return to standing fully upright. Pauses 1 full second at the top. Repeats the exact same hinge a second time with identical timing and identical constant soft-knee position. Only 2 reps total, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Banded Romanian Deadlift : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Standing on a grey yoga mat in side profile, feet hip-width apart, standing on a looped resistance band, holding both ends of the band in her hands at hip height. Soft slight bend in both knees maintained throughout the entire movement — knees must never lock straight and never deeply bend; this soft bend is constant from start to finish on both reps. She very slowly hinges at the hips over 3 full seconds, pushing her hips backward and sliding her hands down the front of her thighs while keeping her back completely flat and neutral — NOT a squat, NOT rounding the spine. She stops when her torso is roughly parallel to the floor — a full but moderate RDL depth, NOT tilting the torso past horizontal, NOT touching the floor. She holds completely still at this bottom position for 1 full second, then very slowly drives her hips forward over 3 full seconds to return to standing fully upright. Pauses 1 full second at the top. Repeats the exact same hinge a second time with identical timing and identical constant soft-knee position. Only 2 reps total, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Kling settings:** Subject Binding = Elara · 1080p · 10s · 16:9 · Multi-Shot OFF · Audio OFF. Trim facing-camera intro if present.
 
 ---
 
 ### 🔄 Back Extension (45°) — `back_extension_45`
-**Status:** Retry v1 (2026-08-19) — previous AI attempts failed entirely. New prompt describes the bench clearly, starts at the extended (top) position, clothing coverage added. If Kling still cannot render the machine, use Pexels placeholder.
+**Status:** Retry v1 (2026-08-19) — previous AI attempts failed entirely. New prompt describes the bench clearly and starts at the extended (top) position. If Kling still cannot render the machine, use Pexels placeholder.
 
 **Clinical form (shot list):**
 - On 45° hyperextension bench, thighs on the angled pads, feet anchored under foot pegs, arms crossed over chest.
@@ -297,14 +296,14 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 - Raise: extend back up to neutral straight line — **do NOT hyperextend past neutral**.
 
 **Locked prompt (v1 — 1 rep, 3+1+3+1 = 8s):**
-> Back Extension (45°) : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Positioned face-down in a 45-degree hyperextension bench: thighs resting on the padded thigh support, feet secured under the foot pegs, arms crossed over her chest. She starts in the extended position — her entire body forms one completely straight neutral line from her head through her hips and down to her ankles, hips and lower back fully extended. She very slowly hinges forward at the hips over 3 full seconds, lowering her torso toward the floor while keeping her back flat and neutral — NOT rounding — until her torso reaches roughly 90 degrees to her legs. She holds completely still at the bottom for 1 full second, then very slowly drives back up through the hips over 3 full seconds, raising her torso until her body returns to one perfectly straight neutral line — NOT hyperextending or arching past neutral, just straight. Pauses 1 full second at the top. Only 1 rep total, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Back Extension (45°) : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Positioned face-down in a 45-degree hyperextension bench: thighs resting on the padded thigh support, feet secured under the foot pegs, arms crossed over her chest. She starts in the extended position — her entire body forms one completely straight neutral line from her head through her hips and down to her ankles, hips and lower back fully extended. She very slowly hinges forward at the hips over 3 full seconds, lowering her torso toward the floor while keeping her back flat and neutral — NOT rounding — until her torso reaches roughly 90 degrees to her legs. She holds completely still at the bottom for 1 full second, then very slowly drives back up through the hips over 3 full seconds, raising her torso until her body returns to one perfectly straight neutral line — NOT hyperextending or arching past neutral, just straight. Pauses 1 full second at the top. Only 1 rep total, no additional reps. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Kling settings:** Subject Binding = Elara · 1080p · 10s · 16:9 · Multi-Shot OFF · Audio OFF. If the bench renders incorrectly, do not retry — use Pexels.
 
 ---
 
 ### 🔄 Leg Press — `leg_press`
-**Status:** v2 prompt (2026-08-19) — v1 failed to lock out (stopped short). Hardened lockout language. Clothing coverage added.
+**Status:** v2 prompt (2026-08-19) — v1 failed to lock out (stopped short). Hardened lockout language.
 
 **Previous failure:**
 - v1: legs never reached full extension at the top — always stopped at ~130° knee angle.
@@ -316,7 +315,7 @@ Kling consistently produces **shallow / half ROM** and often **fails to lock out
 - Lower slowly until knees approach chest (deep bend, stop before lumbar rounding).
 
 **Locked prompt (v2 — use this):**
-> Leg Press : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara — wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings. Seated in a leg press machine in side profile — back reclined against the padded backrest, feet flat and shoulder-width apart on the large platform, knees deeply bent pointing toward her chest. She very slowly presses the platform away from her over 3 full seconds through a full complete range of motion — legs extend all the way until both knees are completely straight and fully locked out, legs fully extended, NOT stopping at 90 degrees, NOT stopping at 130 degrees, NOT a half press, knees must be fully straight at the top. She holds this fully-extended locked-out position completely still for 1 full second, then very slowly bends her knees to lower the platform back over 3 full seconds until her knees return to the deep starting position near her chest. Pauses 1 full second at the bottom. Repeats the exact same full-ROM press a second time with identical timing and full lockout. Only 2 reps total, no additional reps. Full complete range of motion from start to finish. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
+> Leg Press : Pure 90-degree side profile, static camera. Neutral relaxed face, no expressions, no smiling. Reference woman linked Elara. Seated in a leg press machine in side profile — back reclined against the padded backrest, feet flat and shoulder-width apart on the large platform, knees deeply bent pointing toward her chest. She very slowly presses the platform away from her over 3 full seconds through a full complete range of motion — legs extend all the way until both knees are completely straight and fully locked out, legs fully extended, NOT stopping at 90 degrees, NOT stopping at 130 degrees, NOT a half press, knees must be fully straight at the top. She holds this fully-extended locked-out position completely still for 1 full second, then very slowly bends her knees to lower the platform back over 3 full seconds until her knees return to the deep starting position near her chest. Pauses 1 full second at the bottom. Repeats the exact same full-ROM press a second time with identical timing and full lockout. Only 2 reps total, no additional reps. Full complete range of motion from start to finish. No rushing, clean pauses. Clean white studio background, soft even lighting. Physical therapy demonstration. Photorealistic, smooth motion.
 
 **Kling settings:** Subject Binding = Elara · 1080p · 10s · 16:9 · Multi-Shot OFF · Audio OFF.
 
@@ -335,18 +334,37 @@ Use `shot_list.md` + catalog `instructions` as source of truth.
 
 ---
 
+## Locked pattern-gap clips (2026-11-18)
+
+Do not regenerate these. Approved Elara clips:
+
+- `scripts/output/double_knee_to_chest_elara_v2.mp4`
+- `scripts/output/knee_to_chest_elara_v1.mp4`
+- `scripts/output/nerve_slider_elara_v1.mp4`
+- `scripts/output/banded_lateral_walk_elara_v1.mp4`
+- `scripts/output/plank_shoulder_taps_elara_v1.mp4`
+- `scripts/output/band_pull_apart_elara_v1.mp4`
+- `scripts/output/sit_to_stand_elara_v1.mp4`
+- `scripts/output/step_up_elara_v1.mp4`
+- `scripts/output/wall_angel_elara_v1.mp4`
+- `scripts/output/side_lying_hip_abduction_elara_v2.mp4`
+
+Pallof Press is out of the program. 90-90 Breathing stays a screen, not a video.
+
 ## Changelog
 
 | Date | Exercise | Change |
 |---|---|---|
-| 2026-08-19 | (global) | **HARD: clothing coverage required on every prompt** — add `"wearing a fitted high-neck long-sleeve moisture-wicking workout top and full-length leggings"` to prevent Kling's default sports-bra clothing from showing cleavage |
-| 2026-08-19 | Banded RDL | v2: soft-knee language hardened ("soft slight bend constant from start to finish"); ROM capped at parallel (NOT past horizontal); clothing added |
-| 2026-08-19 | Back Extension (45°) | Retry v1: detailed bench description, starts at extended top position, clothing added; 1 rep (3+1+3+1=8s) — 2 reps would be 16s; if bench renders wrong → Pexels |
-| 2026-08-19 | Leg Press | v2: full-lockout language tripled ("completely straight", "fully locked out", "NOT stopping at 130°", "NOT a half press"); clothing added |
-| 2026-08-19 | Clamshell | v3: unmarked "dead" — retrying with Kling 3.0; all v2 form fixes kept; clothing coverage added |
-| 2026-08-19 | Banded Clamshell | v1 first attempt: mirrors Clamshell v3 with band above knees; clothing coverage added |
-| 2026-08-19 | Side Plank (Knees) | v2: clothing coverage added to existing locked prompt |
-| 2026-08-19 | Side Plank (Full) | v2: clothing coverage added to existing locked prompt |
+| 2026-11-18 | Pallof Press | Removed from the program. Anti-rotation stays Plank Shoulder Taps. |
+| 2026-11-18 | (global) | Locked the approved pattern-gap Elara clips. Do not regenerate them. |
+| 2026-11-18 | (global) | Clothing sentence removed. Do not describe Elara's outfit. Reference photos set it. |
+| 2026-08-19 | Banded RDL | v2: soft-knee language hardened ("soft slight bend constant from start to finish"); ROM capped at parallel (NOT past horizontal) |
+| 2026-08-19 | Back Extension (45°) | Retry v1: detailed bench description, starts at extended top position; 1 rep (3+1+3+1=8s) — 2 reps would be 16s; if bench renders wrong → Pexels |
+| 2026-08-19 | Leg Press | v2: full-lockout language tripled ("completely straight", "fully locked out", "NOT stopping at 130°", "NOT a half press") |
+| 2026-08-19 | Clamshell | v3: unmarked "dead" — retrying with Kling 3.0; all v2 form fixes kept |
+| 2026-08-19 | Banded Clamshell | v1 first attempt: mirrors Clamshell v3 with band above knees |
+| 2026-08-19 | Side Plank (Knees) | v2: existing locked prompt kept |
+| 2026-08-19 | Side Plank (Full) | v2: existing locked prompt kept |
 | 2026-07-19 | Bodyweight Hip Hinge | Done in PT videos; wire later. Numeric 120° still undershot → harden global ROM overshoot rule |
 | 2026-07-19 | (global) | HARD: Kling always truncates ROM — overspecify end position + "full deep ROM" + NOT half/partial |
 | 2026-07-19 | (global) | HARD: **total timed movement ≤ 8s** (sum of all phases); over budget → 1 rep + shorter holds |

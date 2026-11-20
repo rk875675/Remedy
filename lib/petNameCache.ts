@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'remedy.petName';
@@ -74,4 +74,17 @@ export function usePetName(): string | null {
     if (!loaded) void getRememberedPetName();
   }, []);
   return useSyncExternalStore(subscribe, getCurrent, getCurrent);
+}
+
+/**
+ * A screen's own pet, with the name swapped for the one just saved on this
+ * device. Home and Progress keep a fetched copy and do not reload on every
+ * tab switch, so this is what makes a rename show up there immediately.
+ */
+export function useNamedPet<T extends { name: string | null }>(pet: T | null): T | null {
+  const liveName = usePetName();
+  return useMemo(() => {
+    if (!pet || !liveName || pet.name === liveName) return pet;
+    return { ...pet, name: liveName };
+  }, [pet, liveName]);
 }

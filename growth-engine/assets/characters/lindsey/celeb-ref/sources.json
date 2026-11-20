@@ -1,0 +1,47 @@
+{
+  "note": "Reference only. Lindsey will not look like Mandy Moore. Use these three: straight-on, smiling fuller shot, closer three-quarter. Pixels are upright.",
+  "refs": [
+    {
+      "file": "mandy-sxsw-2018-01-front.jpg",
+      "who": "Mandy Moore",
+      "when": "2018-03-12, SXSW, same dress and hair",
+      "angle": "01-front",
+      "page": "https://commons.wikimedia.org/wiki/File:Mandy_Moore_at_SXSW_2018_(40775469351).jpg",
+      "license": "CC BY 2.0",
+      "credit": "Daniel Benavides, CC BY 2.0",
+      "pixels": [
+        3456,
+        4162
+      ],
+      "orientation": "upright"
+    },
+    {
+      "file": "mandy-sxsw-2018-05-fuller.jpg",
+      "who": "Mandy Moore",
+      "when": "2018-03-12, SXSW, same dress and hair",
+      "angle": "05-fuller",
+      "page": "https://commons.wikimedia.org/wiki/File:Mandy_Moore_at_SXSW_2018_(26905476258).jpg",
+      "license": "CC BY 2.0",
+      "credit": "Daniel Benavides, CC BY 2.0",
+      "pixels": [
+        3456,
+        5184
+      ],
+      "orientation": "upright"
+    },
+    {
+      "file": "mandy-sxsw-2018-07-closer-turn.jpg",
+      "who": "Mandy Moore",
+      "when": "2018-03-12, SXSW, same dress and hair",
+      "angle": "07-closer-turn",
+      "page": "https://commons.wikimedia.org/wiki/File:Mandy_Moore_at_SXSW_2018_(40733718782).jpg",
+      "license": "CC BY 2.0",
+      "credit": "Daniel Benavides, CC BY 2.0",
+      "pixels": [
+        3456,
+        4178
+      ],
+      "orientation": "upright"
+    }
+  ]
+}

@@ -194,11 +194,18 @@ const WEEKLY_CARDS: readonly string[] = [
   'Soreness after a session is often your system updating — not a setback.',
   'The first flare after you feel better is the trap. This is where people quit.',
   'You are not chasing zero pain. You are building enough margin that life fits under it.',
-  'Guarded movement keeps the alarm on. Move like someone whose back can handle this.',
+  'Guarded movement keeps the nervous system on alert. Move like someone whose back can handle this.',
   'A good week is not the finish line. The next hard Tuesday is the test.',
   'You are allowed to trust a good day without waiting for it to be taken away.',
   'Capacity is the point — how much you can do before symptoms climb.',
   'This is becoming training, not rehab you have to think about.',
+  'Most people stop once it feels fine. Staying with it is what keeps it fine.',
+  'A flare now is information, not a reset. Ease off a day, then keep going.',
+  'Relief came first. Strength is what keeps it.',
+  'Notice what you do now without thinking about your back. That is the work showing.',
+  'Harder weeks are allowed. Your back has had time to earn them.',
+  'Keep a short version for busy weeks. Ten minutes beats zero.',
+  'The habit is the point. The program is how you built it.',
 ];
 
 const WEEKLY_LATE =

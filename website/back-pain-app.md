@@ -12,7 +12,7 @@ A structured, video-guided back fitness program for iPhone. Free to download on 
 
 - **Platform:** iPhone, iOS 15.1 or later
 
-- **Program length:** 4 to 6 weeks, set by how long your back has hurt
+- **Program length:** 10 to 16 weeks, set by how long your back has hurt and how it behaves
 
 - **Sessions:** You pick 3 to 7 days a week
 
@@ -20,7 +20,7 @@ A structured, video-guided back fitness program for iPhone. Free to download on 
 
 - **Price:** Free to download. $4.99/week, $12.99/month, or $79.99/year
 
-- **Free trial:** 7 days weekly, 14 days monthly and annual, where offered
+- **Free trial:** 7 days weekly, 14 days monthly, and 7 days annual, where offered
 
 - **Age:** 17+
 

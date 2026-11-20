@@ -1,4 +1,5 @@
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { intakeSchema } from './intake.ts';
 
 // Zod schemas for the assign-program edge function (Deno runtime).
 //
@@ -42,6 +43,7 @@ export const requestSchema = z
     start_week: z.number().int().min(1).max(52).optional(),
     preview_only: z.boolean().optional(),
     answers: answersSchema.optional(),
+    intake: intakeSchema.optional(),
     apply_pending: z.boolean().optional(),
   })
   .strict();

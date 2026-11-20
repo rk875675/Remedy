@@ -8,6 +8,10 @@ import {
   activityLevel,
   durationMs,
   equipmentTier,
+  onboardingDecisionKey,
+  onboardingDecisionValue,
+  onboardingEntryPoint,
+  onboardingLeftTo,
   onboardingStepKey,
   onboardingValidationReason,
   optionValue,
@@ -37,6 +41,11 @@ const stepIndex = z.number().int().nonnegative();
 const stepBase = {
   step_key: onboardingStepKey,
   step_index: stepIndex,
+  entry_point: onboardingEntryPoint,
+  /** Current quiz. The previous q0–q9 quiz did not send this. */
+  flow: z.literal('v2'),
+  /** Set by the SDK on dev builds. Absent on release builds. */
+  client_build: z.enum(['dev', 'release']).optional(),
 };
 
 export const onboardingStarted = defineEvent(
@@ -69,7 +78,34 @@ export const onboardingStepCompleted = defineEvent(
 
 export const onboardingStepExited = defineEvent(
   'onboarding_step_exited',
-  z.object({ ...stepBase, time_on_step_ms: durationMs, exit_type: stepExitType }).strict(),
+  z
+    .object({
+      ...stepBase,
+      time_on_step_ms: durationMs,
+      exit_type: stepExitType,
+      left_to: onboardingLeftTo,
+      is_retake: z.boolean(),
+    })
+    .strict(),
+);
+
+/**
+ * One closed choice. Fired beside option taps, and for choices that are not
+ * option cards (typed vs random pet name, first name provided vs skipped,
+ * attribution skipped, safety none vs acknowledged). The pet name and the
+ * person's name are never properties.
+ */
+export const onboardingDecision = defineEvent(
+  'onboarding_decision',
+  z
+    .object({
+      decision_key: onboardingDecisionKey,
+      decision_value: onboardingDecisionValue,
+      is_deselect: z.boolean(),
+      entry_point: onboardingEntryPoint,
+      flow: z.literal('v2'),
+    })
+    .strict(),
 );
 
 export const onboardingOptionSelected = defineEvent(

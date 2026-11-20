@@ -91,6 +91,11 @@ const EnvSchema = z
     FEED_POSTS_MAX: z.coerce.number().int().min(0).max(50).default(3),
     /** New slideshows / remakes / A/B variants. Off until you say generate. Ramp date does not turn this on. */
     GENERATE_ENABLED: boolStr("false"),
+    // Pre-launch guard: every library crop is now the pet-era app UI. Keep it out of
+    // auto-assignment (and out of the LLM screenshot catalog) until the pet build is live.
+    PET_UI_LIVE: boolStr("false"),
+    // Pet-native formats (mascot arm, pet memes, stage-reveal). Held; off until launch.
+    PET_CONTENT_ENABLED: boolStr("false"),
     /**
      * Coming-soon last slide + caption (no App Store URL). Keep false now
      * that the app is for sale so new posts get the store CTA.
@@ -245,23 +250,23 @@ export const BRAND = {
     "img_0464.jpeg": "Stretch reminders on, every 30 min. Use for reminder / habit.",
     "crop_home.png": "Crop: today's session card + Start Session. Use for start-today CTA, not the full home screen.",
     "crop_home_2.png": "Crop: weekly sessions, completed and not completed and in progress. Use for accountability and tracking session completed",
-    "crop_img_0461.png": "Crop: workout days picker + 3-session plan. Use for detailed schedule close-up.",
+    "crop_img_0461.png": "Crop: Workout days. Tuesday, Friday, and Sunday, 3 of 3. Reminder off. Gym.",
     "crop_img_0462.png": "Crop: pain trends. Use for recovery proof close-up.",
     "crop_img_0462_2.png": "Crop: activity bars. Use for accountability/tracking",
     "crop_img_0462_4.png": "Crop: pain trend + activity bars. Use for recovery proof close-up + accountability + visual display",
-    "crop_img_0465.png": "Crop: single-leg glute bridge video. Use for exercise close-up.",
-    "crop_img_0469.png": "Crop: thoracic extension on chair. Use for desk/mobility close-up.",
-    "crop_img_0470.png": "Crop: bird dog hold. Use for core/stability close-up.",
-    "crop_img_0472.png": "Crop: barbell hip thrust. Use for gym strength close-up.",
-    "crop_img_0473.png": "Crop: bodyweight squat. Use for no-equipment close-up.",
-    "crop_cat_cow.png": "Crop: cat-cow video player. Use for guided stretch close-up.",
-    "crop_pain_check.png": "Crop: 1–10 pain slider. Use for check-in close-up.",
-    "crop_profile.png": "Crop: profile stats + plan. Use only when the slide is about identity + plan. has a bit of reminders as well",
+    "crop_img_0465.png": "Crop: Glute Bridge, set 1 of 3, 9 reps. Use for the bridge.",
+    "crop_img_0469.png": "Crop: Arnie stretching. Real thoracic-extension cue. No exercise video.",
+    "crop_img_0470.png": "Crop: Bird Dog, set 1 of 3, 4 reps. Use for core stability.",
+    "crop_img_0472.png": "Crop: Arnie coaching. Real barbell hip thrust cue. No exercise video.",
+    "crop_img_0473.png": "Crop: Bodyweight Squat, set 1 of 3, 9 reps. Use for no-equipment.",
+    "crop_cat_cow.png": "Crop: Cat-Cow, set 1 of 2, 8 reps. Use for the stretch.",
+    "crop_pain_check.png": "Crop: Pain check before a session, slider at 5 of 10. Arnie: Noticeable. We'll take it easy.",
+    "crop_profile.png": "Crop: Profile, John Doe, Arnie, Annual Plan. Email social@remedyrecoveries.com.",
     "crop_progress.png": "Crop: week ring Use for visual tracking of weekly progress",
-    "crop_progress_2.png": "Crop: larger week ring + weekly completions. Use as a larger accountability/tracking ss",
-    "crop_progress_3.png": "Crop: accountability/weekly session completed. use for accountability",
+    "crop_progress_2.png": "Crop: Progress path, week 2 of 4, and the stage strip at 15. Arnie is fully grown.",
+    "crop_progress_3.png": "Crop: Stage strip, 0 to 15 sessions. Arnie is fully grown.",
     "crop_session.png": "Crop: exercise video + reps counter. Use for in-app form proof.",
-    "crop_session_preview.png": "Crop: session preview Use for plan/length close-up of a session - displays minutes, exercises, focus,etc",
+    "crop_session_preview.png": "Crop: Week 2 session 3, Thoracic Strength & Function, 19 min, 5 exercises, exercise mat, Let's go.",
     "img_0465.png": "Session: single-leg glute bridge. Use for exercise video proof.",
     "img_0466.png": "Session: goblet squat + dumbbell. Use for gym exercise proof.",
     "img_0467.png": "Session: child's pose hold timer. Use for stretch / cool-down.",

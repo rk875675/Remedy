@@ -169,7 +169,7 @@ export const HOME_INSIGHTS: readonly string[] = [
   'Better body awareness often comes along with better control in rehab.',
   'A rough night of sleep can make pain feel worse the next day.',
   'Stress often shows up as muscle tension in the neck and back.',
-  'Pain is an alarm system. Louder alarms do not always mean more damage.',
+  'Pain is a nervous-system signal. Louder does not always mean more damage.',
   'The brain can turn pain volume up or down based on sleep, mood, and stress.',
   'After an injury, nerves can stay sensitive for a while even as tissues heal.',
   'Imaging can show disc bulges in people who feel no pain at all.',

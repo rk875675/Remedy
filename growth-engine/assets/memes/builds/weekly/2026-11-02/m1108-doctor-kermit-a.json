@@ -1,0 +1,33 @@
+{
+  "id": "m1108-doctor-kermit-a",
+  "format": "DeNAShnIYAy",
+  "variantOf": null,
+  "changed": "",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-kermit.gif",
+    "x": -120,
+    "y": 700,
+    "width": 1100
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: show me how you",
+        "get out of bed",
+        "Me:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: show me how you get out of bed. Me:",
+  "caption": "Doctor: show me how you get out of bed Me:",
+  "description": "Exam room, Kermit dancing, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

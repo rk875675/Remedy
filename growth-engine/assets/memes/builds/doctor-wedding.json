@@ -1,0 +1,33 @@
+{
+  "id": "doctor-wedding",
+  "format": "DeNAShnIYAy",
+  "variantOf": "picked-that-box",
+  "changed": "gif carlton, new text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-carlton.gif",
+    "x": -27,
+    "y": 690,
+    "width": 760
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: what were you doing",
+        "when your back went out?",
+        "Me at my cousin's wedding:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: what were you doing when your back went out?",
+  "caption": "Doctor: what were you doing when your back went out? Me at my cousin's wedding:",
+  "description": "Exam room, Carlton dance, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

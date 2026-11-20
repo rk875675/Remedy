@@ -6,6 +6,9 @@ output/
 .env
 apps/web/dist/
 assets/screenshots/library-overrides.json
+assets/screenshots/*.mp4
+assets/screenshots/*.mov
+assets/screenshots/*.webm
 assets/illustrations/flat/_preview/
 assets/audio/src/
 

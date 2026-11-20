@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Dimensions,
   Alert,
   Animated,
@@ -13,6 +14,7 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import { useEvent, useEventListener } from 'expo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
@@ -23,6 +25,16 @@ import { invalidateTabRefresh } from '../../lib/tabRefresh';
 import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import {
+  hasGuideContent,
+  loadExerciseDetails,
+  markGuideSeen,
+  pacePhaseLabels,
+  readGuideSeen,
+  type ExerciseDetail,
+} from '../../lib/exerciseDetails';
+import { ExerciseGuidePill, ExerciseGuideSheet } from '../../components/session/ExerciseGuideSheet';
+import { PaceRing } from '../../components/session/PaceRing';
 import { setPersonProperties } from '../../lib/analytics';
 import {
   exerciseCompleted,
@@ -78,6 +90,7 @@ import { createCoachMemory } from '../../lib/petCoach';
 import { PET_COMPLETE } from '../../constants/petSessionLines';
 import { fillPetLine } from '../../constants/petOnboardingLines';
 import { fetchPetState } from '../../lib/petApi';
+import { useNamedPet } from '../../lib/petNameCache';
 import { petGrowthCopy, type PetState } from '../../lib/pet';
 import { markPetStageSeen, takePetGrowth } from '../../lib/petGrowth';
 import type { PetMood, PetStage } from '../../constants/petImages';
@@ -119,6 +132,14 @@ const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 
 /** Auto-play this many times at the start of each set, then pause. */
 const VIDEO_INTRO_LOOPS = 2;
+const SESSION_RESUME_KEY = 'remedy_session_resume';
+
+type SessionResume = {
+  planSessionId: string;
+  exerciseIndex: number;
+  setIndex: number;
+  phase: 'exercise' | 'checkin_after';
+};
 
 function RestRing({
   seconds,
@@ -198,17 +219,18 @@ const WARM_COPY = [
 // the preview screen so it's meaningful without repeating the session title.
 const PHASE_LABEL: Record<string, string> = {
   mobility: 'Mobility',
-  activation: 'Activation',
+  activation: 'Stability & Core',
   strength: 'Strength',
   recovery: 'Recovery',
 };
 
 // One-line dose summary, e.g. "3 sets × 5 × 10s holds", "3 sets × 12 reps",
 // "2 sets × 40s". withSets=false drops the set prefix (used for set-rest,
-// where the set counter is shown separately).
+// where the set counter is shown separately). perSide appends "each side".
 function formatDose(
   ex: Pick<Exercise, 'sets' | 'reps' | 'duration_seconds'>,
   withSets: boolean,
+  perSide = false,
 ): string {
   const dose = ex.duration_seconds
     ? ex.reps
@@ -219,7 +241,13 @@ function formatDose(
       : '';
   if (!dose) return '';
   const sets = ex.sets && ex.sets > 0 ? ex.sets : 1;
-  return withSets && sets > 1 ? `${sets} sets × ${dose}` : dose;
+  const line = withSets && sets > 1 ? `${sets} sets × ${dose}` : dose;
+  return perSide ? `${line} each side` : line;
+}
+
+/** Inclusive integer in [low, high]. Used as the opening pain score. */
+function painStart(low: number, high: number): number {
+  return low + Math.floor(Math.random() * (high - low + 1));
 }
 
 export default function SessionPlayerScreen() {
@@ -239,12 +267,21 @@ export default function SessionPlayerScreen() {
   } | null>(null);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [exerciseIndex, setExerciseIndex] = useState(0);
-  const [painBefore, setPainBefore] = useState(() => 7 + Math.floor(Math.random() * 4));
-  const [painAfter, setPainAfter] = useState(() => 1 + Math.floor(Math.random() * 3));
+  // A shown score is what gets saved if the slider is left where it opened.
+  // Before opens in 5–8. After opens in 1–3.
+  const [painBefore, setPainBefore] = useState(() => painStart(5, 8));
+  const [painAfter, setPainAfter] = useState(() => painStart(1, 3));
   const [restSeconds, setRestSeconds] = useState(0);
   const [restTotal, setRestTotal] = useState(1);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [detailsById, setDetailsById] = useState<ReadonlyMap<string, ExerciseDetail>>(
+    () => new Map(),
+  );
+  const [detailsReady, setDetailsReady] = useState(false);
+  const [guideSheetId, setGuideSheetId] = useState<string | null>(null);
+  const [guideVisible, setGuideVisible] = useState(false);
+  const [guidePulseId, setGuidePulseId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -261,7 +298,8 @@ export default function SessionPlayerScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const warmCopyRef = useRef<string | null>(null);
   const shareOfferRef = useRef<{ preview: boolean } | null>(null);
-  const [pet, setPet] = useState<PetState | null>(null);
+  const [petState, setPet] = useState<PetState | null>(null);
+  const pet = useNamedPet(petState);
   const petRef = useRef<PetState | null>(null);
   petRef.current = pet;
   const [grewFrom, setGrewFrom] = useState<PetStage | null>(null);
@@ -342,6 +380,14 @@ export default function SessionPlayerScreen() {
   videoUrlRef.current = videoUrl;
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const currentExerciseIdRef = useRef<string | null>(null);
+  currentExerciseIdRef.current = exercises[exerciseIndex]?.id ?? null;
+  const guideSheetIdRef = useRef<string | null>(null);
+  guideSheetIdRef.current = guideSheetId;
+  const guideVisibleRef = useRef(false);
+  guideVisibleRef.current = guideVisible;
+  const guideCheckedRef = useRef<Set<string>>(new Set());
+  const guideDismissedRef = useRef<Set<string>>(new Set());
 
   const resetVideoLoopForSet = useCallback(() => {
     videoPlaysCompleted.current = 0;
@@ -382,6 +428,7 @@ export default function SessionPlayerScreen() {
           startArmedAutoplay();
         })
         .catch(() => {
+          setVideoError(true);
           if (failedExerciseId !== null) {
             exerciseVideoFailed({ exercise_id: failedExerciseId, reason: 'playback_error' });
           }
@@ -411,6 +458,7 @@ export default function SessionPlayerScreen() {
   }, [phase, setIndex, exerciseIndex, player, armSetAutoplay, startArmedAutoplay]);
 
   useEventListener(player, 'statusChange', ({ status }) => {
+    if (status === 'error') setVideoError(true);
     if (status === 'readyToPlay') startArmedAutoplay();
   });
 
@@ -439,12 +487,16 @@ export default function SessionPlayerScreen() {
     player.play();
   });
 
+  const userPausedRef = useRef(false);
+
   const toggleVideoPlayback = useCallback(() => {
     hapticSelection();
     if (player.playing) {
+      userPausedRef.current = true;
       player.pause();
       return;
     }
+    userPausedRef.current = false;
     // Loop forever only after the intro auto-paused. Pausing mid-intro
     // resumes the remaining plays, then pauses again.
     if (videoPlaysCompleted.current >= VIDEO_INTRO_LOOPS) {
@@ -540,15 +592,35 @@ export default function SessionPlayerScreen() {
             if (!r.exercises) return null;
             return {
               ...r.exercises,
-              sets: r.sets ?? r.exercises.sets,
-              reps: r.reps ?? r.exercises.reps,
-              duration_seconds: r.duration_seconds ?? r.exercises.duration_seconds,
+              sets: r.sets,
+              reps: r.reps,
+              duration_seconds: r.duration_seconds,
               rest_seconds: r.rest_seconds ?? r.exercises.rest_seconds,
             };
           })
           .filter((e): e is Exercise => e !== null);
         setExercises(exs);
         setExerciseCount(exs.length);
+        if (id) {
+          void AsyncStorage.getItem(SESSION_RESUME_KEY).then((raw) => {
+            if (!raw) return;
+            try {
+              const saved = JSON.parse(raw) as SessionResume;
+              if (saved.planSessionId !== id) return;
+              if (saved.phase === 'checkin_after') {
+                setPhase('checkin_after');
+                return;
+              }
+              if (saved.exerciseIndex >= 0 && saved.exerciseIndex < exs.length) {
+                setExerciseIndex(saved.exerciseIndex);
+                setSetIndex(Math.max(1, saved.setIndex));
+                setPhase('exercise');
+              }
+            } catch {
+              // A bad resume row just starts the session from the preview.
+            }
+          });
+        }
         // One batched call resolves every clip for the session. Playback URLs come from
         // get-video-url rather than exercises.video_url so the server decides what the
         // client may fetch (signed R2 URL when configured, public URL otherwise) —
@@ -590,6 +662,88 @@ export default function SessionPlayerScreen() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
+  // Teaching copy is optional. A missing table, a slow response, or a bad row
+  // leaves details empty and the session runs exactly as it did without them.
+  useEffect(() => {
+    if (exercises.length === 0) return;
+    let cancelled = false;
+    void loadExerciseDetails(exercises.map((exercise) => exercise.id)).then((map) => {
+      if (cancelled) return;
+      setDetailsById(map);
+      setDetailsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [exercises]);
+
+  const openGuide = useCallback((exerciseId: string) => {
+    guideSheetIdRef.current = exerciseId;
+    setGuideSheetId(exerciseId);
+    setGuideVisible(true);
+  }, []);
+
+  const closeGuide = useCallback(() => {
+    const exerciseId = guideSheetIdRef.current;
+    if (exerciseId) {
+      guideDismissedRef.current.add(exerciseId);
+      void markGuideSeen(exerciseId);
+    }
+    setGuideVisible(false);
+  }, []);
+
+  const endGuidePulse = useCallback(() => {
+    setGuidePulseId(null);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'exercise' || !detailsReady) return;
+    const exercise = exercises[exerciseIndex];
+    if (!exercise) return;
+    if (guideCheckedRef.current.has(exercise.id)) return;
+    const detail = detailsById.get(exercise.id);
+    if (!detail || !hasGuideContent(detail)) {
+      guideCheckedRef.current.add(exercise.id);
+      return;
+    }
+    guideCheckedRef.current.add(exercise.id);
+    const exerciseId = exercise.id;
+    const countdownRuns = Boolean(exercise.duration_seconds);
+    void readGuideSeen(exerciseId).then((seen) => {
+      if (seen) return;
+      if (phaseRef.current !== 'exercise') return;
+      if (currentExerciseIdRef.current !== exerciseId) return;
+      if (guideDismissedRef.current.has(exerciseId)) return;
+      if (countdownRuns) {
+        setGuidePulseId(exerciseId);
+        void markGuideSeen(exerciseId);
+        return;
+      }
+      openGuide(exerciseId);
+    });
+  }, [phase, detailsReady, exercises, exerciseIndex, detailsById, openGuide]);
+
+  useEffect(() => {
+    if (!guideVisible) return;
+    const stillHere =
+      phase === 'exercise' && exercises[exerciseIndex]?.id === guideSheetId;
+    if (stillHere) return;
+    closeGuide();
+  }, [guideVisible, phase, exerciseIndex, exercises, guideSheetId, closeGuide]);
+
+  useEffect(() => {
+    if (guidePulseId === null) return;
+    if (phase === 'exercise' && exercises[exerciseIndex]?.id === guidePulseId) return;
+    setGuidePulseId(null);
+  }, [phase, exerciseIndex, exercises, guidePulseId]);
+
+  useEffect(() => {
+    return () => {
+      const exerciseId = guideSheetIdRef.current;
+      if (guideVisibleRef.current && exerciseId) void markGuideSeen(exerciseId);
+    };
+  }, []);
 
   // Analytics only. A head-count is cheap and runs while the user reads the
   // preview, so it never delays anything they are waiting on.
@@ -732,8 +886,10 @@ export default function SessionPlayerScreen() {
       holdRepRef.current = 1;
       setHoldRep(1);
       setCountdown(holdDuration);
+      userPausedRef.current = false;
       countdownRef.current = setInterval(() => {
         setCountdown((prev) => {
+          if (userPausedRef.current) return prev;
           if (prev <= 1) {
             // Any exercise with a duration, including ones added later.
             playDoneChime();
@@ -903,6 +1059,7 @@ export default function SessionPlayerScreen() {
 
     restTimerRef.current = setInterval(() => {
       setRestSeconds((prev) => {
+        if (userPausedRef.current) return prev;
         if (prev <= 1) {
           if (restTimerRef.current) clearInterval(restTimerRef.current);
           advanceAfterRest(kind);
@@ -1000,7 +1157,28 @@ export default function SessionPlayerScreen() {
    * The preview and complete phases are not abandonment — nothing was started in
    * the first, and everything was finished in the second.
    */
+  function persistResume() {
+    if (!id) return;
+    let next: SessionResume | null = null;
+    if (phase === 'checkin_after') {
+      next = { planSessionId: id, exerciseIndex, setIndex, phase: 'checkin_after' };
+    } else if (phase === 'exercise') {
+      next = { planSessionId: id, exerciseIndex, setIndex, phase: 'exercise' };
+    } else if (phase === 'rest') {
+      const ontoNextExercise = restKind === 'exercise';
+      next = {
+        planSessionId: id,
+        exerciseIndex: ontoNextExercise ? exerciseIndex + 1 : exerciseIndex,
+        setIndex: ontoNextExercise ? 1 : setIndex + 1,
+        phase: 'exercise',
+      };
+    }
+    if (!next) return;
+    void AsyncStorage.setItem(SESSION_RESUME_KEY, JSON.stringify(next));
+  }
+
   function reportAbandon(exitType: 'user_exit' | 'backgrounded') {
+    persistResume();
     if (abandonReported.current) return;
     if (phase === 'preview' || phase === 'complete') return;
     abandonReported.current = true;
@@ -1046,6 +1224,7 @@ export default function SessionPlayerScreen() {
           // Pop back to the existing tabs entry (dismissTo) rather than stacking a
           // duplicate — Home refreshes via its focus effect.
           onPress: () => {
+            persistResume();
             reportAbandon('user_exit');
             router.dismissTo('/(tabs)');
           },
@@ -1058,11 +1237,19 @@ export default function SessionPlayerScreen() {
   async function handleBeginSession() {
     hapticPrimaryAction();
     if (!user || !id) return;
-    await supabase.from('pain_checkins').insert({
+    const { error: painError } = await supabase.from('pain_checkins').insert({
       user_id: user.id,
       score: painBefore,
       type: 'before' as const,
     });
+    if (painError) {
+      Alert.alert(
+        'Could not save your pain score',
+        'Check your connection and try again.',
+        [{ text: 'Try again', onPress: () => void handleBeginSession() }],
+      );
+      return;
+    }
     if (sessionMeta) {
       painCheckinSubmitted({
         checkin_type: 'before',
@@ -1096,38 +1283,47 @@ export default function SessionPlayerScreen() {
     // Authoritative, pointer-guarded completion. The server only accepts the session
     // that matches the user's current week/session, writes the completion + after-checkin,
     // and advances the pointer atomically (see migration 021).
-    const { data, error } = await supabase.rpc('complete_session', {
-      p_plan_session_id: id,
-      p_duration_seconds: durationSeconds,
-      p_pain_after: painAfter,
-    });
+    let data: unknown;
+    let error: { message: string } | null = null;
+    try {
+      const response = await supabase.rpc('complete_session', {
+        p_plan_session_id: id,
+        p_duration_seconds: durationSeconds,
+        p_pain_after: painAfter,
+      });
+      data = response.data;
+      error = response.error;
+    } catch {
+      setIsSubmitting(false);
+      sessionCompletionFailed({ reason: 'network', plan_session_id: id });
+      hapticWarning();
+      Alert.alert(
+        'Could not save this session',
+        'The connection dropped. Your session is still here — try again.',
+        [
+          { text: 'Try again', onPress: () => void handleComplete() },
+          { text: 'Not now', style: 'cancel' },
+        ],
+      );
+      return;
+    }
 
     if (error || !data) {
       setIsSubmitting(false);
-      const reason = error ? classifyCompletionError(error.message) : 'not_current_session';
+      const message = error?.message?.toLowerCase() ?? '';
+      const rampRequired = message.includes('weekly_ramp_required');
+      const notCurrent = message.includes('session_not_current') || message.includes('not_current');
+      const reason = error
+        ? classifyCompletionError(error.message)
+        : notCurrent
+          ? 'rpc_error'
+          : 'network';
       sessionCompletionFailed({ reason, plan_session_id: id });
       hapticWarning();
 
-      // A dropped connection must not throw away a finished workout. Stay on this screen
-      // so Try again re-sends the same completion; the server's pointer guard makes a
-      // duplicate impossible, so retrying is safe.
-      if (reason === 'network') {
-        Alert.alert(
-          'Could not save this session',
-          "The connection dropped. Your session is still here — try again.",
-          [
-            { text: 'Try again', onPress: () => void handleComplete() },
-            { text: 'Not now', style: 'cancel' },
-          ],
-        );
-        return;
-      }
-
-      // Migration 057 gates week N on a ramp decision for week N-1. Saying "this isn't
-      // your current session" here told the user nothing actionable. Home redirects to
-      // /weekly-ramp whenever pending_ramp_week is set, so routing there unblocks them
-      // without this screen having to work out the week number.
-      if (error && error.message.toLowerCase().includes('weekly_ramp_required')) {
+      // Migration 057 gates week N on a ramp decision for week N-1. Home redirects to
+      // /weekly-ramp whenever pending_ramp_week is set.
+      if (rampRequired) {
         Alert.alert(
           'One step first',
           'Check in on how last week went, then come back and finish this session.',
@@ -1136,13 +1332,22 @@ export default function SessionPlayerScreen() {
         return;
       }
 
-      // Otherwise the session genuinely isn't the user's current one (deep-link / replay
-      // / already completed). Don't corrupt UI state — send them back to Home where the
-      // real next session is surfaced.
+      if (notCurrent) {
+        Alert.alert(
+          'Could not save this session',
+          'This session is no longer your current one. Returning you to your plan.',
+          [{ text: 'OK', onPress: () => router.dismissTo('/(tabs)') }],
+        );
+        return;
+      }
+
       Alert.alert(
         'Could not save this session',
-        'This session is no longer your current one. Returning you to your plan.',
-        [{ text: 'OK', onPress: () => router.dismissTo('/(tabs)') }],
+        'The connection dropped. Your session is still here — try again.',
+        [
+          { text: 'Try again', onPress: () => void handleComplete() },
+          { text: 'Not now', style: 'cancel' },
+        ],
       );
       return;
     }
@@ -1156,6 +1361,7 @@ export default function SessionPlayerScreen() {
 
     invalidateTabRefresh('home');
     invalidateTabRefresh('progress');
+    void AsyncStorage.removeItem(SESSION_RESUME_KEY);
 
     if (result.program_done) {
       setIsProgramCompleted(true);
@@ -1381,6 +1587,8 @@ export default function SessionPlayerScreen() {
         sessionMeta={sessionMeta}
         exerciseCount={exerciseCount}
         equipmentItems={orderedEquipmentForExercises(exercises)}
+        exercises={exercises}
+        detailsById={detailsById}
         onBegin={() => setPhase('checkin_before')}
         onBack={() => router.back()}
         insets={insets}
@@ -1443,7 +1651,7 @@ export default function SessionPlayerScreen() {
               </Text>
               <Text style={styles.nextExName}>{nextEx.name}</Text>
               <Text style={styles.nextExDuration}>
-                {formatDose(nextEx, !isSetRest)}
+                {formatDose(nextEx, !isSetRest, detailsById.get(nextEx.id)?.per_side === true)}
               </Text>
             </View>
           )}
@@ -1484,6 +1692,22 @@ export default function SessionPlayerScreen() {
 
   // --- EXERCISE ---
   if (phase === 'exercise' && currentExercise) {
+    const exerciseDetail = detailsById.get(currentExercise.id) ?? null;
+    const sideSuffix = exerciseDetail?.per_side === true ? ' each side' : '';
+    const tempoLine = exerciseDetail?.tempo?.trim() ?? '';
+    const guideDetail =
+      exerciseDetail && hasGuideContent(exerciseDetail) ? exerciseDetail : null;
+    const showPace =
+      reduceMotion === false &&
+      !currentExercise.duration_seconds &&
+      Boolean(currentExercise.reps) &&
+      pacePhaseLabels(exerciseDetail?.tempo_pattern ?? []) !== null;
+    const guideSheetExercise = guideSheetId
+      ? exercises.find((exercise) => exercise.id === guideSheetId) ?? null
+      : null;
+    const guideSheetDetail = guideSheetExercise
+      ? detailsById.get(guideSheetExercise.id) ?? null
+      : null;
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.exerciseTopBar} onLayout={trackRect('topBar')}>
@@ -1574,7 +1798,7 @@ export default function SessionPlayerScreen() {
         </View>
 
         <View style={styles.exerciseInfo} onLayout={trackRect('info')}>
-          {/* Name, set counter and countdown: measured so the buddy never stands on them. */}
+          {/* Name, dose, and the guide control: measured so the buddy never stands on them. */}
           <View style={{ alignSelf: 'flex-start' }} onLayout={trackRect('infoText')}>
             <Text style={styles.exerciseName}>{currentExercise.name}</Text>
 
@@ -1587,11 +1811,35 @@ export default function SessionPlayerScreen() {
             {currentExercise.duration_seconds ? (
               <Text style={styles.countdownText}>
                 {currentExercise.reps
-                  ? `Hold ${holdRep} of ${currentExercise.reps} · ${countdown}s`
-                  : `${countdown}s remaining`}
+                  ? `Hold ${holdRep} of ${currentExercise.reps} · ${countdown}s${sideSuffix}`
+                  : `${countdown}s remaining${sideSuffix}`}
               </Text>
             ) : currentExercise.reps ? (
-              <Text style={styles.countdownText}>{currentExercise.reps} reps</Text>
+              showPace && exerciseDetail ? (
+                <View style={styles.doseRow}>
+                  <Text style={[styles.countdownText, styles.countdownTextFlush]}>
+                    {currentExercise.reps} reps{sideSuffix}
+                  </Text>
+                  <PaceRing pattern={exerciseDetail.tempo_pattern} />
+                </View>
+              ) : (
+                <Text style={styles.countdownText}>
+                  {currentExercise.reps} reps{sideSuffix}
+                </Text>
+              )
+            ) : null}
+
+            {tempoLine.length > 0 ? <Text style={styles.tempoHint}>{tempoLine}</Text> : null}
+
+            {guideDetail ? (
+              <ExerciseGuidePill
+                pulse={guidePulseId === currentExercise.id}
+                onPress={() => {
+                  hapticSelection();
+                  openGuide(currentExercise.id);
+                }}
+                onPulseEnd={endGuidePulse}
+              />
             ) : null}
           </View>
 
@@ -1635,6 +1883,15 @@ export default function SessionPlayerScreen() {
             maxSize={smallPhone ? 136 : 184}
             rects={coachRects}
             memory={coachMemory}
+          />
+        ) : null}
+
+        {guideSheetExercise && guideSheetDetail && hasGuideContent(guideSheetDetail) ? (
+          <ExerciseGuideSheet
+            visible={guideVisible && guideSheetId === currentExercise.id}
+            name={guideSheetExercise.name}
+            detail={guideSheetDetail}
+            onClose={closeGuide}
           />
         ) : null}
       </View>
@@ -1863,6 +2120,8 @@ function SessionPreviewScreen({
   sessionMeta,
   exerciseCount,
   equipmentItems,
+  exercises,
+  detailsById,
   onBegin,
   onBack,
   insets,
@@ -1871,6 +2130,8 @@ function SessionPreviewScreen({
   sessionMeta: { title: string; duration_minutes: number; week_number: number; session_number: number; phase: string } | null;
   exerciseCount: number;
   equipmentItems: string[];
+  exercises: Exercise[];
+  detailsById: ReadonlyMap<string, ExerciseDetail>;
   onBegin: () => void;
   onBack: () => void;
   insets: { top: number; bottom: number };
@@ -1894,7 +2155,11 @@ function SessionPreviewScreen({
         </TouchableOpacity>
       </View>
 
-      <View style={previewStyles.body}>
+      <ScrollView
+        style={previewStyles.body}
+        contentContainerStyle={previewStyles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={previewStyles.hero}>
           {pet ? (
             <View style={previewStyles.petWrap}>
@@ -1936,7 +2201,33 @@ function SessionPreviewScreen({
             </View>
           </View>
         ) : null}
-      </View>
+
+        {exercises.length > 0 ? (
+          <View style={previewStyles.list}>
+            {exercises.map((exercise, index) => {
+              const dose = formatDose(
+                exercise,
+                true,
+                detailsById.get(exercise.id)?.per_side === true,
+              );
+              return (
+                <View
+                  key={`${exercise.id}-${index}`}
+                  style={previewStyles.listRow}
+                  accessible
+                  accessibilityLabel={`${index + 1}. ${exercise.name}${dose ? `, ${dose}` : ''}`}
+                >
+                  <Text style={previewStyles.listIndex}>{index + 1}</Text>
+                  <View style={previewStyles.listBody}>
+                    <Text style={previewStyles.listName}>{exercise.name}</Text>
+                    {dose ? <Text style={previewStyles.listDose}>{dose}</Text> : null}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+      </ScrollView>
 
       <MedicalDisclaimer style={previewStyles.disclaimer} />
       <TouchableOpacity style={previewStyles.beginButton} onPress={() => { hapticPrimaryAction(); onBegin(); }} activeOpacity={0.85}>
@@ -1976,6 +2267,9 @@ const previewStyles = StyleSheet.create({
   body: {
     flex: 1,
     marginTop: 20,
+  },
+  bodyContent: {
+    paddingBottom: 8,
   },
   hero: {
     backgroundColor: colors.primaryMuted,
@@ -2048,6 +2342,39 @@ const previewStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  list: {
+    marginTop: 20,
+    paddingHorizontal: 4,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  listIndex: {
+    width: 24,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    color: colors.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  listBody: {
+    flex: 1,
+  },
+  listName: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  listDose: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   disclaimer: {
     marginBottom: 12,
@@ -2550,6 +2877,22 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: 12,
     fontVariant: ['tabular-nums'],
+  },
+  countdownTextFlush: {
+    marginBottom: 0,
+    flexShrink: 1,
+  },
+  doseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  tempoHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginBottom: 12,
   },
   exerciseInstructions: {
     fontSize: 15,

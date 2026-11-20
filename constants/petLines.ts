@@ -38,7 +38,7 @@ export const PET_GREW_LINES: Record<Exclude<PetStage, 1>, string> = {
 export const PET_WEEK_COMPLETE_LINE = '{name} is proud of that week.';
 
 /** Program complete. */
-export const PET_PROGRAM_COMPLETE_LINE = '{name} made it the whole way with you.';
+export const PET_PROGRAM_COMPLETE_LINE = '{name} is ready for the next one.';
 
 /** Onboarding: meeting and naming the pet. */
 export const PET_MEET_TITLE = 'Meet your armadillo';
@@ -109,7 +109,7 @@ export const PET_CHECK_INBOX_LINE = "Check your inbox. I'll wait right here.";
 export const PET_FEEDBACK_FORM_LINE = 'Say anything. It all gets read.';
 
 /** Editing the answers that shape the program. */
-export const PET_ANSWERS_LINE = "Change anything. I'll rebuild around it.";
+export const PET_ANSWERS_LINE = 'Change anything. Equipment updates now. Bigger changes wait until next week.';
 
 /** Choosing workout days and the reminder time. */
 export const PET_WORKOUT_DAYS_LINE = "Pick your days. I'll be ready on each one.";
@@ -124,13 +124,38 @@ export const PET_TIP_HEADING = "{name}'s tip";
 export const PET_HOME_DONE_LINE = 'Done for today. I can feel it.';
 export const PET_HOME_REST_LINE = "Rest day. I'm napping. You should too.";
 
-/** Reminder notifications. */
-export const PET_WORKOUT_REMINDER = {
-  title: '{name} is ready when you are',
-  body: "Today's session is waiting. A few minutes and you're both done.",
-} as const;
+/**
+ * Two separate reminder pools. Workout lines are only about today's session.
+ * Stretch lines are only about standing up for a short stretch. They never
+ * share a sentence. `{name}` is the pet. Onboarding shows the workout pool,
+ * because that step schedules workout reminders.
+ */
+export const PET_WORKOUT_REMINDERS = [
+  {
+    title: '{name} is ready when you are',
+    body: "Today's session is waiting. A few minutes and you're both done.",
+  },
+  {
+    title: '{name} saved your spot',
+    body: "Your session is ready. A few minutes, then you're both done.",
+  },
+  {
+    title: "Today's session",
+    body: '{name} is waiting. A short session, then you can both be done.',
+  },
+] as const;
 
-export const PET_STRETCH_REMINDER = {
-  title: 'Stretch break',
-  body: '{name} is stretching. Stand up and join in for a minute.',
-} as const;
+export const PET_STRETCH_REMINDERS = [
+  {
+    title: 'Stretch break',
+    body: '{name} is stretching. Stand up and join in for a minute.',
+  },
+  {
+    title: '{name} is uncurling',
+    body: 'Shake it out. One stretch, then sit back down.',
+  },
+  {
+    title: 'Stand and stretch',
+    body: '{name} rolled out. A short stretch, nothing else.',
+  },
+] as const;

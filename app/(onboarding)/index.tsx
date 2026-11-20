@@ -1,67 +1,123 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ContinueButton } from '../../components/onboarding/ContinueButton';
-import { PetBadge } from '../../components/pet/PetBadge';
-import { WarmBackground } from '../../components/onboarding/WarmBackground';
-import {
-  useOnboarding,
-  getResumeStep,
-  ONBOARDING_FLOW,
-  ONBOARDING_STEP_PATHS,
-} from '../../context/OnboardingContext';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { WelcomeStage } from '../../components/onboarding/coldopen/WelcomeStage';
+import { ObFooter, ObScreen, PrimaryButton, RevealText, TextLink, ob, obType } from '../../components/onboarding/kit';
+import { getResumeStep, rebuildOnboardingStack } from '../../constants/onboardingFlow';
 import { useAuth } from '../../context/AuthContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import { usePremium } from '../../context/PremiumContext';
-import { useUser } from '../../lib/superwall';
-import { useOnboardingPet } from '../../lib/useOnboardingPet';
-import { hapticWarning } from '../../lib/haptics';
 import { signedOut } from '../../lib/analytics/events/auth';
+import { legalDocumentViewed } from '../../lib/analytics/events/engagement';
 import { onboardingStarted } from '../../lib/analytics/events/onboarding';
 import { markOnboardingFunnelStart, ONBOARDING_STEP_KEYS } from '../../lib/analytics/onboardingSteps';
-import { colors, serifFont } from '../../constants/colors';
+import { hapticWarning } from '../../lib/haptics';
+import { recordLegalAcceptances } from '../../lib/legalAcceptance';
+import { trackOption, useHasPet, useObStep } from '../../lib/onboardingFlow';
+import { useAfterTransition } from '../../lib/useAfterTransition';
+import { useReduceMotion } from '../../lib/useReduceMotion';
+import { useUser } from '../../lib/superwall';
+
+const COPY = {
+  headline: 'Stop thinking\nabout your back.',
+  start: 'Get started',
+  resume: 'Continue',
+  account: 'I already have an account',
+  terms: 'Terms',
+  privacy: 'Privacy Policy',
+} as const;
+
+const RISE = 14;
+
+function useRise(delay: number) {
+  const reduce = useReduceMotion();
+  const ready = useAfterTransition();
+  const anim = useRef(new Animated.Value(reduce === true ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (!ready || reduce === null) return;
+    if (reduce) {
+      anim.setValue(1);
+      return;
+    }
+    anim.setValue(0);
+    const motion = Animated.timing(anim, {
+      toValue: 1,
+      duration: ob.motion.base,
+      delay,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+      isInteraction: false,
+    });
+    motion.start();
+    return () => motion.stop();
+  }, [ready, reduce, delay, anim]);
+
+  return {
+    opacity: anim,
+    transform: [
+      {
+        translateY: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [RISE, 0],
+        }),
+      },
+    ],
+  };
+}
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { resetAnswers, answers, progress, retaking } = useOnboarding();
-  const { name: petName } = useOnboardingPet();
-  // A stale session (signed in during a previous test/session) is otherwise invisible
-  // here: tapping "Sign in" would silently bounce to the tabs (root guard treats an
-  // already-authed, fully-onboarded user on an auth route as misplaced) with no
-  // explanation. Surface it and offer a real way out instead.
+  const { height } = useWindowDimensions();
+  const { goNext } = useObStep('welcome');
+  const { resetAnswers, answers, intake, progress, setLocalAnswer, getSnapshot, hydrated } = useOnboarding();
+  const hasPet = useHasPet();
   const { user, signOut } = useAuth();
   const { signOut: superwallSignOut } = useUser();
-  // Onboarded account whose subscription ended: they reached Welcome by swiping back
-  // off Your Program. The CTA returns them to the paywall — never through the quiz.
   const { premium, onboardingDone } = usePremium();
   const isLapsed = !!user && onboardingDone === true && premium === false;
-  // A signed-in user whose pet already has a server name (or a retake) is never asked to
-  // name or grow it again; a name typed in this funnel (progress.pet_name) is not that.
-  const hasPet = retaking || (!!user && !!petName && !progress?.pet_name);
+  const started = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      started.current = false;
+    }, []),
+  );
+
+  const flow = { answers, intake, progress, hasPet };
+  const resumeStep = getResumeStep(flow);
+  const canResume = resumeStep !== 'welcome';
+  const cta = canResume || isLapsed ? COPY.resume : COPY.start;
+
+  const headlineStyle = useRise(0);
+  const footerStyle = useRise(120);
 
   async function handleSignOut() {
     hapticWarning();
-    // Before signOut: the identity reset fires off the resulting session change,
-    // and this event has to land on the person who signed out.
     signedOut({ source_screen: 'onboarding' });
     void superwallSignOut();
     await signOut();
   }
-  // Saved progress means an unauthenticated user backed out to welcome mid-funnel; the
-  // root guard normally resumes them before this screen shows. Keep their answers and
-  // offer to continue rather than wiping (the old mount-reset silently lost everything).
-  // Resume target is clamped to the first step whose data is missing — jumping to the
-  // furthest-reached screen with earlier answers gone strands the user on match's
-  // "complete all questions" error.
-  const resumeStep = getResumeStep(progress, answers);
-  const canResume = resumeStep !== 'welcome';
+
+  function openLegal(document: 'terms' | 'privacy') {
+    legalDocumentViewed({ document, source_screen: 'onboarding' });
+    router.push(document === 'terms' ? '/(legal)/terms' : '/(legal)/privacy');
+  }
+
+  function agree() {
+    setLocalAnswer('agreed_legal', true);
+    void recordLegalAcceptances(['age', 'health_consent', 'terms', 'privacy']).catch(() => {});
+    trackOption('welcome', 'legal_assent');
+  }
 
   function handleStart() {
+    if (!hydrated || started.current) return;
     if (isLapsed) {
+      started.current = true;
       router.push('/(onboarding)/match?lapsed=1');
       return;
     }
+    started.current = true;
     markOnboardingFunnelStart();
     onboardingStarted({
       is_resume: canResume,
@@ -73,164 +129,150 @@ export default function WelcomeScreen() {
         : {}),
     });
     if (canResume) {
-      // Push every step up to the resume target so swipe-back works through the quiz
-      // instead of dead-ending on a single orphaned screen.
-      const skipPetSteps = hasPet && (resumeStep === 'pet' || resumeStep === 'grow');
-      const targetIndex = ONBOARDING_FLOW.indexOf(skipPetSteps ? 'founder' : resumeStep);
-      for (let i = 1; i <= targetIndex; i++) {
-        const step = ONBOARDING_FLOW[i];
-        if (hasPet && (step === 'pet' || step === 'grow')) continue;
-        router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
-      }
+      agree();
+      const snap = getSnapshot();
+      rebuildOnboardingStack(
+        {
+          replace: (href) => {
+            router.replace(href as never);
+          },
+          push: (href) => {
+            router.push(href as never);
+          },
+        },
+        resumeStep,
+        { answers: snap.answers, intake: snap.intake, progress: snap.progress, hasPet },
+      );
       return;
     }
-    // Fresh run: clear any orphaned answers/progress before beginning.
     resetAnswers();
-    router.push(hasPet ? '/(onboarding)/founder' : '/(onboarding)/pet');
+    agree();
+    goNext();
   }
 
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const nameOpacity = useRef(new Animated.Value(0)).current;
-  const nameTranslate = useRef(new Animated.Value(24)).current;
-  const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const subtitleTranslate = useRef(new Animated.Value(12)).current;
-  const footerOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const fadeUp = (opacity: Animated.Value, translate: Animated.Value, duration: number) =>
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(translate, {
-          toValue: 0,
-          duration,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]);
-
-    Animated.stagger(160, [
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      fadeUp(nameOpacity, nameTranslate, 700),
-      fadeUp(subtitleOpacity, subtitleTranslate, 500),
-      Animated.timing(footerOpacity, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
-      <WarmBackground />
-      <Animated.View style={[styles.logoWrap, { opacity: logoOpacity }]}>
-        <PetBadge stage={1} mood="idle" size={150} />
-      </Animated.View>
-
-      <View style={styles.content}>
-        <Animated.Text
-          style={[styles.appName, { opacity: nameOpacity, transform: [{ translateY: nameTranslate }] }]}
-          adjustsFontSizeToFit
-          numberOfLines={1}
-        >
-          Remedy
-        </Animated.Text>
-        <Animated.Text
-          style={[
-            styles.subtitle,
-            { opacity: subtitleOpacity, transform: [{ translateY: subtitleTranslate }] },
-          ]}
-        >
-          Stop worrying about your back every time you move.
-        </Animated.Text>
+    <ObScreen
+      testID="welcome"
+      chapter={null}
+      onBack={null}
+      background="plain"
+      fade={false}
+      footerColor="transparent"
+      scroll={false}
+      contentStyle={styles.frame}
+      footer={
+        <ObFooter>
+          <Animated.View style={footerStyle}>
+            <PrimaryButton testID="start" label={cta} variant="ink" disabled={!hydrated} onPress={handleStart} />
+            {user ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Signed in as ${user.email ?? 'an account'}. Sign out`}
+                onPress={() => {
+                  void handleSignOut();
+                }}
+                style={styles.signIn}
+              >
+                <Text style={[styles.signInText, styles.onHill]}>
+                  Signed in as {user.email ?? 'an account'} on this device.{' '}
+                  <Text style={styles.signOut}>Sign out</Text>
+                </Text>
+              </Pressable>
+            ) : (
+              <TextLink
+                label={COPY.account}
+                tone="light"
+                onPress={() => {
+                  router.navigate('/(auth)/sign-in');
+                }}
+              />
+            )}
+            <Text style={[styles.consent, styles.onHill]}>
+              By tapping Get started, I confirm I'm 17+, agree to the{' '}
+              <Text
+                style={[styles.consentLink, styles.onHill]}
+                onPress={() => openLegal('terms')}
+                accessibilityRole="link"
+                accessibilityLabel={COPY.terms}
+                testID="legal-terms"
+              >
+                {COPY.terms}
+              </Text>{' '}
+              and{' '}
+              <Text
+                style={[styles.consentLink, styles.onHill]}
+                onPress={() => openLegal('privacy')}
+                accessibilityRole="link"
+                accessibilityLabel={COPY.privacy}
+                testID="legal-privacy"
+              >
+                {COPY.privacy}
+              </Text>
+              , and consent to Remedy using my answers about my back and health to build my plan.
+            </Text>
+          </Animated.View>
+        </ObFooter>
+      }
+    >
+      <WelcomeStage />
+      <View pointerEvents="none" style={styles.middle}>
+        <Animated.View style={headlineStyle}>
+          <RevealText style={[styles.headline, height < 740 && styles.headlineShort]}>{COPY.headline}</RevealText>
+        </Animated.View>
       </View>
-
-      <Animated.View style={[styles.footer, { opacity: footerOpacity }]}>
-        <ContinueButton label={canResume || isLapsed ? 'Continue' : 'Get Started'} onPress={handleStart} />
-        {user ? (
-          <TouchableOpacity style={styles.signInLink} onPress={handleSignOut} activeOpacity={0.6}>
-            <Text style={styles.signInText}>
-              Signed in as {user.email ?? 'an account'} on this device.{' '}
-              <Text style={styles.signInBold}>Sign out</Text>
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.signInLink}
-            onPress={() => router.navigate('/(auth)/sign-in')}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.signInText}>
-              Already have an account? <Text style={styles.signInBold}>Sign in</Text>
-            </Text>
-          </TouchableOpacity>
-        )}
-      </Animated.View>
-    </View>
+    </ObScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  frame: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: 28,
-    overflow: 'hidden',
+    paddingHorizontal: 0,
+    paddingBottom: 0,
   },
-  logoWrap: {
-    alignSelf: 'flex-start',
-  },
-  content: {
+  middle: {
     flex: 1,
-    justifyContent: 'flex-end',
-    paddingBottom: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginTop: 36,
   },
-  appName: {
-    fontSize: 88,
-    lineHeight: 96,
-    fontFamily: serifFont,
-    fontWeight: '700',
-    color: colors.primaryDeep,
-    letterSpacing: -3,
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontFamily: serifFont,
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-    maxWidth: 320,
-  },
-  footer: {
-    paddingBottom: 8,
-    gap: 16,
-    alignItems: 'center',
-    width: '100%',
-  },
-  signInLink: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  signInText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.textSecondary,
+  headline: {
+    fontSize: 66,
+    lineHeight: 70,
+    fontWeight: '800',
+    letterSpacing: -1.8,
+    color: '#000000',
     textAlign: 'center',
   },
-  signInBold: {
-    color: colors.primary,
+  headlineShort: {
+    fontSize: 54,
+    lineHeight: 58,
+  },
+  signIn: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  signInText: {
+    ...obType.caption,
+    textAlign: 'center',
+  },
+  signOut: {
+    color: ob.color.accent,
+    fontWeight: '700',
+  },
+  consent: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: ob.color.inkSoft,
+    textAlign: 'center',
+  },
+  consentLink: {
+    textDecorationLine: 'underline',
     fontWeight: '600',
+  },
+  onHill: {
+    color: '#F6EDE0',
   },
 });

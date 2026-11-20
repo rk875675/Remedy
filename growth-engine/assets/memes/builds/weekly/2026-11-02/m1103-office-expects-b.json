@@ -1,0 +1,33 @@
+{
+  "id": "m1103-office-expects-b",
+  "format": "pizza-party-office",
+  "variantOf": "m1103-office-expects-a",
+  "changed": "text",
+  "background": "pizza-party-office/02-background.jpg",
+  "gif": {
+    "file": "pizza-party-office/03-motion.gif",
+    "x": 18,
+    "y": 773,
+    "width": 1044
+  },
+  "audio": {
+    "file": "pizza-party-office/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 14.25,
+  "text": [
+    {
+      "lines": [
+        "How your back expects you",
+        "to move after a full day",
+        "of back-to-back meetings"
+      ],
+      "y": 150
+    }
+  ],
+  "title": "How your back expects you to move after a full day of back-to-back meetings",
+  "caption": "How your back expects you to move after a full day of back-to-back meetings",
+  "description": "Cubicle photo, the office reaction, the sound from that format.",
+  "musicCredit": "Sound: original sound — eae_vini058",
+  "results": []
+}

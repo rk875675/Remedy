@@ -6,6 +6,8 @@ import {
   type TemplateInput,
   type TemplateSession,
 } from './engine.ts';
+import { intakeSchema, type Intake } from './intake.ts';
+import { isDoseClass, type ExerciseDetail, type SpineBias } from './engineV2.ts';
 
 export type AssignmentContext = {
   rules: AssignmentRulesConfig;
@@ -14,6 +16,7 @@ export type AssignmentContext = {
   template: TemplateInput;
   exercises: CatalogExercise[];
   replacements: ReplacementEntry[];
+  details: ExerciseDetail[];
 };
 
 export async function loadAssignmentContext(
@@ -79,5 +82,71 @@ export async function loadAssignmentContext(
     },
     exercises: exercisesRes.data as unknown as CatalogExercise[],
     replacements: (replacementsRes.data ?? []) as ReplacementEntry[],
+    details: await loadExerciseDetails(supabase),
   };
+}
+
+const SPINE_BIASES = new Set<string>(['flexion', 'extension', 'neutral', 'rotation', 'lateral']);
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+function parseExerciseDetail(row: unknown): ExerciseDetail | null {
+  if (row === null || typeof row !== 'object') return null;
+  const record = row as Record<string, unknown>;
+  if (typeof record.exercise_id !== 'string' || typeof record.slug !== 'string') return null;
+  if (typeof record.dose_class !== 'string' || !isDoseClass(record.dose_class)) return null;
+  if (typeof record.spine_bias !== 'string' || !SPINE_BIASES.has(record.spine_bias)) return null;
+  if (typeof record.per_side !== 'boolean') return null;
+  const spine = record.spine_bias as SpineBias;
+  return {
+    exercise_id: record.exercise_id,
+    slug: record.slug,
+    dose_class: record.dose_class,
+    spine_bias: spine,
+    contra: asStringArray(record.contra),
+    function_targets: asStringArray(record.function_targets),
+    per_side: record.per_side,
+  };
+}
+
+async function loadExerciseDetails(supabase: SupabaseClient): Promise<ExerciseDetail[]> {
+  try {
+    const { data, error } = await supabase
+      .from('exercise_details')
+      .select('exercise_id, slug, dose_class, spine_bias, contra, function_targets, per_side');
+    if (error || !data) {
+      console.error('exercise_details_load_failed', error?.message ?? 'no_data');
+      return [];
+    }
+    const details: ExerciseDetail[] = [];
+    for (const row of data) {
+      const parsed = parseExerciseDetail(row);
+      if (parsed) details.push(parsed);
+    }
+    return details;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('exercise_details_load_failed', message);
+    return [];
+  }
+}
+
+export async function loadUserIntake(admin: SupabaseClient, userId: string): Promise<Intake | null> {
+  try {
+    const { data, error } = await admin
+      .from('user_intake')
+      .select('answers')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    const parsed = intakeSchema.safeParse(data.answers);
+    return parsed.success ? parsed.data : null;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('load_user_intake_failed', message);
+    return null;
+  }
 }

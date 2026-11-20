@@ -19,8 +19,10 @@ import { hapticPrimaryAction, hapticSelection } from '../../lib/haptics';
 import {
   scheduleStretchReminders,
   cancelStretchReminders,
+  ensureStretchReminders,
+  ensureWorkoutReminders,
   getNextStretchTime,
-  scheduleWorkoutReminders,
+  STRETCH_PAUSED_KEY,
 } from '../../lib/notifications';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -29,6 +31,7 @@ import {
   ThisWeekCard,
   STORAGE_WEEK_PLAN_COLLAPSED,
 } from '../../components/home/ThisWeekCard';
+import { supabase } from '../../lib/supabase';
 import {
   WorkoutDaysModal,
   STORAGE_WORKOUT_DAYS,
@@ -58,6 +61,7 @@ import { FriendShareSheet } from '../../components/session/FriendShareSheet';
 import { consumeFriendShareHome, type FriendShareHomePrompt } from '../../lib/friendShare';
 import { resolveDisplayName, useHomeGreetingParts } from '../../lib/greeting';
 import { prefetchSessionVideos } from '../../lib/prefetchSessionVideos';
+import { useDaySky } from '../../lib/daySky';
 import { hasCompletedOrientation } from '../../lib/orientation';
 import {
   asPlanSession,
@@ -68,24 +72,26 @@ import {
   shouldSkipTabRefresh,
   beginTabRefresh,
   finishTabRefresh,
+  failTabRefresh,
   invalidateTabRefresh,
 } from '../../lib/tabRefresh';
 import { isPendingApplyDue } from '../../lib/programAnswers';
 import { flushPendingProgramApply } from '../../lib/applyProgramAnswers';
 import { derivePetMood, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
+import { useNamedPet } from '../../lib/petNameCache';
 import { countMissedThisWeek } from '../../lib/streak';
 import {
   PetScene,
-  SceneLabel,
   SceneTitle,
   SceneBody,
   SceneButton,
   SceneLink,
 } from '../../components/pet/PetScene';
+import { PET_HOME_DONE_LINE, PET_HOME_REST_LINE } from '../../constants/petLines';
 import { PetBadge } from '../../components/pet/PetBadge';
 import type { PetStage } from '../../constants/petImages';
-import { PET_HOME_DONE_LINE, PET_HOME_REST_LINE } from '../../constants/petLines';
+import type { PainTrigger } from '../../types/database';
 import {
   PetNameSheet,
   hasDismissedPetNamePrompt,
@@ -96,16 +102,38 @@ import type { UserPlanSession, UserProgram } from '../../types/database';
 type SessionWithExerciseCount = UserPlanSession & { exercise_count: number };
 type HomeEmptyStateReason = import('zod').z.infer<typeof homeEmptyStateReason>;
 
+/** Survives Home remounts. One shown per nudge_key per JS session. */
+const nudgeShownKeys = new Set<string>();
+
+const PAIN_TRIGGERS = ['sitting', 'bending', 'standing', 'morning', 'exercise', 'other'] as const;
+
+const SESSION_LINE: Record<PainTrigger, string> = {
+  sitting: 'Sitting was the hard one.',
+  bending: 'Bending was the hard one.',
+  standing: 'Standing was the hard one.',
+  morning: 'Mornings were the hard part.',
+  exercise: 'Training was the hard part.',
+  other: 'A short one for today.',
+};
+
+function firstPainTrigger(value: unknown): PainTrigger | null {
+  if (!Array.isArray(value)) return null;
+  const first = value[0];
+  return PAIN_TRIGGERS.find((item) => item === first) ?? null;
+}
+
+function doseLine(minutes: number, count: number): string {
+  const exercises = count === 1 ? 'exercise' : 'exercises';
+  return `${minutes} min · ${count} ${exercises}`;
+}
+
 const STRETCH_KEYS = {
   enabled: 'remedy_stretch_enabled',
   interval: 'remedy_stretch_interval',
   start: 'remedy_stretch_start_hour',
   end: 'remedy_stretch_end_hour',
-  paused: 'remedy_stretch_paused',
+  paused: STRETCH_PAUSED_KEY,
 } as const;
-
-/** Survives Home remounts. One shown per nudge_key per JS session. */
-const nudgeShownKeys = new Set<string>();
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -115,8 +143,6 @@ function formatCountdown(ms: number): string {
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// Live countdown to the next stretch reminder. Reads its settings from
-// AsyncStorage (written by the Profile tab) and self-hides when disabled.
 function StretchReminderCard({ petStage }: { petStage?: PetStage }) {
   const [enabled, setEnabled] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -137,15 +163,22 @@ function StretchReminderCard({ petStage }: { petStage?: PetStage }) {
       ]),
     );
     const isEnabled = map[STRETCH_KEYS.enabled] === 'true';
+    const isPaused = map[STRETCH_KEYS.paused] === 'true';
     setEnabled(isEnabled);
-    setPaused(map[STRETCH_KEYS.paused] === 'true');
+    setPaused(isPaused);
     const intervalRaw = map[STRETCH_KEYS.interval];
     const startRaw = map[STRETCH_KEYS.start];
     const endRaw = map[STRETCH_KEYS.end];
-    if (intervalRaw) setIntervalMin(parseInt(intervalRaw, 10));
-    if (startRaw) setStartHour(parseInt(startRaw, 10));
-    if (endRaw) setEndHour(parseInt(endRaw, 10));
-    setNextTime(isEnabled ? await getNextStretchTime() : null);
+    const interval = intervalRaw ? parseInt(intervalRaw, 10) : 60;
+    const start = startRaw ? parseInt(startRaw, 10) : 9;
+    const end = endRaw ? parseInt(endRaw, 10) : 18;
+    if (intervalRaw && Number.isFinite(interval)) setIntervalMin(interval);
+    if (startRaw && Number.isFinite(start)) setStartHour(start);
+    if (endRaw && Number.isFinite(end)) setEndHour(end);
+    if (isEnabled && !isPaused && Number.isFinite(interval) && Number.isFinite(start) && Number.isFinite(end)) {
+      await ensureStretchReminders(interval, start, end);
+    }
+    setNextTime(isEnabled && !isPaused ? await getNextStretchTime() : null);
     setNow(Date.now());
   }, []);
 
@@ -161,16 +194,11 @@ function StretchReminderCard({ petStage }: { petStage?: PetStage }) {
     return () => clearInterval(id);
   }, [enabled, paused]);
 
-  // When the countdown elapses, reschedule so the next slot's time is picked up.
   useEffect(() => {
     if (!enabled || paused || !nextTime) return;
-    if (now >= nextTime.getTime()) {
-      (async () => {
-        await scheduleStretchReminders(intervalMin, startHour, endHour);
-        setNextTime(await getNextStretchTime());
-      })();
-    }
-  }, [now, nextTime, enabled, paused, intervalMin, startHour, endHour]);
+    if (now < nextTime.getTime()) return;
+    void getNextStretchTime().then(setNextTime);
+  }, [now, nextTime, enabled, paused]);
 
   const handlePause = useCallback(async () => {
     hapticSelection();
@@ -195,8 +223,8 @@ function StretchReminderCard({ petStage }: { petStage?: PetStage }) {
   const valueText = paused
     ? 'Paused'
     : nextTime
-    ? `Next stretch in ${formatCountdown(remainingMs)}`
-    : 'No more reminders today';
+      ? `Next stretch in ${formatCountdown(remainingMs)}`
+      : 'No more reminders today';
 
   return (
     <View style={styles.stretchCard}>
@@ -228,6 +256,7 @@ function StretchReminderCard({ petStage }: { petStage?: PetStage }) {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const sky = useDaySky();
   const { user } = useAuth();
 
   const [userProgram, setUserProgram] = useState<UserProgram | null>(null);
@@ -238,8 +267,9 @@ export default function HomeScreen() {
   const [isDoneToday, setIsDoneToday] = useState(false);
   const [sessionsThisWeek, setSessionsThisWeek] = useState(0);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
-  const [durationWeeks, setDurationWeeks] = useState(5);
+  const [durationWeeks, setDurationWeeks] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [homeLoadError, setHomeLoadError] = useState(false);
 
   const [workoutDays, setWorkoutDays] = useState<number[]>([]);
   const [daysSince, setDaysSince] = useState<string | null>(null);
@@ -249,6 +279,7 @@ export default function HomeScreen() {
   const [reminderMinute, setReminderMinute] = useState(0);
   const [weekSessions, setWeekSessions] = useState<WeekSession[]>([]);
   const [userEquipment, setUserEquipment] = useState<string | null>(null);
+  const [hardTrigger, setHardTrigger] = useState<PainTrigger | null>(null);
   const [weekPlanCollapsed, setWeekPlanCollapsed] = useState(true);
   const [displayWeekDays, setDisplayWeekDays] = useState<boolean[]>(
     () => Array.from({ length: 7 }, () => false),
@@ -257,7 +288,8 @@ export default function HomeScreen() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [sharePrompt, setSharePrompt] = useState<FriendShareHomePrompt | null>(null);
   const [thisWeekCompletions, setWeekCompletions] = useState<RawCompletion[]>([]);
-  const [pet, setPet] = useState<PetState | null>(null);
+  const [petState, setPet] = useState<PetState | null>(null);
+  const pet = useNamedPet(petState);
   // null until read, so the naming sheet never flashes for someone who dismissed it.
   const [petPromptDismissed, setPetPromptDismissed] = useState<boolean | null>(null);
   const isFocused = useIsFocused();
@@ -295,6 +327,7 @@ export default function HomeScreen() {
     }
 
     beginTabRefresh('home');
+    let refreshOk = false;
     try {
     void fetchPetState().then((next) => {
       if (next) setPet(next);
@@ -319,9 +352,11 @@ export default function HomeScreen() {
     const state = await fetchHomeState(Number.isFinite(offset) ? offset : 0);
     if (!state) {
       setDisplayName(resolveDisplayName(null, user));
+      setHomeLoadError(true);
       setLoaded(true);
       return;
     }
+    setHomeLoadError(false);
 
     setDisplayName(resolveDisplayName(state.display_name, user));
 
@@ -329,18 +364,27 @@ export default function HomeScreen() {
     if (!up) {
       setUserProgram(null);
       setWeekSessions([]);
+      setDurationWeeks(null);
+      setTodaySession(null);
+      setNextSessionId(null);
       setLoaded(true);
+      refreshOk = true;
       return;
     }
     setUserProgram(up);
 
     if (!state?.plan) {
       setWeekSessions([]);
+      setDurationWeeks(null);
+      setTodaySession(null);
+      setNextSessionId(null);
       setLoaded(true);
+      refreshOk = true;
       return;
     }
 
     if (state.pending_ramp_week != null) {
+      refreshOk = true;
       router.replace(`/weekly-ramp?week=${state.pending_ramp_week}`);
       return;
     }
@@ -364,8 +408,23 @@ export default function HomeScreen() {
 
     if (!home.plan) {
       setWeekSessions([]);
+      setDurationWeeks(null);
+      setTodaySession(null);
+      setNextSessionId(null);
       setLoaded(true);
+      refreshOk = true;
       return;
+    }
+
+    if (program.pending_apply_week != null && program.applied_answers) {
+      setHardTrigger(firstPainTrigger(program.applied_answers.pain_trigger));
+    } else {
+      const { data: triggerRow } = await supabase
+        .from('onboarding_answers')
+        .select('pain_trigger')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setHardTrigger(firstPainTrigger(triggerRow?.pain_trigger));
     }
 
     const planSessionsPerWeek = home.plan.sessions_per_week;
@@ -392,9 +451,7 @@ export default function HomeScreen() {
     let days: number[] = [];
     try { if (storedDays) days = JSON.parse(storedDays) as number[]; } catch { /* ignore */ }
     let since = storedDaysSince;
-    let daysReset = false;
     if (days.length !== planSessionsPerWeek) {
-      daysReset = true;
       days = computeDefaultWorkoutDays(planSessionsPerWeek);
       since = localDateKey(new Date());
       await AsyncStorage.multiSet([
@@ -418,10 +475,11 @@ export default function HomeScreen() {
     }
     setReminderHour(hour);
     setReminderMinute(minute);
-    // A new days/week (next program, edited answers) resets the day set above; the
-    // scheduled reminders still point at the old days until they move with it.
-    if (daysReset && storedNotif === 'true') {
-      void scheduleWorkoutReminders(days, hour, minute).catch(() => {});
+    // Keeps the weekly alarms on the saved days and copy. A new days/week count
+    // (next program, edited answers) is already written above, so this moves the
+    // alarms with it. Stretch alarms are a separate schedule.
+    if (storedNotif === 'true') {
+      void ensureWorkoutReminders(days, hour, minute).catch(() => {});
     }
 
     const todayIsWorkout = isTodayWorkoutDay(days);
@@ -455,6 +513,7 @@ export default function HomeScreen() {
         setNextSessionId(null);
         nextSessionPosition.current = null;
         setLoaded(true);
+        refreshOk = true;
         return;
       }
 
@@ -498,8 +557,13 @@ export default function HomeScreen() {
     }
 
     setLoaded(true);
+    refreshOk = true;
+    } catch {
+      setHomeLoadError(true);
+      setLoaded(true);
     } finally {
-      finishTabRefresh('home');
+      if (refreshOk) finishTabRefresh('home');
+      else failTabRefresh('home');
     }
   }, [user, router]);
 
@@ -527,10 +591,10 @@ export default function HomeScreen() {
   // state, and only for the reason actually being rendered.
   const lastEmptyReason = useRef<HomeEmptyStateReason | null>(null);
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || homeLoadError) return;
 
     let reason: HomeEmptyStateReason | null = null;
-    if (userProgram && userProgram.current_week > durationWeeks) reason = 'program_complete';
+    if (durationWeeks != null && userProgram && userProgram.current_week > durationWeeks) reason = 'program_complete';
     else if (userProgram && !userProgram.active_plan_id) reason = 'no_active_plan';
     else if (!todaySession) {
       reason = isDoneToday
@@ -543,7 +607,7 @@ export default function HomeScreen() {
     if (reason === lastEmptyReason.current) return;
     lastEmptyReason.current = reason;
     if (reason !== null) homeEmptyStateShown({ reason });
-  }, [loaded, userProgram, durationWeeks, todaySession, isRestDay, isDoneToday]);
+  }, [loaded, homeLoadError, userProgram, durationWeeks, todaySession, isRestDay, isDoneToday]);
 
   async function goToSession(sessionId: string) {
     if (user?.id && !(await hasCompletedOrientation(user.id))) {
@@ -587,21 +651,32 @@ export default function HomeScreen() {
   }
 
   const petMood = derivePetMood({
-    programComplete: Boolean(userProgram && userProgram.current_week > durationWeeks),
+    programComplete: Boolean(durationWeeks != null && userProgram && userProgram.current_week > durationWeeks),
     isDoneToday,
     hasSessionToday: todaySession !== null,
     isRestDay,
     missedPlannedDays: countMissedThisWeek(thisWeekCompletions, weekSchedule),
     hour: new Date().getHours(),
   });
+  const spoken = hardTrigger ? SESSION_LINE[hardTrigger] : 'A short one for today.';
+
   // Today's session, rest day, or program completion: lives on the hill in the pet scene.
-  const sceneActions = !loaded ? null : userProgram && userProgram.current_week > durationWeeks ? (
+  const sceneActions = !loaded ? null : homeLoadError ? (
     <>
-      <SceneLabel>PROGRAM COMPLETE</SceneLabel>
-      <SceneTitle hasBody>You finished your program!</SceneTitle>
-      <SceneBody>
-        You completed your full program. View your summary and pick what&apos;s next.
-      </SceneBody>
+      <SceneTitle hasBody lines={3}>Could not load your session.</SceneTitle>
+      <SceneBody>Check your connection and try again.</SceneBody>
+      <SceneButton
+        label="Try again"
+        onPress={() => {
+          hapticPrimaryAction();
+          void fetchData({ force: true });
+        }}
+      />
+    </>
+  ) : durationWeeks != null && userProgram && userProgram.current_week > durationWeeks ? (
+    <>
+      <SceneTitle lines={3}>{`${durationWeeks} weeks, done.`}</SceneTitle>
+      <SceneBody>See your summary, then build the next one.</SceneBody>
       <SceneButton
         label="View summary"
         onPress={() => {
@@ -612,11 +687,7 @@ export default function HomeScreen() {
     </>
   ) : userProgram && !userProgram.active_plan_id ? (
     <>
-      <SceneLabel>ALMOST THERE</SceneLabel>
-      <SceneTitle hasBody>Your program needs to be built</SceneTitle>
-      <SceneBody>
-        Tap below to generate your personalized sessions from your quiz answers.
-      </SceneBody>
+      <SceneTitle lines={3}>Your plan still needs building.</SceneTitle>
       <SceneButton
         label="Build my program"
         onPress={() => {
@@ -627,12 +698,11 @@ export default function HomeScreen() {
     </>
   ) : todaySession ? (
     <>
-      <SceneLabel>
-        {`TODAY · ${todaySession.estimated_minutes} MIN · ${todaySession.exercise_count} EXERCISE${todaySession.exercise_count !== 1 ? 'S' : ''}`}
-      </SceneLabel>
-      <SceneTitle>{todaySession.title}</SceneTitle>
+      <SceneTitle lines={3}>{todaySession.title}</SceneTitle>
+      <SceneBody>{spoken}</SceneBody>
       <SceneButton
         label="Start session"
+        detail={doseLine(todaySession.estimated_minutes, todaySession.exercise_count)}
         onPress={() => {
           hapticPrimaryAction();
           sessionStartTapped({
@@ -646,15 +716,13 @@ export default function HomeScreen() {
     </>
   ) : isDoneToday ? (
     <>
-      <SceneLabel>DONE FOR TODAY</SceneLabel>
-      <SceneTitle hasBody>You&apos;re good for today</SceneTitle>
-      <SceneBody>{PET_HOME_DONE_LINE}</SceneBody>
+      <SceneTitle hasBody lines={3}>{PET_HOME_DONE_LINE}</SceneTitle>
       {nextWorkoutDay !== null && (
         <SceneBody>Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}</SceneBody>
       )}
       {nextSessionId && (
         <SceneLink
-          label="Do another session →"
+          label="Do another session"
           onPress={() => {
             const position = nextSessionPosition.current;
             if (position) {
@@ -671,18 +739,16 @@ export default function HomeScreen() {
     </>
   ) : (
     <>
-      <SceneLabel>{isRestDay ? 'REST DAY' : 'UP NEXT'}</SceneLabel>
-      <SceneTitle hasBody>{isRestDay ? 'Recovery day' : 'Your next session'}</SceneTitle>
-      <SceneBody>
+      <SceneTitle hasBody lines={3}>
         {isRestDay ? PET_HOME_REST_LINE : 'Your next session is ready whenever you are.'}
-      </SceneBody>
+      </SceneTitle>
       {isRestDay && nextWorkoutDay !== null && (
         <SceneBody>Next workout · {DAY_NAMES_FULL[nextWorkoutDay]}</SceneBody>
       )}
       {nextSessionId &&
         (isRestDay ? (
           <SceneLink
-            label="View next session →"
+            label="View next session"
             onPress={() => {
               const position = nextSessionPosition.current;
               if (position) {
@@ -715,8 +781,8 @@ export default function HomeScreen() {
   );
   const petScene = (
     <View style={styles.petScene}>
-      {/* Keeps the pull-down area green instead of showing the page background. */}
-      <View pointerEvents="none" style={styles.petSceneOverscroll} />
+      {/* Keeps the pull-down area the same cream as the meadow sky. */}
+      <View pointerEvents="none" style={[styles.petSceneOverscroll, { backgroundColor: sky.top }]} />
       <PetScene
         topInset={insets.top}
         greeting={greeting}
@@ -724,6 +790,7 @@ export default function HomeScreen() {
         onPressFirstName={openProfileNameEdit}
         pet={pet}
         mood={petMood}
+        sky={sky}
       >
         {sceneActions}
       </PetScene>
@@ -756,12 +823,12 @@ export default function HomeScreen() {
           workoutDays={weekSchedule}
           displayWeekDays={displayWeekDays}
           weekSessions={weekSessions}
-          sessionsPerWeek={weekSchedule.length > 0 ? weekSchedule.length : sessionsPerWeek}
+          sessionsPerWeek={weekSessions.length > 0 ? weekSessions.length : sessionsPerWeek}
           sessionsThisWeek={sessionsThisWeek}
           userEquipment={userEquipment}
           weekPlanCollapsed={weekPlanCollapsed}
           weekNumber={
-            userProgram.current_week <= durationWeeks
+            durationWeeks != null && userProgram.current_week <= durationWeeks
               ? userProgram.current_week
               : undefined
           }
@@ -862,10 +929,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 600,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.background,
   },
 
-  // Stretch break countdown card
   stretchCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -917,10 +983,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-
-  // Skeletons
   skeletonCard: {
     marginBottom: 16,
   },
-
 });

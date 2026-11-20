@@ -1,0 +1,1300 @@
+{
+  "weekStart": "2026-11-02",
+  "createdAt": "2026-11-02T00:51:30.661Z",
+  "autopost": true,
+  "groups": [
+    {
+      "key": "remedyrecoveries",
+      "handles": [
+        "tiktok:remedy.recoveries",
+        "facebook:Remedy Recoveries",
+        "youtube:remedyrecoveries"
+      ]
+    },
+    {
+      "key": "remedystories",
+      "handles": [
+        "tiktok:remedy.stories",
+        "instagram:remedy.stories",
+        "youtube:remedystories"
+      ]
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-11-02",
+      "template": "doctor-carlton",
+      "test": "Adult party vs kid's party as the moment it went",
+      "posts": [
+        {
+          "specId": "m1102-doctor-carlton-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Doctor: so how exactly",
+            "did you hurt your back?",
+            "Me at the work holiday party:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1102-doctor-carlton-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1102-doctor-carlton-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-03T00:39:19.000Z",
+              "zernioPostId": "6ae7deb53493786a1138595e",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 6,
+              "likes": 3,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-03T00:53:29.000Z",
+              "zernioPostId": "6ae7deb73493786a11385974",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 7,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-16T11:54:24.200Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-03T01:02:59.000Z",
+              "zernioPostId": "6ae7deba3493786a11385985",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 995,
+              "likes": 10,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-16T11:54:24.200Z"
+            }
+          ]
+        },
+        {
+          "specId": "m1102-doctor-carlton-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "Doctor: when did your back",
+            "start hurting?",
+            "Me at my kid's birthday party:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1102-doctor-carlton-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1102-doctor-carlton-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-03T02:36:35.000Z",
+              "zernioPostId": "6ae7dedabeee34d89a0abc64",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 1,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-03T02:49:47.000Z",
+              "zernioPostId": "6ae7dedcbeee34d89a0abc6d",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 126,
+              "likes": 4,
+              "shares": 1,
+              "comments": 1,
+              "metricsAt": "2026-11-16T11:54:24.200Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-03T02:45:07.000Z",
+              "zernioPostId": "6ae7dedfbeee34d89a0abc76",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 0,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-16T11:54:24.200Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-03",
+      "template": "office-expects",
+      "test": "Waking up vs end of the workday",
+      "posts": [
+        {
+          "specId": "m1103-office-expects-b",
+          "variant": "b",
+          "group": "remedyrecoveries",
+          "lines": [
+            "How your back expects you",
+            "to move after a full day",
+            "of back-to-back meetings"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1103-office-expects-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1103-office-expects-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-03T23:03:48.000Z",
+              "zernioPostId": "6ae7defebeee34d89a0abd97",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 1,
+              "likes": 1,
+              "shares": 1,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-03T23:17:04.000Z",
+              "zernioPostId": "6ae7df01beee34d89a0abdc0",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 2,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-17T11:54:36.161Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-03T23:28:58.000Z",
+              "zernioPostId": "6ae7df04beee34d89a0abdea",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 984,
+              "likes": 6,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-17T11:54:36.161Z"
+            }
+          ]
+        },
+        {
+          "specId": "m1103-office-expects-a",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "How your back expects you",
+            "to get out of bed after",
+            "sleeping on it wrong"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1103-office-expects-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1103-office-expects-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-03T20:24:25.000Z",
+              "zernioPostId": "6ae7df223493786a11385a82",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 2,
+              "likes": 2,
+              "shares": 1,
+              "comments": 0,
+              "metricsAt": "2026-11-17T11:54:36.161Z"
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-03T20:29:54.000Z",
+              "zernioPostId": "6ae7df25beee34d89a0abf2f",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 144,
+              "likes": 5,
+              "shares": 0,
+              "comments": 1,
+              "metricsAt": "2026-11-17T11:54:36.161Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-03T20:34:39.000Z",
+              "zernioPostId": "6ae7df27beee34d89a0abf3c",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 4,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-17T11:54:36.161Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "template": "doctor-kermit",
+      "test": "Lifting from the floor vs a stretch routine",
+      "posts": [
+        {
+          "specId": "m1104-doctor-kermit-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Doctor: show me how you",
+            "pick things up off the floor",
+            "Me:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1104-doctor-kermit-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1104-doctor-kermit-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-04T20:33:20.000Z",
+              "zernioPostId": "6ae7df45beee34d89a0ac02b",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 0,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-04T20:51:06.000Z",
+              "zernioPostId": "6ae7df48beee34d89a0ac040",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-04T20:39:00.000Z",
+              "zernioPostId": "6ae7df4bbeee34d89a0ac05a",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 1077,
+              "likes": 9,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-18T12:03:17.959Z"
+            }
+          ]
+        },
+        {
+          "specId": "m1104-doctor-kermit-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "Doctor: show me your",
+            "morning stretch routine",
+            "Me:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1104-doctor-kermit-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1104-doctor-kermit-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-05T02:54:21.000Z",
+              "zernioPostId": "6ae7df67beee34d89a0ac13d",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-05T03:02:54.000Z",
+              "zernioPostId": "6ae7df6abeee34d89a0ac149",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-05T03:03:07.000Z",
+              "zernioPostId": "6ae7df6cbeee34d89a0ac166",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-05",
+      "template": "duo-getting-ready+duo-always-together",
+      "test": "One format each: different room, cutout, line, and sound",
+      "posts": [
+        {
+          "specId": "m1105-grocery-caught-b",
+          "variant": "b",
+          "group": "remedyrecoveries",
+          "lines": [
+            "When you lift the case",
+            "of water like a champ and",
+            "make a noise you can't explain"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-grocery-caught-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-grocery-caught-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-06T00:16:02.000Z",
+              "zernioPostId": "6ae7f50871d4ddc2f1c723b6",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-06T00:23:04.000Z",
+              "zernioPostId": "6ae7f3f61015658fb693618d",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-06T00:23:08.000Z",
+              "zernioPostId": "6ae7f3f81015658fb6936196",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1105-grocery-caught-a",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "When you sneeze in the",
+            "cereal aisle and your back",
+            "locks up mid-sneeze"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-grocery-caught-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-grocery-caught-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-05T22:27:14.000Z",
+              "zernioPostId": "6ae7f4111015658fb6936220",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-05T22:52:57.000Z",
+              "zernioPostId": "6ae7f4121015658fb6936229",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-05T22:43:43.000Z",
+              "zernioPostId": "6ae7f4141015658fb693623a",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1105-duo-getting-ready",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Me and my back getting",
+            "ready to go out like we",
+            "didn't hear a pop this morning"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-duo-getting-ready.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-duo-getting-ready.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-06T00:16:02.000Z",
+              "zernioPostId": "6aebe2f1b617ee8007b83be6",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 1,
+              "likes": 2,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-06T00:23:08.000Z",
+              "zernioPostId": "6aebe2f4ea46fa11840d2ef6",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 5,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "m1105-duo-always-together",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "you and your heating pad",
+            "are always together,",
+            "don't you get bored?"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-duo-always-together.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1105-duo-always-together.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-05T22:27:14.000Z",
+              "zernioPostId": "6aebe2f6ea46fa11840d2f0f",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 11,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-05T22:52:57.000Z",
+              "zernioPostId": "6aebe2f9b617ee8007b83c0b",
+              "status": "published",
+              "error": "fetch failed",
+              "views": 133,
+              "likes": 4,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-06",
+      "template": "duo-barber+duo-first-shot",
+      "test": "One format each: different room, cutout, line, and sound",
+      "posts": [
+        {
+          "specId": "m1106-doctor-carlton-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Doctor: and how did",
+            "this happen exactly?",
+            "Me at pickup basketball at 38:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-doctor-carlton-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-doctor-carlton-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-07T00:42:19.000Z",
+              "zernioPostId": "6ae7f4268c71f47e4136035c",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-07T00:52:54.000Z",
+              "zernioPostId": "6ae7f4281015658fb69362ce",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T00:52:21.000Z",
+              "zernioPostId": "6ae7f42b8c71f47e41360361",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1106-doctor-carlton-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "Doctor: any idea what",
+            "set your back off?",
+            "Me at the bachelorette party:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-doctor-carlton-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-doctor-carlton-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-07T02:33:48.000Z",
+              "zernioPostId": "6ae7f43c1015658fb6936338",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T02:58:51.000Z",
+              "zernioPostId": "6ae7f43d1015658fb6936345",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-07T02:56:29.000Z",
+              "zernioPostId": "6ae7f43f8c71f47e4136036a",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1106-duo-barber",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "My back won't stop talking",
+            "about that couch nap.",
+            "Me: say less."
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-duo-barber.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-duo-barber.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-07T00:42:19.000Z",
+              "zernioPostId": "6aebe2fdea46fa11840d2f6f",
+              "status": "published",
+              "error": "",
+              "views": 82,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T00:52:21.000Z",
+              "zernioPostId": "6aebe2ffea46fa11840d2f91",
+              "status": "published",
+              "error": "",
+              "views": 618,
+              "likes": 3,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "m1106-duo-first-shot",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "Me and my back after",
+            "one good night of sleep"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-duo-first-shot.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1106-duo-first-shot.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-07T02:33:48.000Z",
+              "zernioPostId": "6aebe302ea46fa11840d2fb8",
+              "status": "published",
+              "error": "",
+              "views": 123,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T02:58:51.000Z",
+              "zernioPostId": "6aebe304ea46fa11840d2fd5",
+              "status": "published",
+              "error": "",
+              "views": 128,
+              "likes": 2,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "template": "duo-inside-jokes+duo-reunion",
+      "test": "One format each: different room, cutout, line, and sound",
+      "posts": [
+        {
+          "specId": "m1107-office-expects-b",
+          "variant": "b",
+          "group": "remedyrecoveries",
+          "lines": [
+            "How your back expects you",
+            "to get off the couch after",
+            "one episode turned into five"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-office-expects-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-office-expects-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-07T18:16:45.000Z",
+              "zernioPostId": "6ae7f4521015658fb69363ab",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-07T18:26:27.000Z",
+              "zernioPostId": "6ae7f4541015658fb69363b4",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T18:38:30.000Z",
+              "zernioPostId": "6ae7f4571015658fb69363c1",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1107-office-expects-a",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "How your back expects you",
+            "to stand up after a",
+            "three-hour drive"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-office-expects-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-office-expects-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-07T16:02:27.000Z",
+              "zernioPostId": "6ae7f46a1015658fb693641f",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T16:06:45.000Z",
+              "zernioPostId": "6ae7f46c1015658fb6936428",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-07T16:21:13.000Z",
+              "zernioPostId": "6ae7f46e1015658fb6936439",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1107-duo-inside-jokes",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "When my back and I are",
+            "supposed to rest but we",
+            "both go do the laundry"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-duo-inside-jokes.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-duo-inside-jokes.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-07T18:16:45.000Z",
+              "zernioPostId": "6aebe308ea46fa11840d3003",
+              "status": "published",
+              "error": "",
+              "views": 52,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T18:38:30.000Z",
+              "zernioPostId": "6aebe30aea46fa11840d3014",
+              "status": "published",
+              "error": "",
+              "views": 1009,
+              "likes": 8,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "m1107-duo-reunion",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "Me and my heating pad",
+            "after a full day at the desk"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-duo-reunion.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1107-duo-reunion.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-07T16:02:27.000Z",
+              "zernioPostId": "6aebe30dea46fa11840d303c",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-07T16:06:45.000Z",
+              "zernioPostId": "6aebe30fea46fa11840d3057",
+              "status": "published",
+              "error": "",
+              "views": 142,
+              "likes": 3,
+              "shares": 2,
+              "comments": 0,
+              "metricsAt": "2026-11-07T22:04:59.041Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "template": "clip-pizza-reach",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "m1108-doctor-kermit-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Doctor: show me how you",
+            "get out of bed",
+            "Me:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1108-doctor-kermit-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1108-doctor-kermit-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-08T17:27:07.000Z",
+              "zernioPostId": "6ae7f4808c71f47e41360384",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5958fa0694bf600cec83b",
+              "platform": "facebook",
+              "handle": "Remedy Recoveries",
+              "keySlot": "4",
+              "scheduledFor": "2026-11-08T17:48:44.000Z",
+              "zernioPostId": "6ae7f4838c71f47e4136038d",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-08T17:52:40.000Z",
+              "zernioPostId": "6ae7f4851015658fb69364c1",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "m1108-doctor-kermit-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "Doctor: show me how",
+            "you put your socks on",
+            "Me:"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1108-doctor-kermit-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\m1108-doctor-kermit-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-08T21:39:10.000Z",
+              "zernioPostId": "6ae7f4971015658fb6936543",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57bf0ddc87ab67dabdeb1",
+              "platform": "instagram",
+              "handle": "remedy.stories",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-08T21:51:30.000Z",
+              "zernioPostId": "6ae7f4991015658fb6936559",
+              "status": "cancelled",
+              "error": "replaced: each format posts once",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-08T22:00:51.000Z",
+              "zernioPostId": "6ae7f49b8d31433d2d8c6f0d",
+              "status": "cancelled",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "clip-pizza-reach",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Why did I throw my back out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\clip-pizza-reach.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\clip-pizza-reach.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-08T17:27:07.000Z",
+              "zernioPostId": "6aefa7e24f8845eb334b27f8",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-08T17:48:33.000Z",
+              "zernioPostId": "6aefa7e411076346fb7fbe94",
+              "status": "published",
+              "error": "",
+              "views": 26139,
+              "likes": 102,
+              "shares": 0,
+              "comments": 2,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "clip-pizza-reach",
+          "variant": "a",
+          "group": "remedystories",
+          "lines": [
+            "Why did I throw my back out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\clip-pizza-reach.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\clip-pizza-reach.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-08T21:39:10.000Z",
+              "zernioPostId": "6aefa7e611076346fb7fbea1",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-08T22:00:36.000Z",
+              "zernioPostId": "6aefa7e64f8845eb334b2800",
+              "status": "published",
+              "error": "",
+              "views": 4,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "pizza-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Why did I throw my back out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\pizza-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\pizza-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-09T00:55:58.791Z",
+              "zernioPostId": "6af11a236425f2e41280be2e",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        },
+        {
+          "specId": "pizza-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "Why did I throw my back out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\pizza-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\pizza-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-09T00:55:58.791Z",
+              "zernioPostId": "6af11a2c6425f2e41280be77",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

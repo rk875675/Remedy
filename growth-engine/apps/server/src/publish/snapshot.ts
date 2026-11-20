@@ -17,7 +17,7 @@ import { postOutputDir, slideObjectKey, SLIDE_REV, CTA_CACHE } from "../generati
 import { shortObjectKey, shortOutputPath } from "../generation/short.js";
 import { keepShortForReview, pruneRemotePostMedia } from "../generation/storage.js";
 import { uploadBuffer, uploadShort, uploadSlides, downloadText, publicUrl, objectExists, SCREENSHOT_R2_PREFIX, ILLUSTRATION_R2_PREFIX } from "./r2.js";
-import { defaultScreenshotDescription, isCroppedScreenshot, listLocalScreenshots, readScreenshotMeta, screenshotPath } from "../generation/screenshots.js";
+import { defaultScreenshotDescription, isCroppedScreenshot, isVideoScreenshot, listLocalScreenshots, readScreenshotMeta, screenshotContentType, screenshotPath } from "../generation/screenshots.js";
 import { persistThumb } from "../generation/thumbs.js";
 import { allIllustrationAssets, ensureIllustrationManifest, illustrationFilePath, illustrationFit, illustrationMime, isIllustrationEnabled } from "../generation/illustrations.js";
 import { syncLibraryOverridesFromR2 } from "../generation/library-overrides.js";
@@ -363,10 +363,9 @@ export async function publishDashboardSnapshot(): Promise<string | null> {
   );
   for (const file of screenshotFiles) {
     const local = screenshotPath(file);
-    const ext = path.extname(file).toLowerCase();
-    const type = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".webp" ? "image/webp" : "image/png";
+    const type = screenshotContentType(file);
     await uploadBuffer(`${SCREENSHOT_R2_PREFIX}${file}`, fs.readFileSync(local), type);
-    await persistThumb(file, local).catch(() => {});
+    if (!isVideoScreenshot(file)) await persistThumb(file, local).catch(() => {});
   }
   if (fs.existsSync(cropPath)) {
     await uploadBuffer(

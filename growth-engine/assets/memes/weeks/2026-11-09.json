@@ -1,0 +1,593 @@
+{
+  "weekStart": "2026-11-09",
+  "createdAt": "2026-11-10T02:10:00.000Z",
+  "autopost": true,
+  "groups": [
+    {
+      "key": "remedyrecoveries",
+      "handles": [
+        "tiktok:remedy.recoveries",
+        "youtube:remedyrecoveries"
+      ]
+    },
+    {
+      "key": "remedystories",
+      "handles": [
+        "tiktok:remedy.stories",
+        "youtube:remedystories"
+      ]
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-11-10",
+      "template": "oreo-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "oreo-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "POV: you bent down",
+            "to grab one sock and",
+            "your back gave out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\oreo-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\oreo-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-10T18:06:07.000Z",
+              "zernioPostId": "6af27c8a7cd0c30040ec760d",
+              "status": "published",
+              "error": "",
+              "views": 4,
+              "likes": 2,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-10T18:19:16.000Z",
+              "zernioPostId": "6af27c8c7cd0c30040ec7628",
+              "status": "published",
+              "error": "",
+              "views": 1070,
+              "likes": 7,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "oreo-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "POV: you bent down",
+            "to grab one sock and",
+            "your back gave out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\oreo-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\oreo-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-11T02:54:28.000Z",
+              "zernioPostId": "6af27c8e80c26b7a0402cb4d",
+              "status": "published",
+              "error": "",
+              "views": 6,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-11T03:10:30.000Z",
+              "zernioPostId": "6af27c8f80c26b7a0402cb57",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "template": "school-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "school-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "When you stand up",
+            "after sitting all day",
+            "and your back locks"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\school-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\school-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-12T00:48:10.000Z",
+              "zernioPostId": "6af27c927cd0c30040ec7662",
+              "status": "published",
+              "error": "",
+              "views": 66,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-12T01:11:16.000Z",
+              "zernioPostId": "6af27c94abef8f5f2d58ce15",
+              "status": "published",
+              "error": "",
+              "views": 599,
+              "likes": 10,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "school-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "When you stand up",
+            "after sitting all day",
+            "and your back locks"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\school-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\school-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-12T02:51:18.000Z",
+              "zernioPostId": "6af27c967cd0c30040ec766e",
+              "status": "published",
+              "error": "",
+              "views": 79,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-12T03:11:52.000Z",
+              "zernioPostId": "6af27c97f3f93af207830047",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-12",
+      "template": "once-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "once-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "When one stretch",
+            "is finally working",
+            "your back quits",
+            "halfway through"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\once-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\once-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-13T00:31:42.000Z",
+              "zernioPostId": "6af27c99f3f93af207830067",
+              "status": "published",
+              "error": "",
+              "views": 39,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-13T00:41:17.000Z",
+              "zernioPostId": "6af27c9bf3f93af207830082",
+              "status": "published",
+              "error": "",
+              "views": 1410,
+              "likes": 9,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "once-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "When one stretch",
+            "is finally working",
+            "your back quits",
+            "halfway through"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\once-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\once-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-13T02:01:38.000Z",
+              "zernioPostId": "6af27c9df3f93af207830093",
+              "status": "published",
+              "error": "",
+              "views": 5,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-13T02:23:02.000Z",
+              "zernioPostId": "6af27c9ef3f93af20783009c",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-13",
+      "template": "suits-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "suits-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "How a thrown-out back",
+            "walks into work",
+            "and acts like",
+            "it is fine"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\suits-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\suits-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-14T00:03:19.000Z",
+              "zernioPostId": "6af27ca1f3f93af2078300bb",
+              "status": "published",
+              "error": "",
+              "views": 15,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-14T00:16:08.000Z",
+              "zernioPostId": "6af27ca37cd0c30040ec769f",
+              "status": "published",
+              "error": "",
+              "views": 997,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "suits-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "How a thrown-out back",
+            "walks into work",
+            "and acts like",
+            "it is fine"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\suits-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\suits-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-14T00:48:16.000Z",
+              "zernioPostId": "6af27ca680c26b7a0402cb72",
+              "status": "published",
+              "error": "",
+              "views": 17,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-14T01:01:28.000Z",
+              "zernioPostId": "6af27ca7f3f93af207830103",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-14",
+      "template": "bench-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "bench-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "POV: you look up mid lift",
+            "and your back already quit"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\bench-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\bench-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-14T16:01:29.000Z",
+              "zernioPostId": "6af287362b8a1c8090f1d6be",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-14T16:06:43.000Z",
+              "zernioPostId": "6af287381fe5bcc60a8d516a",
+              "status": "published",
+              "error": "",
+              "views": 1593,
+              "likes": 11,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "bench-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "POV: you look up mid lift",
+            "and your back already quit"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\bench-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\bench-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-14T17:31:01.000Z",
+              "zernioPostId": "6af2873a2b8a1c8090f1d6d3",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-14T17:54:30.000Z",
+              "zernioPostId": "6af2873b1fe5bcc60a8d517d",
+              "status": "published",
+              "error": "",
+              "views": 5,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-15",
+      "template": "fish-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "fish-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "Your back when you bend",
+            "down for one sock"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fish-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fish-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-15T17:06:15.000Z",
+              "zernioPostId": "6af2873d1fe5bcc60a8d519b",
+              "status": "published",
+              "error": "",
+              "views": null,
+              "likes": null,
+              "shares": null,
+              "comments": null,
+              "metricsAt": ""
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-15T17:18:42.000Z",
+              "zernioPostId": "6af2873f1fe5bcc60a8d51b0",
+              "status": "published",
+              "error": "",
+              "views": 1068,
+              "likes": 14,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "fish-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "Your back when you bend",
+            "down for one sock"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fish-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fish-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-15T18:17:13.000Z",
+              "zernioPostId": "6af287411fe5bcc60a8d51c5",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-15T18:22:17.000Z",
+              "zernioPostId": "6af287421fe5bcc60a8d51cd",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

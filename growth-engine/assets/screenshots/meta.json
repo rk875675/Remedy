@@ -1,216 +1,84 @@
 {
-  "home.png": {
-    "description": "Home: today's session + week days. Use for start-today / weekly plan."
-  },
-  "session.png": {
-    "description": "Session: glute-bridge video + 14 reps. Use for in-app exercise proof."
-  },
-  "cat_cow.png": {
-    "description": "Session: cat-cow stretch video. Use for guided stretch proof."
-  },
   "progress.png": {
     "description": "Progress: week 4/5 + pain trend. Use for recovery tracking."
   },
-  "pain_check.png": {
-    "description": "Pain check: 1–10 slider. Use for check-in / before-session."
-  },
-  "workout_days.png": {
-    "description": "Workout days + reminder. Use for schedule / habit slides."
-  },
-  "session_preview.png": {
-    "description": "Preview: 19 min, 5 exercises. Use for session length / plan."
-  },
-  "profile.png": {
-    "description": "Profile: stats + plan. Use for personal progress / identity."
-  },
-  "profile_original.png": {
-    "description": "Profile original, full screen. Use if you need the uncropped profile."
-  },
-  "img_0460.png": {
-    "description": "Splash: Remedy + back pain relief. Use for brand / first-impression."
-  },
-  "img_0461.png": {
-    "description": "Workout days picker + session list. Use for schedule / 3-day plan."
-  },
-  "img_0462.png": {
-    "description": "Progress: pain trend + activity bars. Use for recovery proof."
-  },
-  "img_0464.jpeg": {
-    "description": "Stretch reminders on, every 30 min. Use for reminder / habit."
-  },
-  "img_0465.png": {
-    "description": "Session: single-leg glute bridge. Use for exercise video proof."
-  },
-  "img_0466.png": {
-    "description": "Session: goblet squat + dumbbell. Use for gym exercise proof."
-  },
-  "img_0467.png": {
-    "description": "Session: child's pose hold timer. Use for stretch / cool-down."
-  },
-  "img_0469.png": {
-    "description": "Session: thoracic extension on chair. Use for desk / mobility."
-  },
-  "img_0470.png": {
-    "description": "Session: bird dog hold. Use for core / stability proof."
-  },
-  "img_0471.png": {
-    "description": "Session: dead bug, 10 reps. Use for core exercise proof."
-  },
-  "img_0472.png": {
-    "description": "Session: barbell hip thrust. Use for gym strength proof."
-  },
-  "img_0473.png": {
-    "description": "Session: bodyweight squat. Use for no-equipment exercise."
-  },
-  "img_0475.png": {
-    "description": "Session: kettlebell deadlift. Use for gym hinge / lift."
-  },
-  "img_0476.png": {
-    "description": "Session: kettlebell deadlift (alt). Use for gym hinge / lift."
-  },
-  "img_0477.png": {
-    "description": "Session: split squat, 10 reps. Use for single-leg strength."
-  },
   "crop_img_0461.png": {
-    "description": "Crop: workout days picker + 3-session plan. Use for detailed schedule close-up.",
+    "description": "Crop: Workout days. Tuesday, Friday, and Sunday, 3 of 3. Reminder off. Gym.",
     "cropped": true,
-    "source": "img_0461.png"
+    "source": "workout_days_sheet.png"
   },
   "crop_cat_cow.png": {
-    "description": "Crop: cat-cow video player. Use for guided stretch close-up.",
+    "description": "Crop: Cat-Cow, set 1 of 2, 8 reps. Arnie: Eyes on the movement. Use for the stretch.",
     "cropped": true,
-    "source": "cat_cow.png"
+    "source": "exercise_cat_cow.png"
   },
   "crop_home.png": {
-    "description": "Crop: today's session card + Start Session. Use for start-today CTA, not the full home screen.",
+    "description": "Crop: Home scene. Arnie standing, 19 min, 5 exercises, Start session. Use for start-today.",
     "cropped": true,
-    "source": "home.png"
+    "source": "home_arnie_standing.png"
   },
   "crop_home_2.png": {
-    "description": "Crop: weekly sessions, completed and not completed and in progress. Use for accountability and tracking session completed",
+    "description": "Crop: This week on Home, 2 of 2 sessions, Edit days. Use for the week row.",
     "cropped": true,
-    "source": "home.png"
-  },
-  "crop_img_0462.png": {
-    "description": "Crop: pain trends. Use for recovery proof close-up.",
-    "cropped": true,
-    "source": "img_0462.png",
-    "assign": false
-  },
-  "crop_img_0462_2.png": {
-    "description": "Crop:  activity bars. Use for acountability/tracking",
-    "cropped": true,
-    "source": "img_0462.png"
+    "source": "home_arnie_standing.png"
   },
   "crop_img_0465.png": {
-    "description": "Crop: single-leg glute bridge video. Use for exercise close-up.",
+    "description": "Crop: Glute Bridge, set 1 of 3, 9 reps. Arnie: I am here. Keep going. Use for the bridge.",
     "cropped": true,
-    "source": "img_0465.png"
+    "source": "exercise_glute_bridge.png"
   },
   "crop_img_0469.png": {
-    "description": "Crop: thoracic extension on chair. Use for desk/mobility close-up.",
-    "cropped": true,
-    "source": "img_0469.png"
+    "description": "Crop: Arnie stretching. Real cue for thoracic extension over a chair. No exercise video. Use for that cue.",
+    "cropped": true
   },
   "crop_img_0470.png": {
-    "description": "Crop: bird dog hold. Use for core/stability close-up.",
+    "description": "Crop: Bird Dog, set 1 of 3, 4 reps. Cue: reach opposite arm and leg. Use for core stability.",
     "cropped": true,
-    "source": "img_0470.png"
+    "source": "exercise_bird_dog.png"
   },
   "crop_img_0472.png": {
-    "description": "Crop: barbell hip thrust. Use for gym strength close-up.",
-    "cropped": true,
-    "source": "img_0472.png"
+    "description": "Crop: Arnie coaching. Real cue for the barbell hip thrust. No exercise video. Use for that cue.",
+    "cropped": true
   },
   "crop_img_0473.png": {
-    "description": "Crop: bodyweight squat. Use for no-equipment close-up.",
+    "description": "Crop: Bodyweight Squat, set 1 of 3, 9 reps. Cue: knees track over the toes. Use for no-equipment.",
     "cropped": true,
-    "source": "img_0473.png"
+    "source": "exercise_squat.png"
   },
   "crop_pain_check.png": {
-    "description": "Crop: 1–10 pain slider. Use for check-in close-up.",
+    "description": "Crop: Pain check before a session, slider at 5 of 10. Arnie: Noticeable. We'll take it easy.",
     "cropped": true,
-    "source": "pain_check.png"
+    "source": "pain_check_before_5.png"
   },
   "crop_profile.png": {
-    "description": "Crop: profile stats + plan. Use only when the slide is about identity + plan. has a bit of reminders as well",
+    "description": "Crop: Profile, John Doe, Arnie, Annual Plan. Email social@remedyrecoveries.com.",
     "cropped": true,
-    "source": "profile.png"
+    "source": "profile_john.png"
   },
   "crop_progress.png": {
-    "description": "Crop: week ring Use for visual tracking of weekly progress",
-    "cropped": true,
-    "source": "progress.png"
+    "description": "Crop: Progress path, week 2 of 4, Arnie fully grown. Use for the week path.",
+    "cropped": true
   },
   "crop_progress_2.png": {
-    "description": "Crop: larger week ring + weekly completions. Use as a larger accountability/tracking ss",
-    "cropped": true,
-    "source": "progress.png"
+    "description": "Crop: Progress path, week 2 of 4, and the stage strip at 15. Arnie is fully grown.",
+    "cropped": true
   },
   "crop_progress_3.png": {
-    "description": "Crop: acountability/weekly session completed. use for accountability",
-    "cropped": true,
-    "source": "progress.png"
-  },
-  "crop_img_0462_4.png": {
-    "description": "Crop: pain trend + activity bars. Use for recovery proof close-up + accountability + visual display",
-    "cropped": true,
-    "source": "img_0462.png"
+    "description": "Crop: Stage strip, 0 to 15 sessions. Arnie is fully grown.",
+    "cropped": true
   },
   "crop_session.png": {
-    "description": "Crop: exercise video + reps counter. Use for in-app form proof.",
+    "description": "Crop: Glute Bridge in a session, set 1 of 3, 9 reps, exercise 2 of 5. Use for in-session proof.",
     "cropped": true,
-    "source": "session.png"
+    "source": "exercise_glute_bridge.png"
   },
   "crop_session_preview.png": {
-    "description": "Crop: session preview Use for plan/length close-up of a session - displays minutes, exercises, focus,etc",
+    "description": "Crop: Week 2 session 3, Thoracic Strength & Function, 19 min, 5 exercises, exercise mat, Let's go.",
     "cropped": true,
-    "source": "session_preview.png"
-  },
-  "img_0524.png": {
-    "description": "Founder: 4 in 5 people get back pain. Use for lifetime-stat / why-we-built slides."
+    "source": "session_preview_w2s3.png"
   },
   "img_0525.png": {
     "description": "Education: 50% less pain in ~6 weeks chart. Use for research / hope / timeline."
-  },
-  "img_0526.png": {
-    "description": "Onboarding: where did you hear about us. Use for first-touch / discovery."
-  },
-  "img_0527.png": {
-    "description": "Onboarding: have you tried to fix it before. Use for stretch-failed / YouTube-failed."
-  },
-  "img_0528.png": {
-    "description": "Onboarding: main goal options (unselected). Prefer img_0529 when the slide needs a filled answer.",
-    "assign": false
-  },
-  "img_0531.png": {
-    "description": "Onboarding: how long you've had it (3–12 months). Use for chronic / personal plan."
-  },
-  "img_0530.png": {
-    "description": "Onboarding: where is your back pain (lower selected). Use for tailored / not-generic."
-  },
-  "img_0529.png": {
-    "description": "Onboarding: main goal selected (pain + mobility). Use for tailored / personal plan."
-  },
-  "img_0534.png": {
-    "description": "Onboarding: activity level (desk / light / lifting). Use for desk-worker plan."
-  },
-  "img_0533.png": {
-    "description": "Onboarding: pain type (stiff / ache / sharp). Use for personalization / mobility."
-  },
-  "img_0532.png": {
-    "description": "Onboarding: how long you've had it (unselected). Prefer img_0531.",
-    "assign": false
-  },
-  "img_0537.png": {
-    "description": "Onboarding: equipment (gym / bands / floor). Use for no-gym / gym plan."
-  },
-  "img_0536.png": {
-    "description": "Onboarding: what makes pain worse (standing + mornings). Use for flare / sitting."
-  },
-  "img_0535.png": {
-    "description": "Onboarding: what makes pain worse (unselected). Prefer img_0536.",
-    "assign": false
   },
   "img_0540.png": {
     "description": "Onboarding: your matched Lower Back Pain Relief Program. Use for tailored-plan proof.",
@@ -219,7 +87,351 @@
   "img_0539.png": {
     "description": "Onboarding: building your plan. Use for personalization moment / analyzing answers."
   },
-  "img_0538.png": {
-    "description": "Onboarding: 15 min + 4 days per week. Use for schedule / fits-your-life."
+  "home_arnie_standing.png": {
+    "description": "Home: Arnie standing, 1 session until he grows, Thoracic Stability & Core ready. Use for start-today.",
+    "assign": false
+  },
+  "home_poke_lot.png": {
+    "description": "Home: Arnie poked. Bubble: Okay, that is a lot of poking. Use for a poke reaction.",
+    "assign": false
+  },
+  "home_angry_not_amused.png": {
+    "description": "Home: Arnie angry, arms crossed. Faint bubble: I am NOT amused. Use for poked-too-much.",
+    "assign": false
+  },
+  "home_angry.png": {
+    "description": "Home: Arnie angry, arms crossed, no speech bubble. Use for the mad pose.",
+    "assign": false
+  },
+  "home_angry_enough.png": {
+    "description": "Home: Arnie angry. Bubble: Enough! I mean it. Use for the poke limit.",
+    "assign": false
+  },
+  "home_reading.png": {
+    "description": "Home: Arnie sitting and reading, no speech bubble. Use for the reading pose.",
+    "assign": false
+  },
+  "home_reading_page.png": {
+    "description": "Home: Arnie reading. Bubble: Yes? Quickly. I have a page to turn. Use for the reading line.",
+    "assign": false
+  },
+  "pain_check_before_9.png": {
+    "description": "Pain check before a session, slider at 9 of 10. Score is high. Use only for a bad-flare check-in.",
+    "assign": false
+  },
+  "exercise_cat_cow.png": {
+    "description": "Session: Cat-Cow Stretch, set 1 of 2, 8 reps, exercise 1 of 5. Use for guided stretch proof.",
+    "assign": false
+  },
+  "exercise_squat.png": {
+    "description": "Session: Bodyweight Squat, set 1 of 3, 9 reps, exercise 3 of 5. Use for no-equipment strength.",
+    "assign": false
+  },
+  "exercise_bird_dog.png": {
+    "description": "Session: Bird Dog, set 1 of 3, 4 reps, exercise 4 of 5. Use for core and stability.",
+    "assign": false
+  },
+  "exercise_childs_pose.png": {
+    "description": "Session: Child's Pose Hold, set 1 of 2, 41s left, exercise 5 of 5. Use for the cool-down stretch.",
+    "assign": false
+  },
+  "ramp_week2_hold.png": {
+    "description": "Week 2 complete. Suggestion: stay at the current level. Use for the between-week check, not a results claim.",
+    "assign": false
+  },
+  "profile_john.png": {
+    "description": "Profile: John Doe, pet Arnie, Annual Plan, Upper Back Strength. Email social@remedyrecoveries.com.",
+    "assign": false
+  },
+  "rec_splash_launch.mp4": {
+    "description": "Screen recording, 1s. Splash: curled armadillo, Remedy / Back Pain Relief fading in. Use for the open.",
+    "assign": false
+  },
+  "rec_home_ball.mp4": {
+    "description": "Screen recording, 2s. Home, Arnie still a ball, 1 session until he grows, session ready. Use for day-one home.",
+    "assign": false
+  },
+  "rec_poke_to_angry.mp4": {
+    "description": "Screen recording, 10s. Home poke: Arnie goes from standing happy to angry, Fine I am leaving, then off screen.",
+    "assign": false
+  },
+  "rec_poke_roll_away.mp4": {
+    "description": "Screen recording, 20s. Home poke. Lines include Fine I am leaving and rolling. Mad. He leaves and returns as the ball.",
+    "assign": false
+  },
+  "rec_session_to_pain9.mp4": {
+    "description": "Screen recording, 90s. Home, then Cat-Cow and Child's Pose, ends on the before-session pain check at 9. Not one exercise.",
+    "assign": false
+  },
+  "rec_session_done_home.mp4": {
+    "description": "Screen recording, 70s. Home done-for-today fully grown, then Cat-Cow and Bird Dog, back to Home with Arnie reading.",
+    "assign": false
+  },
+  "rec_onboarding_welcome_grow.mp4": {
+    "description": "Screen recording, 15s. Welcome, grow screen stuck on Today (curled ball), then the founder line. Does not show later stages.",
+    "assign": false
+  },
+  "rec_grow_complete.mp4": {
+    "description": "Screen recording, 30s. Dead Bug, then Session Complete: Arnie grew, fully grown, 0 exercises, pain -1. Then Home done.",
+    "assign": false
+  },
+  "exercise_glute_bridge.png": {
+    "description": "Session: Glute Bridge, set 1 of 3, 9 reps, exercise 2 of 5. Use for the bridge."
+  },
+  "crop_home_poke.png": {
+    "description": "Crop: Home. Bubble: Okay, that is a lot of poking. Use for a poke reaction.",
+    "cropped": true,
+    "source": "home_poke_lot.png"
+  },
+  "crop_home_angry.png": {
+    "description": "Crop: Home. Arnie angry, arms crossed, no bubble. Use for the mad pose.",
+    "cropped": true,
+    "source": "home_angry.png"
+  },
+  "crop_home_angry_enough.png": {
+    "description": "Crop: Home. Bubble: Enough! I mean it. Use for the poke limit.",
+    "cropped": true,
+    "source": "home_angry_enough.png"
+  },
+  "crop_home_not_amused.png": {
+    "description": "Crop: Home. Arnie angry. Faint bubble: I am NOT amused. Use for poked-too-much.",
+    "cropped": true,
+    "source": "home_angry_not_amused.png"
+  },
+  "crop_home_reading.png": {
+    "description": "Crop: Home. Arnie reading, no bubble. Use for the reading pose.",
+    "cropped": true,
+    "source": "home_reading.png"
+  },
+  "crop_home_reading_page.png": {
+    "description": "Crop: Home. Bubble: Yes? Quickly. I have a page to turn. Use for the reading line.",
+    "cropped": true,
+    "source": "home_reading_page.png"
+  },
+  "crop_exercise_childs_pose.png": {
+    "description": "Crop: Child's Pose Hold, set 1 of 2, 41s left. Arnie gives the cue. Use for the cool-down.",
+    "cropped": true,
+    "source": "exercise_childs_pose.png"
+  },
+  "crop_ramp_week2.png": {
+    "description": "Crop: Week 2 complete. Suggestion: stay at the current level. Not a results claim.",
+    "cropped": true,
+    "source": "ramp_week2_hold.png"
+  },
+  "crop_onboard_hear.png": {
+    "description": "Crop: Onboarding, where did you hear about us, Instagram selected.",
+    "cropped": true,
+    "source": "onboard_hear_instagram.png"
+  },
+  "crop_onboard_belief.png": {
+    "description": "Crop: Onboarding, do you believe Remedy can fix your back pain, Yes selected.",
+    "cropped": true,
+    "source": "onboard_belief_yes.png"
+  },
+  "crop_onboard_recognize.png": {
+    "description": "Crop: Onboarding, which sounds like you, I've learned to live with it.",
+    "cropped": true,
+    "source": "onboard_recognize_lived.png"
+  },
+  "crop_onboard_goal_pain.png": {
+    "description": "Crop: Onboarding, main goal, Reduce daily pain only.",
+    "cropped": true,
+    "source": "onboard_goal_pain.png"
+  },
+  "crop_onboard_goal_mobility.png": {
+    "description": "Crop: Onboarding, main goal, Improve mobility only.",
+    "cropped": true,
+    "source": "onboard_goal_mobility.png"
+  },
+  "crop_onboard_activity.png": {
+    "description": "Crop: Onboarding, activity, Very active / strength training.",
+    "cropped": true,
+    "source": "onboard_activity_strength.png"
+  },
+  "crop_onboard_worse.png": {
+    "description": "Crop: Onboarding, pain worse from sitting too long and bending or lifting.",
+    "cropped": true,
+    "source": "onboard_worse_sit_bend.png"
+  },
+  "crop_onboard_gym.png": {
+    "description": "Crop: Onboarding, equipment, Full gym access selected.",
+    "cropped": true,
+    "source": "onboard_equipment_gym.png"
+  },
+  "crop_onboard_time.png": {
+    "description": "Crop: Onboarding, 15 minutes a day, 4 days a week.",
+    "cropped": true,
+    "source": "onboard_time_15_4.png"
+  },
+  "crop_onboard_commit.png": {
+    "description": "Crop: Onboarding, I'm done working around my back. Committed.",
+    "cropped": true,
+    "source": "onboard_commit.png"
+  },
+  "crop_onboard_building.png": {
+    "description": "Crop: Onboarding, Building your plan, Arnie curled and peeking.",
+    "cropped": true,
+    "source": "onboard_building.png"
+  },
+  "crop_onboard_building_eyes.png": {
+    "description": "Crop: Onboarding, Building your plan, Arnie's eyes showing. Alternate frame.",
+    "cropped": true,
+    "source": "onboard_building_eyes.png"
+  },
+  "crop_onboard_program.png": {
+    "description": "Crop: Onboarding, Your Program, Lower Back Pain Relief Program.",
+    "cropped": true,
+    "source": "onboard_program.png"
+  },
+  "session_preview_w2s3.png": {
+    "description": "Session preview: Week 2 session 3, Thoracic Strength & Function, 19 min, 5 exercises, exercise mat.",
+    "assign": false
+  },
+  "pain_check_before_5.png": {
+    "description": "Pain check before a session, slider at 5 of 10. Arnie: Noticeable. We'll take it easy.",
+    "assign": false
+  },
+  "pain_check_before_2.png": {
+    "description": "Pain check before a session, slider at 2 of 10. Arnie: Barely there. Lovely.",
+    "assign": false
+  },
+  "crop_pain_check_2.png": {
+    "description": "Crop: Pain check before a session, slider at 2 of 10. Arnie: Barely there. Lovely.",
+    "cropped": true,
+    "source": "pain_check_before_2.png"
+  },
+  "pain_check_before_10.png": {
+    "description": "Pain check before a session, slider at 10 of 10. High flare. Arnie: That's a lot.",
+    "assign": false
+  },
+  "crop_pain_check_10.png": {
+    "description": "Crop: Pain check at 10 of 10. High flare only. Do not use as the normal check-in.",
+    "cropped": true,
+    "assign": false,
+    "source": "pain_check_before_10.png"
+  },
+  "crop_home_done.png": {
+    "description": "Crop: Done for today. Arnie fully grown, stretching. Next workout Sunday.",
+    "cropped": true
+  },
+  "crop_pain_trend.png": {
+    "description": "Crop: Pain trend, last 14 days. Before is gray, after is green. Not a results claim.",
+    "cropped": true
+  },
+  "workout_days_sheet.png": {
+    "description": "Workout days. Tuesday, Friday, and Sunday selected, 3 of 3. Reminder off. Gym equipment.",
+    "assign": false
+  },
+  "onboard_welcome.png": {
+    "description": "Welcome: Stop thinking about your back. Continue, or I already have an account. Use for the open.",
+    "assign": false
+  },
+  "home_john_arnie_afternoon.png": {
+    "description": "Home: Good afternoon, John. Arnie is fully grown. Sitting was the hard one. 19 min, 5 exercises.",
+    "assign": false
+  },
+  "progress_arnie_week.png": {
+    "description": "Progress: This week 0 of 3. Arnie is fully grown. Stage strip at 15 sessions.",
+    "assign": false
+  },
+  "onboard_goal_ask.png": {
+    "description": "Onboarding: What do you want most? Nothing selected. Arnie asks. Use for the goal question.",
+    "assign": false
+  },
+  "onboard_goal_relief.png": {
+    "description": "Onboarding: goal, Less pain, day to day. Arnie: Relief first. Then we make it last.",
+    "assign": false
+  },
+  "onboard_goal_relief_move.png": {
+    "description": "Onboarding: goals, Less pain and Move freely again. Arnie: Looser first, then stronger.",
+    "assign": false
+  },
+  "onboard_hard_bend.png": {
+    "description": "Onboarding: what's hard right now, Bending or lifting. Arnie: Bending down is a mean ask.",
+    "assign": false
+  },
+  "onboard_hard_more.png": {
+    "description": "Onboarding: anything else, stairs through sport, nothing selected. Button: None of these.",
+    "assign": false
+  },
+  "onboard_proof_chart.png": {
+    "description": "Onboarding: Most back pain gets better. CMAJ 2012 chart, pain down by more than half in six weeks.",
+    "assign": false
+  },
+  "onboard_where_lower.png": {
+    "description": "Onboarding: where it hurts, Lower back. Arnie's line is still finishing: Low back. The classic.",
+    "assign": false
+  },
+  "onboard_where_lower_done.png": {
+    "description": "Onboarding: where it hurts, Lower back selected. Arnie: Low back. The classic.",
+    "assign": false
+  },
+  "onboard_spot_ask.png": {
+    "description": "Onboarding: Does it stay in one place? Nothing selected. Arnie asks.",
+    "assign": false
+  },
+  "onboard_spot_same.png": {
+    "description": "Onboarding: Does it stay in one place? Yes, the same spot. Arnie asks.",
+    "assign": false
+  },
+  "onboard_duration_ask.png": {
+    "description": "Onboarding: How long has this been going on? Nothing selected. Arnie asks.",
+    "assign": false
+  },
+  "onboard_start_injury.png": {
+    "description": "Onboarding: How did it start? An injury or accident. Arnie: Ouch. Noted.",
+    "assign": false
+  },
+  "onboard_feel_ask.png": {
+    "description": "Onboarding: What does it feel like? Nothing selected. Arnie asks.",
+    "assign": false
+  },
+  "onboard_strength_7.png": {
+    "description": "Onboarding: How strong on a normal day? Slider at 7, Strong. Arnie sits on the dial.",
+    "assign": false
+  },
+  "onboard_moving_ask.png": {
+    "description": "Onboarding: How does moving feel? Nothing selected. Button: None of these.",
+    "assign": false
+  },
+  "onboard_moving_stiff.png": {
+    "description": "Onboarding: How does moving feel? Stiff. Arnie: Stiff. Join the club.",
+    "assign": false
+  },
+  "onboard_better_ask.png": {
+    "description": "Onboarding: Which feels better? Curling forward or standing tall. Nothing selected.",
+    "assign": false
+  },
+  "onboard_nerve.png": {
+    "description": "Onboarding: Your nervous system is partly involved. Lancet 2023. A pattern check, not a diagnosis.",
+    "assign": false
+  },
+  "onboard_equipment_ask.png": {
+    "description": "Onboarding: What can you train with? Nothing selected. Full gym is marked most room to grow.",
+    "assign": false
+  },
+  "onboard_reminders.png": {
+    "description": "Onboarding: I'll nudge you when it's time. Notification: Arnie is ready. John, 15 minutes.",
+    "assign": false
+  },
+  "onboard_personalizing.png": {
+    "description": "Onboarding: Personalizing your plan, choosing exercises at 34 percent. Arnie peeking.",
+    "assign": false
+  },
+  "onboard_personalizing_done.png": {
+    "description": "Onboarding: Personalizing your plan, every step checked. Steady start. Arnie peeking.",
+    "assign": false
+  },
+  "onboard_program_top.png": {
+    "description": "Onboarding: Lower Back Pain Relief Program. 10 weeks, 3 days a week, 6 min. Hold to commit.",
+    "assign": false
+  },
+  "onboard_program_phases.png": {
+    "description": "Onboarding: How it builds. Settle 2 weeks, Control 1, Build 7. Week 1, 3 sessions.",
+    "assign": false
+  },
+  "onboard_program_built.png": {
+    "description": "Onboarding: Built around you. Bending-sensitive back, steady start, nervous system partly involved.",
+    "assign": false
   }
 }

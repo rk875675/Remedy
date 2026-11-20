@@ -63,10 +63,10 @@ Wire to DB + Storage only after the batch is complete (do not drip-wire).
 ## Tier 1 — Floor (Side-Lying)
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 7 | Clamshell | `clamshell` | Kling | 🔄 v3 prompt ready — retry with clothing spec (see luma_notes) |
+| 7 | Clamshell | `clamshell` | Kling | 🔄 v3 prompt ready (see luma_notes) |
 | 8 | Open-Book Rotation | `open_book_rotation` | — | ⛔ AI failed (too complex); revisit later |
-| 9 | Side Plank (Knees) | `side_plank_knees` | Kling | 🔄 v2 prompt ready — clothing coverage added (see luma_notes) |
-| 10 | Side Plank (Full) | `side_plank_full` | Kling | 🔄 v2 prompt ready — clothing coverage added (see luma_notes) |
+| 9 | Side Plank (Knees) | `side_plank_knees` | Kling | 🔄 v2 prompt ready (see luma_notes) |
+| 10 | Side Plank (Full) | `side_plank_full` | Kling | 🔄 v2 prompt ready (see luma_notes) |
 
 ## Tier 1 — All Fours
 | # | Exercise | File Name | Method | Status |
@@ -92,9 +92,9 @@ Wire to DB + Storage only after the batch is complete (do not drip-wire).
 ## Tier 2 — Bands / Dumbbells
 | # | Exercise | File Name | Method | Status |
 |---|---|---|---|---|
-| 20 | Banded Clamshell | `banded_clamshell` | Kling | 🔄 v1 prompt ready — clothing coverage added (see luma_notes) |
+| 20 | Banded Clamshell | `banded_clamshell` | Kling | 🔄 v1 prompt ready (see luma_notes) |
 | 21 | Banded Row | `banded_row` | Kling | 🔄 generating |
-| 22 | Banded Romanian Deadlift | `banded_rdl` | Kling | 🔄 v2 prompt ready — soft-knee + ROM fix + clothing (see luma_notes) |
+| 22 | Banded Romanian Deadlift | `banded_rdl` | Kling | 🔄 v2 prompt ready — soft-knee + ROM fix (see luma_notes) |
 | 23 | Dumbbell Romanian Deadlift | `dumbbell_rdl` | Kling | 🔄 generating |
 | 24 | Goblet Squat | `goblet_squat` | Kling | 🔄 generating |
 | 25 | Suitcase Carry | `suitcase_carry` | — | ⛔ AI failed / unclear; revisit later |

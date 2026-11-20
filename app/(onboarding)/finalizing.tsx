@@ -1,244 +1,302 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WarmBackground } from '../../components/onboarding/WarmBackground';
-import { PetBubble } from '../../components/pet/PetSays';
-import { PetRollTrack } from '../../components/pet/PetRoll';
-import { colors, serifFont } from '../../constants/colors';
-import { PET_PRESENTS, fillPetLine } from '../../constants/petOnboardingLines';
-import { radius } from '../../constants/spacing';
-import { shadows } from '../../constants/shadows';
+import { Pet } from '../../components/pet/Pet';
+import { AttributionPopup, type HearValue } from '../../components/onboarding/plan/AttributionPopup';
+import { ObScreen, ProgressRow, RevealText, ob, obType } from '../../components/onboarding/kit';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { setPersonProperties } from '../../lib/analytics';
+import {
+  durationDetailLabel,
+  equipmentLabel,
+  locationLabel,
+  profileSummary,
+  completeIntake,
+} from '../../lib/intakeSummary';
+import { deriveProfile } from '../../lib/intake';
+import { trackDecision, trackOption, useObStep } from '../../lib/onboardingFlow';
+import { parseCompleteAnswers, prefetchPlanPreview } from '../../lib/planPreview';
 import { useOnboardingPet } from '../../lib/useOnboardingPet';
-import { prefetchPlanPreview } from '../../lib/planPreview';
+import { useAfterTransition } from '../../lib/useAfterTransition';
+import { useReduceMotion } from '../../lib/useReduceMotion';
 
-const steps = [
-  'Analyzing your pain profile...',
-  'Matching exercises to your needs...',
-  'Building your weekly schedule...',
-  'Finalizing your program...',
+const HOLD_MS = 500;
+const FAST_ROW_MS = 180;
+
+const ROW_LABELS = [
+  'Reading your answers',
+  'Mapping your pain pattern',
+  'Choosing your exercises',
+  'Setting your starting dose',
+] as const;
+
+/** Percent beats inside one row. The flat spots are the "this is work" pauses. */
+const BEATS: Array<{ at: number; percent: number }> = [
+  { at: 160, percent: 18 },
+  { at: 380, percent: 34 },
+  { at: 560, percent: 38 },
+  { at: 820, percent: 63 },
+  { at: 1020, percent: 69 },
+  { at: 1240, percent: 88 },
+  { at: 1500, percent: 100 },
 ];
 
-// Each line stays active, then checks off. The bar fills across the same span
-// so it hits 100% on the last check. Hold after that so the check is on screen
-// before Your Program — the old timer left at 100% while the last line was
-// still a dot (`i < currentStep` never included the final step).
-const STEP_MS = 900;
-const DONE_HOLD_MS = 800;
+const TRUST =
+  'Built on back-pain guidelines from the American College of Physicians, NICE and the WHO';
 
-const SOCIAL_PROOF =
-  '4 in 5 adults experience back pain at some point. Staying active with structured, gradual movement is one of the best-supported ways to manage it.';
+function isSessionMinutes(value: number | null | undefined): value is 15 | 20 | 30 {
+  return value === 15 || value === 20 || value === 30;
+}
 
 export default function FinalizingScreen() {
+  useObStep('finalizing');
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const { answers } = useOnboarding();
-  const { name } = useOnboardingPet();
-  // Checked-off count. Equals `steps.length` once the last line has a check.
-  const [completed, setCompleted] = useState(0);
-
-  useEffect(() => {
-    prefetchPlanPreview(answers);
-  }, [answers]);
-
-  const fillAnim = useRef(new Animated.Value(0)).current;
-  const proofOpacity = useRef(new Animated.Value(0)).current;
   const routerRef = useRef(router);
   routerRef.current = router;
+  const { height, width } = useWindowDimensions();
+  const { answers, intake, progress, setLocalAnswer, hydrated } = useOnboarding();
+  const { stage } = useOnboardingPet();
+  const reduce = useReduceMotion();
+  const ready = useAfterTransition();
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const resumeRef = useRef<(() => void) | null>(null);
+  const [completed, setCompleted] = useState(0);
+  const [active, setActive] = useState<number | null>(null);
+  const [percent, setPercent] = useState(0);
+  const [popup, setPopup] = useState(false);
+  const bob = useRef(new Animated.Value(0)).current;
+
+  const parsed = useMemo(() => parseCompleteAnswers(answers), [answers]);
+  const intakeFull = useMemo(() => completeIntake(answers, intake), [answers, intake]);
+  const summary = useMemo(() => {
+    if (!parsed || !intakeFull) return null;
+    return profileSummary(parsed, intakeFull, deriveProfile(parsed, intakeFull));
+  }, [parsed, intakeFull]);
+
+  const subs = [
+    answers.pain_location && intake.duration_detail
+      ? `${locationLabel(answers.pain_location)} · ${durationDetailLabel(intake.duration_detail)}`
+      : 'Your answers',
+    summary?.patternTitle ?? 'Your answers',
+    answers.equipment && isSessionMinutes(intake.minutes ?? progress?.minutes)
+      ? `${equipmentLabel(answers.equipment)} · ${intake.minutes ?? progress?.minutes} min sessions`
+      : 'Your answers',
+    summary?.startTitle ?? 'Your starting point',
+  ];
 
   useEffect(() => {
-    Animated.timing(proofOpacity, {
-      toValue: 1,
-      duration: 400,
-      delay: 600,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [proofOpacity]);
+    prefetchPlanPreview(answers, intake);
+  }, [answers, intake]);
 
   useEffect(() => {
+    if (!ready || reduce !== false) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+          isInteraction: false,
+        }),
+        Animated.timing(bob, {
+          toValue: 0,
+          duration: 1500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+          isInteraction: false,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bob, ready, reduce]);
+
+  useEffect(() => {
+    if (!hydrated || reduce === null) return;
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
+    const skipAttribution = Boolean(progressRef.current?.hear_about);
 
-    Animated.timing(fillAnim, {
-      toValue: 1,
-      duration: steps.length * STEP_MS,
-      easing: Easing.linear,
-      // Width interpolation cannot use the native driver.
-      useNativeDriver: false,
-    }).start();
-
-    for (let i = 0; i < steps.length; i++) {
-      timers.push(
-        setTimeout(() => {
-          if (!cancelled) setCompleted(i + 1);
-        }, (i + 1) * STEP_MS),
-      );
+    function delay(ms: number): Promise<void> {
+      return new Promise((resolve) => {
+        const id = setTimeout(resolve, ms);
+        timers.push(id);
+      });
     }
 
-    timers.push(
-      setTimeout(() => {
-        if (!cancelled) routerRef.current.replace('/(onboarding)/match');
-      }, steps.length * STEP_MS + DONE_HOLD_MS),
-    );
+    async function runRow(index: number) {
+      if (reduce) {
+        await delay(FAST_ROW_MS);
+        if (cancelled) return;
+        setCompleted(index + 1);
+        return;
+      }
+      setActive(index);
+      setPercent(0);
+      const started = Date.now();
+      for (const beat of BEATS) {
+        const waitMs = Math.max(0, beat.at - (Date.now() - started));
+        await delay(waitMs);
+        if (cancelled) return;
+        setPercent(beat.percent);
+      }
+      if (cancelled) return;
+      setActive(null);
+      setCompleted(index + 1);
+    }
 
+    async function run() {
+      setCompleted(0);
+      setActive(null);
+      setPercent(0);
+      setPopup(false);
+      for (let index = 0; index < ROW_LABELS.length; index++) {
+        await runRow(index);
+        if (cancelled) return;
+        if (index === 1 && !skipAttribution) {
+          await new Promise<void>((resolve) => {
+            resumeRef.current = () => {
+              resumeRef.current = null;
+              resolve();
+            };
+            setPopup(true);
+          });
+          if (cancelled) return;
+          setPopup(false);
+        }
+      }
+      await delay(HOLD_MS);
+      if (cancelled) return;
+      routerRef.current.replace('/(onboarding)/match');
+    }
+
+    void run();
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
-      fillAnim.stopAnimation();
+      resumeRef.current?.();
+      resumeRef.current = null;
     };
-  }, [fillAnim]);
+    // hear_about is read once, when the sequence starts. Saving it must not restart the rows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, reduce]);
 
-  const fillWidth = fillAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
-  const activeIndex = completed < steps.length ? completed : -1;
+  function answer(value: HearValue) {
+    setLocalAnswer('hear_about', value);
+    trackOption('finalizing', value);
+    setPersonProperties({ acquisition_source: value });
+    setPopup(false);
+    resumeRef.current?.();
+  }
+
+  function skip() {
+    trackDecision('acquisition_source', 'skipped');
+    setPopup(false);
+    resumeRef.current?.();
+  }
+
+  const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
+  const short = height < 720;
+  // 568pt (first-gen SE, and Display Zoom). The open column otherwise meets the pet.
+  const tight = height < 600;
+  const narrow = width < 380;
+  const paddingTop = tight ? 24 : short ? 40 : 48;
+  const afterTitle = tight ? 20 : 36;
+  const rowGap = tight ? 16 : 24;
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          // The roll-plus-bubble stack is taller than the old side-by-side pet.
-          // On a 667pt phone the original +60 top padding leaves the checklist
-          // against the proof card, so that padding shrinks only on short screens.
-          paddingTop: insets.top + (height < 720 ? 32 : 60),
-          paddingBottom: insets.bottom + 40,
-        },
-      ]}
-    >
+    <>
       <Stack.Screen options={{ gestureEnabled: false, headerShown: false }} />
-      <WarmBackground />
-      <View style={styles.content}>
-        <View style={styles.rollWrap}>
-          <PetRollTrack size={84} />
+      <ObScreen
+        chapter={null}
+        onBack={null}
+        scroll={false}
+        background="plain"
+        testID="finalizing"
+        contentStyle={styles.stage}
+      >
+        <View style={[styles.flow, { paddingTop, paddingBottom: tight ? 176 : 220 }]}>
+          <RevealText style={[styles.title, narrow ? styles.titleNarrow : null]}>
+            {'Personalizing\nyour plan'}
+          </RevealText>
+          <View style={{ marginTop: afterTitle, gap: rowGap }}>
+            {ROW_LABELS.map((label, index) => (
+              <ProgressRow
+                key={label}
+                label={label}
+                sub={subs[index]}
+                state={index < completed ? 'done' : index === active ? 'active' : 'pending'}
+                percent={index === active ? percent : 0}
+              />
+            ))}
+          </View>
+          <View style={[styles.trust, { marginTop: tight ? 28 : 40 }]}>
+            <View style={styles.rule} />
+            <Text style={styles.trustText}>{TRUST}</Text>
+          </View>
         </View>
-        <View style={styles.bubbleWrap}>
-          <PetBubble line={fillPetLine(PET_PRESENTS.finalizing.line, { name })} />
+        <View pointerEvents="none" style={styles.petAnchor}>
+          <Animated.View style={{ transform: [{ translateY }] }}>
+            <Pet
+              stage={stage}
+              mood="peeking"
+              size={320}
+              shadow={false}
+              accessibilityLabel="Your armadillo peeking over the page"
+            />
+          </Animated.View>
         </View>
-
-        <Text style={styles.title}>Building your plan</Text>
-
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, { width: fillWidth }]} />
-        </View>
-
-        <View style={styles.steps}>
-          {steps.map((step, i) => {
-            const done = i < completed;
-            return (
-              <View key={step} style={styles.stepRow}>
-                <Text style={[styles.stepCheck, done && styles.stepCheckDone]}>
-                  {done ? '✓' : '·'}
-                </Text>
-                <Text
-                  style={[
-                    styles.stepText,
-                    (done || i === activeIndex) && styles.stepTextActive,
-                    i === activeIndex && styles.stepTextCurrent,
-                  ]}
-                >
-                  {step}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
-      <Animated.View style={[styles.proofCard, { opacity: proofOpacity }]}>
-        <Text style={styles.proofText}>{SOCIAL_PROOF}</Text>
-      </Animated.View>
-    </View>
+      </ObScreen>
+      {popup ? <AttributionPopup onAnswer={answer} onSkip={skip} /> : null}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  stage: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: 24,
+    paddingBottom: 0,
   },
-  content: {
+  flow: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rollWrap: {
-    alignSelf: 'stretch',
-    width: '100%',
-  },
-  bubbleWrap: {
-    marginTop: 14,
-    marginBottom: 28,
-    maxWidth: 320,
-    alignSelf: 'center',
+    justifyContent: 'flex-start',
   },
   title: {
-    fontSize: 26,
-    fontFamily: serifFont,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 28,
-    letterSpacing: -0.3,
+    ...obType.display,
+    fontSize: 40,
+    lineHeight: 48,
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  progressTrack: {
-    width: '100%',
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 32,
+  titleNarrow: {
+    fontSize: 34,
+    lineHeight: 40,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  steps: {
-    width: '100%',
-    gap: 14,
-  },
-  stepRow: {
-    flexDirection: 'row',
+  trust: {
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    paddingHorizontal: 16,
   },
-  stepCheck: {
-    width: 16,
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    textAlign: 'center',
+  rule: {
+    width: 28,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: ob.color.accent,
   },
-  stepCheckDone: {
-    color: colors.primary,
-  },
-  stepText: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: colors.textTertiary,
-  },
-  stepTextActive: {
-    color: colors.textSecondary,
-  },
-  stepTextCurrent: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  proofCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 18,
-    ...shadows.low,
-  },
-  proofText: {
-    fontSize: 13,
+  trustText: {
+    ...obType.caption,
     lineHeight: 20,
-    color: colors.textSecondary,
+    fontWeight: '400',
+    color: ob.color.inkSoft,
     textAlign: 'center',
+  },
+  petAnchor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -36,
+    alignItems: 'center',
   },
 });

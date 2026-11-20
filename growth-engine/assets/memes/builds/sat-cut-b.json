@@ -1,0 +1,18 @@
+{
+  "id": "sat-cut-b",
+  "clip": "assets/memes/clips/sat-face.mp4",
+  "seconds": 5.4,
+  "trim": 0.9,
+  "zoom": 1.11,
+  "pan": 0.16,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 800, "h": 320 },
+  "text": [
+    { "lines": ["When you sat all day", "and your back is having", "the time of its life"], "y": 860, "size": 42, "font": "black" }
+  ],
+  "title": "Cut B — sat all day",
+  "caption": "When you sat all day and your back is having the time of its life",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — therealcoopjt"
+}

@@ -1,0 +1,67 @@
+{
+  "days": [
+    {
+      "day": 1,
+      "template": "doctor-carlton",
+      "test": "Adult party vs kid's party as the moment it went",
+      "variants": [
+        { "lines": ["Doctor: so how exactly", "did you hurt your back?", "Me at the work holiday party:"], "title": "Doctor: so how exactly did you hurt your back? Me at the work holiday party:" },
+        { "lines": ["Doctor: when did your back", "start hurting?", "Me at my kid's birthday party:"], "title": "Doctor: when did your back start hurting? Me at my kid's birthday party:" }
+      ]
+    },
+    {
+      "day": 2,
+      "template": "office-expects",
+      "test": "Waking up vs end of the workday",
+      "variants": [
+        { "lines": ["How your back expects you", "to get out of bed after", "sleeping on it wrong"], "title": "How your back expects you to get out of bed after sleeping on it wrong" },
+        { "lines": ["How your back expects you", "to move after a full day", "of back-to-back meetings"], "title": "How your back expects you to move after a full day of back-to-back meetings" }
+      ]
+    },
+    {
+      "day": 3,
+      "template": "doctor-kermit",
+      "test": "Lifting from the floor vs a stretch routine",
+      "variants": [
+        { "lines": ["Doctor: show me how you", "pick things up off the floor", "Me:"], "title": "Doctor: show me how you pick things up off the floor. Me:" },
+        { "lines": ["Doctor: show me your", "morning stretch routine", "Me:"], "title": "Doctor: show me your morning stretch routine. Me:" }
+      ]
+    },
+    {
+      "day": 4,
+      "template": "grocery-caught",
+      "test": "Sneezing vs lifting in public",
+      "variants": [
+        { "lines": ["When you sneeze in the", "cereal aisle and your back", "locks up mid-sneeze"], "title": "When you sneeze in the cereal aisle and your back locks up mid-sneeze" },
+        { "lines": ["When you lift the case", "of water like a champ and", "make a noise you can't explain"], "title": "When you lift the case of water like a champ and make a noise you can't explain" }
+      ]
+    },
+    {
+      "day": 5,
+      "template": "doctor-carlton",
+      "test": "Sports vs the dance floor as the cause",
+      "variants": [
+        { "lines": ["Doctor: and how did", "this happen exactly?", "Me at pickup basketball at 38:"], "title": "Doctor: and how did this happen exactly? Me at pickup basketball at 38:" },
+        { "lines": ["Doctor: any idea what", "set your back off?", "Me at the bachelorette party:"], "title": "Doctor: any idea what set your back off? Me at the bachelorette party:" }
+      ]
+    },
+    {
+      "day": 6,
+      "template": "office-expects",
+      "test": "Long drive vs long couch session",
+      "variants": [
+        { "lines": ["How your back expects you", "to stand up after a", "three-hour drive"], "title": "How your back expects you to stand up after a three-hour drive" },
+        { "lines": ["How your back expects you", "to get off the couch after", "one episode turned into five"], "title": "How your back expects you to get off the couch after one episode turned into five" }
+      ]
+    },
+    {
+      "day": 7,
+      "template": "doctor-kermit",
+      "test": "Getting out of bed vs putting socks on",
+      "variants": [
+        { "lines": ["Doctor: show me how you", "get out of bed", "Me:"], "title": "Doctor: show me how you get out of bed. Me:" },
+        { "lines": ["Doctor: show me how", "you put your socks on", "Me:"], "title": "Doctor: show me how you put your socks on. Me:" }
+      ]
+    }
+  ]
+}

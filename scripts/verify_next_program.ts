@@ -148,7 +148,7 @@ test('rebuild fills equipment missing from a half-finished row', () => {
 
 const rules: AssignmentRulesConfig = {
   global: {
-    duration_weeks: { acute: 4, subacute: 5, chronic: 6 },
+    duration_weeks: { acute: 10, subacute: 10, chronic: 12 },
     bodyweight_only_early_weeks: 2,
     early_weeks: 2,
     scoring: {

@@ -1,0 +1,33 @@
+{
+  "id": "doctor-toes",
+  "format": "DeNAShnIYAy",
+  "variantOf": "picked-that-box",
+  "changed": "gif squidward, new text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-squidward.gif",
+    "x": -298,
+    "y": 540,
+    "width": 1360
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: okay, bend down",
+        "and touch your toes",
+        "Me:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: okay, bend down and touch your toes",
+  "caption": "Doctor: okay, bend down and touch your toes. Me:",
+  "description": "Exam room, Squidward squat, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

@@ -1,0 +1,18 @@
+{
+  "id": "oreo-cut-b",
+  "clip": "assets/memes/clips/oreo-mug.mp4",
+  "seconds": 6.4,
+  "trim": 1.0,
+  "zoom": 1.11,
+  "pan": 0.82,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 460, "h": 360 },
+  "text": [
+    { "lines": ["POV: you bent down", "to grab one sock and", "your back gave out"], "y": 490, "size": 46, "font": "black" }
+  ],
+  "title": "Cut B — sock, back gave out",
+  "caption": "POV: you bent down to grab one sock and your back gave out",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — memesource060"
+}

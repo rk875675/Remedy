@@ -1,0 +1,17 @@
+{
+  "id": "pizza-cut-b",
+  "clip": "assets/memes/clips/pizza-counter.mp4",
+  "seconds": 4.6,
+  "trim": 0.5,
+  "zoom": 1.08,
+  "pan": 0.2,
+  "speed": 0.94,
+  "cover": { "y": 430, "h": 300 },
+  "text": [
+    { "lines": ["Why did I throw my back out"], "y": 575, "size": 40, "font": "black" }
+  ],
+  "title": "Cut B — other crop, slower",
+  "caption": "Why did I throw my back out",
+  "description": "Black Segoe, smaller. Starts 0.5s later, 8% closer and shifted, 6% slower. The meme's own sound.",
+  "musicCredit": "Sound: original, 6% slower — memesource060"
+}

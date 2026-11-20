@@ -1,11 +1,37 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, Pressable, Platform, BackHandler } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation, Stack } from 'expo-router';
 import { CommonActions } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WarmBackground } from '../../components/onboarding/WarmBackground';
-import { AnimatedTagline } from '../../components/onboarding/AnimatedTagline';
-import { ContinueButton } from '../../components/onboarding/ContinueButton';
+import { GrowthPath, type ProgressStory } from '../../components/onboarding/plan/GrowthPath';
+import { HoldToCommit } from '../../components/onboarding/plan/HoldToCommit';
+import { PlanCard } from '../../components/onboarding/plan/PlanCard';
+import {
+  Metric,
+  NerveMark,
+  PatternMark,
+  PlanIcon,
+  StartMark,
+  type PatternIcon,
+  type StartIcon,
+} from '../../components/onboarding/plan/PlanArt';
+import {
+  PhaseStepper,
+  phasesFromMode,
+  phasesFromOutline,
+  type PhaseStep,
+} from '../../components/onboarding/plan/PhaseStepper';
+import {
+  Confetti,
+  NoteCard,
+  ObScreen,
+  PrimaryButton,
+  RevealText,
+  SourcesLink,
+  SourcesSheet,
+  TextLink,
+  ob,
+  obType,
+} from '../../components/onboarding/kit';
 import { useOnboarding, type OnboardingProgress } from '../../context/OnboardingContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePremium } from '../../context/PremiumContext';
@@ -18,11 +44,9 @@ import {
   dismissSuperwall,
 } from '../../lib/superwall';
 import { PromoCodeSheet } from '../../components/PromoCodeSheet';
-import { PetSays } from '../../components/pet/PetSays';
-import { PET_PRESENTS } from '../../constants/petOnboardingLines';
-import { useOnboardingPet } from '../../lib/useOnboardingPet';
+import { MedicalDisclaimer } from '../../components/legal/MedicalDisclaimer';
 import { supabase } from '../../lib/supabase';
-import { getPendingPurchase, setPendingPurchase } from '../../lib/pendingPurchase';
+import { clearPendingPurchase, getPendingPurchase, setPendingPurchase } from '../../lib/pendingPurchase';
 import { getLatestRemedyTransaction, restoreRemedyTransaction } from '../../lib/iap';
 import { extractInvokeError } from '../../lib/functionsError';
 import { setPersonProperties } from '../../lib/analytics';
@@ -52,21 +76,36 @@ import { openLegalDocument } from '../../lib/legalLinks';
 import { sessionLength } from '../../lib/analytics/events/enums';
 import { onboardingFunnelDurationMs } from '../../lib/analytics/onboardingSteps';
 import type { z } from 'zod';
-import { colors, serifFont } from '../../constants/colors';
-import { radius } from '../../constants/spacing';
 import { type OnboardingAnswersInput, type PlanPreview } from '../../lib/schemas';
 import {
-  answersPreviewKey,
   loadPlanPreview,
   parseCompleteAnswers,
   peekPlanPreview,
 } from '../../lib/planPreview';
 import type { OnboardingAnswers } from '../../types/database';
 import { outcomeTagline } from '../../constants/mindset';
+import { ONBOARDING_SOURCES } from '../../constants/onboardingSources';
+import {
+  HARD_NOW,
+  MIN_PROGRAM_WEEKS,
+  deriveProfile,
+  type ClinicalProfile,
+  type FunctionTarget,
+  type Intake,
+} from '../../lib/intake';
+import { persistIntake } from '../../lib/intakeApi';
+import {
+  completeIntake,
+  profileSummary,
+  programEndDateLabel,
+  programWeeksFor,
+} from '../../lib/intakeSummary';
+import { hapticSuccess } from '../../lib/haptics';
 
-/** Client-side default shown when the preview edge function doesn't answer. */
-const FALLBACK_WEEKS = 8;
 const FALLBACK_TAGLINE = 'A plan built from your answers.';
+const COMMIT_PAUSE_MS = 500;
+
+const ALL_SOURCES = Object.values(ONBOARDING_SOURCES);
 
 type RequiredAnswers = OnboardingAnswersInput;
 type MainGoalValue = 'reduce_pain' | 'return_to_exercise' | 'sleep' | 'mobility';
@@ -83,6 +122,62 @@ const GOAL_TITLE: Record<MainGoalValue, string> = {
   sleep: 'Recovery',
   mobility: 'Mobility',
 };
+
+/** Checkpoint targets, in the words of what they said is hard. */
+const HARD_CHECKPOINT: Record<FunctionTarget, string> = {
+  bed: 'Up and out of bed easily',
+  bending: 'Bending to tie your shoes',
+  sitting: 'Sitting through a movie',
+  standing: 'Standing to cook a meal',
+  walking: 'Long walks again',
+  stairs: 'Stairs without bracing',
+  twisting: 'Turning to look behind you',
+  overhead: 'Reaching the top shelf',
+  sleep: 'Sleeping more comfortably',
+  exercise: 'Back to your workouts',
+};
+
+const GOAL_CHECKPOINT: Record<MainGoalValue, string> = {
+  reduce_pain: 'Everyday moves feel easy',
+  return_to_exercise: HARD_CHECKPOINT.exercise,
+  sleep: HARD_CHECKPOINT.sleep,
+  mobility: 'Moving freely again',
+};
+
+const PLAN_OUTCOME = 'Stop thinking about your back';
+
+/** Which "hard right now" answer best matches each goal, most relevant first. */
+const GOAL_HARD: Record<MainGoalValue, readonly FunctionTarget[]> = {
+  reduce_pain: [],
+  return_to_exercise: ['exercise'],
+  sleep: ['sleep', 'bed'],
+  mobility: ['bending', 'overhead', 'twisting'],
+};
+
+function progressStory(
+  hardNow: readonly string[] | undefined,
+  goal: MainGoalValue | undefined,
+): ProgressStory | null {
+  const picked = (hardNow ?? []).filter((value): value is FunctionTarget =>
+    (HARD_NOW as readonly string[]).includes(value),
+  );
+  const preferred = goal ? GOAL_HARD[goal].find((value) => picked.includes(value)) : undefined;
+  const lead = preferred ?? picked[0];
+  const checkpoint = lead ? HARD_CHECKPOINT[lead] : goal ? GOAL_CHECKPOINT[goal] : null;
+  return checkpoint ? { checkpoint, outcome: PLAN_OUTCOME } : null;
+}
+
+function patternKind(bias: ClinicalProfile['bias']): PatternIcon {
+  if (bias === 'flexion_sensitive') return 'bend';
+  if (bias === 'extension_sensitive') return 'arch';
+  return 'mix';
+}
+
+function startKind(mode: ClinicalProfile['mode']): StartIcon {
+  if (mode === 'calm') return 'gentle';
+  if (mode === 'build') return 'build';
+  return 'steady';
+}
 
 function triggerBullet(trigger: PainTriggerValue): string {
   switch (trigger) {
@@ -145,9 +240,7 @@ function reportPlanPreview(properties: Parameters<typeof onboardingPlanPreviewed
 
 export default function MatchScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { answers, retaking, progress } = useOnboarding();
-  const { stage: petStage } = useOnboardingPet();
+  const { answers, intake, retaking, progress, setLocalAnswer } = useOnboarding();
   const { user } = useAuth();
   const { refreshPremium } = usePremium();
   const { identify } = useUser();
@@ -156,17 +249,36 @@ export default function MatchScreen() {
   const [error, setError] = useState<string | null>(null);
   // Memoized on `answers` (stable useState value) because `parseCompleteAnswers`
   // returns a fresh Zod-parsed object every call. Without this the preview effect
-  // below, which depends on `complete` and calls setPreview(), re-ran on every
-  // render and looped: it re-invoked assign-program roughly 1.4×/second.
+  // below, which depends on these answer objects and calls setPreview(), re-ran
+  // on every render and looped: it re-invoked assign-program roughly 1.4×/second.
   const complete = useMemo(() => parseCompleteAnswers(answers), [answers]);
-  const peekedPreview = complete ? peekPlanPreview(complete) : null;
+  const intakeFull = useMemo(() => completeIntake(answers, intake), [answers, intake]);
+  // Lapsed users have no quiz left in context (cleared after the first signup).
+  // The screen still has to be the current plan page, so these are loaded from
+  // onboarding_answers + user_intake and used only for display and preview.
+  const [serverQuiz, setServerQuiz] = useState<{
+    answers: OnboardingAnswersInput;
+    intake: Intake | null;
+  } | null>(null);
+  const shownAnswers = complete ?? serverQuiz?.answers ?? null;
+  const shownIntake = complete ? intakeFull : (serverQuiz?.intake ?? null);
+  const profile = useMemo(() => {
+    if (!shownAnswers || !shownIntake) return null;
+    return deriveProfile(shownAnswers, shownIntake);
+  }, [shownAnswers, shownIntake]);
+  const localWeeks =
+    shownAnswers && shownIntake ? programWeeksFor(shownAnswers, shownIntake) : MIN_PROGRAM_WEEKS;
+  const summary = useMemo(() => {
+    if (!shownAnswers || !shownIntake || !profile) return null;
+    return profileSummary(shownAnswers, shownIntake, profile);
+  }, [shownAnswers, shownIntake, profile]);
+  const peekedPreview = complete ? peekPlanPreview(complete, intakeFull) : null;
   const [preview, setPreview] = useState<PlanPreview | null>(
     peekedPreview?.ok ? peekedPreview.data : null,
   );
   const [previewSettled, setPreviewSettled] = useState(peekedPreview !== null);
-  // Existing assigned plan — used when a lapsed user has no in-memory quiz
-  // answers (cleared after first onboarding) so Your Program still shows
-  // their real name / duration instead of the generic fallback.
+  // Assigned snapshot. Fallback only, when the saved quiz cannot be parsed.
+  // A readable quiz renders the current plan page instead of this row.
   const [savedPlan, setSavedPlan] = useState<{
     program_name: string;
     subtitle: string | null;
@@ -186,8 +298,6 @@ export default function MatchScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   // "Have a code?" promo sheet (backend creator codes + Apple offer-code fallback).
   const [promoVisible, setPromoVisible] = useState(false);
-  // Paywall closed with no purchase. Cleared when Continue opens it again.
-  const [showDismissedLine, setShowDismissedLine] = useState(false);
 
   // Lapsed subscriber: Continue opens Superwall, back goes to Welcome (sign in / out).
   const { lapsed } = useLocalSearchParams<{ lapsed?: string }>();
@@ -195,13 +305,39 @@ export default function MatchScreen() {
   // Already-onboarded reconvert: same skip-quiz behavior even if the param is
   // missing (e.g. an older building-plan redirect to /(onboarding)/match).
   const isReconvert = isLapsed || (!!user && !retaking && !complete);
+  const celebrate = !retaking && !isReconvert;
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [freshCommit, setFreshCommit] = useState(false);
+  const [bursts, setBursts] = useState(celebrate ? 1 : 0);
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mounted = useRef(true);
+  useEffect(() => () => {
+    if (commitTimer.current) clearTimeout(commitTimer.current);
+  }, []);
   useEffect(() => () => { mounted.current = false; }, []);
 
   // replace() onto match leaves it alone in the stack — iOS swipe-back is a no-op.
   // Put Welcome underneath so the only back target is sign in / sign out.
   const navigation = useNavigation();
+  // The plan before the paywall is a dead end: swipe-back and the hardware back
+  // button stay here. A lapsed subscriber can still return to Welcome to sign out,
+  // and a retake can still step back through answers.
+  const planLocked = !isReconvert && !retaking;
+  useEffect(() => {
+    if (!planLocked) return;
+    const blockHardware = BackHandler.addEventListener('hardwareBackPress', () => true);
+    const blockPop = navigation.addListener('beforeRemove', (event) => {
+      const type = event.data.action.type;
+      if (type === 'GO_BACK' || type === 'POP' || type === 'POP_TO_TOP') {
+        event.preventDefault();
+      }
+    });
+    return () => {
+      blockHardware.remove();
+      blockPop();
+    };
+  }, [navigation, planLocked]);
   useEffect(() => {
     if (!isReconvert) return;
     if (navigation.canGoBack()) return;
@@ -220,7 +356,7 @@ export default function MatchScreen() {
     if (!isReconvert || !user) return;
     let cancelled = false;
     void (async () => {
-      const [{ data: up }, { data: answersRow }] = await Promise.all([
+      const [{ data: up }, { data: answersRow }, { data: intakeRow }] = await Promise.all([
         supabase
           .from('user_programs')
           .select('active_plan_id')
@@ -228,13 +364,31 @@ export default function MatchScreen() {
           .maybeSingle(),
         supabase
           .from('onboarding_answers')
-          .select('pain_location, pain_trigger, equipment')
+          .select(
+            'pain_location, pain_duration, pain_type, activity_level, pain_trigger, equipment, main_goal, sessions_per_week_preference',
+          )
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('user_intake')
+          .select('answers')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]);
       if (cancelled) return;
+      const parsed = answersRow ? parseCompleteAnswers(answersRow) : null;
       if (answersRow) {
-        setSavedAnswers(answersRow);
+        setSavedAnswers({
+          pain_location: answersRow.pain_location,
+          pain_trigger: answersRow.pain_trigger,
+          equipment: answersRow.equipment,
+        });
+      }
+      if (parsed) {
+        setServerQuiz({
+          answers: parsed,
+          intake: completeIntake(parsed, intakeRow?.answers ?? null),
+        });
       }
       if (!up?.active_plan_id) return;
       const { data: plan } = await supabase
@@ -244,7 +398,10 @@ export default function MatchScreen() {
         .maybeSingle();
       if (plan && !cancelled) {
         setSavedPlan(plan);
-        setPreviewSettled(true);
+        // A parsed quiz is about to load the current preview. Settling here
+        // would paint the stored snapshot (the short plan from assignment time)
+        // and leave it up if that preview is what the screen should show.
+        if (!parsed) setPreviewSettled(true);
       }
     })();
     return () => {
@@ -269,10 +426,11 @@ export default function MatchScreen() {
   // Server-consistent preview. The Promise is cached on the answers fingerprint so
   // a Superwall remount does not start a second assign-program call.
   useEffect(() => {
-    if (!complete) return;
+    if (!shownAnswers) return;
     let cancelled = false;
-    const answers = complete;
-    loadPlanPreview(complete).then((result) => {
+    const answersForPreview = shownAnswers;
+    const intakeForPreview = shownIntake;
+    loadPlanPreview(answersForPreview, intakeForPreview).then((result) => {
       if (cancelled) return;
       if (result.ok) {
         setPreview(result.data);
@@ -293,15 +451,17 @@ export default function MatchScreen() {
       setPreviewSettled(true);
       reportPlanPreview({
         preview_source: 'fallback',
-        duration_weeks: FALLBACK_WEEKS,
-        sessions_per_week: answers.sessions_per_week_preference,
-        equipment_tier: answers.equipment,
+        duration_weeks: intakeForPreview
+          ? programWeeksFor(answersForPreview, intakeForPreview)
+          : MIN_PROGRAM_WEEKS,
+        sessions_per_week: answersForPreview.sessions_per_week_preference,
+        equipment_tier: answersForPreview.equipment,
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [complete]);
+  }, [shownAnswers, shownIntake]);
 
   // Fallback capture from Superwall's transactionComplete event.
   const lastTransaction = useRef<{ originalTransactionId: string; productId: string } | null>(null);
@@ -322,6 +482,15 @@ export default function MatchScreen() {
   // One forced re-present after clearing Superwall's subscription status.
   const forcePresentAttempted = useRef(false);
   const recoveringSkip = useRef(false);
+  // Hard paywall. Superwall also runs `feature()` for a non-gated close and for
+  // the exit survey. Either one used to see an older StoreKit transaction and
+  // send the user to sign-up. A shown paywall continues only after a purchase
+  // or restore in THIS presentation.
+  const paywallWasPresented = useRef(false);
+  const purchasedThisPresentation = useRef(false);
+  // "Have a code?" dismisses the paywall so the promo sheet can open. That
+  // dismiss is not a close, and must not wipe a purchase waiting for sign-up.
+  const promoDismiss = useRef(false);
 
   useSuperwallEvents({
     // "Have a code?" element on the Superwall paywall (custom action
@@ -329,12 +498,14 @@ export default function MatchScreen() {
     // renders behind Superwall's native view controller.
     onCustomPaywallAction: (name) => {
       if (name !== 'redeem_promo_code') return;
+      promoDismiss.current = true;
       void (async () => {
         await dismissSuperwall();
         if (mounted.current) setPromoVisible(true);
       })();
     },
     onPaywallPresent: (paywallInfo) => {
+      paywallWasPresented.current = true;
       forcePresentAttempted.current = false;
       const experiment = paywallInfo.experiment;
       paywallVariant.current = {
@@ -380,6 +551,7 @@ export default function MatchScreen() {
           });
           break;
         case 'transactionComplete': {
+          purchasedThisPresentation.current = true;
           const originalId = event.transaction?.originalTransactionIdentifier;
           const productId = event.product?.productIdentifier;
           if (originalId && productId) {
@@ -465,7 +637,12 @@ export default function MatchScreen() {
   }
 
   const { registerPlacement } = usePlacement({
+    onPresent: () => {
+      paywallWasPresented.current = true;
+    },
     onDismiss: async (_info, result) => {
+      // A gated close never resolves registerPlacement, so its finally never runs.
+      if (mounted.current) setPresenting(false);
       paywallDismissed({
         placement: 'onboarding_paywall',
         result_type: result.type,
@@ -474,17 +651,28 @@ export default function MatchScreen() {
           : { paywall_variant_id: paywallVariant.current.variantId }),
       });
       if (result.type === 'purchased' || result.type === 'restored') {
+        purchasedThisPresentation.current = true;
         await handlePurchased();
       } else {
+        // Hard paywall. X, the exit survey, and a non-gated close all land here.
+        // Stay on the program. Also drop a stash from an older close so the root
+        // guard cannot skip "Building your plan" and open sign-up.
+        const openingPromo = promoDismiss.current;
+        promoDismiss.current = false;
+        if (
+          !openingPromo &&
+          !purchasedThisPresentation.current &&
+          !purchaseNavigated.current
+        ) {
+          await clearPendingPurchase();
+        }
         // transactionComplete may have raised the busy overlay preemptively;
         // a dismiss without a purchase result must not leave it stuck.
-        if (mounted.current) {
-          setBusy(null);
-          setShowDismissedLine(true);
-        }
+        if (mounted.current) setBusy(null);
       }
     },
     onSkip: (reason) => {
+      if (mounted.current) setPresenting(false);
       paywallDismissed({
         placement: 'onboarding_paywall',
         result_type: 'no_paywall',
@@ -493,6 +681,15 @@ export default function MatchScreen() {
           : { paywall_variant_id: paywallVariant.current.variantId }),
       });
       if (__DEV__) console.log('[superwall] skipped', reason);
+      // A shown paywall that closes is a dismiss, not a skip. Skip-recovery
+      // looks up any StoreKit transaction and would send a close to sign-up.
+      if (paywallWasPresented.current && !purchasedThisPresentation.current) {
+        const openingPromo = promoDismiss.current;
+        promoDismiss.current = false;
+        if (!openingPromo && !purchaseNavigated.current) void clearPendingPurchase();
+        if (mounted.current) setBusy(null);
+        return;
+      }
       void recoverFromSkippedPaywall();
     },
     onError: (err) => {
@@ -500,6 +697,7 @@ export default function MatchScreen() {
       // failures have their own confirmation alerts.
       if (__DEV__) console.log('[superwall] onError', err);
       if (mounted.current) {
+        setPresenting(false);
         Alert.alert('Could not open checkout', 'Please try again.');
       }
     },
@@ -511,14 +709,19 @@ export default function MatchScreen() {
     }
   }, [user]);
 
-  // Superwall calls `feature()` when it decides the paywall shouldn't be shown at
-  // all (recognized subscriber, holdout group, etc.) — no purchase UI ran, so
-  // nothing was stashed for building-plan to verify. Treat it the same as a
-  // restore: check StoreKit for a real transaction before granting access, same
-  // as handlePurchased/handleRestore. Never route into the app on Superwall's say
-  // alone — building-plan (or the root guard, if none is found) still requires a
-  // server-verified entitlement.
+  // Superwall calls `feature()` when the paywall is not shown (recognized
+  // subscriber, holdout) AND when a non-gated paywall is closed. The close must
+  // not continue. Only a purchase or restore in this presentation, or a skip
+  // where the paywall never appeared, may look at StoreKit.
+  function closedWithoutBuying(): boolean {
+    return paywallWasPresented.current && !purchasedThisPresentation.current;
+  }
+
   async function handleFeatureAccess() {
+    if (closedWithoutBuying()) {
+      if (mounted.current) setBusy(null);
+      return;
+    }
     if (purchaseNavigated.current) return;
     purchaseNavigated.current = true;
     setBusy('Confirming your purchase…');
@@ -596,6 +799,8 @@ export default function MatchScreen() {
     if (options?.forceInactive || isReconvert) {
       await setSuperwallSubscriptionInactive();
     }
+    paywallWasPresented.current = false;
+    purchasedThisPresentation.current = false;
     setPresenting(true);
     try {
       let trigger = complete?.pain_trigger[0] ?? savedAnswers?.pain_trigger[0];
@@ -636,6 +841,7 @@ export default function MatchScreen() {
           equipment_note: equipment ? equipmentNote(equipment) : equipmentNote('open_space'),
         },
         feature() {
+          if (closedWithoutBuying()) return;
           void handleFeatureAccess();
         },
       });
@@ -713,8 +919,15 @@ export default function MatchScreen() {
           'This subscription is linked to a different Remedy account. Sign in with the account ' +
             'that purchased it to restore access.',
         );
-      } else {
+      } else if (
+        reason === 'transaction_expired' ||
+        reason === 'no_active_subscription' ||
+        reason === 'invalid_receipt' ||
+        reason === 'invalid_transaction'
+      ) {
         Alert.alert('Restore', 'No active subscription found.');
+      } else {
+        Alert.alert('Restore', 'Could not restore purchases. Try again later.');
       }
     } catch {
       restoreFailed({ source_screen: 'match', reason: 'network' });
@@ -780,9 +993,14 @@ export default function MatchScreen() {
           .update({ ...complete })
           .eq('user_id', user.id);
         if (updateError) {
-          setError(updateError.message);
+          setError('Could not save your answers. Check your connection and try again.');
           setLoading(false);
           return;
+        }
+        const savedIntake = completeIntake(answers, intake);
+        if (savedIntake) {
+          // A failed intake write must not block the program rebuild.
+          await persistIntake(user.id, savedIntake);
         }
         reportOnboardingCompleted(complete, true, progress);
         // Keep `retaking` raised until building-plan finishes the re-assignment. Ending it
@@ -815,113 +1033,236 @@ export default function MatchScreen() {
   // buildNaming, and stays consistent with the tagline below (also primary-goal-based).
   const programName =
     preview?.program_name ??
-    savedPlan?.program_name ??
-    (complete
-      ? `${AREA_TITLE[complete.pain_location]} ${GOAL_TITLE[complete.main_goal[0]]} Program`
-      : 'Your Program');
+    (shownAnswers
+      ? `${AREA_TITLE[shownAnswers.pain_location]} ${GOAL_TITLE[shownAnswers.main_goal[0]]} Program`
+      : (savedPlan?.program_name ?? 'Your Program'));
   const subtitle =
     preview?.subtitle ??
-    savedPlan?.subtitle ??
-    (complete?.equipment === 'open_space' ? 'Bodyweight' : null);
-  const primaryGoal = complete?.main_goal[0];
+    (shownAnswers
+      ? (shownAnswers.equipment === 'open_space' ? 'Bodyweight' : null)
+      : (savedPlan?.subtitle ?? null));
+  const primaryGoal = shownAnswers?.main_goal[0];
   const tagline =
-    complete && primaryGoal
-      ? outcomeTagline(primaryGoal, complete.activity_level)
+    shownAnswers && primaryGoal
+      ? outcomeTagline(primaryGoal, shownAnswers.activity_level)
       : previewSettled
         ? (preview?.tagline ?? savedPlan?.tagline ?? FALLBACK_TAGLINE)
         : null;
-  const weeks = preview?.duration_weeks ?? savedPlan?.duration_weeks ?? FALLBACK_WEEKS;
+  // Current engine length wins over the snapshot stored at assignment. A lapsed
+  // account's row can still be the short plan from before this page.
+  const weeks =
+    preview?.duration_weeks ?? (shownIntake ? localWeeks : (savedPlan?.duration_weeks ?? localWeeks));
+  const displayWeeks = weeks;
   const perWeek =
     preview?.sessions_per_week ??
+    shownAnswers?.sessions_per_week_preference ??
     savedPlan?.sessions_per_week ??
-    complete?.sessions_per_week_preference ??
     3;
   const minutes = avgMinutes(preview) ?? 20;
-  const petPresent = showDismissedLine
-    ? PET_PRESENTS.paywallDismissed
-    : retaking
-      ? PET_PRESENTS.matchRetake
-      : isReconvert
-        ? PET_PRESENTS.matchLapsed
-        : PET_PRESENTS.match;
+  const chosenMinutes =
+    shownIntake?.minutes === 15 || shownIntake?.minutes === 20 || shownIntake?.minutes === 30
+      ? shownIntake.minutes
+      : progress?.minutes === 15 || progress?.minutes === 20 || progress?.minutes === 30
+        ? progress.minutes
+        : null;
+  const displayMinutes = avgMinutes(preview) ?? chosenMinutes ?? minutes;
+  const story = progressStory(shownIntake?.hard_now, primaryGoal);
+  const endLabel = programEndDateLabel(displayWeeks);
+  const firstSession = preview?.week_one[0] ?? null;
+  const sessionsThisWeek = preview?.week_one.length ?? 0;
+  const outlinePhases = preview?.outline ? phasesFromOutline(preview.outline.weeks) : [];
+  const phases: PhaseStep[] | null =
+    outlinePhases.length > 0 ? outlinePhases : profile ? phasesFromMode(profile.mode) : null;
+  const showHold = !retaking && !isReconvert && !progress?.committed_at;
+
+  function openPlan() {
+    void handleStart();
+  }
+
+  function finishCommit() {
+    setFreshCommit(true);
+    setLocalAnswer('committed_at', new Date().toISOString());
+    hapticSuccess();
+    setBursts((count) => count + 1);
+    if (commitTimer.current) clearTimeout(commitTimer.current);
+    commitTimer.current = setTimeout(() => {
+      commitTimer.current = null;
+      if (!mounted.current) return;
+      setFreshCommit(false);
+      void handleStart();
+    }, COMMIT_PAUSE_MS);
+  }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 8 }]}>
-      <WarmBackground />
-      <Stack.Screen options={{ gestureEnabled: true, headerShown: false }} />
-      <View style={styles.body}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          <View style={styles.petSays}>
-            <PetSays line={petPresent.line} mood={petPresent.mood} stage={petStage} entrance="drop" />
-          </View>
-
-          <Text style={styles.eyebrow}>{retaking ? 'YOUR UPDATED PROGRAM' : isReconvert ? 'RESUME YOUR PROGRAM' : 'YOUR PROGRAM'}</Text>
-
-          <Text style={styles.programName} numberOfLines={3}>
-            {programName}
-          </Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-
-          {tagline ? (
-            <AnimatedTagline
-              text={tagline}
-              revealKey={complete ? answersPreviewKey(complete) : 'incomplete'}
-            />
-          ) : (
-            <View style={styles.taglineSlot} />
-          )}
-
-          {!SUPERWALL_AVAILABLE && !retaking && (
-            <View style={styles.devBanner}>
-              <Text style={styles.devText}>
-                Expo Go: Superwall unavailable. Tap below to skip with a dev trial.
-              </Text>
+    <View style={styles.root}>
+      <Stack.Screen options={{ gestureEnabled: !planLocked, headerShown: false }} />
+      <ObScreen
+        chapter={null}
+        onBack={null}
+        background="mint"
+        testID="match"
+        contentStyle={styles.scrollContent}
+        footer={
+          <View style={styles.footerStack}>
+            {!SUPERWALL_AVAILABLE && !retaking ? (
+              <View style={styles.devBanner}>
+                <Text style={styles.devText}>
+                  Expo Go: Superwall unavailable. Tap below to skip with a dev trial.
+                </Text>
+              </View>
+            ) : null}
+            {showHold || freshCommit ? (
+              <HoldToCommit disabled={loading || presenting} onComplete={finishCommit} />
+            ) : (
+              <PrimaryButton
+                testID="plan-continue"
+                label={retaking ? 'Update my program' : 'Continue'}
+                disabled={loading || presenting}
+                onPress={openPlan}
+              />
+            )}
+            <View style={styles.footerLinks}>
+              {!retaking ? (
+                <View testID="restore-purchases" collapsable={false}>
+                  <TextLink label="Restore Purchases" onPress={() => void handleRestore()} tone="soft" />
+                </View>
+              ) : null}
+              <View style={styles.legalRow}>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Terms of Use"
+                  onPress={() => openLegalDocument('terms', 'match')}
+                  hitSlop={8}
+                  style={styles.legalHit}
+                >
+                  <Text style={styles.legal}>Terms of Use</Text>
+                </Pressable>
+                <Text style={styles.legalDivider}>·</Text>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Privacy Policy"
+                  onPress={() => openLegalDocument('privacy', 'match')}
+                  hitSlop={8}
+                  style={styles.legalHit}
+                >
+                  <Text style={styles.legal}>Privacy Policy</Text>
+                </Pressable>
+              </View>
+              {error ? (
+                <Text style={styles.error} accessibilityLiveRegion="polite">
+                  {error}
+                </Text>
+              ) : null}
             </View>
-          )}
-
-          {error && <Text style={styles.error}>{error}</Text>}
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <ContinueButton
-            label={retaking ? 'Update My Program' : 'Continue'}
-            onPress={() => {
-              setShowDismissedLine(false);
-              void handleStart();
-            }}
-            disabled={loading || presenting}
-          />
-          {!retaking && (
-            <Text style={styles.restore} onPress={handleRestore}>
-              Restore Purchases
-            </Text>
-          )}
-          <View style={styles.legalRow}>
-            <Text
-              style={styles.legal}
-              onPress={() => openLegalDocument('terms', 'match')}
-            >
-              Terms of Use
-            </Text>
-            <Text style={styles.legalDivider}>·</Text>
-            <Text
-              style={styles.legal}
-              onPress={() => openLegalDocument('privacy', 'match')}
-            >
-              Privacy Policy
-            </Text>
           </View>
+        }
+      >
+        <View style={styles.hero}>
+          <RevealText testID="plan-headline" style={styles.headline}>
+            {programName}
+          </RevealText>
         </View>
-      </View>
+
+        {profile?.flags.clinicianFirst ? (
+          <PlanCard plain delay={40}>
+            <NoteCard
+              tone="warn"
+              icon="alert-circle-outline"
+              title="Before you start"
+              text="Get checked by a clinician first. Your plan will be here when you're cleared."
+            />
+          </PlanCard>
+        ) : null}
+
+        <PlanCard title="Projected progress" delay={80}>
+          <GrowthPath
+            weeks={displayWeeks}
+            perWeek={perWeek}
+            minutes={displayMinutes}
+            endLabel={endLabel}
+            story={story}
+          />
+        </PlanCard>
+
+        {phases && phases.length > 0 ? (
+          <PlanCard title="How it builds" delay={140}>
+            <PhaseStepper steps={phases} />
+          </PlanCard>
+        ) : null}
+
+        {firstSession ? (
+          <PlanCard title="Week 1" delay={200}>
+            <View style={styles.statRow}>
+              <Metric
+                icon="calendar"
+                tone="clay"
+                value={sessionsThisWeek}
+                label={sessionsThisWeek === 1 ? 'Session' : 'Sessions'}
+              />
+              <Metric icon="dumbbell" tone="amber" value={firstSession.exercises.length} label="Moves each" />
+              <Metric icon="clock" tone="blue" value={firstSession.estimated_minutes} label="Min each" />
+            </View>
+            {firstSession.title.length > 0 ? (
+              <Text style={styles.cardNote} numberOfLines={2}>
+                First up: {firstSession.title}
+              </Text>
+            ) : null}
+          </PlanCard>
+        ) : null}
+
+        {summary && profile ? (
+          <PlanCard title="Built around you" delay={260}>
+            <ProfileRow icon={<PatternMark kind={patternKind(profile.bias)} />} title={summary.patternTitle} body={summary.patternBody} />
+            <ProfileRow icon={<StartMark kind={startKind(profile.mode)} />} title={summary.startTitle} body={summary.startBody} />
+            <ProfileRow icon={<NerveMark />} title={summary.nsTitle} body={summary.nsBody} />
+            {summary.focusChips.length > 0 ? (
+              <View style={styles.chips}>
+                {summary.focusChips.map((chip) => (
+                  <View key={chip} style={styles.chip}>
+                    <Text style={styles.chipText}>{chip}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {summary.adaptations.length > 0 ? (
+              <View style={styles.stack}>
+                {summary.adaptations.map((line) => (
+                  <View key={line} style={styles.adaptRow}>
+                    <PlanIcon name="heart" tone="clay" size={26} />
+                    <Text style={styles.adaptText}>{line}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {summary.goals.length > 0 ? (
+              <View style={styles.stack}>
+                <Text style={styles.blockLabel}>What we're training for</Text>
+                <View style={styles.chips}>
+                  {summary.goals.map((goal) => (
+                    <View key={goal} style={styles.chip}>
+                      <Text style={styles.chipText}>{goal}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </PlanCard>
+        ) : null}
+
+        <PlanCard title="Worth knowing" delay={320}>
+          <Text style={styles.note}>
+            The date is a target from your answers. It is not a result anyone can promise.
+          </Text>
+          <MedicalDisclaimer style={styles.disclaimer} />
+          <SourcesLink label="Learn about sources we use." onPress={() => setSourcesOpen(true)} />
+        </PlanCard>
+      </ObScreen>
+
+      {bursts > 0 ? <Confetti key={bursts} play count={32} /> : null}
 
       {busy !== null && (
         <View style={styles.busyOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={ob.color.accent} />
           <Text style={styles.busyText}>{busy}</Text>
         </View>
       )}
@@ -933,6 +1274,31 @@ export default function MatchScreen() {
         // routes into the app once the entitlement is confirmed.
         onAccessGranted={() => router.replace('/building-plan')}
       />
+      <SourcesSheet
+        visible={sourcesOpen}
+        onClose={() => setSourcesOpen(false)}
+        items={ALL_SOURCES}
+      />
+    </View>
+  );
+}
+
+function ProfileRow({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <View style={styles.profileRow}>
+      {icon}
+      <View style={styles.profileCopy}>
+        <Text style={styles.profileTitle}>{title}</Text>
+        <Text style={styles.profileBody}>{body}</Text>
+      </View>
     </View>
   );
 }
@@ -1024,118 +1390,194 @@ function avgMinutes(preview: PlanPreview | null): number | null {
   return avg > 0 ? avg : null;
 }
 
+const headlineWeight = Platform.OS === 'ios' ? '800' : '700';
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: 24,
-  },
-  body: {
+  root: {
     flex: 1,
   },
-  scroll: {
-    flex: 1,
+  scrollContent: {
+    gap: 16,
+    paddingTop: 8,
+    paddingBottom: 28,
   },
-  // Centered flex layout: the short content block floats in the middle of the
-  // available space above the pinned footer, so variable title/tagline heights
-  // (long generated program names) just shift the block — nothing overflows.
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+  footerStack: {
+    gap: 6,
   },
-  petSays: {
-    alignSelf: 'stretch',
-    marginBottom: 20,
+  footerLinks: {
+    gap: 0,
   },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 1.5,
-    marginBottom: 16,
-    textAlign: 'center',
+  hero: {
+    gap: 10,
+    alignItems: 'flex-start',
+    paddingTop: 12,
+    paddingBottom: 4,
   },
-  programName: {
-    fontSize: 30,
-    fontFamily: serifFont,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    lineHeight: 38,
-    marginBottom: 8,
-    letterSpacing: -0.3,
-    textAlign: 'center',
+  headline: {
+    fontSize: 40,
+    lineHeight: 46,
+    fontWeight: headlineWeight,
+    letterSpacing: -1.2,
+    color: ob.color.ink,
+    textAlign: 'left',
   },
-  subtitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 12,
-    textAlign: 'center',
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
   },
-  taglineSlot: {
-    minHeight: 48,
-    maxWidth: 300,
-    width: '100%',
-  },
-  error: {
-    marginTop: 16,
-    fontSize: 14,
-    color: colors.warning,
-    textAlign: 'center',
-  },
-  devBanner: {
-    marginTop: 24,
-    padding: 12,
-    borderRadius: radius.chip,
-    backgroundColor: '#FFF3E0',
-    borderWidth: 1,
-    borderColor: colors.warning,
-  },
-  devText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.warning,
-    textAlign: 'center',
-  },
-  footer: {
+  statRow: {
+    flexDirection: 'row',
     gap: 12,
-    alignItems: 'center',
   },
-  restore: {
+  cardNote: {
+    ...obType.caption,
+    fontWeight: '400',
+    color: ob.color.inkSoft,
+  },
+  note: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '500',
+    color: ob.color.ink,
+  },
+  disclaimer: {
     fontSize: 15,
-    color: colors.textSecondary,
-    textDecorationLine: 'underline',
-    paddingVertical: 4,
+    lineHeight: 21,
+    textAlign: 'left',
+    color: ob.color.inkSoft,
+  },
+  profileCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  profileTitle: {
+    ...obType.bodyStrong,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
+  },
+  profileBody: {
+    ...obType.caption,
+    fontWeight: '400',
+    color: ob.color.inkSoft,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: ob.color.accentSoft,
+    borderRadius: ob.radius.pill,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  chipText: {
+    ...obType.caption,
+    color: ob.color.accentDeep,
+  },
+  sessionHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  sessionTitle: {
+    ...obType.bodyStrong,
+    fontSize: 17,
+    lineHeight: 22,
+    flex: 1,
+  },
+  sessionMinutes: {
+    ...obType.caption,
+    color: ob.color.accentDeep,
+  },
+  stack: {
+    gap: 10,
+  },
+  exerciseRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  exerciseName: {
+    ...obType.body,
+    color: ob.color.ink,
+    flex: 1,
+  },
+  dose: {
+    ...obType.bodyStrong,
+    color: ob.color.inkSoft,
+    flexShrink: 0,
+  },
+  more: {
+    ...obType.caption,
+  },
+  adaptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  adaptText: {
+    ...obType.body,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: ob.color.ink,
+    flex: 1,
+  },
+  blockLabel: {
+    ...obType.bodyStrong,
   },
   legalRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    marginTop: 2,
+  },
+  legalHit: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   legal: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    ...obType.caption,
     textDecorationLine: 'underline',
   },
   legalDivider: {
+    ...obType.caption,
+  },
+  error: {
+    ...obType.caption,
+    color: ob.color.warn,
+    textAlign: 'center',
+  },
+  devBanner: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: ob.radius.chip,
+    backgroundColor: ob.color.warnSoft,
+    borderWidth: 1,
+    borderColor: ob.color.warn,
+  },
+  devText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: ob.color.warn,
+    textAlign: 'center',
   },
   busyOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
+    backgroundColor: ob.color.mint,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
   },
   busyText: {
-    fontSize: 15,
-    color: colors.textSecondary,
+    ...obType.body,
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
 });

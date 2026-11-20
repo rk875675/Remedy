@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { LogBox } from 'react-native';
-import { useSegments } from 'expo-router';
+import { useGlobalSearchParams, useSegments } from 'expo-router';
 
 import { useAuth } from '../../context/AuthContext';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -42,12 +42,15 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
  */
 export function AnalyticsBridge() {
   const segments = useSegments();
+  const params = useGlobalSearchParams<{ lapsed?: string | string[] }>();
   const screenName = toScreenName(segments as readonly string[]);
   const { retaking } = useOnboarding();
+  const lapsedParam = params.lapsed;
+  const lapsed = lapsedParam === '1' || (Array.isArray(lapsedParam) && lapsedParam.includes('1'));
 
   useIdentitySync();
   useScreenTracking(screenName);
-  useOnboardingStepTracking(screenName, retaking);
+  useOnboardingStepTracking(screenName, retaking, lapsed);
   return null;
 }
 

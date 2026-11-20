@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   displayedPetMood,
   petImage,
@@ -446,8 +447,10 @@ export function Pet({
     };
   }, [mood, reduceMotion, breath, size]);
 
+  const celebrated = useRef(false);
   useEffect(() => {
     if (mood !== 'celebrating' || reduceMotion !== false) {
+      celebrated.current = false;
       if (motionKind.current === 'hop') {
         motionAnim.current?.stop();
         motionAnim.current = null;
@@ -456,6 +459,9 @@ export function Pet({
       }
       return;
     }
+    // Showing the screen again re-runs this. One celebration per arrival.
+    if (celebrated.current) return;
+    celebrated.current = true;
     startHops();
     return () => {
       if (motionKind.current !== 'hop') return;
@@ -465,6 +471,18 @@ export function Pet({
       restBody(body);
     };
   }, [mood, reduceMotion, body]);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (motionKind.current !== 'hop') return;
+        motionAnim.current?.stop();
+        motionAnim.current = null;
+        motionKind.current = null;
+        restBody(body);
+      };
+    }, [body]),
+  );
 
   useEffect(() => {
     if (reduceMotion !== true) return;

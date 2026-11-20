@@ -1,0 +1,46 @@
+{
+  "formats": [
+    {
+      "id": "pet-mad-meme",
+      "kind": "meme",
+      "status": "held",
+      "hypothesis": "A 'me / my armadillo' overlay meme using the angry pet and a real in-app line travels like the duo overlays we already study, and gives the app a face.",
+      "mechanic": "Tan background, two-line setup on top (me: ... / my armadillo:), the pet on a green hill, one speech bubble with a real line from constants/petMoodLines.ts. Own art only, no third-party GIFs or sounds.",
+      "accounts": ["tiktok:remedy.recoveries", "tiktok:remedy.stories"],
+      "cta": "none on the image; the app link lives in the bio",
+      "rules": [
+        "Bubble text must be a line that exists in constants/petMoodLines.ts or petOnboardingLines.ts.",
+        "The joke is about poking the pet or the pet's mood, never about the user's pain level or healing.",
+        "No stats, no results, no medical claims.",
+        "Not scheduled before the pet build is live on the App Store."
+      ]
+    },
+    {
+      "id": "pet-stage-reveal",
+      "kind": "carousel",
+      "status": "held",
+      "hypothesis": "A five-stage reveal (0, 1, 4, 9, 15 sessions) gives a swipe reason and shows the app mechanic without any outcome claim.",
+      "mechanic": "Cover, then one slide per stage with the lifetime-session count, then a plain closing slide. Counts come from PRD 6.9.",
+      "accounts": ["instagram:remedyrecoveries", "tiktok:remedy.recoveries"],
+      "cta": "OWNER DECISION: plain closing slide as sampled, or end on one of the 7 locked CTA_REVIEW_OPTIONS. The sample does not touch the locked CTA.",
+      "rules": [
+        "Stage thresholds must match PRD 6.9 (0/1/4/9/15).",
+        "State that the pet never shrinks only as an app fact, not as a promise about a back.",
+        "Instagram @remedyrecoveries stays curated: goes through _ig-main.ts, not the engine."
+      ]
+    },
+    {
+      "id": "pet-mood-sheet",
+      "kind": "sheet",
+      "status": "held",
+      "hypothesis": "A 2x2 sheet of pet moods with relatable one-line captions is a cheap, shareable still for IG and Pinterest.",
+      "mechanic": "Title line, four pet moods (angry, sleepy, reading, stretching), a short caption under each.",
+      "accounts": ["instagram:remedy.stories", "pinterest"],
+      "cta": "none",
+      "rules": [
+        "Captions are about the pet or ordinary life, never a claim about a back.",
+        "Follow the IG voice rules in .cursor/rules/growth-engine.mdc (one natural sentence, no em dashes, no slogans)."
+      ]
+    }
+  ]
+}

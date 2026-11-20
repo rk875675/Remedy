@@ -224,7 +224,7 @@ export interface ResolvedPlan {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const TITLE_AREA: Record<PainLocation, string> = {
+export const TITLE_AREA: Record<PainLocation, string> = {
   upper: 'Thoracic',
   lower: 'Lumbar',
   all: 'Full Back',
@@ -757,9 +757,13 @@ function resolveSessionArea(
     : rules.pain_location.all_week_bias.second_half;
 }
 
-function buildNaming(
+export function buildNaming(
   answers: Answers,
-  rules: AssignmentRulesConfig,
+  rules: {
+    pain_location: { title_focus: Record<string, string> };
+    main_goal: { title_focus: Record<string, string> };
+    equipment: { subtitle_when: Record<string, string> };
+  },
 ): { name: string; subtitle: string | null; tagline: string } {
   const primary = rules.pain_location.title_focus[answers.pain_location] ?? 'Back';
   const primaryGoal = answers.main_goal[0];

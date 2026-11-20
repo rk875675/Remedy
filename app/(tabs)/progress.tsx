@@ -5,15 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   Animated,
   Easing,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart, BarChart } from 'react-native-gifted-charts';
-import Svg, { Path } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../constants/colors';
@@ -26,18 +26,20 @@ import { MiniRing } from '../../components/ui/MiniRing';
 import { progressRangeChanged } from '../../lib/analytics/events/engagement';
 import { PetStageStrip } from '../../components/pet/PetStageStrip';
 import { PET_STAGE_SCALE } from '../../constants/petImages';
-import { Dust, DUST_PALE, easedTimeAt, type DustHandle } from '../../components/pet/Dust';
+import { Dust, DUST_EARTH, easedTimeAt, type DustHandle } from '../../components/pet/Dust';
+import { MeadowStage } from '../../components/onboarding/coldopen/MeadowStage';
+import { useDaySky, type DaySky } from '../../lib/daySky';
 import { JourneyPet, type JourneyPetHandle } from '../../components/pet/JourneyPet';
 import { PET_UNFURL_MS } from '../../components/pet/Pet';
 import { petGrowthCopy, stageProgress, type PetState } from '../../lib/pet';
 import { fetchPetState } from '../../lib/petApi';
+import { useNamedPet } from '../../lib/petNameCache';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import { PET_FALLBACK_NAME } from '../../constants/petLines';
 import type { UserProgram } from '../../types/database';
 import {
   computePainChart,
   computeActivityChart,
-  getEstimatedCompletion,
   computeWeekDays,
   historyWindowStartISO,
   PROGRESS_HISTORY_DAYS,
@@ -48,15 +50,13 @@ import {
   type ActivityRange,
 } from '../../lib/progress';
 import { countMissedThisWeek, showingUpCopy } from '../../lib/streak';
-import { shouldSkipTabRefresh, beginTabRefresh, finishTabRefresh, invalidateTabRefresh } from '../../lib/tabRefresh';
+import { shouldSkipTabRefresh, beginTabRefresh, finishTabRefresh, failTabRefresh, invalidateTabRefresh } from '../../lib/tabRefresh';
 import { computeDefaultWorkoutDays, activeWorkoutDaysThisWeek, todayDayIndex } from '../../lib/workoutDays';
 import { STORAGE_WORKOUT_DAYS, STORAGE_WORKOUT_DAYS_SINCE, DAY_LABELS } from '../../components/progress/WorkoutDaysModal';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_INNER_W = SCREEN_WIDTH - 88;
 const PAIN_Y_AXIS_W = 36;
-const PAIN_CHART_DATA_W = CARD_INNER_W - PAIN_Y_AXIS_W;
-const ACTIVITY_CHART_W = CARD_INNER_W - PAIN_Y_AXIS_W - 12;
+const DECK_GAP = 12;
+const DECK_PEEK = 32;
 
 function activityBarLayout(barCount: number, chartWidth: number): {
   barWidth: number;
@@ -92,16 +92,15 @@ function activityBarLayout(barCount: number, chartWidth: number): {
   };
 }
 
-const PATH_H = 48;
+const TRAIL_DROP = 22;
+const PATH_H = 64;
 const PATH_MID = 22;
-const PATH_PAD = 16;
-const PET_ON_NODE = 46;
-// The highest node is 6px above PATH_MID. The tallest pet is PET_ON_NODE and
-// stands with its bottom on that point, plus 8px of air so it is not clipped.
-const PATH_PET_PAD = PET_ON_NODE - (PATH_MID - 6) + 8;
+const PATH_PAD = 18;
+const PET_ON_NODE = 78;
+// Highest in the middle, so the marks sit on the hill. The pet stands on the current one.
+const PATH_PET_PAD = PET_ON_NODE - PATH_MID + 12;
 const JOURNEY_TRACK_W = 180;
 const STAGE_SLOT = 52;
-const PATH_LINE = 'rgba(255, 255, 255, 0.35)';
 
 // The program as a route. The intro plays once per route per app session.
 let journeyPlayedKey: string | null = null;
@@ -112,8 +111,6 @@ const CURVE_STEPS = 8;
 const BALL_DRAWN = PET_ON_NODE * PET_STAGE_SCALE[1];
 const BALL_RADIUS = BALL_DRAWN / 2;
 const LEAD_MS = 300;
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 type Pt = { x: number; y: number };
 type Sample = { d: number; x: number; y: number };
@@ -126,6 +123,7 @@ type Geom = {
   samples: Sample[];
   segments: Seg[];
   ahead: string[];
+  road: string;
   pops: { i: number; f: number }[];
   dust: { x: number; f: number }[];
 };
@@ -174,20 +172,51 @@ function routeKey(weeks: number, week: number, complete: boolean): string {
   return complete ? `${weeks}:done` : `${weeks}:${week}`;
 }
 
-function curvePoint(a: Pt, b: Pt, u: number): Pt {
-  const dx = (b.x - a.x) / 2;
+/** The crown of the hill: highest in the middle, lower toward both edges. */
+function trailDrop(t: number): number {
+  const u = Math.max(-0.96, Math.min(0.96, (t - 0.5) * 1.8));
+  return TRAIL_DROP * (1 - Math.sqrt(1 - u * u));
+}
+
+function trailAt(t: number, span: number): Pt {
+  return {
+    x: PATH_PAD + span * t,
+    y: PATH_MID + trailDrop(t),
+  };
+}
+
+function trailTangent(t: number, span: number): Pt {
+  const u = Math.max(-0.96, Math.min(0.96, (t - 0.5) * 1.8));
+  const slope = (TRAIL_DROP * u) / Math.sqrt(1 - u * u);
+  return { x: span, y: slope * 1.8 };
+}
+
+function segmentCubic(t0: number, t1: number, span: number): { a: Pt; c1: Pt; c2: Pt; b: Pt } {
+  const a = trailAt(t0, span);
+  const b = trailAt(t1, span);
+  const dt = t1 - t0;
+  const m0 = trailTangent(t0, span);
+  const m1 = trailTangent(t1, span);
+  return {
+    a,
+    b,
+    c1: { x: a.x + (m0.x * dt) / 3, y: a.y + (m0.y * dt) / 3 },
+    c2: { x: b.x - (m1.x * dt) / 3, y: b.y - (m1.y * dt) / 3 },
+  };
+}
+
+function cubicPoint(a: Pt, c1: Pt, c2: Pt, b: Pt, u: number): Pt {
   const m = 1 - u;
   const mm = m * m;
   const uu = u * u;
   return {
-    x: mm * m * a.x + 3 * mm * u * (a.x + dx) + 3 * m * uu * (b.x - dx) + uu * u * b.x,
-    y: mm * m * a.y + 3 * mm * u * a.y + 3 * m * uu * b.y + uu * u * b.y,
+    x: mm * m * a.x + 3 * mm * u * c1.x + 3 * m * uu * c2.x + uu * u * b.x,
+    y: mm * m * a.y + 3 * mm * u * c1.y + 3 * m * uu * c2.y + uu * u * b.y,
   };
 }
 
-function curvePath(a: Pt, b: Pt): string {
-  const dx = (b.x - a.x) / 2;
-  return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+function cubicPath(a: Pt, c1: Pt, c2: Pt, b: Pt): string {
+  return `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`;
 }
 
 function faceTurn(length: number): number {
@@ -224,6 +253,7 @@ function emptyGeom(): Geom {
     samples: [],
     segments: [],
     ahead: [],
+    road: '',
     pops: [],
     dust: [],
   };
@@ -234,10 +264,7 @@ function buildGeom(width: number, weeks: number, currentWeek: number, complete: 
   const span = Math.max(0, width - PATH_PAD * 2);
   const stops: Pt[] = Array.from({ length: weeks }, (_, i) => {
     const t = weeks > 1 ? i / (weeks - 1) : 0.5;
-    return {
-      x: PATH_PAD + span * t,
-      y: PATH_MID + Math.sin(t * Math.PI * 2) * 6,
-    };
+    return trailAt(t, span);
   });
   const rawGoal = complete ? weeks - 1 : currentWeek - 1;
   const goal = Math.max(-1, Math.min(weeks - 1, rawGoal));
@@ -250,17 +277,17 @@ function buildGeom(width: number, weeks: number, currentWeek: number, complete: 
   samples.push({ d: 0, x: first.x, y: first.y });
   nodeD.push(0);
   let travelled = 0;
+  let road = `M ${first.x} ${first.y}`;
 
   for (let i = 0; i < stops.length - 1; i++) {
-    const a = stops[i];
-    const b = stops[i + 1];
-    if (!a || !b) continue;
-    const path = curvePath(a, b);
+    const seg = segmentCubic(i / (stops.length - 1), (i + 1) / (stops.length - 1), span);
+    const path = cubicPath(seg.a, seg.c1, seg.c2, seg.b);
+    road += ` C ${seg.c1.x} ${seg.c1.y}, ${seg.c2.x} ${seg.c2.y}, ${seg.b.x} ${seg.b.y}`;
     if (i < goal) {
       const start = travelled;
-      let prev = a;
+      let prev = seg.a;
       for (let k = 1; k <= CURVE_STEPS; k++) {
-        const p = curvePoint(a, b, k / CURVE_STEPS);
+        const p = cubicPoint(seg.a, seg.c1, seg.c2, seg.b, k / CURVE_STEPS);
         travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
         const last = samples[samples.length - 1];
         const d = last && travelled <= last.d ? last.d + 0.001 : travelled;
@@ -307,24 +334,32 @@ function buildGeom(width: number, weeks: number, currentWeek: number, complete: 
     }
   }
 
-  return { stops, goal, length, turn: faceTurn(length), samples, segments, ahead, pops, dust };
+  return { stops, goal, length, turn: faceTurn(length), samples, segments, ahead, road, pops, dust };
 }
 
 function JourneyRoute({
   weeks,
   currentWeek,
   complete,
+  startLabel = 'Start',
   finishLabel,
   pet,
   petSettled,
+  ends = true,
+  onDark = false,
 }: {
   weeks: number;
   currentWeek: number;
   complete: boolean;
+  startLabel?: string;
   finishLabel: string;
   pet: PetState | null;
   /** The pet lookup has answered (with or without a pet), so the intro can start. */
   petSettled: boolean;
+  /** Names at the two ends of the path. */
+  ends?: boolean;
+  /** Trail drawn on a dark sky. */
+  onDark?: boolean;
 }) {
   const reduceMotion = useReduceMotion();
   const [width, setWidth] = useState(0);
@@ -402,20 +437,6 @@ function JourneyRoute({
       }),
     };
   }, [geom, complete, dist, unwind]);
-
-  const reveal = useMemo(
-    () =>
-      geom.segments.map((seg) => ({
-        d: seg.d,
-        dash: seg.dash,
-        offset: line.interpolate({
-          inputRange: [seg.from, seg.to],
-          outputRange: [seg.dash, 0],
-          extrapolate: 'clamp',
-        }),
-      })),
-    [geom, line],
-  );
 
   const nodeLooks = useMemo(
     () =>
@@ -764,43 +785,18 @@ function JourneyRoute({
       <View
         style={styles.pathWrap}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        accessibilityLabel={complete ? 'Program complete' : `Week ${currentWeek} of ${weeks}`}
+        accessibilityLabel={
+          complete
+            ? `${Math.max(weeks - 1, 0)} of ${Math.max(weeks - 1, 0)} sessions this week`
+            : `${Math.max(currentWeek - 1, 0)} of ${Math.max(weeks - 1, 0)} sessions this week`
+        }
       >
-        <View style={styles.pathShift}>
-          {width > 0 ? (
-            <Svg width={width} height={PATH_H}>
-              {reveal.map((seg, i) => (
-                <AnimatedPath
-                  key={`seg-${i}`}
-                  d={seg.d}
-                  fill="none"
-                  stroke={PATH_LINE}
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  strokeDasharray={[seg.dash, seg.dash]}
-                  strokeDashoffset={seg.offset}
-                />
-              ))}
-              {geom.ahead.map((d, i) => (
-                <Path
-                  key={`ahead-${i}`}
-                  d={d}
-                  fill="none"
-                  stroke={PATH_LINE}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeDasharray="1 7"
-                />
-              ))}
-            </Svg>
-          ) : null}
-        </View>
         {width > 0
           ? stops.map((s, i) => {
+              // The first point is where the week starts. Marks are the sessions themselves.
+              if (i === 0) return null;
               const reached = currentIdx >= 0 && i <= currentIdx;
               const look = nodeLooks[i];
-              const end = complete && i === lastIdx;
-              // The current node is bare ground: the pet stands on it, so no dot shows under its feet.
               const plain = !complete && i === currentIdx;
               const scale = scalesRef.current[i];
               return (
@@ -809,19 +805,25 @@ function JourneyRoute({
                   pointerEvents="none"
                   style={[styles.nodeSpot, { left: s.x - 16, top: PATH_PET_PAD + s.y - 16 }]}
                 >
-                  <View style={styles.nodeAhead} />
-                  {reached && look && scale ? (
+                  {!plain && !reached ? (
+                    <View style={[styles.tickOpen, onDark ? styles.tickOpenOnSky : null]} />
+                  ) : null}
+                  {reached && (!plain || !pet) && look && scale ? (
                     <>
                       <Animated.View
                         style={[
                           styles.nodeRing,
+                          onDark ? styles.nodeRingOnHill : null,
                           { opacity: look.ringOpacity, transform: [{ scale: look.ringScale }] },
                         ]}
                       />
-                      <Animated.View style={[styles.nodeFill, { transform: [{ scale }] }]}>
-                        {end ? <View style={styles.nodeHalo} /> : null}
-                        <View style={styles.nodeDisk}>{plain ? null : <View style={styles.nodeDot} />}</View>
-                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.tickDone,
+                          onDark ? styles.tickDoneOnSky : null,
+                          { transform: [{ scale }] },
+                        ]}
+                      />
                     </>
                   ) : null}
                 </View>
@@ -830,13 +832,13 @@ function JourneyRoute({
           : null}
         {width > 0 ? (
           <View pointerEvents="none" style={styles.dustLane}>
-            <Dust ref={dustRef} color={DUST_PALE} />
+            <Dust ref={dustRef} color={DUST_EARTH} />
           </View>
         ) : null}
-        {width > 0 ? (
+        {width > 0 && ends ? (
           <View style={styles.pathLabels}>
             {currentIdx !== 0 ? (
-              <Text style={[styles.pathLabel, styles.pathLabelStart]}>Start</Text>
+              <Text style={[styles.pathLabel, styles.pathLabelStart]}>{startLabel}</Text>
             ) : null}
             {currentIdx !== lastIdx ? (
               <Text style={[styles.pathLabel, styles.pathLabelEnd]}>{finishLabel}</Text>
@@ -904,16 +906,37 @@ function JourneyRoute({
 
 function JourneyFrame({
   topInset,
+  sky,
   children,
 }: {
   topInset: number;
-  children: React.ReactNode;
+  sky: DaySky;
+  children?: React.ReactNode;
 }) {
+  const [box, setBox] = useState({ width: 0, height: 0 });
   return (
     <View style={styles.journeyBleed}>
-      {/* Keeps the pull-down area green instead of showing the page background. */}
-      <View pointerEvents="none" style={styles.journeyOverscroll} />
-      <View style={[styles.journeyPanel, { paddingTop: topInset + 16 }]}>
+      <View pointerEvents="none" style={[styles.journeyOverscroll, { backgroundColor: sky.top }]} />
+      <View
+        style={[styles.journeyPanel, { paddingTop: topInset + 16, backgroundColor: sky.top }]}
+        onLayout={(event) => {
+          const width = Math.round(event.nativeEvent.layout.width);
+          const height = Math.round(event.nativeEvent.layout.height);
+          setBox((current) =>
+            current.width === width && current.height === height ? current : { width, height },
+          );
+        }}
+      >
+        {box.width > 0 && box.height > 0 ? (
+          <MeadowStage
+            width={box.width}
+            height={box.height}
+              groundY={topInset + 86 + PATH_PET_PAD + PATH_MID + 12}
+            frame={false}
+            day={sky}
+            still
+          />
+        ) : null}
         {children}
       </View>
     </View>
@@ -927,15 +950,156 @@ const RANGE_DAYS: Record<PainRange | ActivityRange, number> = {
   '6m': 180,
 };
 
+function countSessionsThisWeek(completions: RawCompletion[], now = new Date()): number {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  let count = 0;
+  for (const row of completions) {
+    const at = new Date(row.completed_at);
+    if (at >= start && at < end) count += 1;
+  }
+  return count;
+}
+
+function deckCardWidth(screen: number): number {
+  return Math.max(240, screen - 24 - DECK_GAP - DECK_PEEK);
+}
+
+function ProgressDeck({ pages }: { pages: { key: string; title: string; node: React.ReactNode }[] }) {
+  const { width } = useWindowDimensions();
+  const cardW = deckCardWidth(width);
+  const stride = cardW + DECK_GAP;
+  const loop = pages.length > 1;
+  const items = loop ? [pages[pages.length - 1]!, ...pages, pages[0]!] : pages;
+  const scroller = useRef<ScrollView>(null);
+  const [active, setActive] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!loop) return;
+    scroller.current?.scrollTo({ x: stride, animated: false });
+  }, [loop, stride]);
+
+  function pageFromOffset(x: number): number {
+    const index = Math.round(x / stride);
+    if (!loop) return Math.min(pages.length - 1, Math.max(0, index));
+    if (index <= 0) return pages.length - 1;
+    if (index >= pages.length + 1) return 0;
+    return index - 1;
+  }
+
+  function settle(x: number) {
+    if (!loop) {
+      setActive(pageFromOffset(x));
+      return;
+    }
+    const index = Math.round(x / stride);
+    if (index <= 0) {
+      scroller.current?.scrollTo({ x: pages.length * stride, animated: false });
+      setActive(pages.length - 1);
+      return;
+    }
+    if (index >= pages.length + 1) {
+      scroller.current?.scrollTo({ x: stride, animated: false });
+      setActive(0);
+      return;
+    }
+    setActive(index - 1);
+  }
+
+  function go(page: number) {
+    const next = ((page % pages.length) + pages.length) % pages.length;
+    scroller.current?.scrollTo({ x: (loop ? next + 1 : next) * stride, animated: true });
+    setActive(next);
+  }
+
+  return (
+    <View style={styles.deck}>
+      {pages.length > 1 ? (
+        <View style={styles.tabRow}>
+          {pages.map((page, index) => {
+            const on = index === active;
+            return (
+              <TouchableOpacity
+                key={page.key}
+                onPress={() => go(index)}
+                activeOpacity={0.75}
+                style={[styles.tab, on ? styles.tabOn : styles.tabOff]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={on ? styles.tabTextOn : styles.tabTextOff}>{page.title}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+      <View style={styles.deckStage}>
+        <ScrollView
+          ref={scroller}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          snapToInterval={stride}
+          snapToAlignment="start"
+          disableIntervalMomentum
+          contentOffset={{ x: loop ? stride : 0, y: 0 }}
+          contentContainerStyle={styles.deckContent}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={(event) => settle(event.nativeEvent.contentOffset.x)}
+        >
+          {items.map((page, index) => (
+            <View
+              key={`${page.key}-${index}`}
+              style={[
+                styles.card,
+                styles.deckCard,
+                { width: cardW, marginRight: index === items.length - 1 ? 0 : DECK_GAP },
+              ]}
+            >
+              {page.node}
+            </View>
+          ))}
+        </ScrollView>
+        {loop ? (
+          <>
+            <View pointerEvents="none" style={[styles.edgeFade, styles.edgeLeft]}>
+              <LinearGradient
+                colors={[colors.background, 'rgba(246, 237, 224, 0)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </View>
+            <View pointerEvents="none" style={[styles.edgeFade, styles.edgeRight]}>
+              <LinearGradient
+                colors={['rgba(246, 237, 224, 0)', colors.background]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </View>
+          </>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  const sky = useDaySky();
   const { user } = useAuth();
 
   const [totalSessions, setTotalSessions] = useState(0);
   const [userProgram, setUserProgram] = useState<UserProgram | null>(null);
-  const [durationWeeks, setDurationWeeks] = useState(5);
+  const [durationWeeks, setDurationWeeks] = useState<number | null>(null);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const [allPainCheckins, setAllPainCheckins] = useState<RawCheckin[]>([]);
   const [allActivityCompletions, setAllActivityCompletions] = useState<RawCompletion[]>([]);
@@ -943,7 +1107,8 @@ export default function ProgressScreen() {
   const [activityRange, setActivityRange] = useState<ActivityRange>('1m');
   const [workoutDays, setWorkoutDays] = useState<number[]>([]);
   const [daysSince, setDaysSince] = useState<string | null>(null);
-  const [pet, setPet] = useState<PetState | null>(null);
+  const [petState, setPet] = useState<PetState | null>(null);
+  const pet = useNamedPet(petState);
   const [petSettled, setPetSettled] = useState(false);
 
   useFocusEffect(
@@ -977,9 +1142,12 @@ export default function ProgressScreen() {
     [allActivityCompletions, activityRange, activityAccountStart],
   );
 
+  const painChartW = Math.max(120, deckCardWidth(screenW) - 40 - PAIN_Y_AXIS_W);
+  const activityChartW = Math.max(120, painChartW - 12);
+
   const activityLayout = useMemo(
-    () => activityBarLayout(weeklyBarData.length, ACTIVITY_CHART_W),
-    [weeklyBarData.length],
+    () => activityBarLayout(weeklyBarData.length, activityChartW),
+    [weeklyBarData.length, activityChartW],
   );
 
   const activityChartData = useMemo(
@@ -1026,6 +1194,7 @@ export default function ProgressScreen() {
       setPetSettled(true);
     });
     const since = historyWindowStartISO(PROGRESS_HISTORY_DAYS);
+    let refreshed = false;
     try {
 
     const [
@@ -1061,24 +1230,37 @@ export default function ProgressScreen() {
       AsyncStorage.getItem(STORAGE_WORKOUT_DAYS_SINCE),
     ]);
 
+    const coreFailed =
+      painRes.error != null ||
+      activityRes.error != null ||
+      totalRes.error != null ||
+      (upRes.error != null && upRes.error.code !== 'PGRST116');
+    if (coreFailed) {
+      setLoadError(true);
+    } else {
+    setLoadError(false);
     let planSessionsPerWeek = sessionsPerWeek;
     if (!upRes.error || upRes.error.code === 'PGRST116') {
       const up = upRes.data;
       setUserProgram(up);
 
       if (up?.active_plan_id) {
-        const { data: planRes } = await supabase
+        const { data: planRes, error: planError } = await supabase
           .from('user_program_plans')
           .select('duration_weeks, sessions_per_week')
           .eq('id', up.active_plan_id)
           .eq('status', 'active')
           .single();
 
-        if (planRes) {
-          setDurationWeeks(planRes.duration_weeks);
-          setSessionsPerWeek(planRes.sessions_per_week);
-          planSessionsPerWeek = planRes.sessions_per_week;
+        if (planError || !planRes) {
+          setLoadError(true);
+          return;
         }
+        setDurationWeeks(planRes.duration_weeks);
+        setSessionsPerWeek(planRes.sessions_per_week);
+        planSessionsPerWeek = planRes.sessions_per_week;
+      } else {
+        setDurationWeeks(null);
       }
     }
 
@@ -1099,9 +1281,14 @@ export default function ProgressScreen() {
     }
     setWorkoutDays(days);
     setDaysSince(nextSince);
+    refreshed = true;
+    }
 
+    } catch {
+      setLoadError(true);
     } finally {
-      finishTabRefresh('progress');
+      if (refreshed) finishTabRefresh('progress');
+      else failTabRefresh('progress');
       setLoaded(true);
     }
   }
@@ -1109,31 +1296,18 @@ export default function ProgressScreen() {
   const hasEnoughData = allPainCheckins.filter((c) => c.type === 'before').length >= 3;
   const showPainChart = hasEnoughData && painRangeHasData;
 
-  const programWeek = userProgram
-    ? Math.min(userProgram.current_week, durationWeeks)
-    : 1;
-  const isProgramComplete = userProgram
+  const isProgramComplete = userProgram != null && durationWeeks != null
     ? userProgram.current_week > durationWeeks
     : false;
-  const weeksRemaining = durationWeeks - programWeek;
-
-  const estimatedEnd = userProgram && !isProgramComplete
-    ? getEstimatedCompletion(
-        userProgram.current_week,
-        userProgram.current_session,
-        durationWeeks,
-        sessionsPerWeek,
-      )
-    : null;
 
   const effectiveDays =
     workoutDays.length === sessionsPerWeek
       ? workoutDays
       : computeDefaultWorkoutDays(sessionsPerWeek);
   const weekSchedule = activeWorkoutDaysThisWeek(effectiveDays, daysSince);
-  const weekTarget = weekSchedule.length > 0 ? weekSchedule.length : sessionsPerWeek;
+  const weekTarget = sessionsPerWeek;
   const weekDoneFlags = computeWeekDays(allActivityCompletions, 0);
-  const sessionsThisWeek = weekDoneFlags.filter(Boolean).length;
+  const sessionsThisWeek = countSessionsThisWeek(allActivityCompletions);
   const missedThisWeek =
     workoutDays.length === sessionsPerWeek
       ? countMissedThisWeek(allActivityCompletions, weekSchedule)
@@ -1150,12 +1324,34 @@ export default function ProgressScreen() {
     return (
       <TabFadeWrapper>
         <View style={styles.container}>
-          <JourneyFrame topInset={insets.top}>
-            <Text style={styles.journeyLabel}>PROGRESS</Text>
-          </JourneyFrame>
+          <JourneyFrame topInset={insets.top} sky={sky} />
           <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonBlock} />
           <Skeleton height={100} borderRadius={radius.card} style={styles.skeletonBlock} />
           <Skeleton height={180} borderRadius={radius.card} style={styles.skeletonBlock} />
+        </View>
+      </TabFadeWrapper>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <TabFadeWrapper>
+        <View style={styles.container}>
+          <JourneyFrame topInset={insets.top} sky={sky} />
+          <Text style={styles.placeholder}>Could not load your progress.</Text>
+          <Text style={styles.placeholder}>Check your connection and try again.</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              hapticSelection();
+              void fetchAll();
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Try again"
+          >
+            <Text style={styles.retryButtonText}>Try again</Text>
+          </TouchableOpacity>
         </View>
       </TabFadeWrapper>
     );
@@ -1170,40 +1366,42 @@ export default function ProgressScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <JourneyFrame topInset={insets.top}>
-          <Text style={styles.journeyLabel}>PROGRESS</Text>
-          <Text style={styles.journeyHeadline}>
-            {userProgram
-              ? isProgramComplete
-                ? 'Complete'
-                : `Week ${programWeek}`
-              : pet
-                ? petName
-                : 'Progress'}
-            {userProgram && !isProgramComplete ? (
-              <Text style={styles.journeyHeadlineDim}> of {durationWeeks}</Text>
-            ) : null}
-          </Text>
-          {userProgram ? (
-            <Text style={styles.journeySub}>
-              {isProgramComplete
-                ? 'You finished your program!'
-                : weeksRemaining > 0
-                ? `${weeksRemaining} week${weeksRemaining !== 1 ? 's' : ''} to go`
-                : 'Final week'}
-              {estimatedEnd ? `  ·  Est. finish ${estimatedEnd}` : null}
+        <JourneyFrame topInset={insets.top} sky={sky}>
+          {userProgram && !isProgramComplete && weekTarget > 0 ? (
+            <>
+              <Text style={[styles.journeyLabel, sky.ink === 'light' ? styles.onSky : null]}>
+                {durationWeeks != null && userProgram
+                  ? `Week ${userProgram.current_week} of ${durationWeeks}`
+                  : 'This week'}
+              </Text>
+              <Text
+                style={[styles.journeyHeadline, sky.ink === 'light' ? styles.onSkyTitle : null]}
+                accessibilityLabel={`${sessionsThisWeek} of ${weekTarget} sessions this week`}
+              >
+                {sessionsThisWeek}
+                <Text style={[styles.journeyHeadlineDim, sky.ink === 'light' ? styles.onSky : null]}> / {weekTarget}</Text>
+              </Text>
+              <JourneyRoute
+                weeks={weekTarget + 1}
+                currentWeek={Math.min(sessionsThisWeek, weekTarget) + 1}
+                complete={sessionsThisWeek >= weekTarget}
+                finishLabel=""
+                ends={false}
+                onDark
+                pet={pet}
+                petSettled={petSettled}
+              />
+            </>
+          ) : (
+            <Text style={[styles.journeyHeadline, sky.ink === 'light' ? styles.onSkyTitle : null]}>
+              {userProgram && durationWeeks != null
+                ? `${durationWeeks} weeks done`
+                : pet
+                  ? petName
+                  : 'Sessions'}
             </Text>
-          ) : null}
-          {userProgram ? (
-            <JourneyRoute
-              weeks={durationWeeks}
-              currentWeek={programWeek}
-              complete={isProgramComplete}
-              finishLabel={`Week ${durationWeeks}`}
-              pet={pet}
-              petSettled={petSettled}
-            />
-          ) : pet ? (
+          )}
+          {!userProgram && pet ? (
             <View style={styles.growthPillWrap}>
               <View style={styles.growthPill}>
                 <Text style={styles.growthPillText}>{petGrowthCopy(pet)}</Text>
@@ -1237,8 +1435,14 @@ export default function ProgressScreen() {
           </View>
         ) : null}
 
-        {userProgram && !isProgramComplete && (
-          <View style={styles.card}>
+        <ProgressDeck
+          pages={[
+            ...(userProgram && !isProgramComplete
+              ? [{
+                  key: 'week',
+                  title: 'This week',
+                  node: (
+                    <>
             <Text style={styles.cardTitle}>This week</Text>
             <View style={styles.programProgressWeekRow}>
               <View style={styles.programProgressCopy}>
@@ -1297,11 +1501,15 @@ export default function ProgressScreen() {
                 <Text style={styles.legendText}>Missed</Text>
               </View>
             </View>
-          </View>
-        )}
-
-        {/* Pain Trend */}
-        <View style={styles.card}>
+                    </>
+                  ),
+                }]
+              : []),
+            {
+              key: 'pain',
+              title: 'Pain',
+              node: (
+                <>
           <View style={styles.cardHeaderRow}>
             <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Pain trend</Text>
             <View style={styles.rangeRow}>
@@ -1330,11 +1538,11 @@ export default function ProgressScreen() {
                 data={beforeData}
                 data2={afterData}
                 height={150}
-                width={PAIN_CHART_DATA_W}
+                width={painChartW}
                 spacing={
                   beforeData.length > 1
-                    ? Math.max(16, Math.floor((PAIN_CHART_DATA_W - 8) / (beforeData.length - 1)))
-                    : PAIN_CHART_DATA_W - 8
+                    ? Math.max(16, Math.floor((painChartW - 8) / (beforeData.length - 1)))
+                    : painChartW - 8
                 }
                 color1={colors.textSecondary}
                 color2={colors.primary}
@@ -1374,10 +1582,14 @@ export default function ProgressScreen() {
                 : 'Complete more sessions to see your pain trend.'}
             </Text>
           )}
-        </View>
-
-        {/* Activity */}
-        <View style={styles.card}>
+                </>
+              ),
+            },
+            {
+              key: 'activity',
+              title: 'Activity',
+              node: (
+                <>
           <View style={styles.cardHeaderRow}>
             <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Activity</Text>
             <View style={styles.rangeRow}>
@@ -1405,7 +1617,7 @@ export default function ProgressScreen() {
               <BarChart
                 key={activityRange}
                 data={activityChartData}
-                width={ACTIVITY_CHART_W}
+                width={activityChartW}
                 height={128}
                 barWidth={activityLayout.barWidth}
                 spacing={activityLayout.spacing}
@@ -1442,7 +1654,11 @@ export default function ProgressScreen() {
               Complete sessions to see your activity history.
             </Text>
           )}
-        </View>
+                </>
+              ),
+            },
+          ]}
+        />
       </ScrollView>
     </TabFadeWrapper>
   );
@@ -1468,43 +1684,107 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 600,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.background,
   },
   journeyPanel: {
-    backgroundColor: colors.primary,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    overflow: 'visible',
-  },
-  journeyLabel: {
-    ...type.label,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 6,
+    paddingBottom: 22,
+    overflow: 'hidden',
   },
   journeyHeadline: {
     ...type.title,
-    color: '#FFFFFF',
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  journeyLabel: {
+    ...type.label,
+    color: colors.textSecondary,
+    marginBottom: 2,
   },
   journeyHeadlineDim: {
     fontSize: 20,
-    fontWeight: '400',
-    letterSpacing: 0,
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
-  journeySub: {
-    ...type.body,
-    color: 'rgba(255, 255, 255, 0.85)',
-    marginTop: 4,
+  onSky: {
+    color: 'rgba(255, 255, 255, 0.78)',
+  },
+  onSkyTitle: {
+    color: '#FFFFFF',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  tab: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  tabOn: {
+    backgroundColor: colors.primary,
+  },
+  tabOff: {
+    backgroundColor: colors.primaryMuted,
+  },
+  tabTextOn: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  tabTextOff: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryDeep,
+  },
+  deck: {
+    marginHorizontal: -24,
+    marginBottom: 8,
+  },
+  deckStage: {
+    position: 'relative',
+  },
+  deckContent: {
+    paddingHorizontal: 24,
+    alignItems: 'stretch',
+  },
+  deckCard: {
+    marginBottom: 0,
+    minHeight: 300,
+  },
+  edgeFade: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 28,
+  },
+  edgeLeft: {
+    left: 0,
+  },
+  edgeRight: {
+    right: 0,
+  },
+  deckDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 14,
+    height: 8,
+  },
+  deckDot: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
   },
   pathWrap: {
     marginTop: 18,
     height: PATH_PET_PAD + PATH_H + 20,
     overflow: 'visible',
-  },
-  pathShift: {
-    marginTop: PATH_PET_PAD,
   },
   pathLabels: {
     position: 'absolute',
@@ -1517,7 +1797,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.primaryDeep,
   },
   pathLabelStart: {
     left: 0,
@@ -1540,56 +1820,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nodeAhead: {
-    position: 'absolute',
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: PATH_LINE,
-    left: 9.5,
-    top: 9.5,
+  tickOpen: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(62, 107, 78, 0.4)',
+    backgroundColor: 'transparent',
+  },
+  tickOpenOnSky: {
+    borderColor: 'rgba(255, 255, 255, 0.72)',
+  },
+  tickDone: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
+  },
+  tickDoneOnSky: {
+    backgroundColor: '#FFFFFF',
   },
   nodeRing: {
     position: 'absolute',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    left: 7,
-    top: 7,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    left: 6,
+    top: 6,
   },
-  nodeFill: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    left: 1,
-    top: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nodeHalo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  nodeDisk: {
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nodeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.surface,
+  nodeRingOnHill: {
+    borderColor: 'rgba(255, 255, 255, 0.85)',
   },
   growthPillWrap: {
     alignItems: 'center',
@@ -1698,6 +1960,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  retryButton: {
+    alignSelf: 'center',
+    marginTop: 4,
+    backgroundColor: colors.primary,
+    borderRadius: radius.card,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   legendRow: {
     flexDirection: 'row',

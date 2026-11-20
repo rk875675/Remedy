@@ -1,0 +1,37 @@
+{
+  "note": "Registered from assets/pet (copy of the app art). Stage 1-5 = lifetime sessions 0/1/4/9/15. HELD: not read by the live engine.",
+  "stages": [
+    { "stage": 1, "sessions": 0, "label": "closed ball", "file": "s1_idle.png" },
+    { "stage": 2, "sessions": 1, "label": "peeking out", "file": "s2_idle.png" },
+    { "stage": 3, "sessions": 4, "label": "sitting", "file": "s3_idle.png" },
+    { "stage": 4, "sessions": 9, "label": "standing", "file": "s4_idle.png" },
+    { "stage": 5, "sessions": 15, "label": "fully grown", "file": "s5_idle.png" }
+  ],
+  "moods": {
+    "angry": "s4_angry.png",
+    "sad": "s4_sad.png",
+    "happy": "s5_happy.png",
+    "sleepy": "s4_sleepy.png",
+    "reading": "s4_reading.png",
+    "stretching": "s4_stretching.png",
+    "celebrating": "s4_celebrating.png",
+    "bed": "bed.png",
+    "wave": "s1_wave.png",
+    "love": "s1_love.png",
+    "notes": "s1_notes.png",
+    "inspect": "s1_inspect.png",
+    "clipboard": "s1_clipboard.png",
+    "thinking": "s1_thinking.png",
+    "bell": "s1_bell.png",
+    "doctor": "s1_doctor.png",
+    "peeking": "s1_peeking.png",
+    "party": "s1_party.png",
+    "alarm": "s1_alarm.png",
+    "zen": "s1_zen.png",
+    "lifting": "s1_lifting.png",
+    "study": "s1_study.png",
+    "pointing": "s1_pointing.png",
+    "night": "s1_night.png",
+    "flag": "s1_flag.png"
+  }
+}

@@ -19,6 +19,7 @@ import {
   rebuildOnboardingStack,
   shouldOpenMatch,
 } from '../context/OnboardingContext';
+import { useHasPet } from '../lib/onboardingFlow';
 import { PremiumProvider, usePremium } from '../context/PremiumContext';
 import { SuperwallWrapper } from '../lib/superwall';
 import { getPendingPurchase } from '../lib/pendingPurchase';
@@ -37,7 +38,8 @@ function RootNavigator() {
   // refreshPremium() calls update all three atomically, preventing the guard from
   // re-routing back to building-plan with stale state after a successful run.
   const { premium, onboardingDone, hasActivePlan } = usePremium();
-  const { retaking, answers, hydrated, progress } = useOnboarding();
+  const { retaking, answers, intake, hydrated, progress } = useOnboarding();
+  const hasPet = useHasPet();
   const segments = useSegments();
   const router = useRouter();
   // Whether a paywall purchase is stashed in AsyncStorage awaiting post-signup
@@ -176,22 +178,23 @@ function RootNavigator() {
     // off a legal document they explicitly opened.
     const inLegal = segments[0] === '(legal)';
 
-    // Quiz finished in THIS funnel (safety accepted + every required answer + q8).
-    // Leftover answers from a previous run must not count — that dumped mid-quiz
-    // users onto match ("Your Program") after a reload.
-    const quizFinished = shouldOpenMatch(progress, answers);
-    const funnelInProgress = hasMeaningfulIncompleteFunnel(progress, answers);
+    // Quiz finished in THIS funnel (every applicable step through safety, legacy
+    // answers, and a complete intake). Leftover answers from a previous run must
+    // not count — that dumped mid-quiz users onto match after a reload.
+    const flow = { answers, intake, progress, hasPet };
+    const quizFinished = shouldOpenMatch(flow);
+    const funnelInProgress = hasMeaningfulIncompleteFunnel(flow);
 
     const applyFunnelResume = (): boolean => {
       if (funnelResumeRan.current || inAuth || inLegal || inBuilding) return false;
       funnelResumeRan.current = true;
       if (quizFinished) {
-        rebuildOnboardingStack(router, 'match', answers);
+        rebuildOnboardingStack(router, 'match', flow);
         return true;
       }
-      const resumeStep = getResumeStep(progress, answers);
+      const resumeStep = getResumeStep(flow);
       if (resumeStep === 'welcome') return false;
-      rebuildOnboardingStack(router, resumeStep, answers);
+      rebuildOnboardingStack(router, resumeStep, flow);
       return true;
     };
 
@@ -204,14 +207,37 @@ function RootNavigator() {
       // before a force-quit is resumed correctly rather than being routed back to a
       // blank welcome screen.
       if (!hydrated || hasPendingPurchase === null || hasPendingPromo === null || !deepLinkChecked) return;
-      if ((hasPendingPurchase || hasPendingPromo) && quizFinished) {
+      if ((hasPendingPurchase || hasPendingPromo) && quizFinished && progress?.step === 'match') {
         // Purchased (or validated a promo code) on the paywall, then quit before
         // finishing sign-up. Resume at the auth entry so building-plan can persist
         // the answers and verify the purchase / redeem the code.
-        if (!inAuth) {
-          router.replace('/(auth)/sign-in?mode=signup');
+        // Cold start only, and only once the program screen was actually reached.
+        // The quiz becomes "finished" the moment safety is accepted — still before
+        // "Building your plan". Doing this on every pass dumped a closed paywall
+        // (or a leftover stash) straight onto sign-up in the middle of onboarding.
+        const coldStart = !unauthGuardRan.current && !hadSession.current;
+        const onMatch = inOnboarding && segs[1] === 'match';
+        // On the program screen the paywall itself decides. A close must not be
+        // replaced out from under the paywall, and leaving that screen afterwards
+        // must not count as a fresh launch.
+        if (onMatch) {
+          unauthGuardRan.current = true;
+          return;
         }
-        return;
+        if (inLegal) return;
+        if (coldStart && !inAuth) {
+          unauthGuardRan.current = true;
+          let active = true;
+          void Promise.all([getPendingPurchase(), getPendingPromo()]).then(([purchase, promo]) => {
+            if (!active) return;
+            setHasPendingPurchase(!!purchase);
+            setHasPendingPromo(!!promo);
+            if (purchase || promo) router.replace('/(auth)/sign-in?mode=signup');
+          });
+          return () => {
+            active = false;
+          };
+        }
       }
       const firstRun = !unauthGuardRan.current;
       unauthGuardRan.current = true;
@@ -269,11 +295,11 @@ function RootNavigator() {
     if (funnelInProgress && !retaking && !onboardingDone) {
       if (applyFunnelResume()) return;
       if (!inOnboarding && !inBuilding && !inLegal && !inAuth) {
-        const resumeStep = getResumeStep(progress, answers);
+        const resumeStep = getResumeStep(flow);
         if (resumeStep === 'welcome') {
           router.replace('/(onboarding)');
         } else {
-          rebuildOnboardingStack(router, resumeStep, answers);
+          rebuildOnboardingStack(router, resumeStep, flow);
         }
       }
       return;
@@ -329,9 +355,14 @@ function RootNavigator() {
       if (retaking && inOnboarding) return;
       router.replace('/(tabs)');
     }
-  }, [session, loading, onboardingDone, premium, hasActivePlan, retaking, answers, hydrated, hasPendingPurchase, hasPendingPromo, deepLinkChecked, progress, segments]);
+  }, [session, loading, onboardingDone, premium, hasActivePlan, retaking, answers, intake, hasPet, hydrated, hasPendingPurchase, hasPendingPromo, deepLinkChecked, progress, segments]);
 
-  const supplementaryReady = !loading && !(session && (onboardingDone === null || premium === null || hasActivePlan === null));
+  // Hold the splash until the saved funnel is loaded, so welcome cannot paint
+  // (and record a blank step) before a relaunch is sent back to its question.
+  const supplementaryReady =
+    !loading &&
+    hydrated &&
+    !(session && (onboardingDone === null || premium === null || hasActivePlan === null));
 
   useEffect(() => {
     if (supplementaryReady && !initialLoadComplete) {

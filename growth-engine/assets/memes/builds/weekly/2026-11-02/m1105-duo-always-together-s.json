@@ -1,0 +1,20 @@
+{
+  "id": "m1105-duo-always-together-s",
+  "format": "duo-always-together",
+  "variantOf": "m1105-duo-always-together",
+  "changed": "stories text",
+  "background": "duo-always-together/02-background.jpg",
+  "gif": { "file": "duo-always-together/03-motion.gif", "x": 0, "y": 701, "width": 891 },
+  "audio": { "file": "duo-always-together/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 14.0,
+  "text": [
+    { "lines": ["how are you and that", "heating pad always", "in the same room?"], "y": 348, "box": "white" },
+    { "lines": ["Me"], "x": 277, "y": 740, "size": 56 },
+    { "lines": ["My heating pad"], "x": 693, "y": 731, "size": 56 }
+  ],
+  "title": "How are you and that heating pad always in the same room?",
+  "caption": "how are you and that heating pad always in the same room?",
+  "description": "Living room, two cats dancing, Stories caption on a white box.",
+  "musicCredit": "Sound: RMB (Ring My Bell) — Aitch",
+  "results": []
+}

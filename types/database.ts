@@ -1,3 +1,11 @@
+import type { Intake } from '../lib/intake';
+
+export type UserIntakeRow = {
+  user_id: string;
+  version: number;
+  answers: Intake;
+};
+
 export type Profile = {
   id: string;
   display_name: string | null;
@@ -343,6 +351,19 @@ export type Database = {
           sessions_per_week_preference?: number | null;
           completed_at?: string | null;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      user_intake: {
+        Row: UserIntakeRow;
+        Insert: {
+          user_id: string;
+          version: number;
+          answers: Intake;
+        };
+        Update: {
+          version?: number;
+          answers?: Intake;
         };
         Relationships: [];
       };

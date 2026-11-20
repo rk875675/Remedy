@@ -20,7 +20,7 @@ Onboarding takes a few minutes. A sample of the questions, some general and some
 
 ## Get a program built from those answers
 
-- **Length.** 4, 5, or 6 weeks, depending on how long your back has bothered you.
+- **Length.** 10 to 16 weeks, depending on how long your back has bothered you and how it behaves.
 
 - **Schedule.** The days you chose, with a suggested number of sessions based on your activity level.
 
@@ -45,6 +45,8 @@ Each session opens with a preview: how long it takes, how many exercises, the ma
 - Cool down with a recovery stretch.
 
 - Rate your pain again.
+
+Your armadillo coaches from the corner of the screen, and it uncurls a little when you finish. It is the one thing in the app allowed to be smug about it.
 
 4
 

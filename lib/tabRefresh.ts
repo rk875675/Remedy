@@ -28,6 +28,12 @@ export function finishTabRefresh(key: string): void {
   lastOkAt.set(key, Date.now());
 }
 
+/** A failed load must not count as a successful refresh. */
+export function failTabRefresh(key: string): void {
+  inFlight.set(key, false);
+  lastOkAt.delete(key);
+}
+
 export function invalidateTabRefresh(key: string): void {
   lastOkAt.delete(key);
 }

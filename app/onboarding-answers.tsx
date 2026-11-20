@@ -42,6 +42,7 @@ import type { OnboardingAnswers } from '../types/database';
 import { PetSays } from '../components/pet/PetSays';
 import { PET_ANSWERS_LINE } from '../constants/petLines';
 import { fetchPetState } from '../lib/petApi';
+import { invalidateTabRefresh } from '../lib/tabRefresh';
 import type { PetState } from '../lib/pet';
 
 type Draft = OnboardingAnswersInput;
@@ -88,6 +89,7 @@ export default function OnboardingAnswersScreen() {
   const [saved, setSaved] = useState<Draft | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [pendingApplyWeek, setPendingApplyWeek] = useState<number | null>(null);
@@ -121,6 +123,7 @@ export default function OnboardingAnswersScreen() {
   const load = useCallback(() => {
     if (!user) return;
     setLoading(true);
+    setLoadError(false);
     Promise.all([
       supabase.from('onboarding_answers').select('*').eq('user_id', user.id).single(),
       supabase
@@ -128,13 +131,25 @@ export default function OnboardingAnswersScreen() {
         .select('pending_apply_week')
         .eq('user_id', user.id)
         .maybeSingle(),
-    ]).then(([answersRes, programRes]) => {
-      const parsed = answersRes.data ? toDraft(answersRes.data) : null;
-      setSaved(parsed);
-      setDraft(parsed);
-      setPendingApplyWeek(programRes.data?.pending_apply_week ?? null);
-      setLoading(false);
-    });
+    ])
+      .then(([answersRes, programRes]) => {
+        if (answersRes.error && answersRes.error.code !== 'PGRST116') {
+          setLoadError(true);
+          setSaved(null);
+          setDraft(null);
+          setLoading(false);
+          return;
+        }
+        const parsed = answersRes.data ? toDraft(answersRes.data) : null;
+        setSaved(parsed);
+        setDraft(parsed);
+        setPendingApplyWeek(programRes.data?.pending_apply_week ?? null);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoadError(true);
+        setLoading(false);
+      });
   }, [user]);
 
   useFocusEffect(
@@ -361,6 +376,8 @@ export default function OnboardingAnswersScreen() {
       Alert.alert('Could not save', savedResult.error);
       return;
     }
+    invalidateTabRefresh('home');
+    invalidateTabRefresh('progress');
     if (savedResult.data.apply_now) {
       const flushed = await flushPendingProgramApply();
       if (flushed === 'failed') {
@@ -384,6 +401,7 @@ export default function OnboardingAnswersScreen() {
   }
 
   const editorRow = editorKey ? PROGRAM_ANSWER_ROWS.find((r) => r.key === editorKey) : null;
+  const singleEmpty = editorRow != null && !editorRow.multi && pendingId == null;
   const editorOptions =
     editorKey && draft ? editorOptionsFor(editorKey, draftValue(draft, editorKey)) : [];
 
@@ -416,6 +434,21 @@ export default function OnboardingAnswersScreen() {
       >
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+        ) : loadError ? (
+          <View style={styles.loadError}>
+            <Text style={styles.empty}>
+              Could not load your answers. Check your connection and try again.
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={load}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Try again"
+            >
+              <Text style={styles.retryText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
         ) : !draft ? (
           <Text style={styles.empty}>No answers found.</Text>
         ) : (
@@ -571,6 +604,9 @@ export default function OnboardingAnswersScreen() {
                       onPress={() => {
                         if (editorRow?.multi) {
                           toggleMulti(opt.value);
+                        } else if (pendingId === opt.id) {
+                          setPendingId(null);
+                          setPendingValue(null);
                         } else {
                           setPendingId(opt.id);
                           setPendingValue(opt.value);
@@ -581,7 +617,12 @@ export default function OnboardingAnswersScreen() {
                 })}
               </View>
             </ScrollView>
-            <TouchableOpacity style={styles.modalDone} onPress={saveEditor} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={[styles.modalDone, singleEmpty ? styles.modalDoneOff : null]}
+              onPress={saveEditor}
+              disabled={singleEmpty}
+              activeOpacity={0.85}
+            >
               <Text style={styles.modalDoneText}>Save</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalCancel} onPress={closeEditor} activeOpacity={0.7}>
@@ -643,6 +684,21 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 40,
     fontSize: 15,
+  },
+  loadError: {
+    alignItems: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.card,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+  },
+  retryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   card: {
     backgroundColor: colors.surface,
@@ -805,6 +861,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     backgroundColor: colors.primary,
     marginTop: 8,
+  },
+  modalDoneOff: {
+    opacity: 0.4,
   },
   modalDoneText: {
     fontSize: 16,

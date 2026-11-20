@@ -1,0 +1,1814 @@
+{
+  "carousels": [
+    {
+      "id": "laundry",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c01-1.jpg",
+          "shot": {
+            "scene": "A full wicker laundry basket of rumpled clothes sits alone on a bare wooden bedroom floor beside an unmade bed",
+            "light": "window-side"
+          },
+          "lines": [
+            "The laundry basket weighs",
+            "about nine pounds, and your",
+            "back acts like it's ninety."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c01-2.jpg",
+          "shot": {
+            "scene": "A half-full plastic laundry basket rests on the bottom step of a carpeted staircase in a narrow hallway",
+            "light": "low-sun"
+          },
+          "lines": [
+            "You lift with your legs like",
+            "the poster said, and it",
+            "still catches halfway up."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c01-3.jpg",
+          "shot": {
+            "scene": "Neatly folded towels stacked on a rumpled duvet on a bed, a single sock on top",
+            "light": "window-side"
+          },
+          "lines": [
+            "So now everything gets folded",
+            "on the bed, because the bed",
+            "is the right height."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c01-4.jpg",
+          "shot": {
+            "scene": "A front-loading dryer with its round door open in a small laundry nook, a few warm clothes spilling toward the opening",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "It's a workaround, and",
+            "you have about eleven",
+            "of them by now."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_session_preview.png",
+          "lines": [
+            "Week 2, session 3.",
+            "19 minutes, five exercises.",
+            "Thoracic strength."
+          ]
+        }
+      ],
+      "caption": "Half loads, two trips, folding on the bed. What's your laundry workaround?\n\n#lowerbackpain #backpain"
+    },
+    {
+      "id": "bed-office",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c02-1.jpg",
+          "shot": {
+            "scene": "An open laptop sits on an unmade bed among pillows and a rumpled white duvet, a charger cable trailing off the edge",
+            "light": "window-side"
+          },
+          "lines": [
+            "Working from bed felt like",
+            "a perk for about",
+            "three days."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c02-2.jpg",
+          "shot": {
+            "scene": "Three pillows stacked and dented against a plain wooden headboard, the shape of someone who sat there all day",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "Then you're building a little",
+            "pillow fort behind your lower",
+            "back every single morning."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c02-3.jpg",
+          "shot": {
+            "scene": "A nightstand with a half-finished mug of coffee and a phone lying face down, the bed edge just visible",
+            "light": "low-sun"
+          },
+          "lines": [
+            "By Thursday you're taking",
+            "calls standing up just to",
+            "get away from the bed."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c02-4.jpg",
+          "shot": {
+            "scene": "A small kitchen table with a closed laptop, one wooden chair pulled out at an angle, plain wall behind",
+            "light": "window-side"
+          },
+          "lines": [
+            "The kitchen table isn't",
+            "much better, but at least",
+            "it comes with a chair."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_progress_3.png",
+          "lines": [
+            "Fifteen sessions and the",
+            "strip shows Arnie fully",
+            "grown."
+          ]
+        }
+      ],
+      "caption": "The bed office has a way of sending you a bill by Friday.\n\n#wfh #lowerbackpain"
+    },
+    {
+      "id": "travel",
+      "founder": true,
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c03-1.jpg",
+          "shot": {
+            "scene": "He sits in a row of connected airport gate seats with a backpack at his feet, leaning forward with his elbows on his knees, empty seats around him, big windows far behind",
+            "person": "rahul-mid",
+            "light": "fluorescent",
+            "hair": "defined",
+            "outfit": "sage-polo"
+          },
+          "lines": [
+            "Four hours in a middle seat",
+            "and you start negotiating",
+            "with your own spine."
+          ],
+          "focus": "north"
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c03-2.jpg",
+          "shot": {
+            "scene": "An airplane window seat seen from the aisle, a small flat travel pillow wedged against the seat back, clouds outside the oval window",
+            "light": "car-day"
+          },
+          "lines": [
+            "The little pillow they",
+            "give you is doing",
+            "absolutely nothing."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c03-3.jpg",
+          "shot": {
+            "scene": "He walks away from the camera down a long empty jet bridge, a heavy backpack slung over one shoulder",
+            "person": "rahul-behind",
+            "light": "fluorescent",
+            "hair": "defined",
+            "outfit": "sage-polo"
+          },
+          "lines": [
+            "Then you carry a bag on one",
+            "shoulder through the whole",
+            "terminal, because of course."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c03-4.jpg",
+          "shot": {
+            "scene": "A plain hotel bed with white sheets and an open suitcase on the luggage rack beside it",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "And the hotel bed",
+            "is a coin flip."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_cat_cow.png",
+          "lines": [
+            "You can do 8 reps of",
+            "cat-cow on a hotel floor",
+            "before anyone's awake."
+          ]
+        }
+      ],
+      "caption": "Aisle seat, every time, so you can stand up without asking anyone. Where are you flying next?\n\n#travel #lowerbackpain"
+    },
+    {
+      "id": "yard",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c04-1.jpg",
+          "shot": {
+            "scene": "A garden bed with a few weeds pulled and left in a pile, a hand trowel and a worn foam kneeling pad on the soil edge",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "Weeding is fine, it's the",
+            "getting back up that takes",
+            "a few business days."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c04-2.jpg",
+          "shot": {
+            "scene": "A wheelbarrow heaped with dark mulch parked on a lawn next to a fence",
+            "light": "low-sun"
+          },
+          "lines": [
+            "The mulch goes in the",
+            "wheelbarrow and your back",
+            "files a formal complaint."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c04-3.jpg",
+          "shot": {
+            "scene": "A single folding camp chair set right next to a raised vegetable bed, gardening gloves on the seat",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "So now there's a chair",
+            "in the garden, strictly",
+            "for strategic breaks."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c04-4.jpg",
+          "shot": {
+            "scene": "A leaf rake leaning against a wooden fence, a half-raked pile of autumn leaves in the grass",
+            "light": "low-sun"
+          },
+          "lines": [
+            "The yard still gets done,",
+            "just in more chapters",
+            "than it used to."
+          ]
+        },
+        {
+          "kind": "card",
+          "tone": "bone",
+          "lines": [
+            "Send this to whoever",
+            "does the yard at",
+            "your house."
+          ]
+        }
+      ],
+      "caption": "Respect to everyone who still does the whole yard in one Saturday.\n\n#gardening #backpain"
+    },
+    {
+      "id": "car-seat",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c05-1.jpg",
+          "shot": {
+            "scene": "An empty toddler car seat buckled into the back seat of an SUV, seen through the open rear door",
+            "light": "car-day"
+          },
+          "lines": [
+            "The car seat sits at the",
+            "worst angle a back has ever",
+            "been asked to reach."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c05-2.jpg",
+          "shot": {
+            "scene": "A folded stroller leaning against the wall by a front door, a diaper bag hanging off its handle",
+            "light": "window-side"
+          },
+          "lines": [
+            "Folding the stroller into",
+            "the trunk is a two-person",
+            "job you do alone."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c05-3.jpg",
+          "shot": {
+            "scene": "Small children's sneakers and rain boots scattered across a hallway floor near a shoe rack that is completely empty",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "Every pair of tiny shoes",
+            "is somehow on the floor",
+            "and never on the rack."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c05-4.jpg",
+          "shot": {
+            "scene": "A wooden crib with a soft blanket inside in a dim nursery, a nightlight glowing low on the wall",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "And bedtime ends with",
+            "leaning over the crib rail",
+            "very, very slowly."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0469.png",
+          "lines": [
+            "Hands behind your head.",
+            "Arch the upper back over",
+            "the chair, not the low back."
+          ]
+        }
+      ],
+      "caption": "Parenting is mostly bending down. Nobody mentions that part.\n\n#parenting #lowerbackpain"
+    },
+    {
+      "id": "gym-return",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c06-1.jpg",
+          "shot": {
+            "scene": "A loaded barbell resting on rubber gym flooring in an empty gym, racks blurred behind it",
+            "light": "fluorescent"
+          },
+          "lines": [
+            "You haven't touched a",
+            "barbell since the day",
+            "your back said no."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c06-2.jpg",
+          "shot": {
+            "scene": "A zipped gym duffel bag sitting by a front door next to a pair of trainers, a little dust on the bag",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "The gym bag has been by",
+            "the door long enough to",
+            "count as furniture."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c06-3.jpg",
+          "shot": {
+            "scene": "A worn leather lifting belt coiled on the end of a flat gym bench",
+            "light": "fluorescent"
+          },
+          "lines": [
+            "You bought the belt, which",
+            "helped your confidence more",
+            "than it helped your back."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c06-4.jpg",
+          "shot": {
+            "scene": "A pair of light dumbbells on a rubber mat in a home garage gym, the garage door half open",
+            "light": "garage-door"
+          },
+          "lines": [
+            "Getting back to it starts",
+            "a lot lighter than your",
+            "ego would like."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0472.png",
+          "lines": [
+            "Drive the hips up until",
+            "they lock out. Don't arch",
+            "the low back."
+          ]
+        }
+      ],
+      "caption": "Lighter than you want, for longer than you want. That's the whole trick.\n\n#gym #backpain"
+    },
+    {
+      "id": "desk-day",
+      "founder": true,
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c07-1.jpg",
+          "shot": {
+            "scene": "He sits upright at a simple wooden desk by a window with a laptop open, a fresh mug beside it, looking at the screen",
+            "person": "rahul-face",
+            "light": "window-side",
+            "hair": "compact",
+            "outfit": "heather-tee"
+          },
+          "lines": [
+            "At 9am you're sitting up",
+            "straight like someone in",
+            "a posture commercial."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c07-2.jpg",
+          "shot": {
+            "scene": "Close overhead view straight down onto a desk surface: two empty coffee mugs with rings, a closed notebook, a pen and the corner of a laptop, nobody there",
+            "light": "low-sun"
+          },
+          "lines": [
+            "By noon there are two",
+            "mugs on the desk and one",
+            "very slumped spine."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c07-3.jpg",
+          "shot": {
+            "scene": "He leans back in a desk chair in profile, one hand pressed against his lower back, laptop glowing in front of him",
+            "person": "rahul-profile",
+            "light": "low-sun",
+            "hair": "compact",
+            "outfit": "heather-tee"
+          },
+          "lines": [
+            "Around 3pm your lower",
+            "back starts sending",
+            "you emails."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c07-4.jpg",
+          "shot": {
+            "scene": "An empty desk chair turned away from a desk at dusk, the laptop closed",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "And at 6 you stand up like",
+            "you just got off a",
+            "very long flight."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_pain_check.png",
+          "lines": [
+            "Every session starts by",
+            "asking how your pain is",
+            "right now, 1 to 10."
+          ]
+        }
+      ],
+      "caption": "The 3pm email from your lower back is never good news.\n\n#deskjob #wfh"
+    },
+    {
+      "id": "pillows",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c08-1.jpg",
+          "shot": {
+            "scene": "A neatly made bed with four pillows of different sizes arranged carefully, one long body pillow along the side",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "You have a pillow for your",
+            "knees, one for your back,",
+            "and two that just live there."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c08-2.jpg",
+          "shot": {
+            "scene": "A rumpled bed with a single pillow placed lengthwise in the middle where knees would go",
+            "light": "window-side"
+          },
+          "lines": [
+            "Side sleeping with a pillow",
+            "between your knees is a",
+            "whole engineering project."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c08-3.jpg",
+          "shot": {
+            "scene": "A brand new mattress still wrapped in clear plastic leaning against a plain bedroom wall",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "The new mattress was",
+            "supposed to be the answer,",
+            "and it's a very nice mattress."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c08-4.jpg",
+          "shot": {
+            "scene": "A nightstand with a glass of water and a folded electric heating pad, its cord running down behind the bed",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "The heating pad has its",
+            "own spot on the nightstand",
+            "at this point."
+          ]
+        },
+        {
+          "kind": "card",
+          "tone": "bone",
+          "lines": [
+            "How many pillows does",
+            "your back require?",
+            "No judgment here."
+          ]
+        }
+      ],
+      "caption": "Our record so far is six. Beat it in the comments.\n\n#sleep #lowerbackpain"
+    },
+    {
+      "id": "cooking",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c09-1.jpg",
+          "shot": {
+            "scene": "A wooden cutting board on a kitchen counter with a halved onion and a knife, the counter edge low in the frame",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Dinner is twenty minutes",
+            "of leaning over a counter",
+            "that's too low for you."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c09-2.jpg",
+          "shot": {
+            "scene": "A pot simmering on a gas stove with a little steam, a wooden spoon resting across the top",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "By the second pot you're",
+            "doing a little weight shift",
+            "from foot to foot."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c09-3.jpg",
+          "shot": {
+            "scene": "An open dishwasher with the bottom rack pulled all the way out, a few plates loaded",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "Loading the bottom rack is",
+            "its own separate event."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c09-4.jpg",
+          "shot": {
+            "scene": "A tall wooden stool tucked at a kitchen counter, a dish towel draped over the seat",
+            "light": "window-side"
+          },
+          "lines": [
+            "There's a stool in the",
+            "kitchen now, and it",
+            "gets used."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0470.png",
+          "lines": [
+            "Bird dog is 4 reps,",
+            "set 1 of 3, and it fits",
+            "in before dinner."
+          ]
+        }
+      ],
+      "caption": "Every kitchen counter was built for someone two inches shorter than you.\n\n#cooking #backpain"
+    },
+    {
+      "id": "pickleball",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c10-1.jpg",
+          "shot": {
+            "scene": "A pickleball paddle and two plain yellow balls on a bench beside an outdoor court, the net out of focus",
+            "light": "low-sun"
+          },
+          "lines": [
+            "Pickleball was supposed",
+            "to be the easy sport,",
+            "which is funny now."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c10-2.jpg",
+          "shot": {
+            "scene": "A blue gel ice pack lying on the passenger seat of a car",
+            "light": "car-day"
+          },
+          "lines": [
+            "The ice pack lives in",
+            "the car after Saturdays."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c10-3.jpg",
+          "shot": {
+            "scene": "An empty outdoor pickleball court with the net in the middle, a ball resting low near the kitchen line",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "You've started skipping",
+            "the low balls, and your",
+            "partner has noticed."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c10-4.jpg",
+          "shot": {
+            "scene": "Worn court shoes resting on top of a sports bag on a park bench",
+            "light": "low-sun"
+          },
+          "lines": [
+            "Nobody wants to be the",
+            "one who sits out the",
+            "second game."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_session.png",
+          "lines": [
+            "Glute bridges, 9 reps",
+            "a set, are less fun",
+            "than pickleball."
+          ]
+        }
+      ],
+      "caption": "Still showing up on Saturdays, just with a different warm-up.\n\n#pickleball #backpain"
+    },
+    {
+      "id": "lunch-walk",
+      "founder": true,
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c11-1.jpg",
+          "shot": {
+            "scene": "Wide shot from across the street: he walks along a quiet sidewalk under a row of bare trees, small in the lower half of the frame, head well below the middle, hands loose at his sides",
+            "person": "rahul-mid",
+            "light": "overcast-out",
+            "hair": "side-shift",
+            "outfit": "crewneck"
+          },
+          "lines": [
+            "The ten minute walk after",
+            "lunch started as an excuse",
+            "to leave the desk."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c11-2.jpg",
+          "shot": {
+            "scene": "An empty quiet street corner with a crosswalk and a low brick wall, nobody around",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "Turns out the desk was what",
+            "your back wanted to get",
+            "away from too."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c11-3.jpg",
+          "shot": {
+            "scene": "Wide shot: he walks away from the camera along a gravel park path lined with trees, small in the lower half of the frame, head well below the middle, open pale sky above the path",
+            "person": "rahul-behind",
+            "light": "low-sun",
+            "hair": "side-shift",
+            "outfit": "crewneck"
+          },
+          "lines": [
+            "It's not a workout, and",
+            "nobody would call it one."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c11-4.jpg",
+          "shot": {
+            "scene": "An empty wooden park bench beside a path, fallen leaves around its legs",
+            "light": "low-sun"
+          },
+          "lines": [
+            "It's also the only part",
+            "of the day your back",
+            "doesn't bring up."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0461.png",
+          "lines": [
+            "Pick your 3 training days.",
+            "Tuesday, Friday, Sunday.",
+            "Three of three selected."
+          ]
+        }
+      ],
+      "caption": "Ten minutes, same loop, most days. That's it.\n\n#walking #deskjob"
+    },
+    {
+      "id": "bleachers",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c12-1.jpg",
+          "shot": {
+            "scene": "Empty aluminum bleachers beside a high school field, a folded jacket left on one bench",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "Two hours on the bleachers",
+            "is a long time for a back",
+            "with opinions."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c12-2.jpg",
+          "shot": {
+            "scene": "An empty concert venue floor after a show, a few stage lights still glowing, scattered cups on the floor",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Standing at a concert is",
+            "fine right up until",
+            "the encore."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c12-3.jpg",
+          "shot": {
+            "scene": "A padded folding sports chair set up on the sideline of a kids' soccer field, a water bottle in the cup holder",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "You bring your own chair",
+            "to the kids' games now,",
+            "and it's the good one."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c12-4.jpg",
+          "shot": {
+            "scene": "A single car parked in a nearly empty lot at dusk under one tall light",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "The walk back to the car",
+            "is the real final act."
+          ]
+        },
+        {
+          "kind": "card",
+          "tone": "bone",
+          "lines": [
+            "Send this to the friend",
+            "who always needs to",
+            "find a seat."
+          ]
+        }
+      ],
+      "caption": "Real ones bring the chair with the back support.\n\n#lowerbackpain #backpain"
+    },
+    {
+      "id": "back-drawer",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c13-1.jpg",
+          "shot": {
+            "scene": "An open wooden drawer stuffed with a heating pad, a rubber massage ball, a rolled elastic back brace and unlabeled pill bottles",
+            "light": "window-side"
+          },
+          "lines": [
+            "Somewhere in your house",
+            "there's a drawer of things",
+            "you bought for your back."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c13-2.jpg",
+          "shot": {
+            "scene": "A foam roller half hidden under a living room couch, a little dust beside it",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "The foam roller gets used",
+            "every January and then",
+            "lives under the couch."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c13-3.jpg",
+          "shot": {
+            "scene": "A matte black massage gun lying on a bookshelf next to a stack of books",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "The massage gun is great",
+            "for about twenty minutes",
+            "at a time."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c13-4.jpg",
+          "shot": {
+            "scene": "A mesh lumbar pillow slumped low on an office chair, sliding toward the seat",
+            "light": "window-side"
+          },
+          "lines": [
+            "And the lumbar pillow keeps",
+            "sliding down to wherever",
+            "your back isn't."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_profile.png",
+          "lines": [
+            "Remedy builds a plan from",
+            "your answers, which takes",
+            "up less room than a drawer."
+          ]
+        }
+      ],
+      "caption": "What's in your back drawer? Ours has two massage balls and zero regrets.\n\n#backpain #lowerbackpain"
+    },
+    {
+      "id": "gym-confidence",
+      "founder": true,
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c14-1.jpg",
+          "shot": {
+            "scene": "He sits on the end of a flat gym bench tying his shoe, seen in profile, empty racks behind him",
+            "person": "rahul-profile",
+            "light": "fluorescent",
+            "hair": "hero-curl",
+            "outfit": "black-tee-sweats"
+          },
+          "lines": [
+            "Getting back into the gym",
+            "after a back thing is mostly",
+            "a confidence problem."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c14-2.jpg",
+          "shot": {
+            "scene": "A long dumbbell rack in a quiet gym, the heavy end in focus",
+            "light": "fluorescent"
+          },
+          "lines": [
+            "You look at the weights you",
+            "used to lift like they're",
+            "an ex at a party."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c14-3.jpg",
+          "shot": {
+            "scene": "He walks into a gym from behind carrying a duffel bag, the doorway bright",
+            "person": "rahul-behind",
+            "light": "fluorescent",
+            "hair": "hero-curl",
+            "outfit": "black-tee-sweats"
+          },
+          "lines": [
+            "So you start with the",
+            "boring stuff and let",
+            "everyone else show off."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c14-4.jpg",
+          "shot": {
+            "scene": "A water bottle and a towel beside a rolled-out exercise mat on a gym floor near a window",
+            "light": "low-sun"
+          },
+          "lines": [
+            "Boring turns out to be",
+            "a pretty good place",
+            "to start."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_progress.png",
+          "lines": [
+            "Week 2 of 4. Arnie",
+            "is already fully grown",
+            "on the path."
+          ]
+        }
+      ],
+      "caption": "Nobody at the gym is watching you warm up. Promise.\n\n#gym #backpain"
+    },
+    {
+      "id": "road-trip",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c15-1.jpg",
+          "shot": {
+            "scene": "An empty wooden picnic table at a highway rest stop, a car parked behind it, open fields beyond",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "Every road trip has a rest",
+            "stop that's really just",
+            "for your back."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c15-2.jpg",
+          "shot": {
+            "scene": "Close view of a car driver's seat and its side adjustment lever, the cabin in soft daylight",
+            "light": "car-day"
+          },
+          "lines": [
+            "You've adjusted the seat",
+            "about forty times since",
+            "the last exit."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c15-3.jpg",
+          "shot": {
+            "scene": "A rolled-up bath towel wedged at the lower back of a car's driver seat",
+            "light": "car-day"
+          },
+          "lines": [
+            "There's a rolled up towel",
+            "behind your back that",
+            "everyone pretends is normal."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c15-4.jpg",
+          "shot": {
+            "scene": "A car with its driver door wide open at a scenic overlook, hills fading into the distance",
+            "light": "low-sun"
+          },
+          "lines": [
+            "The view is great, and it",
+            "takes you a while to get",
+            "out and see it."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0465.png",
+          "lines": [
+            "9 glute bridges fit on",
+            "a motel floor the",
+            "night before."
+          ]
+        }
+      ],
+      "caption": "The towel stays in the car permanently now. Road trip tips welcome.\n\n#roadtrip #lowerbackpain"
+    },
+    {
+      "id": "dog-walk",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c16-1.jpg",
+          "shot": {
+            "scene": "A dog leash hanging from a hook by a front door, a worn tennis ball on the floor below",
+            "light": "window-side"
+          },
+          "lines": [
+            "The dog has no idea what",
+            "your back went through",
+            "this week."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c16-2.jpg",
+          "shot": {
+            "scene": "A steel dog bowl on a kitchen floor next to a bag of kibble with no visible label",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "Bending down to fill the",
+            "dog bowl is the riskiest",
+            "part of the day."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c16-3.jpg",
+          "shot": {
+            "scene": "A slack leash and a tennis ball on a leafy sidewalk, nobody holding it",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "And one squirrel can",
+            "undo a whole week."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c16-4.jpg",
+          "shot": {
+            "scene": "A round dog bed in a sunny corner of a living room, a chew toy inside",
+            "light": "low-sun"
+          },
+          "lines": [
+            "At least one of you",
+            "sleeps great."
+          ]
+        },
+        {
+          "kind": "card",
+          "tone": "bone",
+          "lines": [
+            "Send this to someone",
+            "whose dog walks them."
+          ]
+        }
+      ],
+      "caption": "Big dog owners know exactly which squirrel we mean.\n\n#dogsofinstagram #backpain"
+    },
+    {
+      "id": "couch-desk",
+      "founder": true,
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c17-1.jpg",
+          "shot": {
+            "scene": "He sits on a living room rug with his back against a couch, a laptop on his knees, a mug on the floor beside him",
+            "person": "rahul-mid",
+            "light": "evening-lamp",
+            "hair": "tousled",
+            "outfit": "black-hoodie"
+          },
+          "focus": "north",
+          "lines": [
+            "At some point the couch",
+            "became a desk, and",
+            "nobody voted on it."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c17-2.jpg",
+          "shot": {
+            "scene": "A laptop open on a low wooden coffee table, a throw blanket bunched on the couch behind it",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "The coffee table is about a",
+            "foot lower than any table",
+            "should ever be."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c17-3.jpg",
+          "shot": {
+            "scene": "He pushes himself up from the floor with one hand on the couch cushion, seen in profile, mid movement",
+            "person": "rahul-profile",
+            "light": "evening-lamp",
+            "hair": "tousled",
+            "outfit": "black-hoodie"
+          },
+          "lines": [
+            "Getting up from the floor",
+            "is a two-part process",
+            "these days."
+          ],
+          "textAt": "bottom"
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c17-4.jpg",
+          "shot": {
+            "scene": "A plain exercise mat rolled out on a living room rug in front of a couch, nothing else on it",
+            "light": "window-side"
+          },
+          "lines": [
+            "A mat in the same room is",
+            "a lot less dramatic than",
+            "it sounds."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_progress_2.png",
+          "lines": [
+            "The stage strip ends",
+            "at 15 sessions. He's",
+            "fully grown."
+          ]
+        }
+      ],
+      "caption": "Couch desk, floor desk, kitchen counter desk. Where are you working from today?\n\n#wfh #backpain"
+    },
+    {
+      "id": "slow-morning",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c18-1.jpg",
+          "shot": {
+            "scene": "The edge of an unmade bed with a pair of slippers waiting on the wooden floor below",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "The first thing you do",
+            "every morning is check what",
+            "kind of day it's going to be."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c18-2.jpg",
+          "shot": {
+            "scene": "A nightstand with a glass of water and a phone face down, early light on the wall",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "You get up in stages,",
+            "like a very old computer."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c18-3.jpg",
+          "shot": {
+            "scene": "A narrow hallway with morning light falling across the floor toward a kitchen doorway",
+            "light": "window-side"
+          },
+          "lines": [
+            "The walk to the coffee",
+            "maker is a warm-up you",
+            "didn't sign up for."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c18-4.jpg",
+          "shot": {
+            "scene": "A drip coffee maker brewing on a kitchen counter, one mug waiting beside it",
+            "light": "window-side"
+          },
+          "lines": [
+            "By the second cup you're",
+            "mostly a person again."
+          ]
+        },
+        {
+          "kind": "card",
+          "tone": "bone",
+          "lines": [
+            "Send this to someone who",
+            "used to be a morning",
+            "person."
+          ]
+        }
+      ],
+      "caption": "Booting up takes a little longer than it used to.\n\n#morningroutine #lowerbackpain"
+    },
+    {
+      "id": "holiday-bins",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c19-1.jpg",
+          "shot": {
+            "scene": "Plain plastic storage bins stacked on a metal garage shelf right up near the ceiling, a folded step ladder leaning against the wall below",
+            "light": "garage-door"
+          },
+          "lines": [
+            "The holiday bins live on the",
+            "top shelf because past you",
+            "was very optimistic."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c19-2.jpg",
+          "shot": {
+            "scene": "A tall garage shelving unit with one plastic bin on the very top shelf, pulled forward so it sticks out a few inches past the edge, a step ladder opened in front of the shelf on the floor",
+            "light": "garage-door"
+          },
+          "lines": [
+            "Getting them down is a long",
+            "reach with a heavy box",
+            "at the end of it."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c19-3.jpg",
+          "shot": {
+            "scene": "A plastic storage bin on a concrete garage floor with its lid off, a big knot of string lights spilling out onto the floor",
+            "light": "garage-door"
+          },
+          "lines": [
+            "The lights come out in one",
+            "knot, and you untangle it",
+            "bent over on the floor."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c19-4.jpg",
+          "shot": {
+            "scene": "Two plastic bins and a long cardboard box with no printing set down beside a living room couch, a few ornaments in a bowl",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "By the time it's all inside,",
+            "your back is the least",
+            "festive thing in the house."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0473.png",
+          "lines": [
+            "Bodyweight squat in Remedy,",
+            "9 reps, set 1 of 3."
+          ]
+        }
+      ],
+      "caption": "Somehow the bins get heavier every year. Who's in charge of getting them down at your place?\n\n#holidays #lowerbackpain"
+    },
+    {
+      "id": "bath-time",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c20-1.jpg",
+          "shot": {
+            "scene": "A bathtub half full of water with a few rubber bath toys floating, a folded towel used as a kneeling pad on the bath mat",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Bath time means kneeling by",
+            "the tub for twenty minutes",
+            "while someone splashes you."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c20-2.jpg",
+          "shot": {
+            "scene": "A plastic rinse cup and a plain bottle of kids' shampoo on the edge of a bathtub, bubbles on the water",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "You lean over the edge to",
+            "rinse their hair at the one",
+            "angle your back hates."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c20-3.jpg",
+          "shot": {
+            "scene": "A wet bath mat and a small hooded towel dropped on a bathroom floor beside the tub",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Getting up off the bath mat",
+            "takes two hands on the tub."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c20-4.jpg",
+          "shot": {
+            "scene": "A small pair of pajamas laid out on a made child's bed, a nightlight glowing in the corner",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Then there are the pajamas,",
+            "which are their own event."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_cat_cow.png",
+          "lines": [
+            "Cat-cow on your knees in",
+            "Remedy, 8 reps, set 1 of 2."
+          ]
+        }
+      ],
+      "caption": "Bath time is the most kneeling most parents do all week. Who does bath duty at your house?\n\n#parenting #lowerbackpain"
+    },
+    {
+      "id": "first-shovel",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c21-1.jpg",
+          "shot": {
+            "scene": "A snow shovel leaning by a front door on a porch, a thin layer of fresh snow on the steps",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "The first snow is pretty",
+            "for about as long as it",
+            "takes to find the shovel."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c21-2.jpg",
+          "shot": {
+            "scene": "A long driveway with fresh snow, one clean shoveled stripe down the middle, the shovel stuck upright in a snow pile",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "The driveway is longer than",
+            "you remember, and every",
+            "scoop starts with a bend."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c21-3.jpg",
+          "shot": {
+            "scene": "Wet snow boots on a rubber mat inside a front door, a pair of gloves drying on the radiator",
+            "light": "window-side"
+          },
+          "lines": [
+            "Halfway through you stop,",
+            "lean on the handle and",
+            "pretend you're admiring it."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c21-4.jpg",
+          "shot": {
+            "scene": "A finished shoveled driveway at dusk, clean wet concrete and neat snow banks on both sides, a porch light on",
+            "light": "low-sun"
+          },
+          "lines": [
+            "It looks great, and it",
+            "snows again on Thursday."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0465.png",
+          "lines": [
+            "Glute bridge in Remedy,",
+            "9 reps, set 1 of 3."
+          ]
+        }
+      ],
+      "caption": "Push the snow or lift and throw it? Everyone has a strong opinion.\n\n#winter #lowerbackpain"
+    },
+    {
+      "id": "tried-ranked",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c22-1.jpg",
+          "shot": {
+            "scene": "A pile of back pain gadgets on a living room rug: a heating pad, a rubber massage ball, a mesh lumbar pillow, a foam roller and a rolled elastic back brace",
+            "light": "window-side"
+          },
+          "lines": [
+            "Everything I bought for my",
+            "back this year, ranked by",
+            "how often I use it."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c22-2.jpg",
+          "shot": {
+            "scene": "An elastic back brace folded in a clear plastic sleeve on a closet shelf next to folded sweaters",
+            "light": "window-side"
+          },
+          "lines": [
+            "7. The back brace, worn",
+            "once, to the mailbox."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c22-3.jpg",
+          "shot": {
+            "scene": "A standing desk raised high with a closed laptop on it, an office chair pushed right up against it",
+            "light": "window-side"
+          },
+          "lines": [
+            "6. The standing desk, which",
+            "stands about twice a month."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c22-4.jpg",
+          "shot": {
+            "scene": "A pair of cushioned shoe insoles still in a plain cardboard sleeve, sitting on a wooden shoe rack by the door",
+            "light": "window-side"
+          },
+          "lines": [
+            "5. The insoles, still in",
+            "the box, still expensive."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c22-5.jpg",
+          "shot": {
+            "scene": "A mesh lumbar pillow strapped to the back of a car driver's seat, the seat empty",
+            "light": "car-day"
+          },
+          "lines": [
+            "4. The lumbar pillow, which",
+            "only works in the car."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c22-6.jpg",
+          "shot": {
+            "scene": "A small rubber massage ball on a hardwood floor against the baseboard of a hallway",
+            "light": "window-side"
+          },
+          "lines": [
+            "3. The massage ball, mostly",
+            "for stepping on by accident."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c22-7.jpg",
+          "shot": {
+            "scene": "A folded heating pad on a couch cushion, its cord running to a wall outlet behind the couch, a mug on the side table",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "2. The heating pad, which",
+            "earns its spot every night."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0470.png",
+          "lines": [
+            "1. Bird dog in Remedy,",
+            "4 reps, set 1 of 3."
+          ]
+        }
+      ],
+      "caption": "Be honest, what's in your ranking? Ours has a brace that went to the mailbox once.\n\n#backpain #lowerbackpain"
+    },
+    {
+      "id": "fitted-sheet",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c23-1.jpg",
+          "shot": {
+            "scene": "A bare mattress on a low bed frame in a bedroom, a white fitted sheet balled up on top of it",
+            "light": "window-side"
+          },
+          "lines": [
+            "Putting on a fitted sheet",
+            "starts out like a fair fight."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c23-2.jpg",
+          "shot": {
+            "scene": "The far corner of a mattress pushed against a bedroom wall, a white sheet corner only half hooked over it",
+            "light": "window-side"
+          },
+          "lines": [
+            "Then the far corner is",
+            "against the wall, and you",
+            "lean across the whole bed."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c23-3.jpg",
+          "shot": {
+            "scene": "One corner of a white fitted sheet popped off the mattress, the rest of the sheet smooth and in place",
+            "light": "window-side"
+          },
+          "lines": [
+            "The first corner pops off",
+            "while you do the last one."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c23-4.jpg",
+          "shot": {
+            "scene": "A neatly made bed with two pillows and a folded blanket at the foot, afternoon light on the wall",
+            "light": "low-sun"
+          },
+          "lines": [
+            "It looks easy once it's done,",
+            "which is how it gets you."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0465.png",
+          "lines": [
+            "Glute bridge in Remedy,",
+            "9 reps, set 1 of 3."
+          ]
+        }
+      ],
+      "caption": "Who else does the fitted sheet with one knee up on the bed?\n\n#lowerbackpain #backpain"
+    },
+    {
+      "id": "thanksgiving-plan",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c24-1.jpg",
+          "shot": {
+            "scene": "A kitchen counter in the middle of Thanksgiving prep: an uncooked turkey in a roasting pan, a bag of potatoes, a pie dish and a stack of plates",
+            "light": "window-side"
+          },
+          "lines": [
+            "How I'm doing Thanksgiving",
+            "this year with my back."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c24-2.jpg",
+          "shot": {
+            "scene": "An open oven with the rack set in the middle position and an empty roasting pan on it",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "The turkey goes on the",
+            "middle rack, so it comes",
+            "out at waist height."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c24-3.jpg",
+          "shot": {
+            "scene": "A tall wooden kitchen stool pulled up to the stove beside a pot of peeled potatoes and a peeler",
+            "light": "window-side"
+          },
+          "lines": [
+            "I peel the potatoes sitting",
+            "on a stool by the stove."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c24-4.jpg",
+          "shot": {
+            "scene": "A fully loaded dishwasher with its door open after a big dinner, a dish towel hanging on the handle",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Someone else loads the",
+            "dishwasher, by request."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c24-5.jpg",
+          "shot": {
+            "scene": "A quiet residential street in the late afternoon, an empty sidewalk lined with bare trees",
+            "light": "low-sun"
+          },
+          "lines": [
+            "After dinner there's a walk",
+            "around the block, mostly so",
+            "I can stand back up."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c24-6.jpg",
+          "shot": {
+            "scene": "An exercise mat unrolled on the floor of a small guest room the next morning, a mug on the windowsill",
+            "light": "dim-morning"
+          },
+          "lines": [
+            "Friday morning I do my",
+            "nineteen minutes on the",
+            "guest room floor."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0470.png",
+          "lines": [
+            "Bird dog in Remedy,",
+            "4 reps, set 1 of 3."
+          ]
+        }
+      ],
+      "caption": "Save this for Thursday. What's your Thanksgiving back move?\n\n#thanksgiving #lowerbackpain"
+    },
+    {
+      "id": "holiday-suitcase",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c25-1.jpg",
+          "shot": {
+            "scene": "A packed hard-shell suitcase standing by a front door, a coat hanging on the hook above it",
+            "light": "window-side"
+          },
+          "lines": [
+            "The suitcase weighs exactly",
+            "the limit, because of course."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c25-2.jpg",
+          "shot": {
+            "scene": "An open car trunk in a driveway with one suitcase inside and a second suitcase on the ground beside the bumper",
+            "light": "overcast-out"
+          },
+          "lines": [
+            "Getting it into the trunk is",
+            "one lift at the worst angle",
+            "you'll do all week."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c25-3.jpg",
+          "shot": {
+            "scene": "An empty airport gate seating area with rows of connected chairs and one carry-on bag on a seat, big windows behind",
+            "light": "fluorescent"
+          },
+          "lines": [
+            "Then two hours in a gate",
+            "chair built by someone who",
+            "has never sat in one."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c25-4.jpg",
+          "shot": {
+            "scene": "A suitcase lying open on a guest bedroom floor, folded clothes inside, a pair of shoes beside it",
+            "light": "window-side"
+          },
+          "lines": [
+            "All week it lives open on",
+            "the floor, so every outfit",
+            "starts with a squat."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_img_0473.png",
+          "lines": [
+            "Bodyweight squat in Remedy,",
+            "9 reps, set 1 of 3."
+          ]
+        }
+      ],
+      "caption": "Checked bag or carry-on this year? Your back has a preference.\n\n#travel #lowerbackpain"
+    },
+    {
+      "id": "tree-water",
+      "slides": [
+        {
+          "kind": "still",
+          "photo": "gen/c26-1.jpg",
+          "shot": {
+            "scene": "A decorated Christmas tree in a living room corner, wrapped presents with plain paper underneath, a tree skirt hiding the stand",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "Nobody mentions the tree",
+            "drinks from a bowl on",
+            "the floor."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c26-2.jpg",
+          "shot": {
+            "scene": "Shot from the floor beside a tall Christmas tree, its heavy lower branches hanging down into the top of the frame, a small watering can on the tree skirt next to the stand and two wrapped presents with plain paper",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "You crawl under the",
+            "branches with a watering",
+            "can every single morning."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c26-3.jpg",
+          "shot": {
+            "scene": "Fallen pine needles on a hardwood floor beside the edge of a tree skirt and one dropped ornament hook",
+            "light": "window-side"
+          },
+          "lines": [
+            "Your back stays bent there",
+            "while the water takes its",
+            "sweet time."
+          ]
+        },
+        {
+          "kind": "still",
+          "photo": "gen/c26-4.jpg",
+          "shot": {
+            "scene": "Tree lights plugged into a power strip on the floor behind a Christmas tree, a low wall outlet",
+            "light": "evening-lamp"
+          },
+          "lines": [
+            "And the outlet for the",
+            "lights is down there too."
+          ]
+        },
+        {
+          "kind": "app",
+          "screenshot": "crop_cat_cow.png",
+          "lines": [
+            "Cat-cow on your knees in",
+            "Remedy, 8 reps, set 1 of 2."
+          ]
+        }
+      ],
+      "caption": "Real tree or fake tree? One of them makes you crawl every morning.\n\n#christmastree #lowerbackpain"
+    }
+  ]
+}

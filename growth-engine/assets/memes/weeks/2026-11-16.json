@@ -1,0 +1,213 @@
+{
+  "weekStart": "2026-11-16",
+  "createdAt": "2026-11-10T02:55:00.000Z",
+  "autopost": true,
+  "groups": [
+    {
+      "key": "remedyrecoveries",
+      "handles": [
+        "tiktok:remedy.recoveries",
+        "youtube:remedyrecoveries"
+      ]
+    },
+    {
+      "key": "remedystories",
+      "handles": [
+        "tiktok:remedy.stories",
+        "youtube:remedystories"
+      ]
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-11-16",
+      "template": "sat-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "sat-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "When you sat all day",
+            "and your back is having",
+            "the time of its life"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\sat-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\sat-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-17T00:36:28.000Z",
+              "zernioPostId": "6af287441fe5bcc60a8d51e2",
+              "status": "published",
+              "error": "",
+              "views": 7,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-17T00:42:56.000Z",
+              "zernioPostId": "6af287461fe5bcc60a8d51f3",
+              "status": "published",
+              "error": "",
+              "views": 75,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "sat-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "When you sat all day",
+            "and your back is having",
+            "the time of its life"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\sat-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\sat-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-17T02:33:31.000Z",
+              "zernioPostId": "6af287482b8a1c8090f1d6e1",
+              "status": "published",
+              "error": "",
+              "views": 240,
+              "likes": 2,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-17T02:46:12.000Z",
+              "zernioPostId": "6af287491fe5bcc60a8d5212",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-11-17",
+      "template": "fryer-cut-a",
+      "test": "One clip. The line is the moment, the video is the reaction.",
+      "posts": [
+        {
+          "specId": "fryer-cut-a",
+          "variant": "a",
+          "group": "remedyrecoveries",
+          "lines": [
+            "When you try to stand",
+            "after sitting and your",
+            "back just gives out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fryer-cut-a.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fryer-cut-a.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad5237aa76dd039fb513b6a",
+              "platform": "tiktok",
+              "handle": "remedy.recoveries",
+              "keySlot": "1",
+              "scheduledFor": "2026-11-18T00:21:39.000Z",
+              "zernioPostId": "6af2874d1fe5bcc60a8d5231",
+              "status": "published",
+              "error": "",
+              "views": 135,
+              "likes": 1,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad5784268ce18b30f6e1845",
+              "platform": "youtube",
+              "handle": "remedyrecoveries",
+              "keySlot": "2",
+              "scheduledFor": "2026-11-18T00:38:55.000Z",
+              "zernioPostId": "6af2874f1fe5bcc60a8d5245",
+              "status": "published",
+              "error": "",
+              "views": 1096,
+              "likes": 3,
+              "shares": 0,
+              "comments": 1,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        },
+        {
+          "specId": "fryer-cut-b",
+          "variant": "b",
+          "group": "remedystories",
+          "lines": [
+            "When you try to stand",
+            "after sitting and your",
+            "back just gives out"
+          ],
+          "video": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fryer-cut-b.mp4",
+          "youtubeVideo": "C:\\Users\\rkuma\\remedy\\growth-engine\\output\\memes\\fryer-cut-b.mp4",
+          "scheduled": [
+            {
+              "accountId": "6ad57d1e13a427fcdf722e92",
+              "platform": "tiktok",
+              "handle": "remedy.stories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-18T01:54:02.000Z",
+              "zernioPostId": "6af287511fe5bcc60a8d5256",
+              "status": "published",
+              "error": "",
+              "views": 33,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            },
+            {
+              "accountId": "6ad57dc31f8fe7aeff608477",
+              "platform": "youtube",
+              "handle": "remedystories",
+              "keySlot": "3",
+              "scheduledFor": "2026-11-18T02:03:36.000Z",
+              "zernioPostId": "6af287521fe5bcc60a8d5260",
+              "status": "published",
+              "error": "",
+              "views": 0,
+              "likes": 0,
+              "shares": 0,
+              "comments": 0,
+              "metricsAt": "2026-11-19T16:01:27.287Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

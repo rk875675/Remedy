@@ -1,0 +1,43 @@
+{
+  "background": {
+    "url": "https://i.pinimg.com/originals/5e/aa/8a/5eaa8ac3af8b973faf1009de3bf533c8.jpg",
+    "page": "https://za.pinterest.com/mokone_x/supermarket/",
+    "size": [
+      1080,
+      1920
+    ],
+    "sift_inliers": 1131,
+    "align_err": 8.635339795587893,
+    "homography_original_to_frame": [
+      [
+        0.5332636827615578,
+        -3.641402239574217e-06,
+        -0.09805487093345579
+      ],
+      [
+        -6.131270981440768e-05,
+        0.5334058035079086,
+        -0.17089286426864533
+      ],
+      [
+        -1.2119857648962334e-07,
+        3.0851495369681903e-08,
+        1.0
+      ]
+    ]
+  },
+  "motion": {
+    "frames": 310,
+    "bg_noise_p99": 22.0,
+    "recomposite_mae_mean": 1.0161232906003153,
+    "recomposite_mae_max": 1.819679856300354,
+    "overlay_leak_mean": 0.00044506272971807565,
+    "gif_bbox_xywh": [
+      41,
+      362,
+      502,
+      662
+    ],
+    "gif_bytes": 13576072
+  }
+}

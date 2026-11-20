@@ -1,0 +1,20 @@
+{
+  "id": "m1105-duo-getting-ready",
+  "format": "duo-getting-ready",
+  "variantOf": null,
+  "changed": "",
+  "background": "duo-getting-ready/02-background.jpg",
+  "gif": { "file": "duo-getting-ready/03-motion.gif", "x": 167, "y": 804, "width": 857 },
+  "audio": { "file": "duo-getting-ready/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 10.31,
+  "text": [
+    { "lines": ["Me and my back getting", "ready to go out like we", "didn't hear a pop this morning"], "y": 317 },
+    { "lines": ["Me"], "x": 197, "y": 951, "size": 56 },
+    { "lines": ["My back"], "x": 773, "y": 1102, "size": 56 }
+  ],
+  "title": "Me and my back getting ready to go out like we didn't hear a pop this morning",
+  "caption": "Me and my back getting ready to go out like we didn't hear a pop this morning",
+  "description": "Vanity room, monkey and llama getting ready, the sound from that format.",
+  "musicCredit": "Sound: original sound - gigolina_ — 💜 𝔾𝕀𝔾𝕆𝕃𝕀ℕ𝔸 💜",
+  "results": []
+}

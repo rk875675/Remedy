@@ -526,6 +526,8 @@ const sheet = StyleSheet.create({
     paddingBottom: 40,
   },
   petRow: {
+    // The name tag sits above the bubble. Without this, the sheet clips it.
+    paddingTop: 14,
     marginBottom: 16,
   },
   title: {

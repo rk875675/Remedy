@@ -1,0 +1,33 @@
+{
+  "id": "m1102-doctor-carlton-b",
+  "format": "DeNAShnIYAy",
+  "variantOf": "m1102-doctor-carlton-a",
+  "changed": "text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-carlton.gif",
+    "x": -27,
+    "y": 690,
+    "width": 760
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: when did your back",
+        "start hurting?",
+        "Me at my kid's birthday party:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: when did your back start hurting? Me at my kid's birthday party:",
+  "caption": "Doctor: when did your back start hurting? Me at my kid's birthday party:",
+  "description": "Exam room, Carlton dance, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

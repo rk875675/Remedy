@@ -1,0 +1,20 @@
+{
+  "id": "m1107-duo-inside-jokes",
+  "format": "duo-inside-jokes",
+  "variantOf": null,
+  "changed": "",
+  "background": "duo-inside-jokes/02-background.jpg",
+  "gif": { "file": "duo-inside-jokes/03-motion.gif", "x": 0, "y": 712, "width": 1080 },
+  "audio": { "file": "duo-inside-jokes/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 12.0,
+  "text": [
+    { "lines": ["When my back and I are", "supposed to rest but we", "both go do the laundry"], "y": 412 },
+    { "lines": ["Me"], "x": 214, "y": 909, "size": 56 },
+    { "lines": ["My back"], "x": 810, "y": 909, "size": 56 }
+  ],
+  "title": "When my back and I are supposed to rest but we both go do the laundry",
+  "caption": "When my back and I are supposed to rest but we both go do the laundry",
+  "description": "Cream living room, two women on the sofa, the sound from that format.",
+  "musicCredit": "Sound: original sound - kirstysedgbeer — Kirsty Sedgbeer",
+  "results": []
+}

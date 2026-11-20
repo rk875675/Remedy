@@ -32,6 +32,7 @@ import {
 import { loadCheckinDraft } from '../lib/nextProgram';
 import type { NextProgramChoice } from '../lib/schemas';
 import { fetchPetState } from '../lib/petApi';
+import { useNamedPet } from '../lib/petNameCache';
 import type { PetState } from '../lib/pet';
 import { PetBadge } from '../components/pet/PetBadge';
 import { PET_PROGRAM_COMPLETE_LINE, petLine } from '../constants/petLines';
@@ -39,6 +40,7 @@ import { PET_PROGRAM_COMPLETE_LINE, petLine } from '../constants/petLines';
 type Loaded = {
   planId: string;
   programName: string;
+  durationWeeks: number;
   programNumber: number;
   atTopLevel: boolean;
   summary: ProgramSummary;
@@ -119,7 +121,8 @@ export default function ProgramCompleteScreen() {
   const [data, setData] = useState<Loaded | null>(null);
   const [hasDraft, setHasDraft] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [pet, setPet] = useState<PetState | null>(null);
+  const [petState, setPet] = useState<PetState | null>(null);
+  const pet = useNamedPet(petState);
   const tracked = useRef(false);
   const leaving = useRef(false);
 
@@ -235,6 +238,7 @@ export default function ProgramCompleteScreen() {
       setData({
         planId: plan.id,
         programName: plan.program_name,
+        durationWeeks: plan.duration_weeks,
         programNumber,
         atTopLevel: up.progression_level >= TOP_PROGRESSION_LEVEL,
         summary,
@@ -325,9 +329,11 @@ export default function ProgramCompleteScreen() {
       {data && data.programNumber > 1 ? (
         <Text style={styles.eyebrow}>PROGRAM {data.programNumber}</Text>
       ) : null}
-      <Text style={styles.heading}>Program Complete</Text>
+      <Text style={styles.heading}>{data ? `${data.durationWeeks} Weeks Done` : 'Program Done'}</Text>
       <Text style={[styles.subheading, pet && styles.subheadingWithPet]}>
-        {data ? `You finished your ${data.programName}.` : 'You finished your program.'}
+        {data
+          ? `That was your ${data.programName}. The next one builds on it.`
+          : 'The next program builds on this one.'}
       </Text>
       {pet ? (
         <Text style={styles.subheading}>{petLine(PET_PROGRAM_COMPLETE_LINE, pet.name)}</Text>
@@ -347,6 +353,13 @@ export default function ProgramCompleteScreen() {
             accessibilityRole="button"
           >
             <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => router.dismissTo('/(tabs)')}
+            accessibilityRole="button"
+          >
+            <Text style={styles.secondaryText}>Back to Home</Text>
           </Pressable>
         </View>
       ) : summary && data ? (
@@ -377,7 +390,7 @@ export default function ProgramCompleteScreen() {
               </View>
             ) : null}
             <Text style={styles.congrats}>
-              That&apos;s real work. Consistent movement is what changes things. You showed up.
+              That&apos;s real work. You showed up. Keeping it going is what stops the next flare.
             </Text>
           </Animated.View>
 
@@ -506,6 +519,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  secondaryButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+  },
+  secondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
   },
   statsCard: {
     flexDirection: 'row',

@@ -1,0 +1,13 @@
+{
+  "id": "clip-pizza-reach",
+  "clip": "assets/memes/clips/pizza-counter.mp4",
+  "seconds": 5.1,
+  "cover": { "y": 500, "h": 220 },
+  "text": [
+    { "lines": ["Why did I throw my back out"], "y": 575, "size": 52 }
+  ],
+  "title": "Original",
+  "caption": "Why did I throw my back out",
+  "description": "Original cut. Same framing, Arial, the meme's own sound.",
+  "musicCredit": "Sound: original sound — memesource060"
+}

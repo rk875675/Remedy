@@ -100,6 +100,10 @@ const FAILURE_COPY: Record<StartNextProgramError, { title: string; body: string 
     title: 'You\u2019re all set',
     body: 'Your next program is already set up and waiting on Home.',
   },
+  not_finished: {
+    title: 'This program is still going',
+    body: 'Finish the sessions you have left, then the next program can start.',
+  },
   not_entitled: {
     title: 'Subscription needed',
     body: 'Your subscription isn\u2019t active right now, so we can\u2019t build a new program yet.',

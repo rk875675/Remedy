@@ -1,0 +1,100 @@
+{
+  "tests": [
+    {
+      "id": "long-deck-8",
+      "hypothesis": "An 8-beat deck (9 slides, a 20s Short) beats our 5-beat default: more watch time on YouTube and the length viral slideshows actually run.",
+      "source": "clonbot.ai study of 1,332 viral TikTok slideshows (median 8 slides; 15+ slides had the highest median views); YouTube weighs total watch time for Shorts.",
+      "arms": { "length": "8+" },
+      "brief": "8 beats: the movement moment, three more movements from the same day that escalate, the turn with a count, the one app slide, one small result moment, the payoff. Still exactly one app slide.",
+      "minPosts": 4
+    },
+    {
+      "id": "quad-list",
+      "hypothesis": "Four movements from one day as a 2x2 list (quad) holds attention better than one photo per slide.",
+      "source": "reidbranded and barclayahmed quad carousels (growth-engine.mdc); zero quad decks measured so far, and the format mix target is 20%.",
+      "arms": { "format": "quad" },
+      "brief": "Quad cover (no labels) of four movements from the same day; one labelled quad with a time or count per cell; app slide; single-photo payoff. Character in about half the cells.",
+      "minPosts": 4
+    },
+    {
+      "id": "pov-cover",
+      "hypothesis": "A cover that opens with \"pov:\" and puts the viewer inside the movement travels further than a first-person statement.",
+      "source": "Aubrium, 1,000+ viral physical therapy reels (Oct 31 2026): POV hooks reached 44x followers, relatable lines 33x, curiosity gaps 27x.",
+      "arms": { "hookStyle": "pov" },
+      "brief": "Cover starts with \"pov:\" and names one body movement inside an ordinary task. Body slides stay first person. Same movement-moment copy rules otherwise.",
+      "minPosts": 4
+    },
+    {
+      "id": "refrain",
+      "hypothesis": "Ending every slide line with the same short tag, then changing it on the last slide, pulls people through the deck.",
+      "source": "socialgrowthengineers: @studytok_alevels \"(tell no one)\" slideshow for Deliveroo Students, 3.1M views from a single-purpose account.",
+      "arms": { "structure": "refrain" },
+      "brief": "Every photo slide line ends with the same 2-4 word tag in parentheses (a body-part aside, e.g. \"(back noted it)\"); the payoff slide swaps the tag for a different one. App slide keeps its plain line.",
+      "minPosts": 4
+    },
+    {
+      "id": "loop-ending",
+      "hypothesis": "A payoff line that hands back to the cover makes the Short loop, which counts as watch time on YouTube.",
+      "source": "prepublish.ai Shorts retention guide (loops and replays count toward watch time; the end should be the start of the next loop).",
+      "arms": { "ending": "loop" },
+      "brief": "The last photo line sets up the cover line so the replay reads on (cover: \"buckling the car seat twists my back every time\"; payoff: \"same car seat, same kid, every time since\"). Everything else exploit.",
+      "minPosts": 4
+    },
+    {
+      "id": "short-cover",
+      "hypothesis": "A 2-4 word cover that names only the movement stops the scroll better than a 6-10 word line.",
+      "source": "clonbot.ai (1-3 word hooks reached the most people) and reelsfarm (1-5 word hooks ahead on TikTok) disagree with topcarousels (6-10 words best on Instagram).",
+      "arms": { "hookLength": "short" },
+      "brief": "Cover is 2-4 words naming the movement and the object (\"one sock.\", \"the car seat.\"); slide 2 carries the full sentence. Soft note on hook length is expected.",
+      "minPosts": 4
+    },
+    {
+      "id": "choice-quad",
+      "hypothesis": "A \"which one gets your back first\" choice across four movements earns comments and reach.",
+      "source": "Indie Hackers analysis of app slideshows: interactive choice posts were the strongest format (top five 221.5M views combined).",
+      "arms": { "format": "quad", "hookStyle": "choice" },
+      "brief": "Quad cover with four numbered movements (labels 1-4) and the line \"which one gets your back first\"; the rest is a normal quad deck. The only question cover allowed.",
+      "minPosts": 4
+    },
+    {
+      "id": "other-person-hook",
+      "hypothesis": "A cover where someone else doubts or reacts (partner, mum, coworker) travels further than a first-person complaint.",
+      "source": "Oliver Henry's Larry agent for Snugly: other-person hooks (landlord, mum) hit 167K-413K vs 879-2,671 for self hooks (~100x); @papanca.io \"'mom why are we poor?'\" carousel 7.2x its norm (topcarousels).",
+      "arms": { "hookStyle": "other-person" },
+      "brief": "Cover names another person and the movement in one line (\"my husband laughed at me getting off the floor like a 90 year old\"). Middle slides stay the character's own days; the payoff shows that person's reaction to the same movement now. No claims, no app name on the cover.",
+      "minPosts": 4
+    },
+    {
+      "id": "tried-ranked",
+      "hypothesis": "A personal ranking of the things the character tried (heating pad, roller, pillow, stretching harder, the floor routine) earns saves and comments.",
+      "source": "Symmetry app tier-list slideshow, 1.1M views at 649x baseline (gethandler.ai); Pilates resource list 3M views, 228K saves at 1,295x.",
+      "arms": { "structure": "ranked" },
+      "brief": "Cover: \"everything i tried for my back this year, ranked\". One slide per item from worst to best, each with a personal verdict and a count or price; the app slide is the top entry, not slide 1 or 2. Generic tools and habits only, never named brands or rival apps, no outcome promises.",
+      "minPosts": 4
+    },
+    {
+      "id": "situation-cheatsheet",
+      "hypothesis": "One named situation with one movement per slide (\"save this\") gets saved more than a story deck.",
+      "source": "GLP-1 Starbucks orders slideshow, 1.5M views, 78K saves at 1,140x (gethandler.ai); guides are saved ~4x more often than jokes (clonbot.ai).",
+      "arms": { "structure": "cheatsheet" },
+      "brief": "Cover names one situation and the character (\"how i get through a 5 hour drive with my back\"). Each slide is one stop or moment and what the character does then, as personal habit, not advice. One app slide in the middle; caption ends with \"save this\".",
+      "minPosts": 4
+    },
+    {
+      "id": "two-slider",
+      "hypothesis": "A two-slide deck (reluctant cover, then the real app screen as the punchline) beats a 5-beat story on TikTok and holds the full Short on YouTube.",
+      "source": "Stronger \"I don't feel like going to the gym today\" / \"neither did he\" (48M + 22M views); Stronger consistency calendar 2-slider at 389x baseline (gethandler.ai). User approved as an explore-only exception to the app-not-on-slide-2 rule (Nov 10).",
+      "arms": { "structure": "two-slide", "length": "2" },
+      "brief": "Exactly two beats then the locked CTA: slide 1 a candid photo of the character with a reluctant line (\"i don't feel like doing my back routine today\"); slide 2 the app slide with a short punchline over a real screen (progress or the exercise crop), e.g. \"19 minutes later\". Set ctaIn unset.",
+      "minPosts": 4
+    },
+    {
+      "id": "pinned-cta",
+      "hypothesis": "With no app slide and no CTA slide, the story reads as a post instead of an ad and travels further; the CTA lives in the YouTube pinned comment.",
+      "source": "Reels Farm study of 7,736 TikTok slideshows (non-promo median 5,700 vs 2,450 for app slideshows); AI Apply static 9.7M with the CTA in a pinned comment; Curiosity Quench pinned-comment CTA. User approved as an explore-only exception to the one-app-slide and locked-CTA rules (Nov 10).",
+      "arms": { "cta": "pinned-comment", "cropKind": "none" },
+      "brief": "A normal exploit story deck with zero app slides and \"ctaIn\": \"pinned-comment\". No CTA slide is rendered; the YouTube Short gets the locked CTA headline plus the App Store link as its pinned first comment. TikTok copies go without the comment (Zernio cannot pin there), so read results on YouTube.",
+      "minPosts": 4
+    }
+  ]
+}

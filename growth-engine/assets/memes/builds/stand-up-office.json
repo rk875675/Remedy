@@ -1,0 +1,16 @@
+{
+  "id": "stand-up-office",
+  "format": "pizza-party-office",
+  "variantOf": null,
+  "changed": "",
+  "background": "pizza-party-office/02-background.jpg",
+  "gif": { "file": "pizza-party-office/03-motion.gif", "x": 18, "y": 773, "width": 1044 },
+  "audio": { "file": "pizza-party-office/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 14.25,
+  "text": [{ "lines": ["How your back expects you", "to stand up after", "sitting all day"], "y": 150 }],
+  "title": "How your back expects you to stand up after sitting all day",
+  "caption": "How your back expects you to stand up after sitting all day.",
+  "description": "Cubicle photo, the office reaction, the sound from that format.",
+  "musicCredit": "Sound: original sound — eae_vini058",
+  "results": []
+}

@@ -76,6 +76,7 @@ import {
   listLocalScreenshots,
   readScreenshotMeta,
   sanitizeScreenshotName,
+  screenshotContentType,
   screenshotPath,
   writeScreenshotMeta,
   type ScreenshotMeta,
@@ -721,8 +722,7 @@ app.get("/api/assets/raw/:file", (c) => {
   if (!isAllowedScreenshotFile(file)) return c.text("Not found", 404);
   const srcPath = screenshotPath(file);
   if (!fs.existsSync(srcPath)) return c.text("Not found", 404);
-  const ext = path.extname(file).toLowerCase();
-  const type = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".webp" ? "image/webp" : "image/png";
+  const type = screenshotContentType(file);
   return new Response(new Uint8Array(fs.readFileSync(srcPath)), {
     headers: { "Content-Type": type, "Cache-Control": "no-store" },
   });

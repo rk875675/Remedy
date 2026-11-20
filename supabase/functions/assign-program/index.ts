@@ -3,8 +3,9 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimitFixedWindow } from '../_shared/ratelimit.ts';
 import { requestSchema, resolvedPlanSchema } from '../_shared/assignment/schema.ts';
 import { buildPlan, clampProgressionLevel, type Answers } from '../_shared/assignment/engine.ts';
+import { buildPlanWithFallback } from '../_shared/assignment/engineV2.ts';
 import { getRebuildEligibility, nextRebuildStamp } from '../_shared/rebuildCooldown.ts';
-import { loadAssignmentContext } from '../_shared/assignment/loadContext.ts';
+import { loadAssignmentContext, loadUserIntake } from '../_shared/assignment/loadContext.ts';
 import { isPendingApplyDue } from '../_shared/assignment/programAnswers.ts';
 
 // assign-program
@@ -175,19 +176,33 @@ Deno.serve(async (req: Request) => {
 
     const ctx = await loadAssignmentContext(supabase);
     if ('error' in ctx) return json({ error: ctx.error }, 500);
-    const { rules, rulesVersion, templateId, template, exercises, replacements } = ctx;
+    const { rules, rulesVersion, templateId, template, exercises, replacements, details } = ctx;
+
+    let intake = body.intake ?? null;
+    if (!intake && !body.preview_only) {
+      intake = await loadUserIntake(supabase, userId);
+    }
 
     // --- Build the plan -------------------------------------------------------
-    const built = buildPlan({
-      answers,
-      rules,
-      rulesVersion,
-      exercises,
-      template,
-      replacements,
-      startWeek,
-      progressionLevel,
+    // v2 only when an intake is present and exercise details loaded. Any v2
+    // failure falls back to v1 so assignment is never blocked.
+    const routed = buildPlanWithFallback({
+      intake,
+      details,
+      input: { answers, exercises, startWeek, progressionLevel },
+      buildV1: () =>
+        buildPlan({
+          answers,
+          rules,
+          rulesVersion,
+          exercises,
+          template,
+          replacements,
+          startWeek,
+          progressionLevel,
+        }),
     });
+    const built = routed.plan;
 
     // Output guard: never persist/return a malformed plan.
     const planParse = resolvedPlanSchema.safeParse(built);
@@ -246,6 +261,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (body.preview_only) {
+      const showV2 = body.intake != null && routed.engine === 2 && routed.profile != null && routed.outline != null;
+      const detailById = new Map(details.map((detail) => [detail.exercise_id, detail]));
+      const weekOne = enrich(plan.start_week);
       return json({
         preview: true,
         program_name: plan.program_name,
@@ -255,9 +273,26 @@ Deno.serve(async (req: Request) => {
         sessions_per_week: plan.sessions_per_week,
         primary_focus: plan.primary_focus,
         secondary_focus: plan.secondary_focus,
-        week_one: enrich(plan.start_week),
+        week_one: showV2
+          ? weekOne.map((session) => ({
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                const detail = detailById.get(exercise.exercise_id);
+                return {
+                  ...exercise,
+                  sets: exercise.sets,
+                  reps: exercise.reps,
+                  duration_seconds: exercise.duration_seconds,
+                  rest_seconds: exercise.rest_seconds,
+                  per_side: detail?.per_side ?? false,
+                  slug: detail?.slug ?? '',
+                };
+              }),
+            }))
+          : weekOne,
         equipment_tier: answers.equipment,
         pain_trigger: answers.pain_trigger,
+        ...(showV2 ? { engine: 2, profile: routed.profile, outline: routed.outline } : {}),
       });
     }
 
@@ -290,7 +325,11 @@ Deno.serve(async (req: Request) => {
       );
       Object.assign(appliedUpdate, stamp);
     }
-    await supabase.from('user_programs').update(appliedUpdate).eq('user_id', userId);
+    const { error: stampError } = await supabase
+      .from('user_programs')
+      .update(appliedUpdate)
+      .eq('user_id', userId);
+    if (stampError) return json({ error: 'snapshot_persist_failed' }, 500);
 
     return json({
       plan_id: planId,

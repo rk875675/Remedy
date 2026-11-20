@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { ClinicalProfile } from './intake';
+
 // ---------------------------------------------------------------------------
 // Central Zod schemas (client side).
 //
@@ -48,6 +50,85 @@ export type OnboardingAnswersInput = z.infer<typeof onboardingAnswersInputSchema
 // assign-program edge function payloads
 // ---------------------------------------------------------------------------
 
+const avoidTagSchema = z.enum([
+  'flexion_endrange',
+  'flexion_loaded',
+  'extension_endrange',
+  'extension_loaded',
+  'rotation_endrange',
+  'rotation_loaded',
+  'neural_tension',
+  'prone',
+  'high_iap',
+  'balance_challenge',
+]);
+
+const functionTargetSchema = z.enum([
+  'bed',
+  'bending',
+  'stairs',
+  'walking',
+  'sitting',
+  'standing',
+  'twisting',
+  'overhead',
+  'sleep',
+  'exercise',
+]);
+
+export const clinicalProfileSchema = z
+  .object({
+    irritability: z.enum(['low', 'moderate', 'high']),
+    irritabilityScore: z.number(),
+    bias: z.enum(['flexion_sensitive', 'extension_sensitive', 'neutral']),
+    biasStrength: z.enum(['clear', 'lean', 'none']),
+    sensitization: z.enum(['low', 'some', 'high']),
+    nsScore: z.number(),
+    fear: z.enum(['low', 'some', 'high']),
+    radicular: z.enum(['none', 'referred', 'below_knee']),
+    mode: z.enum(['calm', 'control', 'build']),
+    emphasis: z
+      .object({
+        mobility: z.number(),
+        control: z.number(),
+        strength: z.number(),
+        relaxation: z.number(),
+      })
+      .strict(),
+    exposureBending: z.boolean(),
+    unilateralFocus: z.boolean(),
+    functionTargets: z.array(functionTargetSchema),
+    avoid: z.array(avoidTagSchema),
+    avoidEarly: z.array(avoidTagSchema),
+    earlyWeeks: z.number(),
+    gentleStart: z.boolean(),
+    loadCap: z.enum(['bodyweight', 'light', 'full']),
+    capacity: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    tierCap: z.number(),
+    slotDelta: z.union([z.literal(-1), z.literal(0)]),
+    flags: z
+      .object({
+        redFlag: z.boolean(),
+        clinicianFirst: z.boolean(),
+        postSurgery: z.boolean(),
+        pregnant: z.boolean(),
+        postpartum: z.boolean(),
+        osteoporosis: z.boolean(),
+        fibromyalgia: z.boolean(),
+        olderAdult: z.boolean(),
+      })
+      .strict(),
+  })
+  .strict();
+
+type ClinicalProfileMatches = [z.infer<typeof clinicalProfileSchema>] extends [ClinicalProfile]
+  ? [ClinicalProfile] extends [z.infer<typeof clinicalProfileSchema>]
+    ? true
+    : never
+  : never;
+const clinicalProfileMatches: ClinicalProfileMatches = true;
+void clinicalProfileMatches;
+
 export const planExerciseSchema = z.object({
   exercise_id: z.string(),
   order_index: z.number(),
@@ -57,7 +138,29 @@ export const planExerciseSchema = z.object({
   rest_seconds: z.number(),
   load_tier: z.number(),
   name: z.string().optional(),
+  per_side: z.boolean().optional(),
+  slug: z.string().optional(),
 });
+
+const planOutlineSchema = z
+  .object({
+    weeks: z.array(
+      z
+        .object({
+          week: z.number(),
+          mode: z.enum(['calm', 'control', 'build']),
+          column: z.enum(['high', 'moderate', 'low']),
+          target_tier: z.number(),
+          sessions: z.number(),
+          avg_minutes: z.number(),
+          exercise_count: z.number(),
+        })
+        .strict(),
+    ),
+    total_sessions: z.number(),
+    unique_exercises: z.number(),
+  })
+  .strict();
 
 export const planSessionSchema = z.object({
   week_number: z.number(),
@@ -70,6 +173,9 @@ export const planSessionSchema = z.object({
 });
 
 // preview_only=true response (match screen).
+// v2 adds engine, profile, and outline, plus per-exercise slug and per_side.
+// Those keys are optional so a v1 payload still parses. Existing exercise dose
+// keys stay required, because both responses include them.
 export const planPreviewSchema = z.object({
   preview: z.literal(true).optional(),
   program_name: z.string(),
@@ -82,6 +188,9 @@ export const planPreviewSchema = z.object({
   week_one: z.array(planSessionSchema),
   equipment_tier: equipmentSchema.optional(),
   pain_trigger: painTriggerSchema.optional(),
+  engine: z.literal(2).optional(),
+  profile: clinicalProfileSchema.optional(),
+  outline: planOutlineSchema.optional(),
 });
 export type PlanPreview = z.infer<typeof planPreviewSchema>;
 

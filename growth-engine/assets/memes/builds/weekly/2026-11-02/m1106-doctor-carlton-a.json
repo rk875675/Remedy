@@ -1,0 +1,33 @@
+{
+  "id": "m1106-doctor-carlton-a",
+  "format": "DeNAShnIYAy",
+  "variantOf": null,
+  "changed": "",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-carlton.gif",
+    "x": -27,
+    "y": 690,
+    "width": 760
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: and how did",
+        "this happen exactly?",
+        "Me at pickup basketball at 38:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: and how did this happen exactly? Me at pickup basketball at 38:",
+  "caption": "Doctor: and how did this happen exactly? Me at pickup basketball at 38:",
+  "description": "Exam room, Carlton dance, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

@@ -2,10 +2,19 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { clearPendingPurchase } from '../lib/pendingPurchase';
-import { onboardingAnswersInputSchema } from '../lib/schemas';
 import { parseRecognizeSelected, type RecognizeKey } from '../constants/mindset';
 import { appBelief, type AppBelief } from '../lib/analytics/events/enums';
+import { NS_LEVEL, NS_PREDICTABLE, type Intake } from '../lib/intake';
 import type { OnboardingAnswers } from '../types/database';
+import {
+  OB_STEPS,
+  getResumeStep,
+  hasMeaningfulIncompleteFunnel,
+  rebuildOnboardingStack,
+  shouldOpenMatch,
+  type ObStepKey,
+  type ReminderTime,
+} from '../constants/onboardingFlow';
 
 type AnswerFields = Omit<OnboardingAnswers, 'id' | 'user_id' | 'completed_at' | 'created_at'>;
 
@@ -15,189 +24,80 @@ type AnswerFields = Omit<OnboardingAnswers, 'id' | 'user_id' | 'completed_at' | 
 // lib/pendingPurchase.ts). Cleared on a fresh funnel start and after the
 // post-auth upsert succeeds.
 const STORAGE_KEY = 'remedy.onboardingAnswers';
+const INTAKE_KEY = 'remedy.onboardingIntake';
 // Separate blob for funnel-resume state. Kept OUT of STORAGE_KEY so no extra keys
 // ever leak into the strict Zod answers object that building-plan upserts to Supabase.
 const PROGRESS_KEY = 'remedy.onboardingProgress';
 
-// Furthest-reached ordering of the first-run funnel. The root guard uses this to
-// resume an unauthenticated user at their last screen and rebuild the back stack.
-export const ONBOARDING_FLOW = [
-  'welcome',
-  'pet',
-  'grow',
-  'founder',
-  'education',
-  'proof',
-  'q0',
-  'q9',
-  'recognize',
-  'seen',
-  'q6',
-  'q1',
-  'q2',
-  'q3',
-  'q4',
-  'q5',
-  'q7',
-  'q8',
-] as const;
+export type OnboardingStep = ObStepKey;
 
-export type OnboardingStep = (typeof ONBOARDING_FLOW)[number];
+// Furthest-reached ordering. Backed by the step registry in constants/onboardingFlow.
+export const ONBOARDING_FLOW: readonly OnboardingStep[] = OB_STEPS.map((step) => step.key);
 
-// Route path for each step (welcome is the onboarding group index route).
-export const ONBOARDING_STEP_PATHS: Record<OnboardingStep, string> = {
-  welcome: '/(onboarding)',
-  pet: '/(onboarding)/pet',
-  grow: '/(onboarding)/grow',
-  founder: '/(onboarding)/founder',
-  education: '/(onboarding)/education',
-  proof: '/(onboarding)/proof',
-  q0: '/(onboarding)/q0',
-  q9: '/(onboarding)/q9',
-  recognize: '/(onboarding)/recognize',
-  seen: '/(onboarding)/seen',
-  q6: '/(onboarding)/q6',
-  q1: '/(onboarding)/q1',
-  q2: '/(onboarding)/q2',
-  q3: '/(onboarding)/q3',
-  q4: '/(onboarding)/q4',
-  q5: '/(onboarding)/q5',
-  q7: '/(onboarding)/q7',
-  q8: '/(onboarding)/q8',
-};
+export const ONBOARDING_STEP_PATHS: Record<OnboardingStep, string> = OB_STEPS.reduce(
+  (paths, step) => {
+    paths[step.key] = step.path;
+    return paths;
+  },
+  {} as Record<OnboardingStep, string>,
+);
+
+const STEP_INDEX: Record<OnboardingStep, number> = ONBOARDING_FLOW.reduce(
+  (index, step, position) => {
+    index[step] = position;
+    return index;
+  },
+  {} as Record<OnboardingStep, number>,
+);
 
 // UI/analytics-only selections that are NOT part of the strict answers schema,
 // persisted alongside progress so they restore on resume/back-navigation.
 type LocalSelections = {
   hear_about: string | null;
-  // Legacy q9 answer ('yes' | 'no'). No longer set; recognize/seen fall back to the
-  // "tried before" copy when it is null.
+  // Legacy answer. No longer set; kept so older blobs still parse.
   tried_before: string | null;
-  // q9: "Do you think Remedy can fix your back pain?"
+  // Legacy belief question. No longer asked; kept so older blobs still parse.
   app_belief: AppBelief | null;
   // Set once "Hold to commit" completes, so swiping back shows the committed state.
   committed_at: string | null;
   minutes: number | null;
-  // Set when "Agree & continue" on the proof screen was tapped (ISO timestamp). The
-  // assent is a hard requirement: resume clamps back to proof until it exists.
+  // Set when the safety step is accepted (ISO timestamp).
   safety_accepted_at: string | null;
-  // Legacy red-flag answer from the removed safety screen. No longer set; kept so
-  // stored progress from older builds still parses.
   has_red_flag: boolean | null;
   agreed_legal: boolean;
-  // Recognition multi-select (analytics / copy only). Completed even when empty
-  // so resume can leave the screen.
+  // Legacy recognition multi-select. No longer set; kept so older blobs still parse.
   recognize_selected: RecognizeKey[];
   recognize_completed: boolean;
   // Pet name typed on the pet screen. Sent with setPetName on building-plan, never
   // with the onboarding_answers upsert.
   pet_name: string | null;
+  first_name: string | null;
+  // Undefined until the reminders step is passed. null means the user skipped it.
+  reminder_time: ReminderTime | null | undefined;
+  // Second page of "What's hard right now?". Restores that page on back.
+  hard_now_more: boolean;
+  // Second page of the conditions question. Restores that page on back.
+  conditions_more: boolean;
+  // Nervous-system deck answers before all five are in. The strict intake field
+  // is only written once the deck is complete.
+  ns_draft: Partial<Intake['ns']> | null;
 };
 
 export type OnboardingProgress = { step: OnboardingStep } & LocalSelections;
 
-// What each step needs before the funnel can resume PAST it. Info screens have no
-// requirement (reaching them is enough); question screens need their answer. Undefined
-// entries mean "no data required".
-const STEP_REQUIREMENT: Partial<
-  Record<OnboardingStep, (progress: OnboardingProgress, answers: Partial<AnswerFields>) => boolean>
-> = {
-  proof: (p) => p.safety_accepted_at !== null,
-  q0: (p) => p.hear_about !== null,
-  q9: (p) => p.app_belief !== null,
-  recognize: (p) => p.recognize_completed,
-  q6: (_p, a) => Array.isArray(a.main_goal) && a.main_goal.length > 0,
-  q1: (_p, a) => !!a.pain_location,
-  q2: (_p, a) => !!a.pain_duration,
-  q3: (_p, a) => Array.isArray(a.pain_type) && a.pain_type.length > 0,
-  q4: (_p, a) => !!a.activity_level,
-  q5: (_p, a) => Array.isArray(a.pain_trigger) && a.pain_trigger.length > 0,
-  q7: (_p, a) => !!a.equipment,
-  q8: (_p, a) => typeof a.sessions_per_week_preference === 'number',
+export type OnboardingSnapshot = {
+  answers: Partial<AnswerFields>;
+  intake: Partial<Intake>;
+  progress: OnboardingProgress | null;
 };
 
-// Where an interrupted funnel should actually resume. The furthest-reached step alone
-// is not safe: progress can outlive answers (e.g. answers cleared on completion, then
-// the user wanders back into onboarding recreating a progress record) and resuming deep
-// into the quiz with empty earlier answers strands the user on match's "complete all
-// questions" error. Clamp to the first step whose data is missing.
-export function getResumeStep(
-  progress: OnboardingProgress | null,
-  answers: Partial<AnswerFields>,
-): OnboardingStep {
-  if (!progress) return 'welcome';
-  const furthestIndex = ONBOARDING_FLOW.indexOf(progress.step);
-  for (let i = 0; i <= furthestIndex; i++) {
-    const step = ONBOARDING_FLOW[i];
-    const requirement = STEP_REQUIREMENT[step];
-    if (requirement && !requirement(progress, answers)) return step;
-  }
-  return progress.step;
-}
-
-/** True only when THIS funnel finished the quiz (safety + every required answer + q8). */
-export function shouldOpenMatch(
-  progress: OnboardingProgress | null,
-  answers: Partial<AnswerFields>,
-): boolean {
-  if (!onboardingAnswersInputSchema.safeParse(answers).success) return false;
-  // Stale complete answers without a live safety acceptance are leftover from a
-  // previous run — do not jump to "Your Program".
-  if (!progress || progress.safety_accepted_at === null) return false;
-  if (getResumeStep(progress, answers) !== 'q8') return false;
-  const requirement = STEP_REQUIREMENT.q8;
-  return !requirement || requirement(progress, answers);
-}
-
-/**
- * A real in-progress first-run (past welcome, or a safety/q0 selection exists).
- * A welcome-only flash while a leftover session restores is NOT this — those
- * users belong on Home.
- */
-export function hasMeaningfulIncompleteFunnel(
-  progress: OnboardingProgress | null,
-  answers: Partial<AnswerFields>,
-): boolean {
-  if (shouldOpenMatch(progress, answers)) return false;
-  if (!progress) return false;
-  if (ONBOARDING_FLOW.indexOf(progress.step) > 0) return true;
-  return (
-    progress.hear_about !== null ||
-    progress.tried_before !== null ||
-    progress.app_belief !== null ||
-    progress.safety_accepted_at !== null ||
-    progress.agreed_legal ||
-    progress.has_red_flag !== null ||
-    progress.minutes !== null ||
-    progress.recognize_completed ||
-    progress.recognize_selected.length > 0
-  );
-}
-
-type StackRouter = {
-  replace: (href: string) => void;
-  push: (href: string) => void;
+export {
+  getResumeStep,
+  hasMeaningfulIncompleteFunnel,
+  rebuildOnboardingStack,
+  shouldOpenMatch,
 };
-
-/** Rebuild welcome → … → target so swipe-back still works after a resume. */
-export function rebuildOnboardingStack(
-  router: StackRouter,
-  target: OnboardingStep | 'match',
-  _answers: Partial<AnswerFields> = {},
-): void {
-  router.replace(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[0]]);
-  if (target === 'match') {
-    for (let i = 1; i < ONBOARDING_FLOW.length; i++) {
-      router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
-    }
-    router.push('/(onboarding)/match');
-    return;
-  }
-  const targetIndex = ONBOARDING_FLOW.indexOf(target);
-  for (let i = 1; i <= targetIndex; i++) {
-    router.push(ONBOARDING_STEP_PATHS[ONBOARDING_FLOW[i]]);
-  }
-}
+export type { ObFlowState, ReminderTime } from '../constants/onboardingFlow';
 
 const DEFAULT_PROGRESS: OnboardingProgress = {
   step: 'welcome',
@@ -212,11 +112,61 @@ const DEFAULT_PROGRESS: OnboardingProgress = {
   recognize_selected: [],
   recognize_completed: false,
   pet_name: null,
+  first_name: null,
+  reminder_time: undefined,
+  hard_now_more: false,
+  conditions_more: false,
+  ns_draft: null,
 };
+
+const KNOWN_STEPS = new Set<string>(ONBOARDING_FLOW);
+
+const NS_PREDICTABLE_VALUES = new Set<string>(NS_PREDICTABLE);
+const NS_LEVEL_VALUES = new Set<string>(NS_LEVEL);
+
+function readNsDraft(value: unknown): Partial<Intake['ns']> | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const draft: Partial<Intake['ns']> = {};
+  if (typeof raw.predictable === 'string' && NS_PREDICTABLE_VALUES.has(raw.predictable)) {
+    draft.predictable = raw.predictable as Intake['ns']['predictable'];
+  }
+  for (const key of ['small_triggers', 'stress', 'anticipation', 'avoidance'] as const) {
+    const item = raw[key];
+    if (typeof item === 'string' && NS_LEVEL_VALUES.has(item)) {
+      draft[key] = item as Intake['ns']['stress'];
+    }
+  }
+  return draft.predictable !== undefined ||
+    draft.small_triggers !== undefined ||
+    draft.stress !== undefined ||
+    draft.anticipation !== undefined ||
+    draft.avoidance !== undefined
+    ? draft
+    : null;
+}
+
+function isReminderTime(value: unknown): value is ReminderTime {
+  return value === 'morning' || value === 'midday' || value === 'evening';
+}
+
+function readReminderTime(raw: Record<string, unknown>): ReminderTime | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(raw, 'reminder_time')) return undefined;
+  if (raw.reminder_time === null) return null;
+  return isReminderTime(raw.reminder_time) ? raw.reminder_time : undefined;
+}
 
 export async function clearStoredAnswers(): Promise<void> {
   try {
     await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Best-effort: a stale entry is cleared on the next funnel start.
+  }
+}
+
+export async function clearStoredIntake(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(INTAKE_KEY);
   } catch {
     // Best-effort: a stale entry is cleared on the next funnel start.
   }
@@ -235,6 +185,9 @@ type OnboardingContextType = {
   setAnswer: <K extends keyof AnswerFields>(field: K, value: AnswerFields[K]) => void;
   /** Removes a field from the answers object so bars and the continue guard treat it as unanswered. */
   clearAnswer: <K extends keyof AnswerFields>(field: K) => void;
+  intake: Partial<Intake>;
+  setIntake: <K extends keyof Intake>(field: K, value: Intake[K]) => void;
+  clearIntake: <K extends keyof Intake>(field: K) => void;
   resetAnswers: () => void;
   // Furthest-reached step + restorable local-only selections for funnel resume.
   progress: OnboardingProgress | null;
@@ -249,6 +202,8 @@ type OnboardingContextType = {
   retaking: boolean;
   startRetake: () => void;
   endRetake: () => void;
+  /** Freshest answers, intake, and progress, including writes from this tick. */
+  getSnapshot: () => OnboardingSnapshot;
 };
 
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
@@ -256,15 +211,29 @@ const OnboardingContext = createContext<OnboardingContextType | null>(null);
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Partial<AnswerFields>>({});
+  const [intake, setIntakeState] = useState<Partial<Intake>>({});
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [retaking, setRetaking] = useState(false);
   // Guards against hydration clobbering answers entered (or reset) before the
   // async read resolves.
   const touched = useRef(false);
-  // Same guard for the separate progress blob.
+  const intakeTouched = useRef(false);
   const progressTouched = useRef(false);
+  // Welcome mounts and records its step before AsyncStorage resolves. Writing
+  // that through immediately used to replace the saved funnel with a blank
+  // welcome step, so a relaunch started over. Queue those writes until the
+  // read finishes, then advance from the stored step.
+  const hydratedRef = useRef(false);
+  const pendingStepRef = useRef<OnboardingStep | null>(null);
+  const pendingLocalRef = useRef<Partial<LocalSelections>>({});
   const prevUserId = useRef<string | null>(null);
+  const answersRef = useRef(answers);
+  const intakeRef = useRef(intake);
+  const progressRef = useRef(progress);
+  answersRef.current = answers;
+  intakeRef.current = intake;
+  progressRef.current = progress;
 
   // When a signed-in user signs out (or the account switches), the quiz answers in
   // context/AsyncStorage belong to the PREVIOUS user. Without this, the root guard
@@ -278,11 +247,17 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     prevUserId.current = currentId;
     if (prevId !== null && prevId !== currentId) {
       touched.current = true;
+      intakeTouched.current = true;
       progressTouched.current = true;
+      answersRef.current = {};
+      intakeRef.current = {};
+      progressRef.current = null;
       setAnswers({});
+      setIntakeState({});
       setProgress(null);
       setRetaking(false);
       void clearStoredAnswers();
+      void clearStoredIntake();
       void clearStoredProgress();
       void clearPendingPurchase();
     }
@@ -290,52 +265,75 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(PROGRESS_KEY)])
-      .then(([answersRaw, progressRaw]) => {
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(INTAKE_KEY),
+      AsyncStorage.getItem(PROGRESS_KEY),
+    ])
+      .then(([answersRaw, intakeRaw, progressRaw]) => {
         if (cancelled) return;
         if (answersRaw && !touched.current) {
           try {
             const parsed: unknown = JSON.parse(answersRaw);
             if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-              setAnswers(parsed as Partial<AnswerFields>);
+              const next = parsed as Partial<AnswerFields>;
+              answersRef.current = next;
+              setAnswers(next);
             }
           } catch {
             // Corrupt answers blob — treat as no stored answers.
+          }
+        }
+        if (intakeRaw && !intakeTouched.current) {
+          try {
+            const parsed: unknown = JSON.parse(intakeRaw);
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+              const next = parsed as Partial<Intake>;
+              intakeRef.current = next;
+              setIntakeState(next);
+            }
+          } catch {
+            // Corrupt intake blob — treat as no stored intake.
           }
         }
         if (progressRaw && !progressTouched.current) {
           try {
             const parsed: unknown = JSON.parse(progressRaw);
             if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-              const p = parsed as Record<string, unknown>;
-              const rawStep = typeof p.step === 'string' ? p.step : null;
-              const step: OnboardingStep | null =
-                rawStep === 'alarm' || rawStep === 'why'
-                  ? 'seen'
-                  : rawStep === 'safety'
-                    ? 'q0'
-                  : rawStep && (ONBOARDING_FLOW as readonly string[]).includes(rawStep)
-                    ? (rawStep as OnboardingStep)
-                    : null;
-              if (step) {
-                setProgress({
-                  step,
-                  hear_about: typeof p.hear_about === 'string' ? p.hear_about : null,
-                  tried_before: typeof p.tried_before === 'string' ? p.tried_before : null,
-                  app_belief: appBelief.safeParse(p.app_belief).success
-                    ? (p.app_belief as AppBelief)
-                    : null,
-                  committed_at: typeof p.committed_at === 'string' ? p.committed_at : null,
-                  minutes: typeof p.minutes === 'number' ? p.minutes : null,
-                  safety_accepted_at:
-                    typeof p.safety_accepted_at === 'string' ? p.safety_accepted_at : null,
-                  has_red_flag: typeof p.has_red_flag === 'boolean' ? p.has_red_flag : null,
-                  agreed_legal: p.agreed_legal === true,
-                  recognize_selected: parseRecognizeSelected(p.recognize_selected),
-                  recognize_completed: p.recognize_completed === true,
-                  pet_name: typeof p.pet_name === 'string' ? p.pet_name : null,
-                });
-              }
+              const raw = parsed as Record<string, unknown>;
+              const rawStep = typeof raw.step === 'string' ? raw.step : '';
+              // Removed steps resume at the next question still in the flow.
+              const storedStep =
+                rawStep === 'scans'
+                  ? 'onset'
+                  : rawStep === 'tried' || rawStep === 'seen'
+                    ? 'conditions'
+                    : rawStep;
+              const step: OnboardingStep = KNOWN_STEPS.has(storedStep)
+                ? (storedStep as OnboardingStep)
+                : 'welcome';
+              const next: OnboardingProgress = {
+                step,
+                hear_about: typeof raw.hear_about === 'string' ? raw.hear_about : null,
+                tried_before: typeof raw.tried_before === 'string' ? raw.tried_before : null,
+                app_belief: appBelief.safeParse(raw.app_belief).success ? (raw.app_belief as AppBelief) : null,
+                committed_at: typeof raw.committed_at === 'string' ? raw.committed_at : null,
+                minutes: typeof raw.minutes === 'number' ? raw.minutes : null,
+                safety_accepted_at:
+                  typeof raw.safety_accepted_at === 'string' ? raw.safety_accepted_at : null,
+                has_red_flag: typeof raw.has_red_flag === 'boolean' ? raw.has_red_flag : null,
+                agreed_legal: raw.agreed_legal === true,
+                recognize_selected: parseRecognizeSelected(raw.recognize_selected),
+                recognize_completed: raw.recognize_completed === true,
+                pet_name: typeof raw.pet_name === 'string' ? raw.pet_name : null,
+                first_name: typeof raw.first_name === 'string' ? raw.first_name : null,
+                reminder_time: readReminderTime(raw),
+                hard_now_more: raw.hard_now_more === true,
+                conditions_more: raw.conditions_more === true,
+                ns_draft: readNsDraft(raw.ns_draft),
+              };
+              progressRef.current = next;
+              setProgress(next);
             }
           } catch {
             // Corrupt progress blob — treat as no saved progress.
@@ -346,7 +344,29 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         // Unreadable storage — treat as a fresh funnel.
       })
       .finally(() => {
-        if (!cancelled) setHydrated(true);
+        if (cancelled) return;
+        hydratedRef.current = true;
+        const queuedStep = pendingStepRef.current;
+        const queuedLocal = pendingLocalRef.current;
+        pendingStepRef.current = null;
+        pendingLocalRef.current = {};
+        const hasLocal = Object.keys(queuedLocal).length > 0;
+        const stored = progressRef.current;
+        const base = stored ?? DEFAULT_PROGRESS;
+        const furthest =
+          queuedStep && STEP_INDEX[queuedStep] > STEP_INDEX[base.step] ? queuedStep : base.step;
+        const changed =
+          hasLocal ||
+          (stored !== null && furthest !== stored.step) ||
+          (stored === null && queuedStep !== null && queuedStep !== 'welcome');
+        if (changed) {
+          const merged: OnboardingProgress = { ...base, ...queuedLocal, step: furthest };
+          progressTouched.current = true;
+          progressRef.current = merged;
+          setProgress(merged);
+          AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(merged)).catch(() => {});
+        }
+        setHydrated(true);
       });
     return () => {
       cancelled = true;
@@ -355,67 +375,96 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   function setAnswer<K extends keyof AnswerFields>(field: K, value: AnswerFields[K]) {
     touched.current = true;
-    setAnswers((prev) => {
-      const next = { ...prev, [field]: value };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    const next = { ...answersRef.current, [field]: value };
+    answersRef.current = next;
+    setAnswers(next);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
   }
 
   function clearAnswer<K extends keyof AnswerFields>(field: K) {
     touched.current = true;
-    setAnswers((prev) => {
-      const next = { ...prev };
-      delete next[field];
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    const next = { ...answersRef.current };
+    delete next[field];
+    answersRef.current = next;
+    setAnswers(next);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+  }
+
+  function setIntake<K extends keyof Intake>(field: K, value: Intake[K]) {
+    intakeTouched.current = true;
+    const next = { ...intakeRef.current, [field]: value };
+    intakeRef.current = next;
+    setIntakeState(next);
+    AsyncStorage.setItem(INTAKE_KEY, JSON.stringify(next)).catch(() => {});
+  }
+
+  function clearIntake<K extends keyof Intake>(field: K) {
+    intakeTouched.current = true;
+    const next = { ...intakeRef.current };
+    delete next[field];
+    intakeRef.current = next;
+    setIntakeState(next);
+    AsyncStorage.setItem(INTAKE_KEY, JSON.stringify(next)).catch(() => {});
+  }
+
+  function writeProgress(next: OnboardingProgress) {
+    progressRef.current = next;
+    setProgress(next);
+    AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next)).catch(() => {});
   }
 
   function setProgressStep(step: OnboardingStep) {
+    if (!hydratedRef.current) {
+      const queued = pendingStepRef.current;
+      pendingStepRef.current = queued && STEP_INDEX[queued] > STEP_INDEX[step] ? queued : step;
+      return;
+    }
     progressTouched.current = true;
-    setProgress((prev) => {
-      const base = prev ?? DEFAULT_PROGRESS;
-      // Only advance — never rewind the furthest-reached step on back-navigation.
-      const furthest =
-        ONBOARDING_FLOW.indexOf(step) > ONBOARDING_FLOW.indexOf(base.step) ? step : base.step;
-      const next: OnboardingProgress = { ...base, step: furthest };
-      AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    const base = progressRef.current ?? DEFAULT_PROGRESS;
+    const furthest = STEP_INDEX[step] > STEP_INDEX[base.step] ? step : base.step;
+    writeProgress({ ...base, step: furthest });
   }
 
   function setLocalAnswer<K extends keyof LocalSelections>(key: K, value: LocalSelections[K]) {
+    if (!hydratedRef.current) {
+      pendingLocalRef.current = { ...pendingLocalRef.current, [key]: value };
+      return;
+    }
     progressTouched.current = true;
-    setProgress((prev) => {
-      const base = prev ?? DEFAULT_PROGRESS;
-      const next: OnboardingProgress = { ...base, [key]: value };
-      AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    const base = progressRef.current ?? DEFAULT_PROGRESS;
+    writeProgress({ ...base, [key]: value });
   }
 
   function resetAnswers() {
     touched.current = true;
+    intakeTouched.current = true;
     progressTouched.current = true;
+    answersRef.current = {};
+    intakeRef.current = {};
+    progressRef.current = null;
     setAnswers({});
+    setIntakeState({});
     setProgress(null);
-    clearStoredAnswers();
-    clearStoredProgress();
+    void clearStoredAnswers();
+    void clearStoredIntake();
+    void clearStoredProgress();
   }
 
   function startRetake() {
-    touched.current = true;
-    progressTouched.current = true;
-    setAnswers({});
-    setProgress(null);
-    clearStoredAnswers();
-    clearStoredProgress();
+    resetAnswers();
     setRetaking(true);
   }
 
   function endRetake() {
     setRetaking(false);
+  }
+
+  function getSnapshot(): OnboardingSnapshot {
+    return {
+      answers: answersRef.current,
+      intake: intakeRef.current,
+      progress: progressRef.current,
+    };
   }
 
   return (
@@ -424,6 +473,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         answers,
         setAnswer,
         clearAnswer,
+        intake,
+        setIntake,
+        clearIntake,
         resetAnswers,
         progress,
         setProgressStep,
@@ -432,6 +484,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         retaking,
         startRetake,
         endRetake,
+        getSnapshot,
       }}
     >
       {children}
@@ -453,5 +506,8 @@ export function useTrackOnboardingStep(step: OnboardingStep) {
   const { setProgressStep } = useOnboarding();
   useEffect(() => {
     setProgressStep(step);
+    // setProgressStep is stable in behavior (it only advances) and is recreated
+    // each render. Depending on it would rewrite progress on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 }

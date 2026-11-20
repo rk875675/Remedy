@@ -1,0 +1,33 @@
+{
+  "id": "doctor-stretches",
+  "format": "DeNAShnIYAy",
+  "variantOf": "picked-that-box",
+  "changed": "gif kermit, new text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-kermit.gif",
+    "x": -120,
+    "y": 700,
+    "width": 1100
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: show me the stretches",
+        "you found online",
+        "Me:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: show me the stretches you found online",
+  "caption": "Doctor: show me the stretches you found online. Me:",
+  "description": "Exam room, Kermit dancing, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Remedy — App Store ideas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #3E6B4E;
+    --green-deep: #2F5440;
+    --ink: #1C1C1E;
+    --cream: #F6EDE0;
+    --wash: #E7EFE9;
+    --shell: #AE5636;
+    --shell-wash: #F3DFCF;
+    --muted: #6B6B6B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--wash);
+    color: var(--ink);
+    font-family: Nunito, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header.bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 22px;
+    background: rgba(246, 237, 224, 0.94);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(62, 107, 78, 0.12);
+  }
+  .brand {
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: -0.4px;
+    color: var(--green);
+    white-space: nowrap;
+  }
+  .brand span { color: var(--ink); font-weight: 800; }
+  .search {
+    flex: 1;
+    max-width: 520px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid rgba(62, 107, 78, 0.16);
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+  .search svg { flex: none; }
+  .search input {
+    border: 0;
+    outline: 0;
+    width: 100%;
+    font: 700 14px Nunito, "Segoe UI", sans-serif;
+    background: transparent;
+    color: var(--ink);
+  }
+  .search input::placeholder { color: #a39b92; font-weight: 700; }
+  .count { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+
+  main { padding: 22px 22px 80px; }
+
+  .note {
+    max-width: 980px;
+    margin: 0 0 22px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.45;
+    color: #3c3833;
+  }
+  .note strong { color: var(--ink); }
+
+  h3.sec {
+    margin: 28px 0 12px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--green-deep);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    padding: 6px 4px 18px;
+  }
+  .card { scroll-snap-align: start; flex: none; width: 214px; }
+  .card[hidden] { display: none; }
+  .shot {
+    width: 390px;
+    height: 844px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 36px;
+    box-shadow: 0 18px 40px rgba(40, 30, 20, 0.18);
+    background: var(--cream);
+    zoom: 0.55;
+  }
+  .shot h2 {
+    position: relative;
+    z-index: 3;
+    margin: 0;
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: -1.8px;
+    line-height: 0.88;
+    color: var(--ink);
+  }
+  .cap {
+    margin: 8px 2px 0;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--green-deep);
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  .bob { animation: bob 3s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .bob, .parade img { animation: none !important; }
+  }
+
+  .sky {
+    background:
+      radial-gradient(120px 120px at 12% 22%, var(--shell-wash) 0%, transparent 70%),
+      radial-gradient(160px 140px at 88% 18%, #d7ebdc 0%, transparent 72%),
+      linear-gradient(180deg, var(--cream) 0%, #f3f7f2 46%, var(--wash) 100%);
+  }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    z-index: 0;
+  }
+  .blob.shell { background: var(--shell); }
+  .blob.tan { background: var(--shell-wash); }
+  .blob.green { background: #cfe3d4; }
+
+  /* Hero — BitePal's first frame: one headline, floating stickers, character on a hill */
+  .hero h2 { font-size: 70px; padding: 40px 12px 0; }
+  .hill {
+    position: absolute;
+    z-index: 1;
+    left: -22%;
+    right: -22%;
+    bottom: -48px;
+    height: 400px;
+    background: var(--green);
+    border-radius: 50% 50% 0 0;
+  }
+  .hero { background: linear-gradient(180deg, #F6EDE0 0%, #F1EBDD 38%, #E4EEDF 62%, #D6E7D7 100%); }
+  .sun {
+    position: absolute; z-index: 0;
+    width: 520px; height: 520px; left: -65px; top: 210px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,246,226,.95) 0%, rgba(255,240,214,.55) 34%, rgba(255,240,214,0) 68%);
+  }
+  .cloud {
+    position: absolute; z-index: 0;
+    height: 34px; border-radius: 40px;
+    background: rgba(255,255,255,.85);
+    filter: blur(1px);
+  }
+  .cloud::before, .cloud::after {
+    content: ""; position: absolute; border-radius: 50%; background: inherit;
+  }
+  .cloud::before { width: 46%; height: 160%; left: 16%; bottom: 30%; }
+  .cloud::after { width: 34%; height: 130%; left: 50%; bottom: 36%; }
+  .ridge {
+    position: absolute; z-index: 1;
+    border-radius: 50% 50% 0 0;
+  }
+  .ridge.far { left: -40%; right: 20%; bottom: 250px; height: 300px; background: #C9DECB; }
+  .ridge.far2 { left: 30%; right: -45%; bottom: 236px; height: 280px; background: #BBD5BF; }
+  .ridge.mid { left: -30%; right: -30%; bottom: 150px; height: 300px; background: #7FA88A; }
+  .hero .hill {
+    background: radial-gradient(120% 90% at 50% 0%, #4B7C5B 0%, #3E6B4E 45%, #2F5440 100%);
+    box-shadow: inset 0 10px 0 rgba(255,255,255,.08);
+  }
+  .tuft {
+    position: absolute; z-index: 1;
+    width: 0; height: 0;
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+    border-bottom: 20px solid #2F5440;
+  }
+  .tuft::before, .tuft::after {
+    content: ""; position: absolute; bottom: -20px;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-bottom: 15px solid #2F5440;
+  }
+  .tuft::before { left: -15px; }
+  .tuft::after { left: 3px; }
+  .groundshadow {
+    position: absolute; z-index: 2;
+    left: 50px; bottom: 40px; width: 200px; height: 30px; border-radius: 50%;
+    background: rgba(20, 40, 28, .35);
+    filter: blur(6px);
+  }
+  .far-pet {
+    position: absolute; z-index: 1;
+    width: 64px; filter: blur(2.5px); opacity: .75;
+    pointer-events: none;
+  }
+  .stg { position: absolute; z-index: 1; pointer-events: none; }
+  .stg img { width: 100%; display: block; position: relative; }
+  .stg::before {
+    content: ""; position: absolute;
+    left: 20%; right: 20%; bottom: 5%; height: 9%;
+    border-radius: 50%; background: rgba(20, 40, 28, .22); filter: blur(3px);
+  }
+  .stg.near img { filter: drop-shadow(0 8px 6px rgba(20, 40, 28, .22)); }
+  .hero .petwrap {
+    position: absolute;
+    z-index: 2;
+    width: 330px;
+    left: 30px;
+    bottom: 28px;
+    pointer-events: none;
+  }
+  .hero .petwrap img { width: 100%; display: block; }
+  .orb {
+    position: absolute;
+    z-index: 4;
+    width: 96px;
+    pointer-events: none;
+    filter: drop-shadow(0 12px 10px rgba(47, 84, 64, 0.18));
+  }
+  .orb img { width: 100%; display: block; }
+  .orb.a { left: -4px; top: 392px; width: 116px; }
+  .orb.a img { transform: rotate(-16deg); }
+  .orb.b { right: -4px; top: 300px; width: 108px; }
+  .orb.b img { transform: rotate(12deg); }
+  .orb.c { right: 28px; top: 318px; width: 72px; }
+  .orb.c img { transform: rotate(-6deg); }
+
+  /* Feature frames */
+  .feat h2 { font-size: 52px; padding: 34px 16px 0; letter-spacing: -1.6px; }
+  .phone {
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    background: #fff;
+    border-radius: 36px;
+    padding: 8px;
+    box-shadow: 0 24px 40px rgba(47, 84, 64, 0.16);
+  }
+  .phone { overflow: hidden; }
+  .phone img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 28px;
+  }
+  .grow .phone { top: 162px; width: 228px; height: 500px; transform: translateX(-50%) rotate(-6deg); }
+  .parade {
+    position: absolute;
+    z-index: 5;
+    left: 6px;
+    right: 6px;
+    bottom: 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+  .parade span { display: block; margin-right: -10px; animation: bob 3.2s ease-in-out infinite; }
+  .parade span:nth-child(2) { animation-delay: .25s; }
+  .parade span:nth-child(3) { animation-delay: .5s; }
+  .parade span:nth-child(4) { animation-delay: .1s; }
+  .parade span:nth-child(5) { animation-delay: .4s; }
+  .parade img { filter: drop-shadow(0 10px 8px rgba(47, 84, 64, 0.18)); display: block; }
+
+  .coach .phone { top: 176px; width: 250px; height: 300px; transform: translateX(-54%) rotate(5deg); }
+  .coach .cut {
+    position: absolute;
+    z-index: 4;
+    width: 210px;
+    right: -18px;
+    bottom: -6px;
+    pointer-events: none;
+    filter: drop-shadow(0 14px 12px rgba(47, 84, 64, 0.16));
+  }
+
+  .ask .phone { top: 188px; width: 230px; height: 460px; transform: translateX(-38%) rotate(-5deg); }
+  .ask .phone img { height: 100%; object-fit: cover; object-position: center 8%; }
+  .ask .cut {
+    position: absolute;
+    z-index: 4;
+    width: 200px;
+    left: -16px;
+    bottom: 8px;
+    pointer-events: none;
+    filter: drop-shadow(0 14px 12px rgba(47, 84, 64, 0.16));
+  }
+
+  /* Shared world for feature frames: same sky and hills as the hero, phone stands on the hill */
+  .world { background: linear-gradient(180deg, #F6EDE0 0%, #F1EBDD 34%, #E4EEDF 58%, #D6E7D7 100%); }
+  .world .sun { left: auto; right: -170px; top: 120px; width: 460px; height: 460px; }
+  .w-ridge { position: absolute; z-index: 1; border-radius: 50% 50% 0 0; }
+  .w-ridge.far { left: -40%; right: 10%; bottom: 210px; height: 230px; background: #C9DECB; }
+  .w-ridge.far2 { left: 25%; right: -50%; bottom: 196px; height: 220px; background: #BBD5BF; }
+  .w-ridge.mid { left: -30%; right: -30%; bottom: 96px; height: 220px; background: #7FA88A; }
+  .w-ridge.hill {
+    left: -25%; right: -25%; bottom: -90px; height: 250px;
+    background: radial-gradient(120% 90% at 50% 0%, #4B7C5B 0%, #3E6B4E 45%, #2F5440 100%);
+  }
+  .world h2 { z-index: 7; }
+  .world .phone {
+    z-index: 3;
+    border: 6px solid #DCE9DE;
+    padding: 6px;
+    box-shadow: 0 30px 50px rgba(30, 60, 40, .22), 0 6px 14px rgba(30, 60, 40, .12);
+  }
+  .world .phone img { border-radius: 26px; }
+  .sticker {
+    position: absolute; z-index: 6; pointer-events: none;
+    filter: drop-shadow(0 16px 14px rgba(30, 60, 40, .22));
+  }
+  .sticker img { width: 100%; display: block; }
+  .lift {
+    position: absolute; z-index: 5;
+    background-color: #fff;
+    background-repeat: no-repeat;
+    border: 5px solid #fff;
+    border-radius: 26px;
+    box-shadow: 0 34px 50px rgba(30, 60, 40, .28), 0 8px 16px rgba(30, 60, 40, .14);
+  }
+  .tilt-l { transform: rotate(-4deg); }
+  .tilt-r { transform: rotate(4deg); }
+
+  @keyframes fall {
+    0% { transform: translateY(-40px) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    100% { transform: translateY(380px) rotate(320deg); opacity: 0; }
+  }
+  .confetti i {
+    position: absolute; z-index: 4; display: block;
+    width: 10px; height: 16px; border-radius: 3px;
+    animation: fall 3.6s linear infinite;
+  }
+
+  .chip {
+    position: absolute; z-index: 6;
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border-radius: 999px;
+    padding: 12px 18px 12px 12px;
+    font-size: 20px; font-weight: 900; color: var(--ink);
+    box-shadow: 0 18px 30px rgba(30, 60, 40, .2);
+  }
+  .chip b {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--green); color: #fff;
+    display: grid; place-items: center; font-size: 16px;
+  }
+
+  @keyframes ripple {
+    0% { transform: translate(-50%, -50%) scale(.3); opacity: .9; }
+    100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+  }
+  .tap { position: absolute; z-index: 6; width: 0; height: 0; }
+  .tap::before {
+    content: ""; position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; transform: translate(-50%, -50%);
+    box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  }
+  .tap i {
+    position: absolute; left: 0; top: 0;
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 4px solid rgba(255,255,255,.95);
+    animation: ripple 1.6s ease-out infinite;
+  }
+  .tap i:nth-child(2) { animation-delay: .8s; }
+
+  /* Night */
+  .world.night { background: linear-gradient(180deg, #16291F 0%, #213D2D 45%, #2F5440 100%); }
+  .world.night h2 { color: #F6EDE0; }
+  .night .w-ridge.far { background: #2B4A38; }
+  .night .w-ridge.far2 { background: #2F5440; }
+  .night .w-ridge.mid { background: #3E6B4E; }
+  .night .w-ridge.hill { background: radial-gradient(120% 90% at 50% 0%, #5A8A69 0%, #4B7C5B 50%, #3E6B4E 100%); }
+  .moon {
+    position: absolute; z-index: 0; right: 40px; top: 210px;
+    width: 96px; height: 96px; border-radius: 50%;
+    box-shadow: 22px -10px 0 0 #F3DFCF;
+    filter: drop-shadow(0 0 24px rgba(243, 223, 207, .45));
+  }
+  @keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+  .star {
+    position: absolute; z-index: 0; width: 5px; height: 5px; border-radius: 50%;
+    background: #F6EDE0; animation: twinkle 2.4s ease-in-out infinite;
+  }
+  @keyframes zz {
+    0% { transform: translate(0, 0) scale(.7); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translate(40px, -120px) scale(1.2); opacity: 0; }
+  }
+  .zz {
+    position: absolute; z-index: 6;
+    font-size: 38px; font-weight: 900; color: #F6EDE0;
+    animation: zz 3.4s ease-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .confetti i, .tap i, .star, .zz { animation: none !important; }
+  }
+
+  /* App Store screenshots are still images. */
+  .shot *, .shot *::before, .shot *::after { animation: none !important; }
+  .confetti i { opacity: 1; }
+
+  .journey {
+    position: absolute; z-index: 5;
+    left: 12px; right: 12px; top: 186px;
+    padding: 26px 18px 22px;
+    border-radius: 34px;
+    color: #F6EDE0;
+    background: radial-gradient(120% 100% at 20% 0%, #4B7C5B 0%, #3E6B4E 55%, #34604A 100%);
+    border: 6px solid #fff;
+    box-shadow: 0 34px 50px rgba(30, 60, 40, .3), 0 8px 16px rgba(30, 60, 40, .14);
+  }
+  .j-k { font-size: 15px; font-weight: 900; letter-spacing: .16em; opacity: .75; }
+  .j-wk { font-size: 58px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; margin-top: 8px; }
+  .j-wk span { font-size: 34px; font-weight: 800; opacity: .8; letter-spacing: -.5px; }
+  .j-sub { font-size: 20px; font-weight: 800; opacity: .85; margin-top: 8px; }
+  .j-path { position: relative; height: 120px; margin-top: 74px; }
+  .j-path svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .j-pet {
+    position: absolute; left: calc(128 / 330 * 100% - 58px); bottom: 26px; width: 116px;
+    filter: drop-shadow(0 8px 6px rgba(0,0,0,.25));
+  }
+  .j-ends { display: flex; justify-content: space-between; font-size: 18px; font-weight: 900; margin-top: 4px; opacity: .9; }
+
+  .lock {
+    width: 100%; height: 100%; border-radius: 26px; overflow: hidden;
+    background: radial-gradient(120% 70% at 50% 100%, #5A8A69 0%, #3E6B4E 45%, #2F5440 100%);
+    color: #F6EDE0; text-align: center; position: relative;
+  }
+  .lock .date { padding-top: 54px; font-size: 15px; font-weight: 800; opacity: .85; }
+  .lock .time { font-size: 74px; font-weight: 900; letter-spacing: -2px; line-height: 1; margin-top: 2px; }
+  .lock .island { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: 82px; height: 22px; border-radius: 20px; background: #111; }
+  .note-card {
+    position: absolute; z-index: 5;
+    display: grid; grid-template-columns: 50px 1fr; gap: 12px; align-items: center;
+    background: rgba(255,255,255,.96);
+    border-radius: 26px; padding: 14px 16px 14px 14px;
+    box-shadow: 0 30px 46px rgba(30, 60, 40, .28), 0 8px 16px rgba(30, 60, 40, .14);
+  }
+  .note-card img { width: 50px; height: 50px; border-radius: 12px; display: block; }
+  .note-card .meta { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #8e8e93; }
+  .note-card .t { font-size: 17px; font-weight: 900; color: var(--ink); margin-top: 1px; }
+  .note-card .b { font-size: 15px; font-weight: 700; color: #3c3c43; line-height: 1.25; margin-top: 2px; }
+
+  /* Header graphic + search result */
+  .wide {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 980px) {
+    .wide { grid-template-columns: 1fr; }
+  }
+  .banner-wrap, .search-wrap { min-width: 0; }
+  .wide { grid-template-columns: 1fr; }
+  .search-wrap { max-width: 440px; }
+
+  .search-board-wrap {
+    width: min(960px, 100%);
+    height: calc(min(960px, 100%) * 1280 / 1920);
+    overflow: hidden;
+    margin-top: 28px;
+  }
+  .search-board {
+    width: 1920px; height: 1280px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #F6EDE0 0%, #F1EBDD 42%, #E4EEDF 68%, #D6E7D7 100%);
+    transform: scale(0.5);
+    transform-origin: 0 0;
+  }
+  .search-board .bn.hl { background: radial-gradient(120% 90% at 50% 0%, #4B7C5B 0%, #3E6B4E 45%, #2F5440 100%); }
+  .search-board .pet {
+    position: absolute; z-index: 3; height: 78%; width: auto;
+    left: 2%; bottom: 0; pointer-events: none;
+    filter: drop-shadow(0 18px 16px rgba(20, 40, 28, .28));
+  }
+  .search-board .store {
+    position: absolute; z-index: 4;
+    right: 70px; top: 90px; width: 980px;
+    border-radius: 36px; padding: 28px 28px 24px;
+    box-shadow: 0 30px 60px rgba(30, 60, 40, .22);
+  }
+  .search-board .sfield { font-size: 28px; padding: 16px 20px; border-radius: 18px; margin-bottom: 22px; gap: 12px; }
+  .search-board .sfield svg { width: 26px; height: 26px; }
+  .search-board .hit { grid-template-columns: 108px 1fr auto; gap: 20px; }
+  .search-board .hit img.icon { width: 108px; height: 108px; border-radius: 24px; }
+  .search-board .hit .name { font-size: 34px; }
+  .search-board .hit .sub { font-size: 24px; margin-top: 4px; }
+  .search-board .get { font-size: 28px; padding: 12px 36px; }
+  .search-board .peek { margin-top: 26px; gap: 16px; }
+  .banner {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3840 / 1646;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--cream);
+    box-shadow: 0 14px 32px rgba(40, 30, 20, 0.14);
+  }
+  .banner .hill {
+    height: 78%;
+    bottom: -18%;
+  }
+  .banner .pet {
+    position: absolute;
+    z-index: 2;
+    height: 86%;
+    width: auto;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .store {
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 14px 32px rgba(40, 30, 20, 0.12);
+  }
+  .hit {
+    display: grid;
+    grid-template-columns: 62px 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .hit img.icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 14px;
+  }
+  .hit .name { font-weight: 900; font-size: 15px; letter-spacing: -0.2px; }
+  .hit .sub { font-weight: 700; font-size: 13px; color: #8e8e93; margin-top: 1px; }
+  .get {
+    background: #007aff;
+    color: #fff;
+    font-weight: 800;
+    font-size: 15px;
+    border: 0;
+    border-radius: 999px;
+    padding: 6px 18px;
+  }
+  .sfield {
+    display: flex; align-items: center; gap: 7px;
+    background: #eeeef0; border-radius: 11px;
+    padding: 8px 11px; margin-bottom: 14px;
+    font-size: 15px; font-weight: 700; color: var(--ink);
+  }
+  .peek {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .peek .mini {
+    aspect-ratio: 390 / 844;
+    overflow: hidden;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .peek .mini .shot {
+    position: absolute; left: 0; top: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform-origin: 0 0;
+  }
+
+  /* Header art */
+  .banner {
+    background: linear-gradient(180deg, #F6EDE0 0%, #F1EBDD 40%, #E4EEDF 64%, #D6E7D7 100%);
+  }
+  .bn { position: absolute; z-index: 1; pointer-events: none; }
+  .bn.sun2 {
+    z-index: 0; left: 30%; top: -20%; width: 40%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,246,226,.95) 0%, rgba(255,240,214,.5) 36%, rgba(255,240,214,0) 68%);
+  }
+  .bn.cl {
+    z-index: 0; aspect-ratio: 3 / 1; border-radius: 40px; background: rgba(255,255,255,.85);
+  }
+  .bn.cl::before, .bn.cl::after { content: ""; position: absolute; border-radius: 50%; background: inherit; }
+  .bn.cl::before { width: 46%; height: 160%; left: 16%; bottom: 30%; }
+  .bn.cl::after { width: 34%; height: 130%; left: 50%; bottom: 36%; }
+  .bn.rg { border-radius: 50% 50% 0 0; }
+  .bn.hl { background: radial-gradient(120% 90% at 50% 0%, #4B7C5B 0%, #3E6B4E 45%, #2F5440 100%); }
+  .bn.fp { filter: blur(1.5px); opacity: .75; }
+  .bn.st { z-index: 2; filter: drop-shadow(0 10px 8px rgba(20, 40, 28, .3)); }
+  .bn.tf {
+    width: 0; height: 0;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-bottom: 16px solid #2F5440;
+  }
+  .bn.gs {
+    z-index: 2; left: 41%; bottom: 3%; width: 18%; height: 7%; border-radius: 50%;
+    background: rgba(20, 40, 28, .38); filter: blur(5px);
+  }
+  .banner .pet { z-index: 3; height: 84%; bottom: 4%; filter: drop-shadow(0 14px 12px rgba(20, 40, 28, .25)); }
+
+  /* Confetti burst around the Session Complete phone */
+  .burst i { position: absolute; z-index: 4; display: block; filter: drop-shadow(0 3px 3px rgba(30, 60, 40, .18)); }
+  .burst .r { width: 9px; height: 18px; border-radius: 3px; }
+  .burst .c { width: 10px; height: 10px; border-radius: 50%; }
+  .burst .s {
+    width: 22px; height: 14px;
+    border: 4px solid; border-color: inherit;
+    border-bottom: 0; border-left-color: transparent !important; border-right-color: transparent !important;
+    border-radius: 50%;
+  }
+
+  /* Subtle finish on every frame: soft vignette and fine grain */
+  .shot::after {
+    content: "";
+    position: absolute; inset: 0; z-index: 9; pointer-events: none;
+    background:
+      radial-gradient(130% 90% at 50% 40%, rgba(0,0,0,0) 62%, rgba(24, 44, 32, .10) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .w-ridge.far, .w-ridge.far2, .ridge.far, .ridge.far2 { box-shadow: inset 0 14px 18px -10px rgba(255,255,255,.55); }
+  .w-ridge.mid, .ridge.mid { box-shadow: inset 0 10px 14px -8px rgba(255,255,255,.28); }
+  .w-ridge.hill { box-shadow: inset 0 8px 0 rgba(255,255,255,.07); }
+  .world .sticker::before {
+    content: ""; position: absolute; z-index: -1;
+    left: 18%; right: 18%; bottom: -2%; height: 7%;
+    border-radius: 50%; background: rgba(20, 40, 28, .28); filter: blur(5px);
+  }
+
+  .ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .idea {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+    box-shadow: 0 8px 18px rgba(40, 30, 20, 0.06);
+  }
+  .idea[hidden] { display: none; }
+  .idea .k { font-size: 11px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green); }
+  .idea h4 { margin: 4px 0 6px; font-size: 18px; letter-spacing: -0.4px; }
+  .idea p { margin: 0; font-size: 13px; font-weight: 700; color: #4c463f; line-height: 1.4; }
+
+  .lib { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+  .lib figure {
+    margin: 0;
+    flex: none;
+    width: 108px;
+  }
+  .lib figure[hidden] { display: none; }
+  .lib img {
+    width: 108px;
+    height: 148px;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: 12px;
+    background: #fff;
+    display: block;
+  }
+  .lib figcaption {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #3c3833;
+    line-height: 1.25;
+  }
+  .poses { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+  .poses figure { margin: 0; flex: none; width: 92px; text-align: center; }
+  .poses figure[hidden] { display: none; }
+  .poses img {
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+    background: var(--cream);
+    border-radius: 14px;
+    display: block;
+  }
+  .poses figcaption { margin-top: 4px; font-size: 11px; font-weight: 800; color: #3c3833; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">Remedy <span>App Store</span></div>
+  <label class="search">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" stroke="#3E6B4E" stroke-width="1.8"/>
+      <path d="M10.5 10.5L14 14" stroke="#3E6B4E" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <input id="q" type="search" placeholder="Search frames, lines, screens, poses" autocomplete="off">
+  </label>
+  <div class="count" id="count">Mini set</div>
+</header>
+
+<main>
+  <p class="note">One headline on each frame. The armadillo does the rest.</p>
+
+  <h3 class="sec">Beginning frames</h3>
+  <div class="row" id="frames">
+
+    <article class="card" data-q="01 hero back exercise pet celebrating hill">
+      <div class="shot hero" id="shot-01">
+        <div class="sun"></div>
+        <div class="cloud" style="width:96px;left:26px;top:300px"></div>
+        <div class="cloud" style="width:70px;right:30px;top:262px;opacity:.8"></div>
+        <div class="ridge far"></div>
+        <div class="ridge far2"></div>
+        <div class="stg" style="left:72px;top:290px;width:44px;filter:blur(1.1px);opacity:.88"><img src="../../assets/pet/s1_idle.png" alt=""></div>
+        <div class="stg" style="left:298px;top:306px;width:60px;filter:blur(.5px)"><img src="../../assets/pet/s2_idle.png" alt=""></div>
+        <div class="ridge mid"></div>
+        <div class="stg near" style="left:24px;top:362px;width:86px"><img src="../../assets/pet/s3_idle.png" alt=""></div>
+        <div class="hill"></div>
+        <div class="stg near" style="left:270px;top:446px;width:118px;z-index:2"><img src="../../assets/pet/s4_idle.png" alt=""></div>
+        <div class="tuft" style="left:40px;bottom:250px"></div>
+        <div class="tuft" style="right:46px;bottom:228px"></div>
+        <div class="tuft" style="left:300px;bottom:120px"></div>
+        <div class="groundshadow"></div>
+        <h2>Back<br>exercise<br>pet</h2>
+        <div class="petwrap" style="left:0;width:300px;bottom:30px;z-index:3"><img src="../../assets/pet/s5_celebrating.png" alt=""></div>
+      </div>
+      <p class="cap">01</p>
+    </article>
+
+    <article class="card" data-q="02 he grows with you stages parade home">
+      <div class="shot feat grow sky" id="shot-02">
+        <h2>Grows<br>with you</h2>
+        <div class="phone"><img src="../../growth-engine/assets/screenshots/home_arnie_standing.png" alt=""></div>
+        <div class="parade">
+          <span><img src="../../assets/pet/s1_idle.png" alt="" style="width:68px;transform:rotate(-14deg)"></span>
+          <span><img src="../../assets/pet/s2_idle.png" alt="" style="width:78px;transform:rotate(10deg)"></span>
+          <span><img src="../../assets/pet/s3_idle.png" alt="" style="width:90px;transform:rotate(-8deg)"></span>
+          <span><img src="../../assets/pet/s4_idle.png" alt="" style="width:102px;transform:rotate(8deg)"></span>
+          <span><img src="../../assets/pet/s5_idle.png" alt="" style="width:118px;transform:rotate(-4deg)"></span>
+        </div>
+      </div>
+      <p class="cap">02</p>
+    </article>
+
+    <article class="card" data-q="03 celebrate wins session complete arnie grew stages confetti">
+      <div class="shot feat world" id="shot-03">
+        <div class="sun"></div>
+        <div class="w-ridge far"></div><div class="w-ridge far2"></div><div class="w-ridge mid"></div><div class="w-ridge hill"></div>
+        <h2>Celebrate<br>wins</h2>
+        <div class="burst">
+          <i class="r" style="left:22px;top:214px;background:#AE5636;transform:rotate(-28deg)"></i>
+          <i class="c" style="left:44px;top:262px;background:#E9B44C"></i>
+          <i class="s" style="left:14px;top:300px;border-color:#3E6B4E;transform:rotate(18deg)"></i>
+          <i class="r" style="left:52px;top:340px;background:#E9B44C;transform:rotate(40deg)"></i>
+          <i class="c" style="left:20px;top:372px;background:#AE5636;width:7px;height:7px"></i>
+          <i class="r" style="right:24px;top:206px;background:#3E6B4E;transform:rotate(22deg)"></i>
+          <i class="s" style="right:14px;top:252px;border-color:#AE5636;transform:rotate(-24deg) scaleX(-1)"></i>
+          <i class="c" style="right:46px;top:292px;background:#E9B44C"></i>
+          <i class="r" style="right:18px;top:330px;background:#AE5636;transform:rotate(-36deg)"></i>
+          <i class="c" style="right:40px;top:366px;background:#3E6B4E;width:7px;height:7px"></i>
+        </div>
+        <div class="phone" style="top:160px;width:262px;height:541px;transform:translateX(-50%)"><img src="img/rec/rec_session_to_pain9_80s.png" alt=""></div>
+        <div class="lift tilt-l" style="left:20px;top:394px;width:350px;height:162px;background-image:url(../../growth-engine/assets/screenshots/crop_progress_3.png);background-size:cover;background-position:center"></div>
+        <div class="sticker bob" style="width:170px;right:-16px;bottom:40px"><img src="../../assets/pet/s5_proud.png" alt=""></div>
+      </div>
+      <p class="cap">03</p>
+    </article>
+
+    <article class="card" data-q="04 track progress journey week 2 of 4 stages">
+      <div class="shot feat world" id="shot-04">
+        <div class="sun"></div>
+        <div class="w-ridge far"></div><div class="w-ridge far2"></div><div class="w-ridge mid"></div><div class="w-ridge hill"></div>
+        <h2>Track<br>progress</h2>
+        <div class="journey tilt-l">
+          <div class="j-k">PROGRESS</div>
+          <div class="j-wk">Week 2 <span>of 4</span></div>
+          <div class="j-sub">2 weeks to go</div>
+          <div class="j-path">
+            <svg viewBox="0 0 330 120" width="330" height="120" aria-hidden="true">
+              <path d="M24 92 C 70 92, 100 96, 128 96" stroke="#F6EDE0" stroke-opacity=".75" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <path d="M128 96 C 170 96, 200 78, 230 80 S 290 90, 306 88" stroke="#F6EDE0" stroke-opacity=".55" stroke-width="5" stroke-dasharray="1 13" stroke-linecap="round" fill="none"/>
+              <circle cx="24" cy="92" r="11" fill="#F6EDE0"/>
+              <circle cx="128" cy="96" r="13" fill="#F6EDE0"/>
+              <circle cx="128" cy="96" r="6" fill="#3E6B4E"/>
+              <circle cx="230" cy="80" r="11" fill="#F6EDE0" fill-opacity=".45"/>
+              <circle cx="306" cy="88" r="11" fill="#F6EDE0" fill-opacity=".45"/>
+            </svg>
+            <img src="../../assets/pet/s5_idle.png" alt="" class="j-pet">
+          </div>
+          <div class="j-ends"><span>Start</span><span>Week 4</span></div>
+        </div>
+        <div class="sticker" style="width:186px;right:-14px;bottom:24px"><img src="../../assets/pet/s5_cheer.png" alt=""></div>
+      </div>
+      <p class="cap">04</p>
+    </article>
+
+    <article class="card" data-q="05 custom plan building onboarding chips lower back 15 min 4 days">
+      <div class="shot feat world" id="shot-05">
+        <div class="sun"></div>
+        <div class="w-ridge far"></div><div class="w-ridge far2"></div><div class="w-ridge mid"></div><div class="w-ridge hill"></div>
+        <h2>Custom<br>plan</h2>
+        <div class="lift tilt-l" style="left:12px;top:176px;width:366px;height:388px;background-image:url(../../growth-engine/assets/screenshots/onboard_building.png);background-size:356px auto;background-position:0 -182px"></div>
+        <div class="chip" style="left:14px;top:590px;transform:rotate(-4deg)"><b>✓</b>Lower Back</div>
+        <div class="chip" style="right:18px;top:612px;transform:rotate(5deg)"><b>✓</b>15 min</div>
+        <div class="chip" style="left:44px;top:680px;transform:rotate(2deg)"><b>✓</b>4 days</div>
+        <div class="sticker" style="width:140px;right:8px;bottom:22px"><img src="../../assets/pet/s3_idle.png" alt=""></div>
+      </div>
+      <p class="cap">05</p>
+    </article>
+
+    <article class="card" data-q="06 video workouts cat cow coach exercise">
+      <div class="shot feat world" id="shot-06">
+        <div class="sun"></div>
+        <div class="w-ridge far"></div><div class="w-ridge far2"></div><div class="w-ridge mid"></div><div class="w-ridge hill"></div>
+        <h2>Video<br>workouts</h2>
+        <div class="phone" style="top:160px;width:262px;height:541px;transform:translateX(-50%)"><img src="../../growth-engine/assets/screenshots/exercise_cat_cow.png" alt=""></div>
+        <div class="lift tilt-l" style="left:12px;top:318px;width:366px;height:244px;background-image:url(../../growth-engine/assets/screenshots/exercise_cat_cow.png);background-size:356px auto;background-position:0 -117px"></div>
+        <div class="sticker bob" style="width:190px;right:-18px;bottom:6px"><img src="../../assets/pet/s5_coach.png" alt=""></div>
+      </div>
+      <p class="cap">06</p>
+    </article>
+
+    <article class="card" data-q="07 rest buddy rest timer drinking water">
+      <div class="shot feat world" id="shot-07">
+        <div class="sun"></div>
+        <div class="w-ridge far"></div><div class="w-ridge far2"></div><div class="w-ridge mid"></div><div class="w-ridge hill"></div>
+        <h2>Rest<br>buddy</h2>
+        <div class="phone" style="top:168px;width:262px;height:541px;transform:translateX(-40%) rotate(5deg)"><img src="img/rec/rec_session_done_home_17s.png" alt=""></div>
+        <div class="sticker bob" style="width:250px;left:-30px;bottom:8px"><img src="../../assets/pet/s5_rest.png" alt=""></div>
+      </div>
+      <p class="cap">07</p>
+    </article>
+
+    <article class="card" data-q="08 gentle reminders notifications lock screen stretch break ready when you are">
+      <div class="shot feat world" id="shot-08">
+        <div class="sun"></div>
+        <div class="w-ridge far"></div><div class="w-ridge far2"></div><div class="w-ridge mid"></div><div class="w-ridge hill"></div>
+        <h2>Gentle<br>reminders</h2>
+        <div class="phone" style="top:160px;width:262px;height:541px;transform:translateX(-50%)">
+          <div class="lock">
+            <div class="island"></div>
+            <div class="date">Monday, November 16</div>
+            <div class="time">9:41</div>
+          </div>
+        </div>
+        <div class="note-card" style="left:14px;right:14px;top:378px;transform:rotate(-2deg)">
+          <img src="../../assets/icon.png" alt="">
+          <div><div class="meta"><span>REMEDY</span><span>now</span></div><div class="t">Arnie is ready when you are</div><div class="b">Today's session is waiting. A few minutes and you're both done.</div></div>
+        </div>
+        <div class="note-card" style="left:24px;right:10px;top:510px;transform:rotate(2deg)">
+          <img src="../../assets/icon.png" alt="">
+          <div><div class="meta"><span>REMEDY</span><span>2h ago</span></div><div class="t">Stretch break</div><div class="b">Arnie is stretching. Stand up and join in for a minute.</div></div>
+        </div>
+        <div class="sticker" style="width:190px;left:-18px;bottom:6px"><img src="../../assets/pet/s5_stretching.png" alt=""></div>
+      </div>
+      <p class="cap">08</p>
+    </article>
+  </div>
+
+  <h3 class="sec">Header and search</h3>
+  <div class="wide">
+    <div class="banner-wrap" data-q="header feature graphic banner 3840 safe area hill happy remedy">
+      <div class="banner" id="shot-header">
+        <div class="bn sun2"></div>
+        <div class="bn cl" style="width:7%;left:13%;top:20%"></div>
+        <div class="bn cl" style="width:5%;right:16%;top:14%;opacity:.85"></div>
+        <div class="bn cl" style="width:4%;left:64%;top:9%;opacity:.7"></div>
+        <div class="bn rg" style="left:-12%;right:48%;bottom:36%;height:46%;background:#C9DECB"></div>
+        <div class="bn rg" style="left:42%;right:-14%;bottom:33%;height:50%;background:#BBD5BF"></div>
+        <img class="bn fp" src="../../assets/pet/s3_idle.png" alt="" style="left:21%;bottom:58%;width:4.2%">
+        <img class="bn fp" src="../../assets/pet/s4_idle.png" alt="" style="right:22%;bottom:62%;width:3.6%">
+        <div class="bn rg" style="left:-20%;right:-20%;bottom:16%;height:44%;background:#7FA88A"></div>
+        <div class="bn rg hl" style="left:-12%;right:-12%;bottom:-34%;height:72%"></div>
+        <div class="bn tf" style="left:30%;bottom:30%"></div>
+        <div class="bn tf" style="right:31%;bottom:27%"></div>
+        <div class="bn tf" style="left:8%;bottom:14%"></div>
+        <div class="bn tf" style="right:7%;bottom:12%"></div>
+        <img class="bn st" src="../../assets/pet/s1_idle.png" alt="" style="left:9%;bottom:12%;width:11%;transform:rotate(-12deg)">
+        <img class="bn st" src="../../assets/pet/s2_idle.png" alt="" style="left:21%;bottom:6%;width:10%;transform:rotate(8deg)">
+        <img class="bn st" src="../../assets/pet/s3_idle.png" alt="" style="right:20%;bottom:5%;width:11%;transform:rotate(-6deg)">
+        <img class="bn st" src="../../assets/pet/s4_idle.png" alt="" style="right:7%;bottom:9%;width:12%;transform:rotate(6deg)">
+        <div class="bn gs"></div>
+        <img class="pet" src="../../assets/pet/s5_celebrating.png" alt="">
+      </div>
+      <p class="cap">Header</p>
+    </div>
+    <div class="search-wrap" data-q="search result app store get subtitle back exercises armadillo icon">
+      <div class="store" id="shot-search">
+        <div class="sfield">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="#8e8e93" stroke-width="1.8"/><path d="M10.5 10.5L14 14" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>back exercises</span>
+        </div>
+        <div class="hit">
+          <img class="icon" src="../../assets/icon.png" alt="">
+          <div>
+            <div class="name">Remedy: Back Pain Relief</div>
+            <div class="sub">Back exercises + an armadillo</div>
+          </div>
+          <button class="get" type="button">GET</button>
+        </div>
+        <div class="peek" id="peek"></div>
+      </div>
+      <p class="cap">Search</p>
+    </div>
+  </div>
+  <div class="search-board-wrap">
+    <div class="search-board" id="shot-search-wide">
+      <div class="bn sun2" style="left:8%;top:-30%"></div>
+      <div class="bn cl" style="width:9%;left:8%;top:14%"></div>
+      <div class="bn cl" style="width:6%;left:28%;top:8%;opacity:.8"></div>
+      <div class="bn rg" style="left:-8%;right:30%;bottom:34%;height:42%;background:#C9DECB"></div>
+      <div class="bn rg" style="left:20%;right:-10%;bottom:30%;height:40%;background:#BBD5BF"></div>
+      <div class="bn rg" style="left:-16%;right:-10%;bottom:12%;height:36%;background:#7FA88A"></div>
+      <div class="bn rg hl" style="left:-10%;right:-8%;bottom:-28%;height:52%"></div>
+      <img class="bn st" src="../../assets/pet/s1_idle.png" alt="" style="left:4%;bottom:16%;width:9%;transform:rotate(-10deg)">
+      <img class="bn st" src="../../assets/pet/s3_idle.png" alt="" style="left:16%;bottom:10%;width:8%;transform:rotate(6deg)">
+      <img class="pet" src="../../assets/pet/s5_celebrating.png" alt="">
+      <div class="store">
+        <div class="sfield">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="#8e8e93" stroke-width="1.8"/><path d="M10.5 10.5L14 14" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>back exercises</span>
+        </div>
+        <div class="hit">
+          <img class="icon" src="../../assets/icon.png" alt="">
+          <div>
+            <div class="name">Remedy: Back Pain Relief</div>
+            <div class="sub">Back exercises + an armadillo</div>
+          </div>
+          <button class="get" type="button">GET</button>
+        </div>
+        <div class="peek"></div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sec">Screens we have</h3>
+  <div class="lib" id="lib">
+    <figure data-q="home standing arnie home_arnie_standing"><img src="../../growth-engine/assets/screenshots/home_arnie_standing.png" alt=""><figcaption>Home, standing</figcaption></figure>
+    <figure data-q="home angry grumpy home_angry"><img src="../../growth-engine/assets/screenshots/home_angry.png" alt=""><figcaption>Home, grumpy</figcaption></figure>
+    <figure data-q="home reading home_reading"><img src="../../growth-engine/assets/screenshots/home_reading.png" alt=""><figcaption>Home, reading</figcaption></figure>
+    <figure data-q="home reading page home_reading_page"><img src="../../growth-engine/assets/screenshots/home_reading_page.png" alt=""><figcaption>Reading a page</figcaption></figure>
+    <figure data-q="poke home_poke_lot"><img src="../../growth-engine/assets/screenshots/home_poke_lot.png" alt=""><figcaption>Poked a lot</figcaption></figure>
+    <figure data-q="session preview 19 min session_preview_w2s3"><img src="../../growth-engine/assets/screenshots/session_preview_w2s3.png" alt=""><figcaption>Session card</figcaption></figure>
+    <figure data-q="glute bridge coach exercise_glute_bridge"><img src="../../growth-engine/assets/screenshots/exercise_glute_bridge.png" alt=""><figcaption>Glute bridge</figcaption></figure>
+    <figure data-q="cat cow exercise_cat_cow"><img src="../../growth-engine/assets/screenshots/exercise_cat_cow.png" alt=""><figcaption>Cat-cow</figcaption></figure>
+    <figure data-q="bird dog exercise_bird_dog"><img src="../../growth-engine/assets/screenshots/exercise_bird_dog.png" alt=""><figcaption>Bird dog</figcaption></figure>
+    <figure data-q="child pose exercise_childs_pose"><img src="../../growth-engine/assets/screenshots/exercise_childs_pose.png" alt=""><figcaption>Child’s pose</figcaption></figure>
+    <figure data-q="squat exercise_squat"><img src="../../growth-engine/assets/screenshots/exercise_squat.png" alt=""><figcaption>Squat</figcaption></figure>
+    <figure data-q="pain check 5 pain_check_before_5"><img src="../../growth-engine/assets/screenshots/pain_check_before_5.png" alt=""><figcaption>Check-in at 5</figcaption></figure>
+    <figure data-q="pain check 2 pain_check_before_2"><img src="../../growth-engine/assets/screenshots/pain_check_before_2.png" alt=""><figcaption>Check-in at 2</figcaption></figure>
+    <figure data-q="workout days schedule workout_days_sheet"><img src="../../growth-engine/assets/screenshots/workout_days_sheet.png" alt=""><figcaption>Your days</figcaption></figure>
+  </div>
+
+  <h3 class="sec">Poses</h3>
+  <div class="poses" id="poses">
+    <figure data-q="pose celebrating s5_celebrating"><img src="../../assets/pet/s5_celebrating.png" alt=""><figcaption>Celebrating</figcaption></figure>
+    <figure data-q="pose angry s5_angry"><img src="../../assets/pet/s5_angry.png" alt=""><figcaption>Angry</figcaption></figure>
+    <figure data-q="pose reading s5_reading"><img src="../../assets/pet/s5_reading.png" alt=""><figcaption>Reading</figcaption></figure>
+    <figure data-q="pose coach s5_coach"><img src="../../assets/pet/s5_coach.png" alt=""><figcaption>Coach</figcaption></figure>
+    <figure data-q="pose cheer s5_cheer"><img src="../../assets/pet/s5_cheer.png" alt=""><figcaption>Cheer</figcaption></figure>
+    <figure data-q="pose sleepy s5_sleepy"><img src="../../assets/pet/s5_sleepy.png" alt=""><figcaption>Sleepy</figcaption></figure>
+    <figure data-q="pose bed"><img src="../../assets/pet/bed.png" alt=""><figcaption>Bed</figcaption></figure>
+    <figure data-q="pose stage 1 ball s1_idle"><img src="../../assets/pet/s1_idle.png" alt=""><figcaption>Stage 1</figcaption></figure>
+    <figure data-q="pose stage 2 peek s2_idle"><img src="../../assets/pet/s2_idle.png" alt=""><figcaption>Stage 2</figcaption></figure>
+    <figure data-q="pose stage 3 sit s3_idle"><img src="../../assets/pet/s3_idle.png" alt=""><figcaption>Stage 3</figcaption></figure>
+    <figure data-q="pose stage 4 stand s4_idle"><img src="../../assets/pet/s4_idle.png" alt=""><figcaption>Stage 4</figcaption></figure>
+    <figure data-q="pose stage 5 grown s5_idle"><img src="../../assets/pet/s5_idle.png" alt=""><figcaption>Stage 5</figcaption></figure>
+  </div>
+</main>
+<script>
+  const q = document.getElementById("q");
+  const count = document.getElementById("count");
+  const items = [...document.querySelectorAll("[data-q]")];
+  function apply() {
+    const needle = q.value.trim().toLowerCase();
+    let shown = 0;
+    for (const el of items) {
+      const hit = !needle || el.dataset.q.includes(needle);
+      el.hidden = !hit;
+      if (hit) shown += 1;
+    }
+    count.textContent = needle ? shown + " matches" : "Mini set";
+  }
+  q.addEventListener("input", apply);
+
+  const firstShots = [...document.querySelectorAll("#frames .shot")].slice(0, 3);
+  const minis = [...document.querySelectorAll(".peek")].flatMap((peek) =>
+    firstShots.map((shot) => {
+      const mini = document.createElement("div");
+      mini.className = "mini";
+      const copy = shot.cloneNode(true);
+      copy.removeAttribute("id");
+      copy.style.zoom = "1";
+      mini.appendChild(copy);
+      peek.appendChild(mini);
+      return mini;
+    })
+  );
+  function fitMinis() {
+    for (const mini of minis) {
+      mini.firstChild.style.transform = `scale(${mini.clientWidth / 390})`;
+    }
+  }
+  fitMinis();
+  window.addEventListener("resize", fitMinis);
+</script>
+</body>
+</html>

@@ -62,32 +62,42 @@ sessions, they have churned.**
 
 ```
 Application Installed
-  → /(onboarding)              welcome
-  → /(onboarding)/pet          meet and name the pet (skipped on a retake or when the account already has a pet)
-  → /(onboarding)/grow         tap through the pet's five stages (skipped on a retake or when the account already has a pet)
-  → /(onboarding)/founder      interstitial
-  → /(onboarding)/education    interstitial
-  → /(onboarding)/proof        why Remedy works + "Agree & continue" legal/health-data assent (hard gate)
-  → /(onboarding)/q0           where did you hear about us      (analytics-only answer)
-  → /(onboarding)/q9           can Remedy fix it? yes/maybe/no  (analytics-only answer → app_belief)
-  → /(onboarding)/recognize    which stuck-pain patterns feel true  (analytics-only)
-  → /(onboarding)/seen         one tailored mindset interstitial (recognize)
-  → /(onboarding)/q6           main goals            (multi)  ← personalizing quiz starts
-  → /(onboarding)/q1           pain location
-  → /(onboarding)/q2           pain duration
-  → /(onboarding)/q3           pain type             (multi)
-  → /(onboarding)/q4           activity level
-  → /(onboarding)/q5           pain triggers         (multi)
-  → /(onboarding)/q7           equipment tier + safety disclaimer modal
-  → /(onboarding)/q8           time budget + cadence → sessions_per_week_preference
-  → /(onboarding)/commit       "Hold to commit" interstitial
-  → /(onboarding)/finalizing   animated "building your plan"
-  → /(onboarding)/match        server-computed plan preview  →  Superwall paywall
-  → /(auth)/sign-in            Apple / Google / Email          ← FIRST TIME AN ACCOUNT EXISTS
-  → /building-plan             persist answers, verify purchase, assign program
-  → /(tabs)                    home
-  → /orientation               three-slide mindset orientation      (first session start only)
-  → /session/[id]              ← FIRST REAL VALUE
+  → /(onboarding)              welcome + legal assent
+  → /(onboarding)/meet         hatch the pet          (skipped when the account already has a pet)
+  → /(onboarding)/pet          name the pet, then first name (same skip)
+  → /(onboarding)/open_goals   chapter open
+  → /(onboarding)/goal         main goal
+  → /(onboarding)/hard_now     what is hard right now
+  → /(onboarding)/outlook      interstitial
+  → /(onboarding)/open_back    chapter open
+  → /(onboarding)/location     where it hurts
+  → /(onboarding)/spread
+  → /(onboarding)/duration
+  → /(onboarding)/onset
+  → /(onboarding)/feel
+  → /(onboarding)/leg          only when pain travels into the leg
+  → /(onboarding)/intensity
+  → /(onboarding)/open_pattern chapter open
+  → /(onboarding)/movement
+  → /(onboarding)/relief
+  → /(onboarding)/rapid        flare, trend, limitation
+  → /(onboarding)/ns           nervous-system check (answers are not sent)
+  → /(onboarding)/ns_result
+  → /(onboarding)/open_you     chapter open
+  → /(onboarding)/conditions   answers are not sent
+  → /(onboarding)/age          answers are not sent
+  → /(onboarding)/activity
+  → /(onboarding)/equipment
+  → /(onboarding)/time         minutes and days per week
+  → /(onboarding)/reminders
+  → /(onboarding)/safety       none vs acknowledged; the flags themselves are not sent
+  → /(onboarding)/finalizing   "where did you hear about us" while the plan is built
+  → /(onboarding)/match        plan + hold to commit → Superwall paywall
+  → /(auth)/sign-in            Apple / Google / Email
+  → /building-plan
+  → /(tabs)
+  → /orientation
+  → /session/[id]
 ```
 
 Two things about this path drive the whole instrumentation design:
@@ -226,7 +236,7 @@ Every funnel below is answerable from the event table in §3.
 | Funnel | Steps | The drop-off question each step answers |
 |---|---|---|
 | **F1 — Onboarding → Activation** | `onboarding_started` → `onboarding_completed` → `paywall_viewed` → `purchase_flow_completed` → `signup_completed` → `program_assigned` | Where between "started onboarding" and "got a program" do we lose people? First session is In-App (F4) and the activation-rate tile, not this funnel. The product funnel still *conceptually* starts at `Application Installed`, but that event is once-per-install and last fired 2026-06-20 — a cutover-scoped insight that starts there is empty forever. Post-paywall handoff (purchase stash → signup → assignment) is still the risky drop. |
-| **F2 — Onboarding step funnel** | `onboarding_step_viewed` / `onboarding_step_completed` for the question keys only (`q0`, `q9`, `q6`, `q1`–`q5`, `q7`, `q8`, `recognize`) | Which question is the expensive one? Interstitials (welcome / founder / education / proof / seen / commit / finalizing / match) are excluded — they live on the full-path tile. `time_on_step_ms` separates "hard question" from "boring question". |
+| **F2 — Onboarding step funnel** | `onboarding_step_viewed` / `onboarding_step_completed` for every key in `onboardingStepKey` | Which current page loses people? Meet, pet, and leg are conditional, so the strict funnel omits them and the per-page table keeps them. `time_on_step_ms` on `onboarding_step_exited` is average time on the page. `exit_type` + `left_to` is why they left. |
 | **F3 — Monetization** | `paywall_viewed` → `paywall_presented` → `purchase_started` → `purchase_flow_completed` | Did they see the paywall, did Superwall actually render one, did they start a purchase, did Apple complete it? Stops at the client purchase because the no-trial SKU never emits `trial_started`. Server grant (`trial_started` **OR** `subscription_started`) is a separate SQL tile. Trial → paid stays its own funnel. |
 | **F4 — Session completion** | `session_start_tapped` → `session_previewed` → `session_started` → `exercise_started` → `session_completed` | Do people bail at the preview, at the pain check-in, at the first exercise, or midway? `session_abandoned` carries `phase_key` for exactly this. |
 | **F5 — Auth** | `signup_started` → `signup_completed`, broken down by `method` | Is Apple/Google/Email failing differently? This runs *after* money has changed hands, so a failure here is a paid user with no account. |
@@ -339,11 +349,28 @@ second, staler source of truth for the same fact.
 Enforced in code as the `KNOWN_SCREENS` allow-list in `lib/analytics/routes.ts`. The two lists
 must stay identical.
 
-`/(onboarding)`, `/(onboarding)/pet`, `/(onboarding)/grow`, `/(onboarding)/founder`, `/(onboarding)/education`, `/(onboarding)/proof`, `/(onboarding)/q0`,
-`/(onboarding)/q9`, `/(onboarding)/q6`, `/(onboarding)/q1`, `/(onboarding)/q2`,
-`/(onboarding)/recognize`, `/(onboarding)/seen`,
-`/(onboarding)/q3`, `/(onboarding)/q4`, `/(onboarding)/q5`, `/(onboarding)/q7`,
-`/(onboarding)/q8`, `/(onboarding)/commit`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
+`/(onboarding)`, `/(onboarding)/meet`, `/(onboarding)/pet`, `/(onboarding)/open_goals`,
+`/(onboarding)/goal`, `/(onboarding)/hard_now`, `/(onboarding)/outlook`,
+`/(onboarding)/open_back`, `/(onboarding)/location`, `/(onboarding)/spread`,
+`/(onboarding)/duration`, `/(onboarding)/onset`,
+`/(onboarding)/feel`, `/(onboarding)/leg`, `/(onboarding)/intensity`,
+`/(onboarding)/open_pattern`, `/(onboarding)/movement`, `/(onboarding)/relief`,
+`/(onboarding)/rapid`, `/(onboarding)/ns`, `/(onboarding)/ns_result`,
+`/(onboarding)/open_you`, `/(onboarding)/conditions`, `/(onboarding)/age`, `/(onboarding)/activity`,
+`/(onboarding)/equipment`, `/(onboarding)/time`, `/(onboarding)/reminders`,
+`/(onboarding)/safety`, `/(onboarding)/finalizing`, `/(onboarding)/match`,
+
+Step keys, in that same order (`welcome` is `/(onboarding)`): `welcome`, `meet`, `pet`,
+`open_goals`, `goal`, `hard_now`, `outlook`, `open_back`, `location`, `spread`, `duration`,
+`onset`, `feel`, `leg`, `intensity`, `open_pattern`, `movement`, `relief`, `rapid`,
+`ns`, `ns_result`, `open_you`, `conditions`, `age`, `activity`, `equipment`,
+`time`, `reminders`, `safety`, `finalizing`, `match`. `step_index` is the 0-based position in
+that list.
+
+Sensitive steps do not send option values: `leg`, `intensity`, `ns`, `conditions`, `age`,
+`safety`. Those cover leg reach, pain intensity, the five nervous-system answers, conditions,
+age band, and red flags. They still emit step viewed and completed (`answer_count` where it
+is natural). `trackOption` no-ops on those steps.
 `/(auth)/sign-in`, `/(auth)/email`, `/(legal)/terms`, `/(legal)/privacy`, `/(tabs)`,
 `/(tabs)/progress`, `/(tabs)/profile`, `/session/[id]`, `/building-plan`, `/weekly-ramp`,
 `/orientation`, `/program-complete`, `/next-program`, `/onboarding-answers`, `/auth-callback`,
@@ -365,19 +392,18 @@ absolute.
 
 ### 3.3 Onboarding — C
 
-Step keys are the members of `ONBOARDING_FLOW` in `context/OnboardingContext.tsx`, plus
-`commit`, `finalizing` and `match`. `step_index` is the array index (0-based), so it
-**shifts when steps are added or removed** — group historical data by `step_key`, not
-`step_index`. The `recognize` / `seen` block sits after q9 and before the personalizing
-quiz (`q6`). The seen interstitial is tailored from the first recognize selection (the
-legacy `tried_before` answer is no longer collected, so the "tried before" copy is used).
+Step keys are the ordered list in §3.2.1 (`welcome` through `match`). `step_index` is the
+array index (0-based), so it **shifts when steps are added or removed** — group historical
+data by `step_key`, not `step_index`. Sensitive steps (`leg`, `intensity`, `ns`,
+`conditions`, `age`, `safety`) do not send `option_value`.
 
 | Event | Fires when | Trigger location | Required properties | Optional | Notes |
 |---|---|---|---|---|---|
 | `onboarding_started` | "Get Started" tapped on welcome | `app/(onboarding)/index.tsx` | `is_resume` bool | `resume_step_key` str, `resume_step_index` int | Top of F1/F2. |
-| `onboarding_step_viewed` | The router settles on a funnel step | `useOnboardingStepTracking` in `lib/analytics/onboardingSteps.ts` | `step_key` str, `step_index` int, `is_retake` bool | — | Driven off the active route, not screen mount: expo-router keeps earlier screens mounted, so a mount hook would miss every back-navigation and re-entry. Exactly one `viewed` and one `exited` per visit. |
-| `onboarding_step_completed` | Continue pressed with a valid answer | Each `q*.tsx` continue handler, via `useOnboardingStepCompletion()` | `step_key` str, `step_index` int, `time_on_step_ms` int, `is_retake` bool | `answer_count` int (multi-selects) | Primary F2 step event. |
-| `onboarding_step_exited` | Leaving a step by any route | `lib/analytics/onboardingSteps.ts` — route watcher + `AppState` listener | `step_key` str, `step_index` int, `time_on_step_ms` int, `exit_type` str | — | `exit_type` ∈ `forward` \| `backward` \| `backgrounded` \| `abandoned`. Without this, a user who took a phone call is indistinguishable from a user who quit. Returning to the foreground starts a *new* visit, so dwell time excludes the time away. |
+| `onboarding_step_viewed` | The router settles on a funnel step | `useOnboardingStepTracking` in `lib/analytics/onboardingSteps.ts` | `step_key` str, `step_index` int, `is_retake` bool, `entry_point` str, `flow` str (`v2`) | `client_build` str | Driven off the active route, not screen mount. Exactly one `viewed` and one `exited` per visit. `entry_point` ∈ `funnel` \| `profile_preview` \| `lapsed`. Profile Force Paywall and `?lapsed=1` are not the quiz. `flow` is `v2` for this quiz; the previous quiz did not send it. |
+| `onboarding_step_completed` | Continue pressed with a valid answer | `useObStep().goNext`, via `useOnboardingStepCompletion()` | `step_key` str, `step_index` int, `time_on_step_ms` int, `is_retake` bool, `entry_point` str | `answer_count` int, `client_build` str | Primary per-page completion. Finalizing and match do not emit it; they leave by route change. |
+| `onboarding_step_exited` | Leaving a step by any route | `lib/analytics/onboardingSteps.ts` — route watcher + `AppState` listener | `step_key` str, `step_index` int, `time_on_step_ms` int, `exit_type` str, `left_to` str, `is_retake` bool, `entry_point` str | `client_build` str | `exit_type` ∈ `forward` \| `backward` \| `backgrounded` \| `abandoned`. `left_to` is the step, screen, `app_background`, or `left_app`. iOS `inactive` is not an exit. Returning to the foreground starts a new visit. |
+| `onboarding_decision` | A closed choice is made or undone | `trackOption`, plus pet name source, first name, attribution skip, reminder skip, and the safety gate | `decision_key` str, `decision_value` str, `is_deselect` bool, `entry_point` str | — | The pet name and the person's name are never sent. `pet_name_source` is `typed` \| `random`. `first_name` is `provided` \| `skipped`. Age, conditions, intensity, leg, and nervous-system answers are not decisions. |
 | `onboarding_option_selected` | An option is tapped on a question screen | Each `q*.tsx` select handler, plus "Agree & continue" on `proof` | `step_key` str, `option_value` str, `is_multi_select` bool, `is_deselect` bool | `selection_count` int, `is_recommended` bool | All option values are closed enums (§3.3.1). `q2` sends the engine bucket (`pain_duration`), not the UI row id. `is_recommended` is set on q8 day/minute taps. q9 yes/no share tokens with legacy safety/q9 answers — always filter by `step_key`, and note q9 meant "tried before" before the belief question replaced it. |
 | `onboarding_hint_shown` | The pet says a personalization line, or a safety warning renders | option tap handlers on `q1`, `q2`, `q3`, `q6`, `recognize` (the line is spoken in the pet's bubble), `q7`, `q8` days nudge, `safety` red-flag warning | `step_key` str, `hint_key` str | — | Replaces `onboarding_option_bubble_shown`. New keys: `red_flag_warning`, `q8_days`. |
 | `onboarding_clinician_exit_confirmed` | **Legacy — no longer emitted** (safety screen removed). "I'll check with a clinician first" tapped on safety | formerly `app/(onboarding)/safety.tsx` | `step_key` str, `time_on_step_ms` int | — | Distinct from a swipe-back. These people self-selected out after seeing the red-flag warning. |
@@ -406,7 +432,8 @@ legacy `tried_before` answer is no longer collected, so the "tried before" copy 
 | `recognize_pattern` (`recognize`) | `effort` \| `return_loop` \| `flinch` \| `permanence` |
 | `session_length` (`q8`) | `minutes_15` \| `minutes_20` \| `minutes_30` |
 | `training_cadence` (`q8`) | `days_3` \| `days_4` \| `days_5` \| `days_6` \| `days_7` (legacy: `every_day` \| `every_other_day`) |
-| `legal_assent` (`proof` "Agree & continue"; `safety` checkbox before it was removed) | `legal_assent` |
+| `legal_assent` (welcome assent) | `legal_assent` |
+| Intake options (non-sensitive) | `hard_*` (bed, bending, stairs, walking, sitting, standing, twisting, overhead, sleep, exercise), `spread_*` (one_spot, one_side, moves, leg, unsure), `onset_*` (injury, lifting, surgery, gradual, sudden, pregnancy, unsure), `movement_*` (stiff, weak, unstable, uneven, unsafe; `guarded` remains valid for older rows and is not offered), `relief_flexion` \| `relief_extension` \| `relief_neither`, `flare_*` (none, minutes, hours, day, days), `trend_*` (better, same, worse, up_down), `limit_*` (none, little, some_days, most_days, a_lot, unsure), `tried_*` (doctor, pt, chiro, massage, acupuncture, medication, stretching, rest; no longer offered), `reminder_morning` \| `reminder_midday` \| `reminder_evening`. Not sent: conditions, red flags, leg reach, ns answers, intensity, age band. |
 | `has_red_flag` (legacy `safety`, removed) | bool — no longer emitted |
 | `home_empty_state_reason` | `program_complete` \| `no_active_plan` \| `rest_day` \| `session_done_today` \| `no_session_available` |
 | `exercise_phase` | `mobility` \| `activation` \| `strength` \| `recovery` |
@@ -687,7 +714,9 @@ same transition. See §5.
 | `has_red_flag` | bool | C | **Legacy — no longer set** (safety screen removed). Was set on safety yes/no and on `onboarding_completed` | Segment later conversion / activation by the contraindication gate. Set pre-auth so the identify merge carries it. |
 | `prior_attempts` | str | C | **Legacy — no longer set** (q9 now asks belief) | First-timer vs already-tried. |
 | `app_belief` | str | C | On q9 answer | `yes` / `maybe` / `no` to "Do you believe Remedy can fix your back pain?". Segment conversion by it. |
-| `session_length` | str | C | On `onboarding_completed` from the q8 minutes pick | `minutes_15` \| `minutes_20` \| `minutes_30`. Compare to actual workout minutes. |
+| `session_length` | str | C | On `onboarding_completed` from the time-screen minutes pick | `minutes_15` \| `minutes_20` \| `minutes_30`. Compare to actual workout minutes. |
+| `pet_name_source` | str | C | When the pet name is confirmed | `typed` \| `random`. The name is never sent. |
+| `first_name_provided` | bool | C | When the first-name step is left | True if they saved a name, false if they skipped. The name is never sent. |
 | `program_week` | int | C | On `session_completed` | "How deep into the program" cohorting. |
 | `first_session_completed_at` | iso | C | Once, on first `session_completed` | Activation timestamp; set-once semantics. |
 | `paywall_variant_id` | str | C | On `paywall_presented` | **Superwall experiment arm** — bridged so variants can be analyzed against retention, not just immediate conversion (Phase 4). |

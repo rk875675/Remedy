@@ -1,0 +1,20 @@
+{
+  "id": "m1105-duo-getting-ready-s",
+  "format": "duo-getting-ready",
+  "variantOf": "m1105-duo-getting-ready",
+  "changed": "stories text",
+  "background": "duo-getting-ready/02-background.jpg",
+  "gif": { "file": "duo-getting-ready/03-motion.gif", "x": 167, "y": 804, "width": 857 },
+  "audio": { "file": "duo-getting-ready/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 10.31,
+  "text": [
+    { "lines": ["Me and my back heading", "out like this morning", "never even happened"], "y": 365, "box": "white" },
+    { "lines": ["Me"], "x": 197, "y": 979, "size": 56 },
+    { "lines": ["My back"], "x": 773, "y": 1130, "size": 56 }
+  ],
+  "title": "Me and my back heading out like this morning never even happened",
+  "caption": "Me and my back heading out like this morning never even happened",
+  "description": "Vanity room, monkey and llama, Stories caption on a white box.",
+  "musicCredit": "Sound: original sound - gigolina_ — 💜 𝔾𝕀𝔾𝕆𝕃𝕀ℕ𝔸 💜",
+  "results": []
+}

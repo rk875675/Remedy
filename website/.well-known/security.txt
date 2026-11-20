@@ -1,0 +1,4 @@
+Contact: mailto:social@remedyrecoveries.com
+Expires: 2027-10-22T00:00:00Z
+Preferred-Languages: en
+Canonical: https://remedyrecoveries.com/.well-known/security.txt

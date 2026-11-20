@@ -9,7 +9,8 @@ import {
   startNextProgramRpcResultSchema,
 } from '../_shared/assignment/schema.ts';
 import { buildPlan, clampProgressionLevel, type Answers, type EquipmentTier } from '../_shared/assignment/engine.ts';
-import { loadAssignmentContext } from '../_shared/assignment/loadContext.ts';
+import { buildPlanWithFallback } from '../_shared/assignment/engineV2.ts';
+import { loadAssignmentContext, loadUserIntake } from '../_shared/assignment/loadContext.ts';
 import {
   answersForNextProgram,
   nextProgressionLevel,
@@ -278,17 +279,29 @@ Deno.serve(async (req: Request) => {
     const ctx = await loadAssignmentContext(supabase);
     if ('error' in ctx) return json({ error: ctx.error }, 500);
 
+    const intake = await loadUserIntake(supabase, userId);
     const planParse = resolvedPlanSchema.safeParse(
-      buildPlan({
-        answers,
-        rules: ctx.rules,
-        rulesVersion: ctx.rulesVersion,
-        exercises: ctx.exercises,
-        template: ctx.template,
-        replacements: ctx.replacements,
-        startWeek: 1,
-        progressionLevel: toLevel,
-      }),
+      buildPlanWithFallback({
+        intake,
+        details: ctx.details,
+        input: {
+          answers,
+          exercises: ctx.exercises,
+          startWeek: 1,
+          progressionLevel: toLevel,
+        },
+        buildV1: () =>
+          buildPlan({
+            answers,
+            rules: ctx.rules,
+            rulesVersion: ctx.rulesVersion,
+            exercises: ctx.exercises,
+            template: ctx.template,
+            replacements: ctx.replacements,
+            startWeek: 1,
+            progressionLevel: toLevel,
+          }),
+      }).plan,
     );
     if (!planParse.success) {
       return json({ error: 'plan_validation_failed', details: planParse.error.flatten() }, 500);

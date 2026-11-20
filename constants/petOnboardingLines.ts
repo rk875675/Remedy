@@ -33,7 +33,7 @@ export const PET_NAME_SUGGESTIONS = [
 /** Naming screen (right after welcome). `{name}` is what the user typed. */
 export const PET_NAMING = {
   title: 'Name your armadillo',
-  asleep: say('Zzz.', 'idle'),
+  asleep: say('It lives on your home screen. It needs a name.', 'idle'),
   named: say('{name}. Yeah. That feels like me.', 'celebrating'),
   suggest: 'Suggest one',
 } as const;
@@ -61,7 +61,6 @@ export const PET_PRESENTS = {
   founder: say('A quick word from the human who made me.'),
   education: say('Good news first. I like good news.', 'celebrating'),
   proof: say("The serious bit. Read it properly, I'll wait."),
-  seen: say('None of that was you failing. I mean it.', 'concerned'),
   commitBefore: say("Hold it down. I'll hold on too."),
   commitAfter: say("That's a promise. {name} heard it.", 'celebrating'),
   finalizing: say('Building your plan. {name} is supervising.'),

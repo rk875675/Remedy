@@ -1,0 +1,33 @@
+{
+  "id": "m1105-grocery-caught-a",
+  "format": "only-one-works-supermarket",
+  "variantOf": null,
+  "changed": "",
+  "background": "only-one-works-supermarket/02-background.jpg",
+  "gif": {
+    "file": "only-one-works-supermarket/03-motion.gif",
+    "x": 77,
+    "y": 679,
+    "width": 941
+  },
+  "audio": {
+    "file": "only-one-works-supermarket/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 10.35,
+  "text": [
+    {
+      "lines": [
+        "When you sneeze in the",
+        "cereal aisle and your back",
+        "locks up mid-sneeze"
+      ],
+      "y": 160
+    }
+  ],
+  "title": "When you sneeze in the cereal aisle and your back locks up mid-sneeze",
+  "caption": "When you sneeze in the cereal aisle and your back locks up mid-sneeze",
+  "description": "Grocery photo, the caught-in-the-aisle reaction, the sound from that format.",
+  "musicCredit": "Sound: original sound — lizzie222221",
+  "results": []
+}

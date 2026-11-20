@@ -15,18 +15,24 @@ export const BRAND = {
   fromEmail: 'hello@send.remedyrecoveries.com',
   fromName: 'Remedy',
   logoUrl: 'https://remedyrecoveries.com/assets/logo.png',
+  // Armadillo drawing (PNG, not webp: Outlook and some Gmail clients skip webp). 2x of the 84px height it is shown at.
+  mascotUrl: 'https://remedyrecoveries.com/assets/pet/email-pet.png',
+  mascotWidth: 63,
+  mascotHeight: 84,
   siteUrl: 'https://remedyrecoveries.com',
   privacyUrl: 'https://remedyrecoveries.com/privacy',
   termsUrl: 'https://remedyrecoveries.com/terms',
   unsubscribeUrl: 'https://remedyrecoveries.com/unsubscribe',
+  // Tokens mirror constants/colors.ts (forest green, terracotta, tan).
   primary: '#3E6B4E',
   primaryDeep: '#2F5440',
-  background: '#FAF7F4',
+  accent: '#AE5636',
+  background: '#F6EDE0',
   surface: '#FFFFFF',
   text: '#1C1C1E',
   muted: '#6B6B6B',
-  tertiary: '#B3ABA5',
-  border: '#E8E0DC',
+  tertiary: '#6B6052',
+  border: '#E5D8C6',
 };
 
 const AUTH_REDIRECT =
@@ -86,7 +92,8 @@ export function renderAuthEmail(opts) {
             </td>
           </tr>
           <tr>
-            <td style="background:${b.surface};border:1px solid ${b.border};border-radius:16px;padding:32px 28px 28px;">
+            <td style="background:${b.surface};border:1px solid ${b.border};border-top:4px solid ${b.accent};border-radius:16px;padding:28px 28px 28px;">
+              <img src="${b.mascotUrl}" width="${b.mascotWidth}" height="${b.mascotHeight}" alt="" style="display:block;border:0;margin:0 0 14px;" />
               <h1 style="margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:32px;font-weight:700;color:${b.text};">
                 ${title}
               </h1>

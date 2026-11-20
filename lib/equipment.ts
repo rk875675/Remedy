@@ -18,7 +18,7 @@ const EXERCISE_EQUIPMENT: Record<string, readonly string[]> = {
   'cccc0001-0000-0000-0000-000000000003': ['Exercise mat'], // Open-Book
   'cccc0001-0000-0000-0000-000000000004': ['Exercise mat'], // Hip Flexor Stretch
   'cccc0001-0000-0000-0000-000000000005': ['Exercise mat'], // Knee-to-Chest
-  'cccc0001-0000-0000-0000-000000000021': ['Exercise mat'], // Pelvic Tilt
+  'cccc0001-0000-0000-0000-000000000021': ['Exercise mat'], // Double Knee-to-Chest
   'cccc0001-0000-0000-0000-000000000022': ['Exercise mat'], // McKenzie Press-Up
   'cccc0001-0000-0000-0000-000000000023': ['Exercise mat'], // Supine Trunk Rotation
   'cccc0001-0000-0000-0000-000000000024': [], // Standing Back Extension

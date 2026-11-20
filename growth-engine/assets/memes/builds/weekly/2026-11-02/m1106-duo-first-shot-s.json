@@ -1,0 +1,20 @@
+{
+  "id": "m1106-duo-first-shot-s",
+  "format": "duo-first-shot",
+  "variantOf": "m1106-duo-first-shot",
+  "changed": "stories text",
+  "background": "duo-first-shot/02-background.jpg",
+  "gif": { "file": "duo-first-shot/03-motion.gif", "x": 41, "y": 735, "width": 1039 },
+  "audio": { "file": "duo-first-shot/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 12.9,
+  "text": [
+    { "lines": ["Me and my back when", "the night actually worked"], "y": 492, "box": "white" },
+    { "lines": ["Me"], "x": 321, "y": 937, "size": 56 },
+    { "lines": ["My back"], "x": 702, "y": 937, "size": 56 }
+  ],
+  "title": "Me and my back when the night actually worked",
+  "caption": "Me and my back when the night actually worked",
+  "description": "Neon bar, two kittens, Stories caption on a white box.",
+  "musicCredit": "Sound: original sound - capcut.green.screens — Meme Finder",
+  "results": []
+}

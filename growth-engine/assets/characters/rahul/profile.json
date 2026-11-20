@@ -1,0 +1,34 @@
+{
+  "name": "Rahul",
+  "role": "Founder of Remedy. Appears in some @remedyrecoveries carousels (about 1 in 4), never all.",
+  "identity_source": "real/ only. Real photos of Rahul (OneDrive, Nov 1). Never use a generated image of him as a reference.",
+  "look": {
+    "face": "long oval face, elongated midface, lean cheeks, defined but not square jaw, rounded chin",
+    "brows": "thick near-black, mostly straight, natural asymmetry",
+    "eyes": "dark-brown almond, slightly heavy upper lids",
+    "nose": "long and prominent, straight-to-slightly-convex bridge, rounded tip",
+    "mouth": "thinner upper lip, fuller lower lip",
+    "skin": "medium warm-brown, olive undertones, real texture, faint under-eye darkness",
+    "facial_hair": "short uneven stubble, never a full beard, never clean-shaven",
+    "build": "lean athletic, moderate shoulders, narrow waist"
+  },
+  "hair_states": {
+    "compact": "curls kept compact, pushed mostly off the forehead",
+    "defined": "defined curls, a few ringlets on the forehead",
+    "tousled": "high-volume messy waves and curls, flyaways",
+    "hero-curl": "swept loosely back, one curl dropping onto the forehead",
+    "side-shift": "curl mass shifted to one side"
+  },
+  "wardrobe": ["grey-tee-jeans", "heather-tee", "black-tee-sweats", "sage-polo", "crewneck", "black-hoodie", "tan-tee"],
+  "refs_by_angle": {
+    "face": ["front-close-grey-tee.jpg", "front-desk-heather-tee.jpg", "three-quarter-cafe-sage-polo.jpg", "profile-right.jpg"],
+    "mid": ["front-desk-heather-tee.jpg", "front-close-grey-tee.jpg", "three-quarter-cafe-sage-polo.jpg", "standing-grey-tee-jeans.jpg"],
+    "profile": ["profile-right.jpg", "profile-left.jpg", "seated-profile-laptop.jpg", "front-close-grey-tee.jpg"],
+    "behind": ["standing-grey-tee-jeans.jpg", "standing-crewneck-black-pants.jpg", "profile-left.jpg"]
+  },
+  "rules": [
+    "Same hair and outfit inside one carousel; vary both across carousels.",
+    "Reject a shot if the nose is shortened, the jaw squared, the face rounded, the skin airbrushed, the curls made uniform, or he looks like a model.",
+    "Do not copy a reference photo's room or pose; only his face, hair texture and build."
+  ]
+}

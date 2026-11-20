@@ -1,0 +1,20 @@
+{
+  "id": "m1105-duo-always-together",
+  "format": "duo-always-together",
+  "variantOf": null,
+  "changed": "",
+  "background": "duo-always-together/02-background.jpg",
+  "gif": { "file": "duo-always-together/03-motion.gif", "x": 0, "y": 701, "width": 891 },
+  "audio": { "file": "duo-always-together/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 14.0,
+  "text": [
+    { "lines": ["you and your heating pad", "are always together,", "don't you get bored?"], "y": 300 },
+    { "lines": ["Me"], "x": 277, "y": 712, "size": 56 },
+    { "lines": ["My heating pad"], "x": 693, "y": 703, "size": 56 }
+  ],
+  "title": "You and your heating pad are always together, don't you get bored?",
+  "caption": "you and your heating pad are always together, don't you get bored?",
+  "description": "Living room, two cats dancing, the sound from that format.",
+  "musicCredit": "Sound: RMB (Ring My Bell) — Aitch",
+  "results": []
+}

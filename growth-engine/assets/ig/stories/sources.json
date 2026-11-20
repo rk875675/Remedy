@@ -1,0 +1,52 @@
+{
+  "bedside.jpg": {
+    "file": "File:Bedside (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Bedside_(Unsplash).jpg",
+    "license": "CC0"
+  },
+  "notebook.jpg": {
+    "file": "File:Pen on a notebook (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Pen_on_a_notebook_(Unsplash).jpg",
+    "license": "CC0"
+  },
+  "fruit.jpg": {
+    "file": "File:Tropical fruit bowl window (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Tropical_fruit_bowl_window_(Unsplash).jpg",
+    "license": "CC0"
+  },
+  "plant.jpg": {
+    "file": "File:Plant Portraits (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Plant_Portraits_(Unsplash).jpg",
+    "license": "CC0"
+  },
+  "quiet-room.jpg": {
+    "file": "File:Coffee table by a wooden wall (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Coffee_table_by_a_wooden_wall_(Unsplash).jpg",
+    "license": "CC0"
+  },
+  "wall-lamp.jpg": {
+    "file": "File:Flat lampshade (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Flat_lampshade_(Unsplash).jpg",
+    "license": "CC0"
+  },
+  "green-cup.jpg": {
+    "file": "File:Frothy coffee in a green cup (Unsplash).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Frothy_coffee_in_a_green_cup_(Unsplash).jpg",
+    "license": "CC0",
+    "note": "Cropped to the cup so the hand at the edge of the original is not in frame."
+  },
+  "sock-bed.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a sock and a made bed." },
+  "pen-floor.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a pen on the floor by a desk chair." },
+  "heating-pad.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a heating pad on a couch." },
+  "low-shelf.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a low bookshelf." },
+  "armchair.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: an empty armchair." },
+  "mat-rug.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a rolled-out exercise mat on a rug." },
+  "stair-shoes.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: shoes on the bottom stair." },
+  "kettle-lean.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a kettle and mug on a counter." },
+  "two-bags.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: two paper grocery bags by the door." },
+  "desk-chair.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: an empty desk chair pushed back." },
+  "car-minute.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a parked car interior in a garage." },
+  "laundry-half.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a half-full laundry basket on a stair landing." },
+  "corner-walk.jpg": { "generated": "2026-11-10", "note": "AI-generated place, no people: an empty autumn sidewalk." },
+  "pillow-knees.jpg": { "generated": "2026-11-10", "note": "AI-generated still life, objects only, no people: a long pillow on a made bed." }
+}

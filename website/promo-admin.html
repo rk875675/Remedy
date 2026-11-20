@@ -8,13 +8,13 @@
 <style>
   :root {
     --green: #3E6B4E;
-    --green-dark: #2f5340;
-    --ink: #1d221f;
-    --muted: #6b7570;
-    --bg: #f6f5f1;
+    --green-dark: #2F5440;
+    --ink: #1C1C1E;
+    --muted: #6A635E;
+    --bg: #F6EDE0;
     --card: #ffffff;
-    --line: #e3e1da;
-    --red: #a94433;
+    --line: #E5D8C6;
+    --red: #AE5636;
   }
   * { box-sizing: border-box; }
   body {
@@ -260,7 +260,7 @@
   function renderCodes() {
     var body = $('codesBody');
     if (state.codes.length === 0) {
-      body.innerHTML = '<tr><td colspan="7" style="color:#6b7570">No codes yet.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" style="color:#6A635E">No codes yet.</td></tr>';
       return;
     }
     body.innerHTML = state.codes

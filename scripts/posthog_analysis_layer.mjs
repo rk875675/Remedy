@@ -62,7 +62,7 @@ const CUTOVER = '2026-08-09';
  * Temporary preview so existing device/sandbox traffic is visible on the boards.
  * Set to false and re-run `--apply` when real users start arriving.
  */
-const INCLUDE_INTERNAL_FOR_PREVIEW = true;
+const INCLUDE_INTERNAL_FOR_PREVIEW = false;
 
 /**
  * Set on every insight rather than relying on the project-level default, which needs
@@ -78,6 +78,8 @@ const TAGS = ['remedy-core'];
 // ingestion (person-on-events) — so the cohort is the only filter that stays in
 // sync with the dashboards after someone is flagged retroactively.
 const INTERNAL_COHORT_ID = 362128;
+/** People who have not viewed a retired onboarding screen in the last 120 days. */
+const CURRENT_FLOW_COHORT_ID = 741181;
 const SQL_EXCLUDE_INTERNAL = INCLUDE_INTERNAL_FOR_PREVIEW
   ? ''
   : `
@@ -85,36 +87,69 @@ const SQL_EXCLUDE_INTERNAL = INCLUDE_INTERNAL_FOR_PREVIEW
   AND coalesce(toString(properties.environment), '') != 'sandbox'`;
 
 const { interstitials: ONBOARDING_INTERSTITIALS } = loadOnboardingFlow();
-const SQL_EXCLUDE_INTERSTITIALS = ONBOARDING_INTERSTITIALS.length
-  ? `\n  AND toString(properties.step_key) NOT IN (${ONBOARDING_INTERSTITIALS.map((k) => `'${k}'`).join(', ')})`
-  : '';
+const SQL_EXCLUDE_INTERSTITIALS = '';
 
-/** Exact on-screen headings. Bars stay `q5`; this is what you see after opening the tile. */
+/**
+ * Onboarding tiles only. Dev builds tag client_build=dev and is_internal.
+ * Profile Force Paywall and the lapsed paywall shortcut set entry_point.
+ * Retakes are a second pass, not acquisition.
+ */
+/** Retired screens. Anyone who viewed one walked the previous quiz, not this one. */
+const REMOVED_ONBOARDING_STEPS = [
+  'grow', 'founder', 'education', 'proof', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5',
+  'q6', 'q7', 'q8', 'q9', 'recognize', 'alarm', 'why', 'commit',
+];
+
+const SQL_EXCLUDE_OLD_FUNNEL = `
+  AND person_id NOT IN (
+    SELECT person_id
+    FROM events
+    WHERE timestamp >= '${CUTOVER}'
+      AND timestamp < now() + INTERVAL 1 DAY
+      AND event = 'onboarding_step_viewed'
+      AND toString(properties.step_key) IN (${REMOVED_ONBOARDING_STEPS.map((key) => `'${key}'`).join(', ')})
+  )`;
+
+const SQL_ONBOARDING_AUDIENCE = `
+  AND coalesce(toString(properties.entry_point), 'funnel') = 'funnel'
+  AND coalesce(toString(properties.is_retake), 'false') NOT IN ('true', '1')
+  AND coalesce(toString(properties.client_build), '') != 'dev'
+  ${SQL_EXCLUDE_INTERNAL}
+  ${SQL_EXCLUDE_OLD_FUNNEL}`;
+
+/** Exact on-screen headings for the current funnel. */
 const ONBOARDING_STEP_QUESTIONS = {
-  welcome: 'Welcome',
+  welcome: 'Stop thinking about your back',
+  meet: 'Meet your armadillo',
   pet: 'Name your armadillo',
-  grow: 'Every session, {name} uncurls a little',
-  founder: 'Your back is stronger than it feels',
-  education: 'The good news',
-  proof: 'Why Remedy works (+ Agree & continue)',
-  q0: 'Where did you hear about us?',
-  safety: 'Do any of these apply to you? (removed)',
-  q9: 'Do you believe Remedy can fix your back pain?',
-  q6: "What's your main goal?",
-  q1: 'Where is your back pain?',
-  q2: 'How long have you had it?',
-  recognize: 'Which of these sound like you?',
-  seen: 'Mindset interstitial',
-  alarm: 'Pain is a protector',
-  why: 'Why Remedy exists',
-  q3: 'How would you describe it?',
-  q4: "What's your activity level?",
-  q5: 'What makes your pain worse?',
-  q7: 'What equipment do you have access to?',
-  q8: 'How much time do you have each day?',
-  commit: 'Hold to commit',
-  finalizing: 'Building your plan',
-  match: 'Your plan preview',
+  open_goals: 'What do you want from your back?',
+  goal: 'What do you want most?',
+  hard_now: "What's hard right now?",
+  outlook: 'Most back pain gets better',
+  open_back: 'Now the back itself',
+  location: 'Where does it hurt?',
+  spread: 'Does it stay in one place?',
+  duration: 'How long has this been going on?',
+  onset: 'How did it start?',
+  feel: 'What does it feel like?',
+  leg: 'How far down does it go?',
+  intensity: 'How strong on a normal day?',
+  open_pattern: 'How it behaves',
+  movement: 'How does moving feel?',
+  relief: 'Which feels better?',
+  rapid: 'Flare, trend, and how much it gets in the way',
+  ns: 'Is your nervous system involved?',
+  ns_result: 'What your answers suggest',
+  open_you: 'Then we build the plan',
+  conditions: 'Anything else I should know about?',
+  age: 'How old are you?',
+  activity: 'How much do you move in a week?',
+  equipment: 'What can you train with?',
+  time: 'How much time can you give this?',
+  reminders: 'When should I remind you?',
+  safety: 'One careful check',
+  finalizing: 'Personalizing your plan',
+  match: 'Your plan',
 };
 
 function hogqlStepQuestion(expr = 'toString(properties.step_key)') {
@@ -126,29 +161,55 @@ function hogqlStepQuestion(expr = 'toString(properties.step_key)') {
 /** Monday-readable labels for $screen_name / screen_exited.screen_name. */
 const SCREEN_LABELS = {
   '/(onboarding)': 'Onboarding — Welcome',
-  '/(onboarding)/pet': 'Onboarding — Pet',
-  '/(onboarding)/grow': 'Onboarding — Grow',
-  '/(onboarding)/founder': 'Onboarding — Founder',
-  '/(onboarding)/education': 'Onboarding — Education',
-  '/(onboarding)/proof': 'Onboarding — Why Remedy works',
-  '/(onboarding)/q0': 'Onboarding — Hear about us',
-  '/(onboarding)/safety': 'Onboarding — Safety (removed)',
-  '/(onboarding)/q9': 'Onboarding — Belief',
-  '/(onboarding)/q6': 'Onboarding — Goal',
-  '/(onboarding)/q1': 'Onboarding — Pain location',
-  '/(onboarding)/q2': 'Onboarding — Duration',
-  '/(onboarding)/recognize': 'Onboarding — Recognition',
-  '/(onboarding)/seen': 'Onboarding — Seen',
-  '/(onboarding)/alarm': 'Onboarding — Pain alarm',
-  '/(onboarding)/why': 'Onboarding — Why Remedy',
-  '/(onboarding)/q3': 'Onboarding — Pain type',
-  '/(onboarding)/q4': 'Onboarding — Activity',
-  '/(onboarding)/q5': 'Onboarding — Triggers',
-  '/(onboarding)/q7': 'Onboarding — Equipment',
-  '/(onboarding)/q8': 'Onboarding — Time budget',
-  '/(onboarding)/commit': 'Onboarding — Hold to commit',
-  '/(onboarding)/finalizing': 'Onboarding — Building plan',
-  '/(onboarding)/match': 'Onboarding — Plan preview',
+  '/(onboarding)/meet': 'Onboarding — Meet the pet',
+  '/(onboarding)/pet': 'Onboarding — Name the pet',
+  '/(onboarding)/open_goals': 'Onboarding — Goals opener',
+  '/(onboarding)/goal': 'Onboarding — Goal',
+  '/(onboarding)/hard_now': 'Onboarding — Hard right now',
+  '/(onboarding)/outlook': 'Onboarding — Outlook',
+  '/(onboarding)/open_back': 'Onboarding — Back opener',
+  '/(onboarding)/location': 'Onboarding — Where it hurts',
+  '/(onboarding)/spread': 'Onboarding — Spread',
+  '/(onboarding)/duration': 'Onboarding — How long',
+  '/(onboarding)/onset': 'Onboarding — How it started',
+  '/(onboarding)/feel': 'Onboarding — What it feels like',
+  '/(onboarding)/leg': 'Onboarding — How far down',
+  '/(onboarding)/intensity': 'Onboarding — Strength',
+  '/(onboarding)/open_pattern': 'Onboarding — Pattern opener',
+  '/(onboarding)/movement': 'Onboarding — Moving',
+  '/(onboarding)/relief': 'Onboarding — What feels better',
+  '/(onboarding)/rapid': 'Onboarding — Quick round',
+  '/(onboarding)/ns': 'Onboarding — Nervous system',
+  '/(onboarding)/ns_result': 'Onboarding — Pattern result',
+  '/(onboarding)/open_you': 'Onboarding — About you opener',
+  '/(onboarding)/conditions': 'Onboarding — Conditions',
+  '/(onboarding)/age': 'Onboarding — Age',
+  '/(onboarding)/activity': 'Onboarding — Activity',
+  '/(onboarding)/equipment': 'Onboarding — Equipment',
+  '/(onboarding)/time': 'Onboarding — Time budget',
+  '/(onboarding)/reminders': 'Onboarding — Reminders',
+  '/(onboarding)/safety': 'Onboarding — Safety check',
+  '/(onboarding)/finalizing': 'Onboarding — Personalizing',
+  '/(onboarding)/match': 'Onboarding — Your plan',
+  '/(onboarding)/grow': 'Onboarding — Grow (removed)',
+  '/(onboarding)/founder': 'Onboarding — Founder (removed)',
+  '/(onboarding)/education': 'Onboarding — Education (removed)',
+  '/(onboarding)/proof': 'Onboarding — Proof (removed)',
+  '/(onboarding)/q0': 'Onboarding — Hear about us (removed)',
+  '/(onboarding)/q9': 'Onboarding — Belief (removed)',
+  '/(onboarding)/q6': 'Onboarding — Goal (old)',
+  '/(onboarding)/q1': 'Onboarding — Pain location (old)',
+  '/(onboarding)/q2': 'Onboarding — Duration (old)',
+  '/(onboarding)/recognize': 'Onboarding — Recognition (removed)',
+  '/(onboarding)/seen': 'Onboarding — Seen (removed)',
+  '/(onboarding)/alarm': 'Onboarding — Pain alarm (removed)',
+  '/(onboarding)/why': 'Onboarding — Why Remedy (removed)',
+  '/(onboarding)/q3': 'Onboarding — Pain type (old)',
+  '/(onboarding)/q4': 'Onboarding — Activity (old)',
+  '/(onboarding)/q5': 'Onboarding — Triggers (old)',
+  '/(onboarding)/q7': 'Onboarding — Equipment (old)',
+  '/(onboarding)/q8': 'Onboarding — Time budget (old)',
+  '/(onboarding)/commit': 'Onboarding — Hold to commit (removed)',
   '/(auth)/sign-in': 'Sign in',
   '/(auth)/email': 'Email auth',
   '/auth-callback': 'Auth callback',
@@ -188,9 +249,10 @@ const OBSOLETE_INSIGHT_NAMES = [
   'Retention',
   'Weekly active users (WAUs)',
   'Daily active users (DAUs)',
-  // Safety screen removed; consent moved to proof ("Agree & continue").
   'Safety — red-flag answers',
   'Safety — clinician-first exits',
+  'Belief — can Remedy fix it? (q9)',
+  'Recognition patterns',
 ];
 
 const ALERTS = [
@@ -382,6 +444,28 @@ const COHORTS = [
     },
   },
   {
+    name: 'Current onboarding flow',
+    description:
+      'Has not viewed a retired onboarding screen (the old q0–q9 quiz) in the last 120 days. ' +
+      'Onboarding funnels use this so welcome and match are not mixed with the previous quiz. ' +
+      'Dev and profile-preview traffic is still removed by the internal cohort.',
+    filters: behavioral([{
+      key: 'onboarding_step_viewed',
+      type: 'behavioral',
+      value: 'performed_event',
+      event_type: 'events',
+      negation: true,
+      time_value: 120,
+      time_interval: 'day',
+      event_filters: [{
+        key: 'step_key',
+        type: 'event',
+        value: REMOVED_ONBOARDING_STEPS,
+        operator: 'exact',
+      }],
+    }]),
+  },
+  {
     name: 'Premium people',
     description:
       'is_premium = true (trial, active, or cancelled-until-expiry). North-star denominator. ' +
@@ -452,15 +536,19 @@ const byEventProp = (prop) => ({ breakdownFilter: { breakdown: prop, breakdown_t
 const byPersonProp = (prop) => ({ breakdownFilter: { breakdown: prop, breakdown_type: 'person' } });
 const BAR = 'ActionsBarValue';
 
-const FULL_PATH_STEPS = [
-  'welcome', 'pet', 'grow', 'founder', 'education', 'proof', 'q0', 'q9', 'recognize', 'seen',
-  'q6', 'q1', 'q2', 'q3', 'q4', 'q5', 'q7', 'q8', 'commit', 'finalizing', 'match',
-];
-
 // step_index shifts whenever a step is added or removed, so tables group by step_key
 // and order by the step's position in the current enum. Removed steps (index 0) drop out.
 const { stepKeys: CURRENT_STEP_KEYS } = loadOnboardingFlow();
+const CONDITIONAL_STEPS = new Set(['meet', 'pet', 'leg']);
+// A strict funnel cannot include screens some people never see — they would look like a drop.
+const FULL_PATH_STEPS = CURRENT_STEP_KEYS.filter((key) => !CONDITIONAL_STEPS.has(key));
 const HOGQL_STEP_ORDER = `indexOf([${CURRENT_STEP_KEYS.map((k) => `'${k}'`).join(', ')}], toString(properties.step_key))`;
+
+const ONBOARDING_EVENT_AUDIENCE = [
+  { key: 'entry_point', type: 'event', value: ['profile_preview', 'lapsed'], operator: 'is_not' },
+  { key: 'is_retake', type: 'event', value: ['true'], operator: 'is_not' },
+  { key: 'client_build', type: 'event', value: ['dev'], operator: 'is_not' },
+];
 
 const stepViewed = (key) => ev('onboarding_step_viewed', {
   custom_name: ONBOARDING_STEP_QUESTIONS[key] ?? key,
@@ -479,10 +567,31 @@ const optionMix = (stepKey, optionValues) => ev('onboarding_option_selected', {
   ],
 });
 
-const completedMix = (prop) => trends(
-  [ev('onboarding_completed', { math: 'dau' })],
-  { ...byEventProp(prop), display: BAR },
-);
+const completedMix = (prop) => sql(`SELECT
+  toString(properties.${prop}) AS choice,
+  uniq(person_id) AS people
+FROM events
+WHERE event = 'onboarding_completed'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND toString(properties.${prop}) != ''
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY choice
+ORDER BY people DESC`);
+
+const optionMixSql = (stepKey, values) => sql(`SELECT
+  toString(properties.option_value) AS choice,
+  uniq(person_id) AS people
+FROM events
+WHERE event = 'onboarding_option_selected'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND toString(properties.step_key) = '${stepKey}'
+  AND toString(properties.is_deselect) NOT IN ('true', '1')
+  AND toString(properties.option_value) IN (${values.map((value) => `'${value}'`).join(', ')})
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY choice
+ORDER BY people DESC`);
 
 /**
  * Completed sessions tagged into cumulative tenure windows.
@@ -676,29 +785,54 @@ ORDER BY week`),
       {
         name: 'F1 — Onboarding → Activation',
         description:
-          'Cutover-scoped first-run path through program assignment. Starts at ' +
-          'onboarding_started because Application Installed is once-per-install and every ' +
-          'current device installed before 2026-08-09. Ends at program_assigned — first ' +
-          'session is 3. In-App (F4) and the activation-rate tile on 2. Users & Retention. ' +
-          'Post-paywall handoff (purchase stash → signup → assignment) is still the risky drop.',
-        query: funnel([
-          ev('onboarding_started'),
-          ev('onboarding_completed'),
-          ev('paywall_viewed'),
-          ev('purchase_flow_completed'),
-          ev('signup_completed'),
-          ev('program_assigned'),
-        ]),
+          'People on the current quiz only. The previous q0–q9 quiz is excluded, and so are ' +
+          'dev builds, profile Force Paywall, the lapsed paywall shortcut, and retakes. ' +
+          'First session is 3. In-App, not this row.',
+        query: sql(`SELECT
+  uniqIf(person_id, event = 'onboarding_started') AS started,
+  uniqIf(person_id, event = 'onboarding_completed') AS finished_quiz,
+  uniqIf(person_id, event = 'paywall_viewed') AS saw_paywall,
+  uniqIf(person_id, event = 'purchase_flow_completed') AS purchased,
+  uniqIf(person_id, event = 'signup_completed') AS signed_up,
+  uniqIf(person_id, event = 'program_assigned') AS got_program
+FROM events
+WHERE timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND event IN (
+    'onboarding_started', 'onboarding_completed', 'paywall_viewed',
+    'purchase_flow_completed', 'signup_completed', 'program_assigned'
+  )
+  ${SQL_ONBOARDING_AUDIENCE}`),
       },
       {
         name: 'Full path — every onboarding screen',
         description:
-          'Same event (step viewed) once per screen, in current order. Includes story ' +
-          'screens the question table hides (founder, education, proof, seen, commit, finalizing). ' +
-          'Use this to see if new copy / the Agree & continue step / the mindset block is where people leave.',
+          'Screens everyone on the current quiz can see, in order. Meet, naming the pet, and ' +
+          'leg pain are not here — some people never see them. They are on the per-page table ' +
+          'and the pet branch. The previous quiz, dev builds, profile Force Paywall, lapsed ' +
+          'paywall opens, and retakes are excluded.',
         fullWidth: true,
         showDescription: true,
-        query: funnel(FULL_PATH_STEPS.map(stepViewed)),
+        query: sql(`SELECT
+  ${HOGQL_STEP_ORDER} AS step_order,
+  toString(properties.step_key) AS step_key,
+  any(${hogqlStepQuestion()}) AS page,
+  uniq(person_id) AS viewed
+FROM events
+WHERE event = 'onboarding_step_viewed'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND toString(properties.step_key) IN (${FULL_PATH_STEPS.map((key) => `'${key}'`).join(', ')})
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY step_order, step_key
+ORDER BY step_order`),
+      },
+      {
+        name: 'New pet — meet, name, then goals',
+        description:
+          'People who do not already have a pet. Typed vs random is the decision table, not this funnel.',
+        showDescription: true,
+        query: funnel(['meet', 'pet', 'open_goals'].map(stepViewed)),
       },
       {
         name: 'Onboarding completion rate (weekly)',
@@ -706,17 +840,27 @@ ORDER BY week`),
           'Unique people who tapped Get Started vs who reached Start My Program that week. ' +
           'Headline quiz-finish rate. Drop-off detail is the full-path funnel and F2.',
         showDescription: true,
-        query: trends([
-          ev('onboarding_started', { math: 'dau', custom_name: 'Started' }),
-          ev('onboarding_completed', { math: 'dau', custom_name: 'Finished quiz' }),
-        ]),
+        query: sql(`SELECT
+  toStartOfWeek(timestamp, 1) AS week,
+  uniqIf(person_id, event = 'onboarding_started') AS started,
+  uniqIf(person_id, event = 'onboarding_completed') AS finished
+FROM events
+WHERE timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND event IN ('onboarding_started', 'onboarding_completed')
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY week
+ORDER BY week`),
       },
       {
         name: 'F2 — Onboarding drop-off by step',
         description:
-          'Question screens only (q0/q9/recognize + q1–q8). Interstitials are ' +
-          'in Full path. median_seconds separates a hard question from a boring one. ' +
-          'Grouped by step_key (step_index shifted when steps were added/removed).',
+          'Every current page, including story screens and the conditional pet and leg pages. ' +
+          'completion_pct is people who pressed Continue divided by people who saw the page. ' +
+          'Meet, pet, and leg are lower on purpose when the page does not apply. ' +
+          'Old q0–q9 keys are dropped. Dev, profile preview, lapsed paywall, and retakes are excluded.',
+        fullWidth: true,
+        showDescription: true,
         query: sql(`SELECT
   ${HOGQL_STEP_ORDER} AS step_order,
   toString(properties.step_key) AS step_key,
@@ -730,73 +874,165 @@ ORDER BY week`),
 FROM events
 WHERE event IN ('onboarding_step_viewed', 'onboarding_step_completed')
   AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
   AND ${HOGQL_STEP_ORDER} > 0
-  ${SQL_EXCLUDE_INTERSTITIALS}
-  ${SQL_EXCLUDE_INTERNAL}
+  ${SQL_ONBOARDING_AUDIENCE}
 GROUP BY step_order, step_key
 ORDER BY step_order`),
       },
       {
-        name: 'Onboarding — exits by step',
+        name: 'Onboarding — why they leave',
+        formerNames: ['Onboarding — exits by step'],
         description:
-          'Abandoned + backgrounded only. step_key stays q5 on the chart; question is the ' +
-          'on-screen heading so you do not have to walk the funnel.',
+          'Every leave that is not Continue. exit_type is back, background, or abandoned. ' +
+          'left_to is the next page, the screen they opened, or app_background. ' +
+          'A phone call is background, not a quit. Rows without left_to are visits from before that field existed.',
+        fullWidth: true,
+        showDescription: true,
         query: sql(`SELECT
+  ${HOGQL_STEP_ORDER} AS step_order,
   toString(properties.step_key) AS step_key,
-  ${hogqlStepQuestion()} AS question,
-  count() AS exits
+  any(${hogqlStepQuestion()}) AS page,
+  toString(properties.exit_type) AS why,
+  if(toString(properties.left_to) = '', '(not recorded yet)', toString(properties.left_to)) AS left_to,
+  count() AS leaves,
+  uniq(person_id) AS people
 FROM events
 WHERE event = 'onboarding_step_exited'
   AND timestamp >= '${CUTOVER}'
-  AND toString(properties.exit_type) IN ('abandoned', 'backgrounded')
-  ${SQL_EXCLUDE_INTERNAL}
-GROUP BY step_key, question
-ORDER BY exits DESC`),
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND toString(properties.exit_type) != 'forward'
+  AND ${HOGQL_STEP_ORDER} > 0
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY step_order, step_key, why, left_to
+ORDER BY leaves DESC`),
       },
       {
-        name: 'Onboarding — time on step',
-        description: 'Average time_on_step_ms per step. Pair with the drop-off table above.',
-        query: trends(
-          [ev('onboarding_step_completed', { math: 'avg', math_property: 'time_on_step_ms' })],
-          { ...byEventProp('step_key'), display: BAR },
-        ),
-      },
-      {
-        name: 'Consent — saw "Why Remedy works" vs tapped Agree & continue',
+        name: 'Onboarding — time on each page',
+        formerNames: ['Onboarding — time on step'],
         description:
-          'Unique people who viewed the proof screen vs who agreed (Terms/Privacy + health-data ' +
-          'consent). The gap is people who left at the consent step.',
+          'Average and median seconds on each current page, from every visit that ended ' +
+          '(continue, back, background, or leaving the quiz). Not only people who pressed Continue.',
+        fullWidth: true,
         showDescription: true,
-        query: trends(
-          [
-            ev('onboarding_step_viewed', { math: 'dau', custom_name: 'Viewed', ...eventPropEq('step_key', 'proof') }),
-            { ...optionMix('proof', ['legal_assent']), custom_name: 'Agreed' },
-          ],
-          { display: BAR },
-        ),
+        query: sql(`SELECT
+  ${HOGQL_STEP_ORDER} AS step_order,
+  toString(properties.step_key) AS step_key,
+  any(${hogqlStepQuestion()}) AS page,
+  count() AS visits,
+  uniq(person_id) AS people,
+  round(avg(toFloat(properties.time_on_step_ms)) / 1000, 1) AS avg_seconds,
+  round(median(toFloat(properties.time_on_step_ms)) / 1000, 1) AS median_seconds
+FROM events
+WHERE event = 'onboarding_step_exited'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND ${HOGQL_STEP_ORDER} > 0
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY step_order, step_key
+ORDER BY step_order`),
       },
       {
-        name: 'Belief — can Remedy fix it? (q9)',
-        formerNames: ['Tried before (q9)'],
+        name: 'Decisions — paywall, purchase, and paid',
         description:
-          'Yes / maybe / no to "Do you believe Remedy can fix your back pain?". Break conversion ' +
-          'down by person property app_belief to see whether skeptics buy.',
+          'Each closed choice, and the share who later reached the paywall, finished a purchase, ' +
+          'or became paid (subscription_started). Pet name is typed vs random — the name is never stored. ' +
+          'Dev, profile preview, lapsed paywall, and retakes are excluded.',
+        fullWidth: true,
         showDescription: true,
-        query: trends(
-          [optionMix('q9', ['yes', 'maybe', 'no'])],
-          { ...byEventProp('option_value'), display: BAR },
-        ),
+        query: sql(`WITH touches AS (
+  SELECT person_id, timestamp, decision_key, decision_value, is_deselect
+  FROM (
+    SELECT
+      person_id,
+      timestamp,
+      toString(properties.decision_key) AS decision_key,
+      toString(properties.decision_value) AS decision_value,
+      toString(properties.is_deselect) AS is_deselect
+    FROM events
+    WHERE event = 'onboarding_decision'
+      AND timestamp >= '${CUTOVER}'
+      AND timestamp < now() + INTERVAL 1 DAY
+      ${SQL_ONBOARDING_AUDIENCE}
+    UNION ALL
+    SELECT
+      person_id,
+      timestamp,
+      multiIf(
+        toString(properties.step_key) = 'time' AND startsWith(toString(properties.option_value), 'minutes_'), 'session_length',
+        toString(properties.step_key) = 'time' AND startsWith(toString(properties.option_value), 'days_'), 'days_per_week',
+        toString(properties.step_key) = 'rapid' AND startsWith(toString(properties.option_value), 'flare_'), 'flare_settle',
+        toString(properties.step_key) = 'rapid' AND startsWith(toString(properties.option_value), 'trend_'), 'pain_trend',
+        toString(properties.step_key) = 'rapid' AND startsWith(toString(properties.option_value), 'limit_'), 'limitation',
+        toString(properties.step_key) = 'finalizing', 'acquisition_source',
+        toString(properties.step_key) = 'welcome', 'legal_assent',
+        toString(properties.step_key) = 'reminders', 'reminder',
+        toString(properties.step_key)
+      ) AS decision_key,
+      toString(properties.option_value) AS decision_value,
+      toString(properties.is_deselect) AS is_deselect
+    FROM events
+    WHERE event = 'onboarding_option_selected'
+      AND timestamp >= '${CUTOVER}'
+      AND timestamp < now() + INTERVAL 1 DAY
+      AND toString(properties.step_key) IN (
+        'welcome', 'goal', 'hard_now', 'location', 'spread', 'duration', 'onset', 'feel',
+        'movement', 'relief', 'rapid', 'activity', 'equipment', 'time', 'reminders', 'finalizing'
+      )
+      ${SQL_ONBOARDING_AUDIENCE}
+  )
+),
+kept AS (
+  SELECT
+    person_id,
+    decision_key,
+    decision_value,
+    min(timestamp) AS decided_at
+  FROM touches
+  GROUP BY person_id, decision_key, decision_value
+  HAVING argMax(is_deselect, timestamp) NOT IN ('true', '1')
+),
+outcomes AS (
+  SELECT
+    person_id,
+    minIf(timestamp, event = 'paywall_viewed') AS paywall_at,
+    minIf(timestamp, event = 'purchase_flow_completed') AS convert_at,
+    minIf(timestamp, event = 'subscription_started') AS paid_at
+  FROM events
+  WHERE event IN ('paywall_viewed', 'purchase_flow_completed', 'subscription_started')
+    AND timestamp >= '${CUTOVER}'
+    AND timestamp < now() + INTERVAL 1 DAY
+    AND coalesce(toString(properties.client_build), '') != 'dev'
+    ${SQL_EXCLUDE_INTERNAL}
+  GROUP BY person_id
+)
+SELECT
+  k.decision_key AS decision,
+  k.decision_value AS choice,
+  uniq(k.person_id) AS people,
+  round(100.0 * uniqIf(k.person_id, isNotNull(o.paywall_at) AND o.paywall_at >= k.decided_at) / nullIf(uniq(k.person_id), 0), 1) AS reached_paywall_pct,
+  round(100.0 * uniqIf(k.person_id, isNotNull(o.convert_at) AND o.convert_at >= k.decided_at) / nullIf(uniq(k.person_id), 0), 1) AS converted_pct,
+  round(100.0 * uniqIf(k.person_id, isNotNull(o.paid_at) AND o.paid_at >= k.decided_at) / nullIf(uniq(k.person_id), 0), 1) AS paid_pct
+FROM kept AS k
+LEFT ANY JOIN outcomes AS o ON k.person_id = o.person_id
+GROUP BY decision, choice
+ORDER BY decision, people DESC`),
       },
       {
-        name: 'Recognition patterns',
+        name: 'Welcome — saw the open vs agreed',
+        formerNames: ['Consent — saw "Why Remedy works" vs tapped Agree & continue'],
         description:
-          'Which stuck-pain stories people tap (effort, return loop, flinch, permanence). ' +
-          'Tells you which mindset copy is landing so you can keep or rewrite the rest.',
+          'Unique people who saw the welcome screen vs who tapped Get Started (Terms, Privacy, ' +
+          'and health-data consent). The gap is people who left before agreeing.',
         showDescription: true,
-        query: trends(
-          [optionMix('recognize', ['effort', 'return_loop', 'flinch', 'permanence'])],
-          { ...byEventProp('option_value'), display: BAR },
-        ),
+        query: sql(`SELECT
+  uniqIf(person_id, event = 'onboarding_step_viewed' AND toString(properties.step_key) = 'welcome') AS saw_welcome,
+  uniqIf(person_id, event = 'onboarding_option_selected' AND toString(properties.step_key) = 'welcome' AND toString(properties.option_value) = 'legal_assent') AS agreed
+FROM events
+WHERE timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND event IN ('onboarding_step_viewed', 'onboarding_option_selected')
+  ${SQL_ONBOARDING_AUDIENCE}`),
       },
       {
         name: 'Completers — pain location',
@@ -817,7 +1053,7 @@ ORDER BY exits DESC`),
       {
         name: 'Completers — activity level',
         description:
-          'Sedentary / light / active / athlete among finishers. Feeds the q8 days recommendation. ' +
+          'Sedentary / light / active / athlete among finishers. Feeds the days-per-week recommendation. ' +
           'If almost everyone is sedentary, the athlete path is unused.',
         showDescription: true,
         query: completedMix('activity_level'),
@@ -839,47 +1075,60 @@ ORDER BY exits DESC`),
         query: completedMix('equipment_tier'),
       },
       {
-        name: 'q8 — days per week chosen',
+        name: 'Time — days per week chosen',
+        formerNames: ['q8 — days per week chosen'],
         description:
-          'Explicit day-bubble taps (not the silent recommended pre-select). 6 and 7 are new. ' +
-          'If nobody picks them, the extra bubbles are noise.',
+          'Day taps on "How much time can you give this?". 6 and 7 are offered. ' +
+          'Paywall and paid rates for each choice are on the decision table.',
         showDescription: true,
-        query: trends(
-          [optionMix('q8', ['days_3', 'days_4', 'days_5', 'days_6', 'days_7'])],
-          { ...byEventProp('option_value'), display: BAR },
-        ),
+        query: optionMixSql('time', ['days_3', 'days_4', 'days_5', 'days_6', 'days_7']),
       },
       {
-        name: 'q8 — session length',
+        name: 'Time — session length',
+        formerNames: ['q8 — session length'],
         description:
-          '15 / 20 / 30+ minutes. Compare later to actual workout minutes on 3. In-App — ' +
+          '15 / 20 / 30 minutes. Compare later to actual workout minutes on 3. In-App — ' +
           'if everyone asks for 15 and sessions run 25, the plan is over-promising.',
         showDescription: true,
-        query: trends(
-          [optionMix('q8', ['minutes_15', 'minutes_20', 'minutes_30'])],
-          { ...byEventProp('option_value'), display: BAR },
-        ),
+        query: optionMixSql('time', ['minutes_15', 'minutes_20', 'minutes_30']),
       },
       {
-        name: 'q8 — picked the recommended days?',
+        name: 'Time — picked the recommended days?',
+        formerNames: ['q8 — picked the recommended days?'],
         description:
-          'Of people who tapped a day bubble, did they take the recommended center slot? ' +
-          'If almost nobody does, the recommendation or the podium layout is wrong.',
+          'Of people who tapped a day, did they take the recommended one? ' +
+          'If almost nobody does, the recommendation is wrong.',
         showDescription: true,
-        query: trends(
-          [optionMix('q8', ['days_3', 'days_4', 'days_5', 'days_6', 'days_7'])],
-          { ...byEventProp('is_recommended'), display: BAR },
-        ),
+        query: sql(`SELECT
+  toString(properties.is_recommended) AS took_recommendation,
+  uniq(person_id) AS people
+FROM events
+WHERE event = 'onboarding_option_selected'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND toString(properties.step_key) = 'time'
+  AND toString(properties.is_deselect) NOT IN ('true', '1')
+  AND startsWith(toString(properties.option_value), 'days_')
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY took_recommendation
+ORDER BY people DESC`),
       },
       {
         name: 'Acquisition source mix',
         description:
-          'Self-reported "where did you hear about us" (q0), as a person property. ' +
+          'Self-reported "where did you hear about us", asked while the plan is personalizing. ' +
           'Closed set: instagram, facebook, tiktok, youtube, google, friend_family, other.',
-        query: trends(
-          [ev('onboarding_completed', { math: 'dau' })],
-          { ...byPersonProp('acquisition_source'), display: BAR },
-        ),
+        query: sql(`SELECT
+  toString(person.properties.acquisition_source) AS source,
+  uniq(person_id) AS people
+FROM events
+WHERE event = 'onboarding_completed'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND toString(person.properties.acquisition_source) != ''
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY source
+ORDER BY people DESC`),
       },
       {
         name: 'Fresh start vs resume',
@@ -887,10 +1136,16 @@ ORDER BY exits DESC`),
           'Get Started taps: new funnel vs continuing a saved one. A high resume share ' +
           'means people are leaving mid-quiz and coming back — look at F2 for the hole.',
         showDescription: true,
-        query: trends(
-          [ev('onboarding_started', { math: 'dau' })],
-          { ...byEventProp('is_resume'), display: BAR },
-        ),
+        query: sql(`SELECT
+  toString(properties.is_resume) AS resumed,
+  uniq(person_id) AS people
+FROM events
+WHERE event = 'onboarding_started'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY resumed
+ORDER BY people DESC`),
       },
       {
         name: 'Time to finish the quiz',
@@ -898,20 +1153,32 @@ ORDER BY exits DESC`),
           'Average time_in_funnel_ms from Get Started to Start My Program. If this is ' +
           '15+ minutes the funnel is too long; pair with time-on-step to see which screen.',
         showDescription: true,
-        query: trends(
-          [ev('onboarding_completed', { math: 'avg', math_property: 'time_in_funnel_ms' })],
-        ),
+        query: sql(`SELECT
+  uniq(person_id) AS people,
+  round(avg(toFloat(properties.time_in_funnel_ms)) / 1000, 1) AS avg_seconds
+FROM events
+WHERE event = 'onboarding_completed'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  AND isNotNull(properties.time_in_funnel_ms)
+  ${SQL_ONBOARDING_AUDIENCE}`),
       },
       {
         name: 'Plan preview source',
         description:
-          'server = assign-program preview worked. fallback = the user saw client-side copy ' +
-          'because the edge function failed. A fallback spike is a product incident, not a copy problem.',
+          'server = the plan engine returned a preview. fallback = the edge function failed and ' +
+          'the screen used client copy. This is not the Profile developer preview and not dev-server traffic.',
         showDescription: true,
-        query: trends(
-          [ev('onboarding_plan_previewed', { math: 'dau' })],
-          { ...byEventProp('preview_source'), display: BAR },
-        ),
+        query: sql(`SELECT
+  toString(properties.preview_source) AS source,
+  uniq(person_id) AS people
+FROM events
+WHERE event = 'onboarding_plan_previewed'
+  AND timestamp >= '${CUTOVER}'
+  AND timestamp < now() + INTERVAL 1 DAY
+  ${SQL_ONBOARDING_AUDIENCE}
+GROUP BY source
+ORDER BY people DESC`),
       },
       {
         name: 'F5 — Signup funnel by method',

@@ -1,0 +1,31 @@
+{
+  "name": "Remedy Marketing",
+  "short_name": "Marketing",
+  "start_url": "/marketing",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6EDE0",
+  "theme_color": "#F6EDE0",
+  "icons": [
+    {
+      "src": "/assets/apple-touch-icon.png?v=0bc49f33",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo-340.png?v=a57f6720",
+      "sizes": "340x340",
+      "type": "image/png"
+    }
+  ],
+  "share_target": {
+    "action": "/marketing",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

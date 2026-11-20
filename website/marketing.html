@@ -1,0 +1,2785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Remedy — Pre-launch</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png?v=113584ba">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=0bc49f33">
+<link rel="manifest" href="/marketing.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pre-launch">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F6EDE0">
+<style>
+  :root {
+    --bg: #F6EDE0;
+    --bg-deep: #EFE5D7;
+    --card: #FFFDF9;
+    --card-2: #FFFFFF;
+    --line: #E5D8C6;
+    --line-strong: #BFAE92;
+    --ink: #1C1C1E;
+    --muted: #55524F;
+    --dim: #6A635E;
+    --ice: #3E6B4E;
+    --ice-mid: #5B8A6C;
+    --ice-soft: #E7EFE9;
+    --ice-deep: #234032;
+    --shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 12px 28px rgba(35, 64, 50, 0.06);
+    --lime: var(--ice);
+    --lime-ink: #FFFDF9;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.35;
+    -webkit-font-smoothing: antialiased;
+    color-scheme: light;
+    background:
+      radial-gradient(900px 420px at 0% -10%, #FFFDF9 0%, transparent 55%),
+      linear-gradient(180deg, #F9F3EA 0%, #F6EDE0 42%, #E5D8C6 100%);
+    min-height: 100vh;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .col { max-width: 1120px; margin: 0 auto; }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(249, 243, 234, 0.9);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(35, 64, 50, 0.08);
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0;
+  }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .brand {
+    margin: 0; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--lime); font-weight: 700;
+  }
+  h1 { margin: 2px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -0.04em; }
+  .tools { display: flex; gap: 8px; align-items: center; }
+  .iconbtn, .menu summary {
+    width: 40px; height: 40px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card-2);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+    display: grid; place-items: center; cursor: pointer; color: var(--ink);
+    list-style: none;
+  }
+  .menu { position: relative; }
+  .menu summary { list-style: none; }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu-pop {
+    position: absolute; right: 0; top: 46px; width: 160px;
+    background: var(--card-2); border: 1px solid var(--line); border-radius: 14px;
+    padding: 6px; display: grid; gap: 4px;
+    box-shadow: 0 16px 40px rgba(35, 64, 50, 0.12);
+  }
+  .menu-pop button, .menu-pop a {
+    display: block; text-align: left; text-decoration: none;
+    background: transparent; border: 0; color: var(--ink);
+    border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: 14px;
+  }
+  .menu-pop button:hover, .menu-pop a:hover { background: var(--ice-soft); }
+  .sync { margin: 8px 0 0; min-height: 16px; color: var(--dim); font-size: 12px; }
+  .tabs { display: flex; gap: 6px; padding: 10px 0 12px; overflow-x: auto; }
+  .tab { flex: 0 0 auto; }
+  .tab {
+    border: 0; background: transparent; color: var(--muted);
+    border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .tab.on { background: var(--ice-deep); color: #FFFDF9; }
+  main { padding: 20px 20px 140px; }
+  .stage { display: block; }
+  .hero {
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--card) 100%);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 18px 16px 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .hero-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .kicker {
+    margin: 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+  .hero h2 {
+    margin: 4px 0 0; font-size: 40px; line-height: 0.95; letter-spacing: -0.05em; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .lead { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+  .vs { margin: 4px 0 0; color: var(--ice); font-size: 13px; font-weight: 700; min-height: 0; }
+  .hero.won {
+    background: linear-gradient(165deg, #FFFDF9 0%, #E7EFE9 55%, #E7EFE9 100%);
+    border-color: var(--ice);
+    box-shadow: 0 18px 40px rgba(35, 64, 50, 0.12);
+  }
+  .vs:empty { display: none; }
+  .ring-wrap { position: relative; width: 108px; height: 108px; flex: 0 0 auto; }
+  .ring { width: 108px; height: 108px; display: block; }
+  .ring .track { fill: none; stroke: #E5D8C6; stroke-width: 8; }
+  .ring .value {
+    fill: none; stroke: var(--ice); stroke-width: 8; stroke-linecap: round;
+    stroke-dasharray: 326.7; stroke-dashoffset: 326.7;
+    transform: rotate(-90deg); transform-origin: 60px 60px;
+    transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ring-label {
+    position: absolute; inset: 0; display: grid; place-items: center; align-content: center;
+    text-align: center;
+  }
+  .ring-label b {
+    font-size: 28px; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .ring-label span { display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .lit b { color: var(--ice-deep); }
+  .xp-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; font-size: 13px; font-weight: 700; }
+  .xp-row span:last-child { color: var(--ice); font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 99px; background: var(--bg-deep); margin-top: 8px; overflow: hidden; }
+  .bar i {
+    display: block; height: 100%; width: 0; border-radius: 99px;
+    background: linear-gradient(90deg, #BFAE92, var(--ice));
+    transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .xp-next { margin: 6px 0 0; color: var(--dim); font-size: 12px; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 18px; }
+  .week i {
+    display: block; text-align: center; font-style: normal; font-size: 10px; color: var(--dim);
+    background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 0 7px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+    font-variant-numeric: tabular-nums;
+  }
+  .week i em { display: block; font-style: normal; font-size: 12px; font-weight: 800; color: var(--ink); margin-bottom: 2px; }
+  .week i.on { border-color: var(--ice-mid); background: var(--ice-soft); }
+  .week i.hot { background: var(--ice); border-color: var(--ice-deep); color: #FFFDF9; }
+  .week i.hot em { color: #FFFDF9; }
+  .week i.today { box-shadow: inset 0 0 0 1px var(--ink); }
+  .week i.empty { opacity: 0.4; }
+  .lane { margin-bottom: 22px; }
+  .lane-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
+  .lane-h h3 { margin: 2px 0 0; font-size: 20px; letter-spacing: -0.03em; }
+  .lane-h .frac { font-size: 18px; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .lane-t1 .kicker, .lane-t1 .frac { color: var(--ice-deep); }
+  .lane-t2 .kicker, .lane-t2 .frac { color: var(--ice); }
+  .lane-t3 .kicker, .lane-t3 .frac { color: #2F5440; }
+  .hint { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+  .lane-bar { height: 4px; border-radius: 99px; background: var(--bg-deep); margin-bottom: 10px; overflow: hidden; }
+  .lane-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #BFAE92, var(--ice)); transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1); }
+  .qblock {
+    margin-bottom: 8px; scroll-margin-bottom: 130px;
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 12px 14px;
+    box-shadow: var(--shadow);
+  }
+  .qblock.board { overflow: hidden; }
+  .qhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .qlabel { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+  .qmeta { color: var(--dim); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .qmeta.on { color: var(--ice-deep); }
+  .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
+  .pip {
+    height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg-deep); cursor: pointer; padding: 0;
+    transition: background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .pip.on { background: #D9CBB4; border-color: #BFAE92; }
+  .pip.top { background: var(--ice); border-color: var(--ice-deep); }
+  .result {
+    margin-top: 8px; padding: 14px; border-radius: 16px;
+    background: var(--card); border: 1px dashed var(--line-strong);
+  }
+  .result h3 { margin: 2px 0 0; font-size: 16px; font-weight: 700; }
+  .under, .composer, .board-body { padding: 10px 0 0; }
+  .logbtn, .addbtn, .savebtn, .x { border: 0; cursor: pointer; border-radius: 999px; }
+  .logbtn, .savebtn, .addbtn {
+    background: var(--ice); color: #FFFDF9; font-weight: 800; font-size: 13px; padding: 8px 12px;
+  }
+  .logbtn[hidden], .composer[hidden] { display: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+    background: var(--ice-soft); border-radius: 999px; padding: 4px 4px 4px 10px;
+    font-size: 12px; font-weight: 700;
+  }
+  .chip a, .chip span { color: var(--ink); text-decoration: none; font-weight: 700; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .x {
+    width: 22px; height: 22px; background: transparent; color: var(--muted); font-size: 16px; line-height: 1;
+  }
+  .composer { display: grid; gap: 8px; }
+  .composer[hidden] { display: none; }
+  input[type="text"], input[type="url"], textarea {
+    width: 100%; background: #F9F3EA; border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 12px; font-size: 16px; color: var(--ink);
+  }
+  textarea { min-height: 84px; resize: vertical; line-height: 1.45; }
+  .addbar { display: flex; gap: 8px; }
+  .addbar input { flex: 1; min-width: 0; }
+  .person, .fmt {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px 0; border-top: 1px solid var(--line);
+  }
+  .who { flex: 1 1 140px; min-width: 120px; }
+  .who a, .who b { display: block; color: var(--ink); text-decoration: none; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who a { font-weight: 700; }
+  .person > input, .fmt > input { width: auto; flex: 1 1 160px; min-width: 140px; padding: 8px 10px; font-size: 16px; }
+  .empty {
+    margin: 4px 0 10px; color: var(--dim); font-size: 13px;
+  }
+  .note-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px;
+  }
+  .note-card h3 { margin: 0 0 8px; font-size: 16px; }
+  .lockslot {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+    padding: 22px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, #EFE5D7 64%, rgba(239,229,215,0));
+    pointer-events: none;
+  }
+  .lockslot button {
+    pointer-events: auto;
+    display: block;
+    width: min(1120px, 100%);
+    margin: 0 auto;
+    border-radius: 16px; cursor: pointer;
+    background: var(--bg-deep); color: var(--ink);
+    font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
+    padding: 16px; min-height: 56px;
+    border: 1px solid var(--line);
+  }
+  .lockslot button.ready {
+    background: var(--ice); color: #FFFDF9; border-color: var(--ice-deep);
+    box-shadow: 0 10px 28px rgba(62, 107, 78, 0.22);
+  }
+  .lockslot button.on { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); box-shadow: none; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px;
+  }
+  .stat b { display: block; font-size: 28px; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .card h3 { margin: 0 0 10px; font-size: 16px; }
+  .heat { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .heat b { display: block; aspect-ratio: 1; border-radius: 4px; background: #E5D8C6; }
+  .heat b.l1 { background: #D9CBB4; }
+  .heat b.l2 { background: #8FB09A; }
+  .heat b.l3 { background: #5B8A6C; }
+  .heat b.l4 { background: #3E6B4E; }
+  .heat b.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .habit { margin: 0 0 12px; }
+  .habit .row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+  .habit .track { height: 6px; border-radius: 99px; background: var(--bg-deep); overflow: hidden; }
+  .habit .track i { display: block; height: 100%; background: var(--ice); }
+  .logline { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .logline span { display: block; color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+  .logline a { color: var(--ink); font-weight: 680; text-decoration: none; }
+  .toast {
+    position: fixed; left: 50%; bottom: 96px; z-index: 25;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .pulse { animation: numpop 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes numpop { 40% { transform: scale(1.04); } }
+  .hidden { display: none !important; }
+  .notes { max-width: 720px; }
+  .notes-title { margin: 4px 0 14px; font-size: 28px; letter-spacing: -0.04em; font-weight: 700; }
+  .daynote {
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    margin: 0 0 14px;
+    box-shadow: var(--shadow);
+  }
+  .daynote-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 16px 16px 0;
+  }
+  .daynote-h h3 { margin: 2px 0 0; font-size: 22px; letter-spacing: -0.03em; }
+  .daynote-h em {
+    font-style: normal; font-size: 12px; font-weight: 700;
+    color: var(--ice-deep); background: var(--ice-soft); border-radius: 999px; padding: 4px 8px;
+  }
+  .daynote-b { padding: 12px 16px 16px; }
+  .field-label {
+    display: block; margin: 0 0 6px;
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+  .daynote-b textarea { width: 100%; min-height: 128px; margin: 0 0 16px; display: block; }
+  .steps { list-style: none; margin: 0 0 12px; padding: 0; }
+  .steps li {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) 28px;
+    align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line);
+  }
+  .steps li.done input { color: var(--dim); }
+  .tick {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong);
+    background: #fff; padding: 0; display: grid; place-items: center;
+  }
+  .tick.on { background: var(--ice); border-color: var(--ice-deep); }
+  .tick.on::after {
+    content: ""; width: 5px; height: 9px; border: solid #FFFDF9; border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -2px);
+  }
+  .steps input { width: 100%; min-width: 0; padding: 8px 10px; }
+  .daynote-b .addbar { margin: 0; }
+  .library { max-width: 880px; }
+  .tpl textarea { min-height: 220px; line-height: 1.5; }
+  .dmbox { margin-top: 18px; }
+  .dmbox .hint { margin: 2px 0 8px; }
+  .dmbox textarea { min-height: 110px; margin: 0; }
+  .dmbox .row { margin-top: 8px; }
+  .rec-main .hint, .clist .hint { white-space: normal; overflow: visible; }
+  .clist {
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    margin: 0 0 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .clist summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+  }
+  .clist summary::-webkit-details-marker { display: none; }
+  .clist-title { flex: 1; font-size: 16px; font-weight: 700; }
+  .clist-count {
+    font-style: normal; font-size: 12px; font-weight: 700;
+    color: var(--ice-deep); background: var(--ice-soft); border-radius: 999px; padding: 3px 8px;
+  }
+  .chev {
+    width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+    transform: rotate(-45deg); flex: 0 0 auto;
+  }
+  .clist[open] .chev { transform: rotate(45deg); }
+  .clist.medium { border-left: 4px solid #BFAE92; }
+  .clist.large { border-left: 4px solid var(--ice); }
+  .clist.huge { border-left: 4px solid var(--ice-deep); }
+  .clist.ugc { border-left: 4px solid #8A7F70; }
+  .clist.sent { border-left: 4px solid var(--line-strong); }
+  .clist-body { padding: 0 16px 14px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--ice-soft); color: var(--ice-deep);
+    display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: 0 0 auto;
+  }
+  .clist.huge .avatar { background: var(--ice-deep); color: #FFFDF9; }
+  .people { margin: 8px 0 0; padding: 0; list-style: none; }
+  .person a.handle { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px; }
+  .person .note-in { flex: 1; min-width: 80px; padding: 7px 10px; font-size: 16px; }
+  .rec { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
+  .rec-main { flex: 1; min-width: 0; }
+  .rec-meta { color: var(--muted); font-size: 12px; margin-left: 8px; font-weight: 700; }
+  .rec-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+  .tpl { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+  .tpl:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+  .tpl-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .tpl-head input { flex: 1; min-width: 140px; font-weight: 700; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  button.ghost, .ghost {
+    background: var(--card-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 12px; cursor: pointer; font-weight: 700; font-size: 13px;
+  }
+  button.soft, .soft {
+    background: var(--ice-soft); color: var(--ice-deep); border: 0;
+    border-radius: 999px; padding: 8px 12px; cursor: pointer; font-weight: 800; font-size: 13px;
+  }
+  button.danger, .danger {
+    background: transparent; color: #8C3D32; border: 1px solid #E4C8C2;
+    border-radius: 999px; padding: 8px 12px; cursor: pointer; font-size: 13px;
+  }
+  .copied { background: var(--ice-soft) !important; color: var(--ice-deep) !important; }
+  .card h2 { margin: 0 0 8px; font-size: 18px; font-weight: 700; }
+  .sharebox { background: linear-gradient(180deg, #F9F3EA, #fff); }
+  @media (max-width: 640px) {
+    .person { flex-wrap: wrap; }
+    .person .note-in { flex: 1 1 100%; }
+    .rec { flex-wrap: wrap; }
+    .rec-actions { width: 100%; }
+  }
+  @media (min-width: 860px) {
+    main { padding-bottom: 40px; }
+    .stage { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
+    .stage-side { position: sticky; top: 88px; }
+    .lockslot { position: static; background: none; padding: 0; pointer-events: auto; }
+    .lockslot button { width: 100%; }
+  }
+  @media (min-width: 1180px) {
+    .stage-main { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; align-items: start; }
+    .lane-t1, .note-card { grid-column: 1 / -1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ring .value, .bar i, .lane-bar i, .pip, .pulse {
+      animation: none !important; transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="col top">
+    <div>
+      <p class="brand">Remedy</p>
+      <h1>Pre-launch</h1>
+    </div>
+    <div class="tools">
+      <button type="button" class="iconbtn" id="muteBtn" aria-label="Sound on"></button>
+      <details class="menu">
+        <summary aria-label="More">···</summary>
+        <div class="menu-pop">
+          <button type="button" id="exportBtn">Export</button>
+          <button type="button" id="importBtn">Import</button>
+          <a href="?logout=1">Sign out</a>
+        </div>
+      </details>
+    </div>
+  </div>
+  <div class="col"><p class="sync" id="sync"></p></div>
+  <nav class="col tabs" id="tabs"></nav>
+</header>
+<main class="col" id="app"></main>
+<div class="toast" id="toast" role="status"></div>
+<input class="hidden" id="importFile" type="file" accept="application/json">
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'remedy.marketingOS.v5';
+  var EPOCH = '2026-09-27';
+  var SOUND_KEY = 'remedy.marketingOS.sound';
+  var DEPTH_MAX = 5;
+  var DEPTH_WORD = ['', 'Skim', 'Light', 'Solid', 'Deep', 'All in'];
+
+  var TIERS = [
+    { id: 't1', kicker: 'Tier 1', title: 'Meta + UGC', hint: 'Learnings and UGC setup. The deepest pass is the score.' },
+    { id: 't2', kicker: 'Tier 2', title: 'Marketing', hint: 'General marketing. Same rule.' },
+    { id: 't3', kicker: 'Tier 3', title: 'Formats', hint: 'Research, community, or learning. The deepest pass is the score.' }
+  ];
+
+  var QUESTS = [
+    { id: 't1yt', tier: 't1', label: 'YouTube', log: true, ph: 'Which video?' },
+    { id: 't1pod', tier: 't1', label: 'Podcast', log: true, ph: 'Which episode?' },
+    { id: 't1ugc', tier: 't1', label: 'UGC setup', board: 'ugc' },
+    { id: 't2yt', tier: 't2', label: 'YouTube', log: true, ph: 'Which video?' },
+    { id: 't2pod', tier: 't2', label: 'Podcast', log: true, ph: 'Which episode?' },
+    { id: 't3fmt', tier: 't3', label: 'Research', board: 'formats' },
+    { id: 'xCommunity', tier: 't3', label: 'Community' },
+    { id: 'xLearn', tier: 't3', label: 'Learning' }
+  ];
+
+  var QUEST_IDS = QUESTS.map(function (q) { return q.id; });
+  var RANKS = ['Cold', 'Warm', 'In it', 'Sharp', 'Hungry', 'Relentless', 'Unfair', 'Locked'];
+  var WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function todayKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function addDays(d, n) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+  function questById(id) {
+    for (var i = 0; i < QUESTS.length; i++) if (QUESTS[i].id === id) return QUESTS[i];
+    return null;
+  }
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function cleanUrl(v) {
+    var s = String(v || '').trim();
+    if (!s) return '';
+    if (!/^https?:\/\//i.test(s)) {
+      if (s.indexOf(' ') !== -1 || s.indexOf('.') === -1) return '';
+      s = 'https://' + s;
+    }
+    if (s.length > 500) return '';
+    return s;
+  }
+  function depthWord(n) { return DEPTH_WORD[n] || ''; }
+  function depthOf(row, id) {
+    if (!row) return 0;
+    var n = row[id];
+    if (n === true) n = 1;
+    n = Number(n);
+    if (!isFinite(n) || n <= 0) return 0;
+    return Math.max(0, Math.min(DEPTH_MAX, Math.round(n)));
+  }
+  function tierIds(tier) {
+    return QUESTS.filter(function (q) { return q.tier === tier; }).map(function (q) { return q.id; });
+  }
+  function tierDepth(row, tier) {
+    var ids = tierIds(tier);
+    var m = 0;
+    for (var i = 0; i < ids.length; i++) m = Math.max(m, depthOf(row, ids[i]));
+    return m;
+  }
+  function anyDepth(row) {
+    var m = 0;
+    for (var i = 0; i < QUEST_IDS.length; i++) m = Math.max(m, depthOf(row, QUEST_IDS[i]));
+    return m;
+  }
+
+  var STORE = 'https://apps.apple.com/app/id6813745106';
+  var pendingShare = null;
+  var muteToggle = false;
+  var DEFAULT_OPINION = [
+    { id: 'op-sm', name: 'Small / medium', body: 'hey [name] — i built a back pain app (structured program + videos, not another 3-stretch page). not asking you to post. i want your honest take if you have 10 minutes with it. details later if it ever makes sense — not the point rn.' },
+    { id: 'op-pt', name: 'PT / clinical', body: 'hey [name] — i’m not a PT. built an iPhone program for people who won’t keep doing $150 visits just to get a plan. want your take on whether the structure is responsible. not a collab ask.' },
+    { id: 'op-lg', name: 'Large / busy', body: 'hey [name] — made a back pain app. not pitching a deal. if you ever have a minute i’d value your opinion. that’s the whole message.' },
+    { id: 'op-yes', name: 'After they say yes', body: 'appreciate it. iOS only: ' + STORE + ' — no script, no posting ask. whenever you try it, tell me what felt dumb, what felt useful, and whether you’d tell a patient / follower to use something like this.' }
+  ];
+  var DEFAULT_COFOUNDER = [
+    { id: 'cf-sm', name: 'Small / medium', body: 'hey [name] — i built a back pain app (structured program + videos, not another 3-stretch page). i’m not a PT. looking for a PT co-founder to own the clinical side. not a paid post. if building this with me is even a maybe, say so.' },
+    { id: 'cf-pt', name: 'PT / clinical', body: 'hey [name] — i’m not a PT. built an iPhone program for people who won’t keep doing $150 visits just to get a plan. i need a PT co-founder, not a shout-out. you’d own whether the program is responsible. if that role is interesting, i’ll send the details.' },
+    { id: 'cf-lg', name: 'Large / busy', body: 'hey [name] — made a back pain app. not pitching a deal. looking for a PT co-founder. if that’s you, or you know who is, that’s the whole message.' },
+    { id: 'cf-yes', name: 'After they say yes', body: 'appreciate it. iOS only: ' + STORE + ' — no script, no posting ask. the role is PT co-founder: you own the clinical side, i own the product. look when you can and tell me if you’d actually want that, and what you’d change before your name is on it.' }
+  ];
+  var DEFAULT_UGC = [
+    { id: 'ugc-open', name: 'Open', body: 'hey [name] — your videos are actually watchable. i have a back pain iOS app and want 1 short raw clip. paying [$X] for one 15–25s vertical, i edit. if it works i’d rehire. want the 5-line brief?' },
+    { id: 'ugc-brief', name: 'Brief', body: 'Remedy = structured back program on iPhone, not random stretches.\nShoot 9:16, whole body in frame, normal room, no medical claims.\nBeat 1: the dumb thing people do (playlist / chair twist / “i’ll rest it”).\nBeat 2: look at camera like that was a bad idea.\nBeat 3: show today’s session on the phone (I’ll send the screenshot).\nBeat 4: do the same movement on the floor, calm, small range.\nNo “this cured me.” No “guaranteed.” Send the raw.' }
+  ];
+  function cloneTpls(list) {
+    return list.map(function (t) { return { id: t.id, name: t.name, body: t.body }; });
+  }
+  var FOLLOWER_DM_IDS = ['followers', 'saves', 'viewed', 'likes'];
+  var FOLLOWER_DMS = [
+    { id: 'followers', label: 'Followers', hint: 'Someone who just followed you.' },
+    { id: 'saves', label: 'Saves', hint: 'Someone who saved a post.' },
+    { id: 'viewed', label: 'Viewed profile', hint: 'Someone who opened your profile.' },
+    { id: 'likes', label: 'Likes', hint: 'Someone who liked a post.' }
+  ];
+  var DEFAULT_FOLLOWER_DMS = {
+    followers: 'Thanks for the follow. Are you dealing with this now, or just keeping it around in case?',
+    saves: 'Saw you saved that one. Is yours worse right when you stand up, or after you have been sitting?',
+    viewed: 'Hey — saw you stopped by. Is the back thing something you are dealing with right now?',
+    likes: 'Hey — is yours worse in the morning, or after you have been sitting?'
+  };
+  function defaultFollowerDms() {
+    var out = {};
+    FOLLOWER_DM_IDS.forEach(function (id) { out[id] = DEFAULT_FOLLOWER_DMS[id]; });
+    return out;
+  }
+  function normalizeFollowerDms(raw) {
+    var out = defaultFollowerDms();
+    if (!raw || typeof raw !== 'object') return out;
+    FOLLOWER_DM_IDS.forEach(function (id) {
+      if (typeof raw[id] === 'string') out[id] = raw[id].slice(0, 2000);
+    });
+    return out;
+  }
+  function followerDmsChanged(dms) {
+    var cur = dms || {};
+    return FOLLOWER_DM_IDS.some(function (id) { return String(cur[id] || '') !== DEFAULT_FOLLOWER_DMS[id]; });
+  }
+
+  function normalizeTpls(list, fallback) {
+    if (!Array.isArray(list) || list.length === 0) return cloneTpls(fallback);
+    return list.map(function (t) {
+      var row = { id: t.id || uid(), name: String(t.name || 'Untitled'), body: String(t.body || '') };
+      var stamp = Date.parse(t && t.updatedAt || '');
+      if (isFinite(stamp)) row.updatedAt = new Date(stamp).toISOString();
+      return row;
+    });
+  }
+
+  var CREATOR_LISTS = {
+    'opinion-medium': { tab: 'opinion', tone: 'medium', title: 'Medium', hint: 'Working accounts. Most of the 10 DMs live here.' },
+    'opinion-large': { tab: 'opinion', tone: 'large', title: 'Large', hint: 'Known and busy. Use the short DM only.' },
+    'opinion-huge': { tab: 'opinion', tone: 'huge', title: 'Huge', hint: 'Almost never reply. Still worth a one-liner later.' },
+    'cofounder-medium': { tab: 'cofounder', tone: 'medium', title: 'Medium', hint: 'Working accounts. Most of the co-founder DMs live here.' },
+    'cofounder-large': { tab: 'cofounder', tone: 'large', title: 'Large', hint: 'Known and busy. Use the short DM only.' },
+    'cofounder-huge': { tab: 'cofounder', tone: 'huge', title: 'Huge', hint: 'Almost never reply. Still worth a one-liner later.' },
+    'ugc': { tab: 'ugc', tone: 'ugc', title: 'Creators', hint: 'Paid tests only. Keep opinion names off this list.' }
+  };
+  var CREATOR_KEYS = Object.keys(CREATOR_LISTS);
+  var IG_RESERVED = {
+    p: 1, reel: 1, reels: 1, stories: 1, explore: 1, accounts: 1, direct: 1, tv: 1,
+    about: 1, legal: 1, developer: 1, directory: 1, share: 1, popular: 1, tags: 1
+  };
+
+  function emptyCreators() {
+    var o = {};
+    CREATOR_KEYS.forEach(function (k) { o[k] = []; });
+    return o;
+  }
+
+  function defaultListOpen() {
+    return {
+      'opinion-medium': true, 'opinion-large': false, 'opinion-huge': false,
+      'cofounder-medium': true, 'cofounder-large': false, 'cofounder-huge': false,
+      ugc: true, 'sent-opinion': false, 'sent-cofounder': false, 'sent-ugc': false
+    };
+  }
+
+  function isHandle(h) {
+    return /^[a-z0-9._]{1,30}$/i.test(h) && !IG_RESERVED[String(h).toLowerCase()];
+  }
+
+  function parseHandles(text) {
+    if (!text) return [];
+    var s = String(text);
+    var found = [];
+    var seen = {};
+    function push(h) {
+      h = String(h || '').replace(/^@/, '').replace(/\/+$/, '').toLowerCase();
+      if (!isHandle(h) || seen[h]) return;
+      seen[h] = true;
+      found.push(h);
+    }
+    var igRe = /(?:https?:\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/([a-zA-Z0-9._]+)(?:[/?#]|$)/g;
+    var m;
+    while ((m = igRe.exec(s))) push(m[1]);
+    var igMe = /(?:https?:\/\/)?(?:www\.)?ig\.me\/([a-zA-Z0-9._]+)/g;
+    while ((m = igMe.exec(s))) push(m[1]);
+    var atRe = /@([a-zA-Z0-9._]{1,30})/g;
+    while ((m = atRe.exec(s))) push(m[1]);
+    var bare = s.trim().replace(/^@/, '');
+    if (isHandle(bare)) push(bare);
+    return found;
+  }
+
+  function normalizeCreator(c) {
+    if (typeof c === 'string') {
+      var h = parseHandles(c)[0];
+      if (!h) return null;
+      return { id: uid(), handle: h, note: '', addedAt: new Date().toISOString() };
+    }
+    if (!c || typeof c !== 'object') return null;
+    var handle = String(c.handle || '').replace(/^@/, '').toLowerCase();
+    if (!isHandle(handle)) return null;
+    return {
+      id: c.id || uid(),
+      handle: handle,
+      note: String(c.note || ''),
+      why: String(c.why || '').slice(0, 280),
+      addedAt: c.addedAt || new Date().toISOString(),
+      dmSent: c.dmSent === true,
+      found: c.found === true
+    };
+  }
+
+  function normalizeCreators(raw) {
+    var out = emptyCreators();
+    if (!raw || typeof raw !== 'object') return out;
+    CREATOR_KEYS.forEach(function (key) {
+      var list = raw[key];
+      if (!Array.isArray(list)) return;
+      var seen = {};
+      list.forEach(function (c) {
+        var n = normalizeCreator(c);
+        if (!n || seen[n.handle]) return;
+        seen[n.handle] = true;
+        out[key].push(n);
+      });
+    });
+    return out;
+  }
+
+  function normalizeOpen(raw) {
+    var out = defaultListOpen();
+    if (!raw || typeof raw !== 'object') return out;
+    Object.keys(out).forEach(function (k) {
+      if (typeof raw[k] === 'boolean') out[k] = raw[k];
+    });
+    return out;
+  }
+
+  var RECS = [
+    { handle: 'backunbroken', tier: 'opinion-medium', followers: 24100, why: '24.1k. Back-pain program. PT. Exercise progressions.', tags: ['back', 'program', 'exercise', 'moves'] },
+    { handle: 'chaplinperformance', tier: 'opinion-medium', followers: 45800, why: '45.8k. PT. Films the return to lifting.', tags: ['exercise', 'lifting', 'back'] },
+    { handle: 'dr.dinesh.physio', tier: 'opinion-medium', followers: 60300, why: '60.3k. Spine rehab clips. Same size as Trevor. More clinic than 3 moves.', tags: ['back', 'exercise', 'clinical'] },
+    { handle: 'drjoshpt', tier: 'opinion-large', followers: 371000, why: '371k. Short back and desk exercise clips. This is the 3-move format.', tags: ['moves', 'back', 'desk', 'exercise'] },
+    { handle: 'thebarbellphysio', tier: 'opinion-large', followers: 286000, why: '286k. Lifters. Mobility. Not a back-only page.', tags: ['lifting', 'exercise', 'young'] },
+    { handle: 'lowbackability', tier: 'opinion-huge', followers: 939000, why: '939k. Brendan, 29. The page is fix-your-back videos.', tags: ['young', 'back', 'moves', 'exercise', 'program'] },
+    { handle: 'rehabfix', tier: 'opinion-huge', followers: 1400000, why: '1.4M. Sciatica and low-back exercises.', tags: ['back', 'moves', 'exercise', 'program'] },
+    { handle: 'moveu', tier: 'opinion-huge', followers: 1800000, why: '1.8M. Disc-bulge program. Younger crowd.', tags: ['young', 'back', 'program', 'exercise'] },
+    { handle: 'theptinitiative', tier: 'opinion-huge', followers: 1000000, why: '1M. Step-by-step PT. Back highlight, a lot of shoulder.', tags: ['exercise', 'program', 'back'] },
+    { handle: 'painacademy', tier: 'opinion-huge', followers: 934000, why: '934k. Movement for chronic pain. Less of the 3-move format.', tags: ['back', 'program'] },
+    { handle: 'dr.caleb.burgess', tier: 'opinion-huge', followers: 1300000, why: '1.3M. Pain and injury, broader than back.', tags: ['program'] },
+    { handle: 'strongdespitepain', tier: 'ugc', followers: 80, why: '80 followers. Films herself. Aging and faith, not Trey’s back-recovery look.', tags: ['aging', 'faith', 'off-lane', 'on-camera'] },
+    { handle: 'rehabscience', tier: 'opinion-huge', followers: 1700000, why: '1.7M. Orthopedic PT. Pain, movement, back and sciatica.', tags: ['back', 'exercise', 'program'] },
+    { handle: 'drjacob', tier: 'opinion-huge', followers: 2000000, why: '2M. DPT. Mobility clips, including low-back tips.', tags: ['back', 'moves', 'exercise', 'young'] },
+    { handle: 'thephysiofix', tier: 'opinion-huge', followers: 1000000, why: '1M. Physio plus strength and mobility.', tags: ['exercise', 'lifting', 'moves'] },
+    { handle: 'theprehabguys', tier: 'opinion-huge', followers: 1000000, why: '1M. Rehab exercise clips. Back is part of the feed.', tags: ['exercise', 'program', 'back'] },
+    { handle: 'docjenfit', tier: 'opinion-huge', followers: 726000, why: '726k. PT. Has a low-back plan and exercise videos.', tags: ['back', 'exercise', 'moves'] },
+    { handle: 'dr.austin.lake', tier: 'opinion-huge', followers: 1000000, why: '1M. DPT. Movement and pain education.', tags: ['exercise', 'program'] },
+    { handle: 'coachgreen.pt', tier: 'opinion-huge', followers: 4000000, why: '4M. Mobility. Short exercise videos, younger audience.', tags: ['young', 'moves', 'exercise'] },
+    { handle: 'elastaboy', tier: 'opinion-huge', followers: 2000000, why: '2M. Mobility coach. Exercise demos, not a clinic page.', tags: ['young', 'moves', 'exercise'] },
+    { handle: 'steficohen', tier: 'opinion-huge', followers: 1000000, why: '1M. DPT. Lifting and evidence. Close to your powerlifting lane.', tags: ['lifting', 'exercise', 'young'] },
+    { handle: 'dr.dan_dpt', tier: 'opinion-large', followers: 645000, why: '645k. DPT. Pain and movement, exercise teaching.', tags: ['exercise', 'back', 'moves'] },
+    { handle: 'whealth', tier: 'opinion-large', followers: 589000, why: '589k. Mobility and pain-free training.', tags: ['moves', 'exercise', 'young'] },
+    { handle: 'mickmovements', tier: 'opinion-large', followers: 689000, why: '689k. Mobility coach. Audience skews 18–35.', tags: ['young', 'moves', 'exercise'] },
+    { handle: 'davidgreyrehab', tier: 'opinion-large', followers: 345000, why: '345k. Rehab progressions. Exercise, not stretch lists.', tags: ['exercise', 'program', 'back'] },
+    { handle: 'drjohnrusin', tier: 'opinion-large', followers: 394000, why: '394k. Pain-free training for lifters.', tags: ['lifting', 'exercise', 'back'] },
+    { handle: 'adammeakins', tier: 'opinion-large', followers: 393000, why: '393k. Physio. Short, blunt rehab and strength takes.', tags: ['exercise', 'lifting'] },
+    { handle: 'drmichaelrowe', tier: 'opinion-large', followers: 261000, why: '261k. SpineCare. Back-pain exercise videos.', tags: ['back', 'exercise', 'moves'] },
+    { handle: 'e3rehab', tier: 'opinion-large', followers: 492000, why: '492k. Phase-by-phase rehab. Exercise explainers.', tags: ['exercise', 'program', 'back'] },
+    { handle: 'strengthcoachtherapy', tier: 'opinion-large', followers: 528000, why: '528k. DPT. Strength-based rehab clips.', tags: ['lifting', 'exercise'] },
+    { handle: 'lindseyjonesdpt', tier: 'opinion-large', followers: 256000, why: '256k. DPT. Trunk, hip, and sciatica exercises.', tags: ['back', 'exercise', 'moves'] },
+    { handle: 'dr.susie.squats', tier: 'opinion-large', followers: 174000, why: '174k. PT. Strength training and injury clips.', tags: ['lifting', 'exercise', 'young'] },
+    { handle: 'drmalekpt', tier: 'opinion-large', followers: 164000, why: '164k. Sports PT. Stretch and rehab for people who still train.', tags: ['lifting', 'exercise'] },
+    { handle: 'exerciseprescriptor', tier: 'opinion-large', followers: 183000, why: '183k. Pain clinic that posts exercise, not only treatment.', tags: ['back', 'exercise'] },
+    { handle: 'wilk_kevin', tier: 'opinion-large', followers: 355000, why: '355k. Sports PT. Rehab education and exercise.', tags: ['exercise', 'lifting'] },
+    { handle: 'the.hip.physio', tier: 'opinion-large', followers: 542000, why: '542k. Hip physio. Adjacent to low-back and sciatica.', tags: ['back', 'exercise'] },
+    { handle: 'corebalancetraining', tier: 'opinion-medium', followers: 71000, why: '71k. DPT. Page is lower-back pain and core exercise.', tags: ['back', 'exercise', 'moves'] },
+    { handle: 'shapeshiftwellness', tier: 'opinion-medium', followers: 17000, why: '17k. Chiro. Low-back pain and sciatica.', tags: ['back', 'moves', 'exercise'] },
+    { handle: 'kardenrabin', tier: 'opinion-medium', followers: 87000, why: '87k. Chronic pain and nervous system. Closer to Trey than to a stretch page.', tags: ['back', 'program'] },
+    { handle: 'fitness4backpain', tier: 'opinion-medium', followers: 15000, why: '15k. Back pain and strength. Same job as Trevor, smaller.', tags: ['back', 'lifting', 'exercise'] },
+    { handle: 'stephi_burnellphysio', tier: 'opinion-medium', followers: 64000, why: '64k. Sciatica physio. Exercise method, not a clinic ad.', tags: ['back', 'exercise'] },
+    { handle: 'greglehman', tier: 'opinion-medium', followers: 46200, why: '46k. Physio. Pain science and movement. High-quality, not a hype page.', tags: ['back', 'exercise'] },
+    { handle: 'docstacie', tier: 'opinion-medium', followers: 84000, why: '84k. Physio, mobility, and strength.', tags: ['moves', 'lifting', 'exercise'] },
+    { handle: 'dr.alexis.shoope', tier: 'opinion-medium', followers: 113000, why: '113k. PT. Hip and back pain plus strength.', tags: ['back', 'lifting', 'exercise'] },
+    { handle: 'bobbysportspt', tier: 'opinion-medium', followers: 144000, why: '144k. Sports DPT. Strength and return-to-training.', tags: ['lifting', 'exercise'] },
+    { handle: 'george_koumentos', tier: 'opinion-medium', followers: 118000, why: '118k. Chronic pain physio. Exercise and education.', tags: ['back', 'exercise'] },
+    { handle: 'thestrongeryu', tier: 'opinion-medium', followers: 36000, why: '36k. PT and strength. Move-better clips.', tags: ['lifting', 'exercise'] },
+    { handle: 'chweingroff', tier: 'opinion-medium', followers: 30000, why: '30k. Training equals rehab. Lifters, not patients-only.', tags: ['lifting', 'exercise'] },
+    { handle: 'drjarodhalldpt', tier: 'opinion-medium', followers: 44000, why: '44k. Ortho PT. Pain and strength takes.', tags: ['back', 'exercise', 'lifting'] },
+    { handle: 'activeptredding', tier: 'opinion-medium', followers: 42000, why: '42k. PT for people who still lift, run, and ride.', tags: ['lifting', 'exercise'] },
+    { handle: 'drandreospina', tier: 'opinion-medium', followers: 137000, why: '137k. Mobility and joint control. Exercise, not treatment ads.', tags: ['moves', 'exercise'] },
+    { handle: 'hoopersbetaofficial', tier: 'opinion-medium', followers: 68000, why: '68k. DPT for climbers. Injury and strength.', tags: ['lifting', 'exercise', 'young'] },
+    { handle: 'lenmacpt', tier: 'opinion-medium', followers: 30000, why: '30k. Sports PT. Rehab explainers.', tags: ['exercise', 'lifting'] },
+    { handle: 'mickhughes.physio', tier: 'opinion-medium', followers: 123000, why: '123k. Sports physio. Injury rehab for athletes.', tags: ['lifting', 'exercise'] },
+    { handle: 'benjamintorresdpt', tier: 'opinion-medium', followers: 101000, why: '101k. Virtual PT. Injury recovery.', tags: ['exercise', 'program'] },
+    { handle: 'dr.zachcolls', tier: 'opinion-medium', followers: 135000, why: '135k. Sports rehab and training.', tags: ['lifting', 'exercise'] },
+    { handle: 'thesportsphysio_', tier: 'opinion-medium', followers: 120000, why: '120k. DPT. Pro-sport rehab drills.', tags: ['lifting', 'exercise'] },
+    { handle: 'mikereinold', tier: 'opinion-medium', followers: 130000, why: '130k. Sports PT. Rehab education.', tags: ['exercise', 'lifting'] },
+    { handle: 'mairyn.dpt', tier: 'opinion-medium', followers: 67000, why: '67k. DPT. Sports rehab and performance.', tags: ['lifting', 'exercise', 'young'] },
+    { handle: 'kv.physio', tier: 'ugc', followers: 444, why: '444 followers. Holistic physio. Posts that activity is the treatment for chronic back pain. Same size as Trey.', tags: ['tiny', 'back', 'on-camera', 'exercise', 'quality'] },
+    { handle: 'jaswant_physio', tier: 'ugc', followers: 3411, why: '3.4k. Physio. Rehab plus strength. Pain-free movement, on camera.', tags: ['back', 'exercise', 'on-camera', 'quality'] },
+    { handle: 'angiejphysio', tier: 'ugc', followers: 3263, why: '3.3k. Youth physio. Lumbar stress fractures and back-load management.', tags: ['back', 'exercise', 'on-camera'] },
+    { handle: 'dr_afia_physiotherapist', tier: 'ugc', followers: 4733, why: '4.7k. Physio. Pain-free movement clips. Just under the 5k line.', tags: ['exercise', 'on-camera', 'back'] },
+    { handle: 'fitphysio.nehal', tier: 'ugc', followers: 1906, why: '1.9k. Physio and yoga. Pain-management videos.', tags: ['exercise', 'on-camera', 'back'] },
+    { handle: 'camdyer_physio', tier: 'ugc', followers: 1718, why: '1.7k. Sports rehab physio. Films training, not a clinic slideshow.', tags: ['lifting', 'exercise', 'on-camera'] }
+  ];
+  var REC_TIERS = {
+    opinion: ['opinion-medium', 'opinion-large', 'opinion-huge'],
+    ugc: ['ugc']
+  };
+  var REC_TITLES = {
+    'opinion-medium': 'Medium',
+    'opinion-large': 'Large',
+    'opinion-huge': 'Huge',
+    ugc: 'Under 5k'
+  };
+
+  function defaultRecsOpen() {
+    return { 'opinion-medium': true, 'opinion-large': true, 'opinion-huge': true, ugc: true };
+  }
+
+  function normalizeVerdicts(raw) {
+    var out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    Object.keys(raw).forEach(function (h) {
+      if (raw[h] === 'approve' || raw[h] === 'reject') out[String(h).replace(/^@/, '').toLowerCase()] = raw[h];
+    });
+    return out;
+  }
+
+  function normalizeRecsOpen(raw) {
+    var out = defaultRecsOpen();
+    if (!raw || typeof raw !== 'object') return out;
+    Object.keys(out).forEach(function (k) {
+      if (typeof raw[k] === 'boolean') out[k] = raw[k];
+    });
+    return out;
+  }
+
+  function normalizePref(raw) {
+    var out = { opinion: 'opinion-medium', cofounder: 'cofounder-medium', ugc: 'ugc' };
+    if (raw && CREATOR_LISTS[raw.opinion] && CREATOR_LISTS[raw.opinion].tab === 'opinion') out.opinion = raw.opinion;
+    if (raw && CREATOR_LISTS[raw.cofounder] && CREATOR_LISTS[raw.cofounder].tab === 'cofounder') out.cofounder = raw.cofounder;
+    if (raw && raw.ugc === 'ugc') out.ugc = 'ugc';
+    return out;
+  }
+
+  function parseKey(k) {
+    var p = String(k).split('-');
+    return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  }
+  function dayLabel(k) {
+    var d = parseKey(k);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var name = k === todayKey() ? 'Today' : WEEK[d.getDay()];
+    return name + ' · ' + months[d.getMonth()] + ' ' + d.getDate();
+  }
+  function notesHtml() {
+    var keys = {};
+    keys[todayKey()] = true;
+    Object.keys(state.days || {}).forEach(function (k) {
+      if (state.days[k] && String(state.days[k].note || '').trim()) keys[k] = true;
+    });
+    Object.keys(state.steps || {}).forEach(function (k) {
+      if ((state.steps[k] || []).length) keys[k] = true;
+    });
+    var list = Object.keys(keys).sort().reverse();
+    return '<div class="notes"><p class="kicker">By day</p><h2 class="notes-title">Notes</h2>' +
+      list.map(dayNoteCard).join('') + '</div>';
+  }
+  function dayNoteCard(k) {
+    var row = (state.days && state.days[k]) || { note: '' };
+    var steps = Array.isArray(state.steps && state.steps[k]) ? state.steps[k] : [];
+    var left = steps.filter(function (s) { return !s.done; }).length;
+    var d = parseKey(k);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var title = k === todayKey() ? 'Today' : WEEK[d.getDay()];
+    var badge = steps.length ? (left ? left + ' left' : 'Clear') : '';
+    return '<article class="daynote">' +
+      '<header class="daynote-h"><div><p class="kicker">' + esc(title) + '</p><h3>' + esc(months[d.getMonth()] + ' ' + d.getDate()) + '</h3></div>' +
+      (badge ? '<em>' + esc(badge) + '</em>' : '') + '</header>' +
+      '<div class="daynote-b">' +
+      '<label class="field-label">Summary</label>' +
+      '<textarea data-day-summary="' + k + '" maxlength="2000" placeholder="What you learned. Short and clear.">' + esc(row.note || '') + '</textarea>' +
+      '<label class="field-label">To do</label>' +
+      (steps.length ? '<ul class="steps">' + steps.map(function (s) {
+        return '<li class="' + (s.done ? 'done' : '') + '">' +
+          '<button type="button" class="tick' + (s.done ? ' on' : '') + '" data-step-toggle="' + k + '" data-id="' + esc(s.id) + '" aria-label="Done"></button>' +
+          '<input type="text" data-step-text="' + k + '" data-id="' + esc(s.id) + '" value="' + esc(s.text) + '" maxlength="180">' +
+          '<button type="button" class="x" data-del-step="' + k + '" data-id="' + esc(s.id) + '" aria-label="Remove">×</button></li>';
+      }).join('') + '</ul>' : '') +
+      '<div class="addbar"><input type="text" data-step-input="' + k + '" placeholder="Action to take" maxlength="180">' +
+      '<button type="button" class="addbtn" data-add-step="' + k + '">Add</button></div></div></article>';
+  }
+  function addStepFor(k) {
+    var input = app.querySelector('[data-step-input="' + k + '"]');
+    var text = input ? String(input.value || '').trim().slice(0, 180) : '';
+    if (!text) return;
+    if (!state.steps[k]) state.steps[k] = [];
+    state.steps[k].push({ id: uid(), text: text, done: false });
+    save();
+    draw(true);
+  }
+  function findTpl(kind, id) {
+    var list = state[kind];
+    if (!Array.isArray(list)) return null;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id === id) return list[i];
+    }
+    return null;
+  }
+  function tplCard(kind, t) {
+    return '<div class="tpl" data-tpl-wrap="' + t.id + '">' +
+      '<div class="tpl-head">' +
+        '<input type="text" data-tpl="' + kind + '" data-id="' + t.id + '" data-field="name" value="' + esc(t.name) + '">' +
+        '<button class="ghost" data-copy="' + kind + '" data-id="' + t.id + '">Copy</button>' +
+        '<button class="danger" data-del-tpl="' + kind + '" data-id="' + t.id + '">Delete</button>' +
+      '</div>' +
+      '<textarea data-tpl="' + kind + '" data-id="' + t.id + '" data-field="body">' + esc(t.body) + '</textarea>' +
+      '</div>';
+  }
+
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(function () { el.classList.remove('show'); }, 2400);
+  }
+
+  function igUrl(handle) {
+    return 'https://www.instagram.com/' + handle + '/';
+  }
+
+  function monogram(handle) {
+    return esc(handle.replace(/[._]/g, '').slice(0, 2).toUpperCase() || '?');
+  }
+
+  function findCreator(listKey, id) {
+    return (state.creators[listKey] || []).filter(function (c) { return c.id === id; })[0];
+  }
+
+  function addHandles(listKey, handles) {
+    if (!CREATOR_LISTS[listKey] || !handles || !handles.length) return { added: [], skipped: [] };
+    var list = state.creators[listKey];
+    var have = {};
+    list.forEach(function (c) { have[c.handle] = true; });
+    var added = [];
+    var skipped = [];
+    handles.forEach(function (h) {
+      if (have[h]) { skipped.push(h); return; }
+      have[h] = true;
+      if (state.removedCreators && state.removedCreators[listKey]) delete state.removedCreators[listKey][h];
+      list.unshift({ id: uid(), handle: h, note: '', addedAt: new Date().toISOString() });
+      added.push(h);
+    });
+    state.listsOpen[listKey] = true;
+    var tab = CREATOR_LISTS[listKey].tab;
+    if (tab && state.creatorPref) state.creatorPref[tab] = listKey;
+    if (added.length) save();
+    return { added: added, skipped: skipped };
+  }
+
+  function reportAdd(listKey, result) {
+    var meta = CREATOR_LISTS[listKey];
+    var tabName = { opinion: 'Opinion', cofounder: 'Co-founder', ugc: 'UGC' }[meta.tab] || 'List';
+    var label = meta.tab === 'ugc' ? 'UGC' : tabName + ' · ' + meta.title;
+    if (result.added.length) {
+      toast('Added @' + result.added.join(' @') + ' to ' + label);
+    } else if (result.skipped.length) {
+      toast('Already in ' + label);
+    } else {
+      toast('No Instagram handle in that');
+    }
+  }
+
+  function addFromInput(listKey) {
+    var input = app.querySelector('[data-creator-input="' + listKey + '"]');
+    var text = input ? input.value : '';
+    var handles = parseHandles(text);
+    var result = addHandles(listKey, handles);
+    if (input && result.added.length) input.value = '';
+    if (!handles.length && text.trim()) toast('No Instagram handle in that');
+    else reportAdd(listKey, result);
+    if (result.added.length) draw(true);
+  }
+
+  function addFromClipboard(listKey) {
+    function fail() {
+      var input = app.querySelector('[data-creator-input="' + listKey + '"]');
+      if (input) input.focus();
+      toast('Paste the Instagram link into the field');
+    }
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      fail();
+      return;
+    }
+    navigator.clipboard.readText().then(function (text) {
+      var handles = parseHandles(text);
+      var result = addHandles(listKey, handles);
+      reportAdd(listKey, result);
+      if (result.added.length) draw(true);
+      else if (!handles.length) fail();
+    }).catch(fail);
+  }
+
+  function emptyRemoved() {
+    var o = {};
+    CREATOR_KEYS.forEach(function (k) { o[k] = {}; });
+    return o;
+  }
+
+  function normalizeRemoved(raw) {
+    var out = emptyRemoved();
+    if (!raw || typeof raw !== 'object') return out;
+    CREATOR_KEYS.forEach(function (k) {
+      var bag = raw[k];
+      if (!bag || typeof bag !== 'object') return;
+      Object.keys(bag).forEach(function (h) {
+        var handle = String(h).replace(/^@/, '').toLowerCase();
+        if (!isHandle(handle)) return;
+        out[k][handle] = String(bag[h] || '');
+      });
+    });
+    return out;
+  }
+
+  function removedWins(gone, creator) {
+    var stamp = gone && gone[creator.handle];
+    if (!stamp) return false;
+    var added = Date.parse(creator.addedAt || '') || 0;
+    var removedAt = Date.parse(stamp) || 0;
+    return !(added && removedAt && added > removedAt);
+  }
+
+  function mergeRemoved(into, from) {
+    if (!into.removedCreators) into.removedCreators = emptyRemoved();
+    var extra = normalizeRemoved(from && from.removedCreators);
+    CREATOR_KEYS.forEach(function (k) {
+      Object.keys(extra[k]).forEach(function (h) {
+        into.removedCreators[k][h] = extra[k][h];
+      });
+      var gone = into.removedCreators[k];
+      into.creators[k] = (into.creators[k] || []).filter(function (c) { return !removedWins(gone, c); });
+    });
+  }
+
+  function absorbSavedPeople(into, from) {
+    if (!into || !from || typeof from !== 'object') return;
+    mergeRemoved(into, from);
+    var incoming = normalizeCreators(from.creators);
+    CREATOR_KEYS.forEach(function (k) {
+      var have = {};
+      var gone = (into.removedCreators && into.removedCreators[k]) || {};
+      (into.creators[k] || []).forEach(function (c) { have[c.handle] = true; });
+      incoming[k].forEach(function (c) {
+        if (have[c.handle] || removedWins(gone, c)) return;
+        if (gone[c.handle]) delete gone[c.handle];
+        into.creators[k].push(c);
+        have[c.handle] = true;
+      });
+    });
+    var seen = {};
+    (into.ugcList || []).forEach(function (u) { if (u && u.id) seen[u.id] = true; });
+    normalizeUgc(from.ugcList).forEach(function (u) {
+      if (seen[u.id]) return;
+      into.ugcList.push(u);
+      seen[u.id] = true;
+    });
+  }
+
+  function creatorSignature(s) {
+    return CREATOR_KEYS.map(function (k) {
+      return (s.creators[k] || []).map(function (c) { return c.handle; }).sort().join(',');
+    }).join('|');
+  }
+
+  function personRow(listKey, c, sent) {
+    var tier = sent && CREATOR_LISTS[listKey].tab !== 'ugc'
+      ? '<span class="rec-meta">' + CREATOR_LISTS[listKey].title + '</span>'
+      : '';
+    var why = c.why ? '<p class="hint" style="margin:2px 0 0">' + esc(c.why) + '</p>' : '';
+    var move = sent
+      ? '<button type="button" class="ghost" data-dm-undo="' + listKey + '" data-id="' + c.id + '">Undo</button>'
+      : '<button type="button" class="soft" data-dm-sent="' + listKey + '" data-id="' + c.id + '">DM sent</button>';
+    return '<li class="person">' +
+      '<div class="avatar">' + monogram(c.handle) + '</div>' +
+      '<div class="who"><a class="handle" href="' + esc(igUrl(c.handle)) + '" target="_blank" rel="noreferrer">@' + esc(c.handle) + '</a>' + tier + why + '</div>' +
+      '<input type="text" class="note-in" data-creator-note="' + listKey + '" data-id="' + c.id + '" placeholder="why them" value="' + esc(c.note) + '">' +
+      '<button class="ghost" data-copy-handle="' + listKey + '" data-id="' + c.id + '">Copy</button>' +
+      move +
+      '<button class="danger" data-del-creator="' + listKey + '" data-id="' + c.id + '">Remove</button>' +
+    '</li>';
+  }
+
+  function creatorListCard(listKey) {
+    var meta = CREATOR_LISTS[listKey];
+    var people = (state.creators[listKey] || []).filter(function (c) { return !c.dmSent; });
+    return '<details class="clist ' + meta.tone + '" data-clist="' + listKey + '"' + (state.listsOpen[listKey] ? ' open' : '') + '>' +
+      '<summary><i class="chev" aria-hidden="true"></i><span class="clist-title">' + meta.title + '</span>' +
+      '<span class="clist-count">' + people.length + '</span></summary>' +
+      '<div class="clist-body"><p class="hint">' + meta.hint + '</p>' +
+      '<div class="addbar">' +
+        '<input type="text" data-creator-input="' + listKey + '" placeholder="@handle or Instagram link" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+        '<button type="button" class="soft" data-add-creator="' + listKey + '">Add</button>' +
+        '<button type="button" class="ghost" data-clip="' + listKey + '">Clipboard</button>' +
+      '</div>' +
+      (people.length
+        ? '<ul class="people">' + people.map(function (c) { return personRow(listKey, c); }).join('') + '</ul>'
+        : '<p class="hint" style="margin:12px 0 0">' +
+          (meta.tab === 'ugc' ? 'Nobody waiting. Approve someone below, or paste a profile.' : 'Nobody waiting. Paste a profile.') +
+          '</p>') +
+      '</div></details>';
+  }
+
+  function shareBox(kind) {
+    var pref = (state.creatorPref && state.creatorPref[kind]) || (kind === 'ugc' ? 'ugc' : kind + '-medium');
+    if (!CREATOR_LISTS[pref]) pref = kind === 'ugc' ? 'ugc' : kind + '-medium';
+    var shortcut = (location.hostname === 'marketing.remedyrecoveries.com'
+      ? location.origin + '/'
+      : location.origin + '/marketing') + '?add=&list=' + encodeURIComponent(pref);
+    return '<div class="card sharebox"><h2>Drop Instagram in</h2>' +
+      '<p class="lead">Instagram will not share straight into a website on iPhone. Copy the profile, then tap Clipboard on a list. Or make an iOS Shortcut that opens the link below with the shared URL. On Android, add this page to your home screen — it can show up in the share sheet.</p>' +
+      '<div class="addbar">' +
+        '<input type="text" readonly value="' + esc(shortcut) + '">' +
+        '<button type="button" class="ghost" data-copy-share>Copy share link</button>' +
+      '</div></div>';
+  }
+
+  function pickBox() {
+    if (!pendingShare || !pendingShare.handles.length) return '';
+    var tags = pendingShare.handles.map(function (h) { return '@' + h; }).join(' · ');
+    return '<div class="card pick"><h2>Where should these go?</h2>' +
+      '<p class="lead">' + esc(tags) + '</p><div class="row">' +
+      '<button type="button" data-pick-list="opinion-medium">Opinion · Medium</button>' +
+      '<button type="button" data-pick-list="opinion-large">Opinion · Large</button>' +
+      '<button type="button" data-pick-list="opinion-huge">Opinion · Huge</button>' +
+      '<button type="button" data-pick-list="cofounder-medium">Co-founder · Medium</button>' +
+      '<button type="button" data-pick-list="cofounder-large">Co-founder · Large</button>' +
+      '<button type="button" data-pick-list="cofounder-huge">Co-founder · Huge</button>' +
+      '<button type="button" data-pick-list="ugc">UGC</button>' +
+      '</div></div>';
+  }
+
+  function followerLabel(n) {
+    if (n >= 1000000) {
+      var m = Math.round((n / 1000000) * 10) / 10;
+      return String(m).replace(/\.0$/, '') + 'M';
+    }
+    if (n >= 1000) {
+      var k = Math.round((n / 1000) * 10) / 10;
+      return String(k).replace(/\.0$/, '') + 'k';
+    }
+    return String(n);
+  }
+
+  function ownedHandles() {
+    var set = {};
+    CREATOR_KEYS.forEach(function (k) {
+      (state.creators[k] || []).forEach(function (c) { set[c.handle] = true; });
+    });
+    return set;
+  }
+
+  function tagWeights(tier) {
+    var base = {
+      'opinion-medium': { back: 5, moves: 4, exercise: 3, program: 2, young: 2, lifting: 1, desk: 1, clinical: 0 },
+      'opinion-large': { moves: 5, back: 4, exercise: 3, young: 2, desk: 2, lifting: 1, program: 1 },
+      'opinion-huge': { back: 5, moves: 4, exercise: 3, program: 2, young: 2 },
+      ugc: { tiny: 6, quality: 5, back: 4, exercise: 3, 'on-camera': 2, pain: 1, young: 1 }
+    }[tier] || {};
+    var w = {};
+    Object.keys(base).forEach(function (k) { w[k] = base[k]; });
+    RECS.forEach(function (r) {
+      if (r.tier !== tier) return;
+      var v = state.recVerdicts[r.handle];
+      if (v !== 'approve' && v !== 'reject') return;
+      var sign = v === 'approve' ? 3 : -4;
+      r.tags.forEach(function (t) { w[t] = (w[t] || 0) + sign; });
+    });
+    return w;
+  }
+
+  function scoreRec(rec) {
+    var w = tagWeights(rec.tier);
+    var n = 0;
+    rec.tags.forEach(function (t) { n += w[t] || 0; });
+    if (rec.tier === 'opinion-medium') n -= Math.abs(Math.log(rec.followers) - Math.log(70000)) * 2;
+    if (rec.tier === 'ugc' && rec.followers >= 100 && rec.followers <= 4000) n += 3;
+    if (rec.tier === 'ugc' && rec.followers < 100) n -= 1;
+    return n;
+  }
+
+  function rankedRecs(tier) {
+    var owned = ownedHandles();
+    return RECS.filter(function (r) {
+      return r.tier === tier && !owned[r.handle] && !state.recVerdicts[r.handle];
+    }).sort(function (a, b) { return scoreRec(b) - scoreRec(a); });
+  }
+
+  function recCard(r) {
+    return '<div class="rec">' +
+      '<div class="avatar">' + monogram(r.handle) + '</div>' +
+      '<div class="rec-main"><a class="handle" href="' + esc(igUrl(r.handle)) + '" target="_blank" rel="noreferrer">@' + esc(r.handle) + '</a>' +
+      '<span class="rec-meta">' + followerLabel(r.followers) + '</span>' +
+      '<p class="hint">' + esc(r.why) + '</p></div>' +
+      '<div class="rec-actions">' +
+        '<button type="button" class="soft" data-rec="approve" data-handle="' + esc(r.handle) + '">Approve</button>' +
+        '<button type="button" class="danger" data-rec="reject" data-handle="' + esc(r.handle) + '">Reject</button>' +
+      '</div></div>';
+  }
+
+  function recTierCard(tier) {
+    var tone = tier === 'ugc' ? 'ugc' : tier.replace('opinion-', '');
+    var waiting = rankedRecs(tier);
+    var shown = waiting;
+    var body = shown.length
+      ? shown.map(recCard).join('')
+      : '<p class="hint">Nothing left in this pile.</p>';
+    return '<details class="clist ' + tone + '" data-rlist="' + tier + '"' + (state.recsOpen[tier] ? ' open' : '') + '>' +
+      '<summary><i class="chev" aria-hidden="true"></i><span class="clist-title">' + REC_TITLES[tier] + '</span>' +
+      '<span class="clist-count">' + waiting.length + '</span></summary>' +
+      '<div class="clist-body">' + body + '</div></details>';
+  }
+
+  function recsBlock(kind) {
+    var lead = kind === 'opinion'
+      ? 'From who you already saved: @trevor.zierke and @abovexpectationsbrand, both about 70k. Younger is a light preference. 3-move back videos rank first. Approve puts them on that size list. Reject hides them.'
+      : 'Under 5k only. The template is @trey.unbroken (400, clean recovery videos). He’s already on your list, so he isn’t in this pile. Approve puts them on the UGC list.';
+    return '<div class="card"><h2>Worth a look</h2><p class="lead">' + lead + '</p>' +
+      REC_TIERS[kind].map(recTierCard).join('') + '</div>';
+  }
+
+  function sentPeople(kind) {
+    var rows = [];
+    CREATOR_KEYS.forEach(function (k) {
+      if (CREATOR_LISTS[k].tab !== kind) return;
+      (state.creators[k] || []).forEach(function (c) {
+        if (c.dmSent) rows.push({ key: k, c: c });
+      });
+    });
+    return rows;
+  }
+
+  function sentListCard(kind) {
+    var id = 'sent-' + kind;
+    var rows = sentPeople(kind);
+    return '<details class="clist sent" data-clist="' + id + '"' + (state.listsOpen[id] ? ' open' : '') + '>' +
+      '<summary><i class="chev" aria-hidden="true"></i><span class="clist-title">DM sent</span>' +
+      '<span class="clist-count">' + rows.length + '</span></summary>' +
+      '<div class="clist-body"><p class="hint">Already messaged. Undo puts them back on the list above.</p>' +
+      (rows.length
+        ? '<ul class="people">' + rows.map(function (row) { return personRow(row.key, row.c, true); }).join('') + '</ul>'
+        : '<p class="hint" style="margin:12px 0 0">Nobody yet.</p>') +
+      '</div></details>';
+  }
+
+  function creatorsBlock(kind) {
+    var keys = CREATOR_KEYS.filter(function (k) { return CREATOR_LISTS[k].tab === kind; });
+    var title = 'Still need a DM';
+    return shareBox(kind) +
+      '<div class="card"><h2>' + title + '</h2>' +
+      '<p class="lead">' + (kind === 'ugc'
+        ? 'Paid ask only. DM sent moves them to the bottom.'
+        : 'Medium, large, and huge stay separate. DM sent moves them to the bottom.') + '</p>' +
+      keys.map(creatorListCard).join('') + '</div>';
+  }
+
+  function dmCard(kind, title, lead) {
+    var list = state[kind] || [];
+    return '<div class="card"><h2>' + title + '</h2><p class="lead">' + lead + '</p>' +
+      list.map(function (t) { return tplCard(kind, t); }).join('') +
+      '<div class="row"><button type="button" class="savebtn" data-save-dms>Save DMs</button>' +
+      '<button type="button" class="soft" data-add-tpl="' + kind + '">Add another DM</button></div>' +
+      '<p class="hint">Saves every Opinion, Co-founder, and UGC message, not just this tab.</p></div>';
+  }
+  function followersHtml() {
+    var dms = normalizeFollowerDms(state.followerDms);
+    return '<div class="library"><div class="card"><h2>DM followers</h2>' +
+      '<p class="lead">What to send. Edits save on their own.</p>' +
+      FOLLOWER_DMS.map(function (box) {
+        return '<div class="dmbox">' +
+          '<label class="field-label" for="dm-' + box.id + '">' + esc(box.label) + '</label>' +
+          '<p class="hint">' + esc(box.hint) + '</p>' +
+          '<textarea id="dm-' + box.id + '" data-follower-dm="' + box.id + '" maxlength="2000">' + esc(dms[box.id] || '') + '</textarea>' +
+          '<div class="row"><button type="button" class="ghost" data-copy-follower="' + box.id + '">Copy</button></div>' +
+          '</div>';
+      }).join('') +
+      '</div></div>';
+  }
+  function libraryView(kind, title, lead) {
+    var messages = dmCard(kind, title, lead);
+    if (kind === 'ugc') {
+      return '<div class="library">' + messages + pickBox() + creatorsBlock(kind) + recsBlock(kind) +
+        '<div class="card">' + sentListCard(kind) + '</div></div>';
+    }
+    return '<div class="library">' + pickBox() + creatorsBlock(kind) + messages +
+      '<div class="card">' + sentListCard(kind) + '</div></div>';
+  }
+
+  function placeFoundOpinion(board) {
+    if (!board || !board.creators) return 0;
+    var owned = {};
+    CREATOR_KEYS.forEach(function (k) {
+      if (!CREATOR_LISTS[k] || CREATOR_LISTS[k].tab !== 'opinion') return;
+      (board.creators[k] || []).forEach(function (c) { owned[c.handle] = k; });
+    });
+    var changed = 0;
+    RECS.forEach(function (r) {
+      if (!CREATOR_LISTS[r.tier] || CREATOR_LISTS[r.tier].tab !== 'opinion') return;
+      var existingKey = owned[r.handle];
+      if (existingKey) {
+        var list = board.creators[existingKey] || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].handle !== r.handle) continue;
+          if (!list[i].why && r.why) {
+            list[i].why = r.why;
+            changed += 1;
+          }
+          break;
+        }
+        return;
+      }
+      if (board.recVerdicts && board.recVerdicts[r.handle] === 'reject') return;
+      var gone = (board.removedCreators && board.removedCreators[r.tier]) || {};
+      if (gone[r.handle]) return;
+      if (!board.creators[r.tier]) board.creators[r.tier] = [];
+      board.creators[r.tier].push({
+        id: uid(),
+        handle: r.handle,
+        note: '',
+        why: r.why || '',
+        addedAt: new Date().toISOString(),
+        dmSent: false,
+        found: true
+      });
+      owned[r.handle] = r.tier;
+      if (board.listsOpen) board.listsOpen[r.tier] = true;
+      changed += 1;
+    });
+    changed += seedCofounder(board);
+    changed += pruneCofounder(board);
+    changed += addCofounderBatch(board);
+    if (changed) board._peopleDirty = true;
+    return changed;
+  }
+  var COFOUNDER_KEEP = [
+    { handle: 'sciaticafreedomclub', why: '22.5k. Andrew Gibson, DPT 2025. Disc and sciatica. 1:1 coaching, not an app.' },
+    { handle: 'dynamicpainsolutions', why: '3.5k. Jonathan Torres, DPT 2021. Only low back and sciatica. 1:1 virtual.' },
+    { handle: 'joshrunsdpt', why: '40 followers. Josh Jordan, DPT. Chronic low back, virtual 1:1, own disc story.' },
+    { handle: 'lioness.strength.dpt', why: '2.6k. Kristen Muñoz, DPT. Back pain and strength. Also pelvic floor.' },
+    { handle: 'dr._dpt', why: '1.5k. Branden West, DPT. Sciatica videos. Clinic, not a web program.' },
+    { handle: 'dr.nick.salinasdpt', why: '2.4k. Nicholaus Salinas, DPT. Back pain and sciatica coaching. Not in his 20s.' },
+    { handle: 'drdivya_dpt', why: '1.2k. Divya Abraham, DPT, CSCS. Athletic low-back coaching. Several years in.' },
+    { handle: 'dr.matt.dpt', why: '355. Matt Szymanski, DPT 2021. Performance PT. Back pain is not the whole page.' },
+    { handle: 'dr.nick.acosta', why: '908. Nick Acosta, DPT. Online back program. He already has an app.' },
+    { handle: 'revisionhealthjax', why: '458. Michael Derry, DPT, OCS. Sciatica and stenosis. Already sells a video course.' },
+    { handle: 'mariesmovement', why: '7.8k. Marie Fernandez, DPT. Pelvic and ortho. Not a back-pain page.' }
+  ];
+  function pruneCofounder(board) {
+    if (!board || !board.creators || board.cofounderPruned) return 0;
+    board.cofounderPruned = true;
+    if (!board.removedCreators) board.removedCreators = emptyRemoved();
+    var keep = {};
+    COFOUNDER_KEEP.forEach(function (p) { keep[p.handle] = p; });
+    var drop = {};
+    RECS.forEach(function (r) {
+      if (!r || String(r.tier || '').indexOf('opinion-') !== 0 || keep[r.handle]) return;
+      drop[r.handle] = true;
+    });
+    var n = 0;
+    var stamp = new Date().toISOString();
+    var keys = ['cofounder-medium', 'cofounder-large', 'cofounder-huge'];
+    keys.forEach(function (key) {
+      if (!board.creators[key]) board.creators[key] = [];
+      if (!board.removedCreators[key]) board.removedCreators[key] = {};
+      board.creators[key] = board.creators[key].filter(function (c) {
+        if (!c || !drop[c.handle]) return true;
+        board.removedCreators[key][c.handle] = stamp;
+        n += 1;
+        return false;
+      });
+    });
+    var have = {};
+    keys.forEach(function (key) {
+      board.creators[key].forEach(function (c) { if (c && c.handle) have[c.handle] = true; });
+    });
+    var medium = board.creators['cofounder-medium'];
+    COFOUNDER_KEEP.forEach(function (p) {
+      if (have[p.handle]) return;
+      if (board.removedCreators['cofounder-medium'][p.handle]) delete board.removedCreators['cofounder-medium'][p.handle];
+      medium.unshift({
+        id: uid(),
+        handle: p.handle,
+        note: '',
+        why: p.why,
+        addedAt: stamp,
+        dmSent: false,
+        found: true
+      });
+      have[p.handle] = true;
+      n += 1;
+    });
+    if (board.listsOpen) board.listsOpen['cofounder-medium'] = true;
+    return n || 1;
+  }
+  var COFOUNDER_BATCH2 = [
+    { handle: 'painandmovementspecialist', why: '4.8k. David McGettigan. Chronic-pain coach. Not a DPT. Back is part of it, not the whole page.' },
+    { handle: 'painfreewithangie', why: '3.3k. Angie Brand. Women 30+. L3 PT / S&C, not a DPT. Pain coach. Stretch.' },
+    { handle: 'realpain2performance', why: '8.3k. Lawrence Craver. Fort Lauderdale pain-to-performance. Not a DPT. Stretch.' },
+    { handle: 'paincoach', why: '3.3k. Richmond Stace. UK pain physio. 1:1. Older. Persistent pain, not a back-only page.' },
+    { handle: 'the_pain_pt', why: '3.6k. Jim Prussack, PT. Mind-body chronic pain. Zoom 1:1. Not a back-only page.' },
+    { handle: 'camdyer_physio', why: '1.7k. Cam Dyer. Sports physio. Films training. Young. Back is not the whole page.' },
+    { handle: 'fitphysio.nehal', why: '1.9k. Nehal. Physio + yoga. Pain videos. Young. Not a back-only page.' },
+    { handle: 'jaswant_physio', why: '3.4k. Jaswant. Physio. Rehab + strength. On camera. Back is not the whole page.' },
+    { handle: 'coachstrumos', why: '7.8k. Stephen Strumos. Over-30s pain-free. Powerlifter/runner. Not a DPT. Stretch.' },
+    { handle: 'shanewarne_fitness', why: '18k. Shane Warne. Own recovery after being hit by a car. 40+ chronic pain. Not a DPT.' },
+    { handle: 'jenn_lymburner', why: '18k. Jenn Lymburner. Recurring pain in active adults. Not a DPT. Stretch unless the feed is back.' },
+    { handle: 'tjpainfree', why: '5.4k. Tristan Jacobs. Powerlifter rehab. 1:1. Not a DPT. Back shows up, not the whole page.' },
+    { handle: 'aaron.palmieri', why: '1.7k. Aaron Palmieri. Barbell athletes in pain. Tiny. 1:1. Confirm he is a DPT and how much is back.' },
+    { handle: 'drlakenbabics', why: '28k. Laken Babics, DPT. Young. 1:1 virtual. Lifting + running. Not a back-only page.' },
+    { handle: 'dr.josh_tcom', why: '13k. Joshua Herrington, DC. Low-back page. Chiro, not a DPT. Solo / small. No app.' },
+    { handle: 'shapeshiftwellness', why: '17k. Anthony Davis, DC. Low back + sciatica. Chiro, not a DPT. Masterclass. No app.' },
+    { handle: 'coach_sofia', why: '13k. Sofia. Piriformis / sciatica / back. NASM CES, not a DPT. Own-experience coach. 1:1.' },
+    { handle: 'dragonphysicaltherapy', why: '986. Ashley Mak, DPT 2012. Sciatica + low back. 1-person virtual brand (ifixyoursciatica). Clinic IG. Not in his 20s.' },
+    { handle: 'kv.physio', why: '444. Tiny physio. Posts that activity is the treatment for chronic back pain. Young-looking. Confirm 1:1.' },
+    { handle: 'angiejphysio', why: '3.3k. Angie. Youth physio. Lumbar stress fractures and back-load. Young. Clinic, not a web program.' },
+    { handle: 'painreliefwithalissa', why: '5.2k. Alissa Wolfe, DPT, OCS. Complex pain including disc/sciatica. Has an academy. Not a consumer app.' },
+    { handle: 'thebackcoach', why: 'Andy Marlow. McGill-certified. 1:1 back + sciatica only. No app. Over 50. Scrap DPT: real McGill experience.' },
+    { handle: 'fitness4backpain', why: '15k. William Richards. Back-only. Own L5-S1. 1:1 + static method. Not a DPT. Not young. 12+ yrs in this.' },
+    { handle: 'tompfeifferfit', why: '37k. Tom Pfeiffer. Desk-worker back pain. Own discs/stenosis since childhood. 1:1. CPT, not a DPT. Younger.' },
+    { handle: 'movewithjenna', why: '25k. Jenna Mok. Back-only: spondy, scolio, stenosis, sciatica. 1:1 + static program. Pilates, not a DPT. Own spine.' },
+    { handle: 'stephi_burnellphysio', why: '41k. Steph Burnell. Sciatica 1:1. Solo. No app. Physio, not a US DPT. Spanish-first. Own sciatica story.' },
+    { handle: 'tylerkallasy.dpt', why: '29k. Tyler Kallasy, DPT. 1:1. Own back story. Coaches lifters out of pain. Not a back-only page. Young.' },
+    { handle: 'racewithrobbie', why: '23k. Robbie Horstman, DPT. Cyclists with back + sciatica only. 1:1. No app. DPT 2013, so ~mid-30s.' },
+    { handle: 'shelton_mp_', why: '91. Tyler Shelton, DPT. McGill-certified. Tiny IG. Back-pain highlight. 1:1 clinic. The YouTube-shaped one if he posts.' },
+    { handle: 'movewcaleb', why: '32.5k. Caleb Kim, physiotherapist. Back + sciatica only. 1:1. 200+ online cases. Young. Static protocol, not an app.' }
+  ];
+  function addCofounderBatch(board) {
+    if (!board || !board.creators) return 0;
+    if (!board.creators['cofounder-medium']) board.creators['cofounder-medium'] = [];
+    if (!board.removedCreators) board.removedCreators = emptyRemoved();
+    if (!board.removedCreators['cofounder-medium']) board.removedCreators['cofounder-medium'] = {};
+    var have = {};
+    ['cofounder-medium', 'cofounder-large', 'cofounder-huge'].forEach(function (key) {
+      (board.creators[key] || []).forEach(function (c) { if (c && c.handle) have[c.handle] = true; });
+    });
+    var gone = board.removedCreators['cofounder-medium'] || {};
+    var n = 0;
+    var stamp = new Date().toISOString();
+    var medium = board.creators['cofounder-medium'];
+    COFOUNDER_BATCH2.forEach(function (p) {
+      if (!p || !p.handle || have[p.handle] || gone[p.handle]) return;
+      medium.unshift({
+        id: uid(),
+        handle: p.handle,
+        note: '',
+        why: p.why,
+        addedAt: stamp,
+        dmSent: false,
+        found: true
+      });
+      have[p.handle] = true;
+      n += 1;
+    });
+    if (n && board.listsOpen) board.listsOpen['cofounder-medium'] = true;
+    return n;
+  }
+  function seedCofounder(board) {
+    if (!board || !board.creators || board.cofounderSeeded) return 0;
+    board.cofounderSeeded = true;
+    var n = 0;
+    ['medium', 'large', 'huge'].forEach(function (tone) {
+      var srcKey = 'opinion-' + tone;
+      var destKey = 'cofounder-' + tone;
+      if (!board.creators[destKey]) board.creators[destKey] = [];
+      var gone = (board.removedCreators && board.removedCreators[destKey]) || {};
+      var seen = {};
+      board.creators[destKey].forEach(function (c) { seen[c.handle] = true; });
+      (board.creators[srcKey] || []).forEach(function (c) {
+        if (!c || !c.handle || seen[c.handle] || gone[c.handle]) return;
+        board.creators[destKey].push({
+          id: uid(),
+          handle: c.handle,
+          note: c.note || '',
+          why: c.why || '',
+          addedAt: c.addedAt || new Date().toISOString(),
+          dmSent: false,
+          found: c.found === true
+        });
+        seen[c.handle] = true;
+        n += 1;
+      });
+    });
+    return n;
+  }
+  function emptyBoard() {
+    return {
+      v: 5,
+      epoch: EPOCH,
+      days: {},
+      sources: [],
+      ugcList: [],
+      formats: [],
+      steps: {},
+      opinion: cloneTpls(DEFAULT_OPINION),
+      cofounder: cloneTpls(DEFAULT_COFOUNDER),
+      ugc: cloneTpls(DEFAULT_UGC),
+      cofounderSeeded: false,
+      cofounderPruned: false,
+      creators: emptyCreators(),
+      removedCreators: emptyRemoved(),
+      listsOpen: defaultListOpen(),
+      creatorPref: normalizePref(null),
+      recVerdicts: {},
+      recsOpen: defaultRecsOpen(),
+      followerDms: defaultFollowerDms()
+    };
+  }
+  function normalizeSources(raw) {
+    if (!Array.isArray(raw)) return [];
+    var out = [];
+    raw.forEach(function (s) {
+      if (!s || QUEST_IDS.indexOf(s.quest) === -1) return;
+      var title = String(s.title || '').trim().slice(0, 140);
+      if (!title) return;
+      out.push({
+        id: s.id || uid(),
+        quest: s.quest,
+        title: title,
+        url: cleanUrl(s.url),
+        day: typeof s.day === 'string' ? s.day : String(s.at || '').slice(0, 10),
+        at: s.at || new Date().toISOString()
+      });
+    });
+    return out.slice(0, 400);
+  }
+  function normalizeUgc(raw) {
+    if (!Array.isArray(raw)) return [];
+    var out = [];
+    raw.forEach(function (u) {
+      if (!u) return;
+      var name = String(u.name || '').trim().slice(0, 80);
+      if (!name) return;
+      out.push({
+        id: u.id || uid(),
+        name: name,
+        url: cleanUrl(u.url),
+        note: String(u.note || '').slice(0, 200),
+        day: typeof u.day === 'string' ? u.day : String(u.at || '').slice(0, 10),
+        at: u.at || new Date().toISOString()
+      });
+    });
+    return out.slice(0, 200);
+  }
+  function normalizeFormats(raw) {
+    if (!Array.isArray(raw)) return [];
+    var out = [];
+    raw.forEach(function (f) {
+      if (!f) return;
+      var title = String(f.title || '').trim().slice(0, 140);
+      if (!title) return;
+      out.push({
+        id: f.id || uid(),
+        title: title,
+        note: String(f.note || '').slice(0, 280),
+        url: cleanUrl(f.url),
+        day: typeof f.day === 'string' ? f.day : String(f.at || '').slice(0, 10),
+        at: f.at || new Date().toISOString()
+      });
+    });
+    return out.slice(0, 200);
+  }
+  function hydrate(d) {
+    var base = emptyBoard();
+    if (!d || d.epoch !== EPOCH) {
+      if (d) keepDms(base, d);
+      return base;
+    }
+    base.days = d.days && typeof d.days === 'object' ? d.days : {};
+    base.sources = normalizeSources(d.sources);
+    base.ugcList = normalizeUgc(d.ugcList);
+    base.formats = normalizeFormats(d.formats);
+    base.steps = d.steps && typeof d.steps === 'object' ? d.steps : {};
+    base.opinion = normalizeTpls(d.opinion, DEFAULT_OPINION);
+    base.cofounder = normalizeTpls(d.cofounder, DEFAULT_COFOUNDER);
+    base.ugc = normalizeTpls(d.ugc, DEFAULT_UGC);
+    base.cofounderSeeded = d.cofounderSeeded === true;
+    base.cofounderPruned = d.cofounderPruned === true;
+    if (typeof d.savedAt === 'string') base.savedAt = d.savedAt;
+    base.creators = normalizeCreators(d.creators);
+    base.removedCreators = normalizeRemoved(d.removedCreators);
+    mergeRemoved(base, base);
+    base.listsOpen = normalizeOpen(d.listsOpen);
+    base.creatorPref = normalizePref(d.creatorPref);
+    base.recVerdicts = normalizeVerdicts(d.recVerdicts);
+    base.recsOpen = normalizeRecsOpen(d.recsOpen);
+    if (d.followerDms && typeof d.followerDms === 'object') base.followerDms = normalizeFollowerDms(d.followerDms);
+    placeFoundOpinion(base);
+    return base;
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      var board = raw ? hydrate(JSON.parse(raw)) : emptyBoard();
+      ['remedy.marketingOS.v2', 'remedy.marketingOS.v3', 'remedy.marketingOS.v4'].forEach(function (oldKey) {
+        var oldRaw = localStorage.getItem(oldKey);
+        if (!oldRaw) return;
+        try { absorbSavedPeople(board, JSON.parse(oldRaw)); } catch (err) { /* ignore a bad older copy */ }
+        localStorage.removeItem(oldKey);
+      });
+      return board;
+    } catch (e) {
+      return emptyBoard();
+    }
+  }
+
+  var state = load();
+  var VIEWS = ['today', 'notes', 'record', 'followers', 'opinion', 'cofounder', 'ugc'];
+  var hashView = location.hash.slice(1);
+  var view = VIEWS.indexOf(hashView) !== -1 ? hashView : 'today';
+  var openComposer = '';
+  var focusSel = '';
+  var boardReady = false;
+  var pendingSave = false;
+  var seenRemoteAt = '';
+  var pushTimer = null;
+  var dirtyAt = 0;
+  var pushing = false;
+  var tapLock = 0;
+  var audioCtx = null;
+  var soundOn = localStorage.getItem(SOUND_KEY) !== '0';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var app = document.getElementById('app');
+  var tabs = document.getElementById('tabs');
+
+  function payload() {
+    return {
+      v: 5,
+      epoch: EPOCH,
+      days: state.days,
+      sources: state.sources,
+      ugcList: state.ugcList,
+      formats: state.formats,
+      steps: state.steps,
+      opinion: state.opinion,
+      cofounder: state.cofounder,
+      ugc: state.ugc,
+      cofounderSeeded: state.cofounderSeeded === true,
+      cofounderPruned: state.cofounderPruned === true,
+      creators: state.creators,
+      removedCreators: state.removedCreators,
+      listsOpen: state.listsOpen,
+      creatorPref: state.creatorPref,
+      recVerdicts: state.recVerdicts,
+      recsOpen: state.recsOpen,
+      followerDms: normalizeFollowerDms(state.followerDms),
+      savedAt: state.savedAt || '',
+      baseUpdatedAt: seenRemoteAt
+    };
+  }
+  function stampSave() {
+    state.savedAt = new Date().toISOString();
+  }
+  function localTplsNewer(localBoard, remoteState) {
+    var localSaved = Date.parse(localBoard && localBoard.savedAt || '') || 0;
+    var remoteUpdated = Date.parse(remoteState && remoteState.updatedAt || '') || 0;
+    return localSaved > remoteUpdated;
+  }
+  function keepLocalTpls(localBoard) {
+    state.opinion = normalizeTpls(localBoard.opinion, DEFAULT_OPINION);
+    state.cofounder = normalizeTpls(localBoard.cofounder, DEFAULT_COFOUNDER);
+    state.ugc = normalizeTpls(localBoard.ugc, DEFAULT_UGC);
+    if (localBoard.cofounderSeeded === true) state.cofounderSeeded = true;
+    if (localBoard.cofounderPruned === true) state.cofounderPruned = true;
+    if (localBoard.followerDms && typeof localBoard.followerDms === 'object') {
+      state.followerDms = normalizeFollowerDms(localBoard.followerDms);
+    }
+    state.savedAt = localBoard.savedAt;
+  }
+  function persistLocal() {
+    localStorage.setItem(KEY, JSON.stringify(payload()));
+  }
+  function setSync(text) {
+    var el = document.getElementById('sync');
+    if (el) el.textContent = text;
+  }
+  function isDirty() { return Date.now() - dirtyAt < 8000 || pushing || pushTimer; }
+  function tplsChanged(list, fallback) {
+    if (!Array.isArray(list) || list.length !== fallback.length) return true;
+    for (var i = 0; i < list.length; i++) {
+      var row = list[i];
+      var base = fallback[i];
+      if (!row || row.id !== base.id || row.name !== base.name || row.body !== base.body) return true;
+    }
+    return false;
+  }
+  function keepDms(into, from) {
+    if (!from) return;
+    if (Array.isArray(from.opinion) && from.opinion.length) into.opinion = normalizeTpls(from.opinion, DEFAULT_OPINION);
+    if (Array.isArray(from.cofounder) && from.cofounder.length) into.cofounder = normalizeTpls(from.cofounder, DEFAULT_COFOUNDER);
+    if (Array.isArray(from.ugc) && from.ugc.length) into.ugc = normalizeTpls(from.ugc, DEFAULT_UGC);
+    if (from.cofounderSeeded === true) into.cofounderSeeded = true;
+    if (from.cofounderPruned === true) into.cofounderPruned = true;
+    if (from.followerDms && typeof from.followerDms === 'object') into.followerDms = normalizeFollowerDms(from.followerDms);
+    absorbSavedPeople(into, from);
+  }
+  function syncOpenTpls() {
+    var fields = app.querySelectorAll('[data-tpl]');
+    for (var i = 0; i < fields.length; i++) {
+      var el = fields[i];
+      var tpl = findTpl(el.getAttribute('data-tpl'), el.getAttribute('data-id'));
+      var field = el.getAttribute('data-field');
+      if (!tpl || (field !== 'name' && field !== 'body')) continue;
+      if (tpl[field] === el.value) continue;
+      tpl[field] = el.value;
+      tpl.updatedAt = new Date().toISOString();
+    }
+  }
+  function applyPushedCreators(body) {
+    if (!body || typeof body !== 'object') return;
+    if (typeof body.updatedAt === 'string') seenRemoteAt = body.updatedAt;
+    if (!body.creators) return;
+    var before = creatorSignature(state);
+    state.creators = normalizeCreators(body.creators);
+    if (body.removedCreators) state.removedCreators = normalizeRemoved(body.removedCreators);
+    mergeRemoved(state, state);
+    var placed = placeFoundOpinion(state);
+    persistLocal();
+    if (boardReady && (creatorSignature(state) !== before || placed)) draw(true);
+    if (placed) save();
+  }
+  function pushRemote(keepalive) {
+    pushing = true;
+    return fetch('/api/marketing-state', {
+      method: 'PUT',
+      credentials: 'same-origin',
+      keepalive: keepalive === true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload())
+    }).then(function (r) {
+      pushing = false;
+      if (!r.ok) { setSync('Saved on this device'); return; }
+      return r.json().then(function (body) {
+        applyPushedCreators(body);
+        setSync('Saved');
+      }).catch(function () { setSync('Saved'); });
+    }).catch(function () {
+      pushing = false;
+      setSync('Saved on this device');
+    });
+  }
+  function save() {
+    stampSave();
+    persistLocal();
+    if (!boardReady) { pendingSave = true; return; }
+    dirtyAt = Date.now();
+    setSync('Saving…');
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () {
+      pushTimer = null;
+      pushRemote();
+    }, 500);
+  }
+  function localHasWork(s) {
+    if (Object.keys(s.days || {}).some(function (k) { return showedUp(s.days[k]); })) return true;
+    if ((s.sources || []).length || (s.ugcList || []).length || (s.formats || []).length) return true;
+    if (s.creators && CREATOR_KEYS.some(function (k) { return (s.creators[k] || []).length; })) return true;
+    if (s.steps && Object.keys(s.steps).some(function (k) { return (s.steps[k] || []).length; })) return true;
+    if (tplsChanged(s.opinion, DEFAULT_OPINION) || tplsChanged(s.cofounder, DEFAULT_COFOUNDER) || tplsChanged(s.ugc, DEFAULT_UGC)) return true;
+    if (s.followerDms && followerDmsChanged(s.followerDms)) return true;
+    return false;
+  }
+  function saveDms() {
+    syncOpenTpls();
+    stampSave();
+    clearTimeout(pushTimer);
+    pushTimer = null;
+    dirtyAt = Date.now();
+    persistLocal();
+    if (!boardReady) {
+      pendingSave = true;
+      toast('Saved on this device');
+      return;
+    }
+    setSync('Saving…');
+    pushRemote().then(function () {
+      var label = document.getElementById('sync');
+      toast(label && label.textContent === 'Saved' ? 'DMs saved' : 'Saved on this device');
+    });
+  }
+  function pullRemote() {
+    return fetch('/api/marketing-state', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.ok) {
+          setSync(localHasWork(state) ? 'Saved on this device' : 'Saved');
+          return;
+        }
+        var local = state;
+        var remoteSig = '';
+        var keepTpls = false;
+        var peopleDirty = false;
+        if (!data.empty && data.state && data.state.epoch === EPOCH) {
+          keepTpls = pendingSave || localTplsNewer(local, data.state);
+          seenRemoteAt = data.state.updatedAt || '';
+          remoteSig = creatorSignature(hydrate(data.state));
+          if (pendingSave) {
+            peopleDirty = state._peopleDirty === true;
+            absorbSavedPeople(state, data.state);
+          } else {
+            state = hydrate(data.state);
+            peopleDirty = state._peopleDirty === true;
+            absorbSavedPeople(state, local);
+          }
+          if (keepTpls) keepLocalTpls(local);
+        } else if (!data.empty && data.state) {
+          keepTpls = localTplsNewer(local, data.state);
+          seenRemoteAt = '';
+          peopleDirty = true;
+          state = emptyBoard();
+          keepDms(state, data.state);
+          absorbSavedPeople(state, local);
+          placeFoundOpinion(state);
+          if (keepTpls) keepLocalTpls(local);
+          remoteSig = creatorSignature(hydrate(data.state));
+        } else if (data.empty) {
+          peopleDirty = state._peopleDirty === true;
+          placeFoundOpinion(state);
+        }
+        delete state._peopleDirty;
+        persistLocal();
+        var grew = creatorSignature(state) !== remoteSig || peopleDirty;
+        if (grew || pendingSave || keepTpls || (data.empty && localHasWork(state))) {
+          pendingSave = false;
+          return pushRemote().then(function () { return 'applied'; });
+        }
+        setSync('Saved');
+        return 'applied';
+      })
+      .catch(function () { setSync('Saved on this device'); });
+  }
+  function refreshSharedLists() {
+    if (!boardReady || isDirty() || pushing) return Promise.resolve();
+    return fetch('/api/marketing-state', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (isDirty() || !data || !data.ok || data.empty || !data.state || data.state.epoch !== EPOCH) return;
+        var before = creatorSignature(state);
+        absorbSavedPeople(state, data.state);
+        if (typeof data.state.updatedAt === 'string') seenRemoteAt = data.state.updatedAt;
+        if (creatorSignature(state) === before) return;
+        persistLocal();
+        draw(true);
+        setSync('Saved');
+      })
+      .catch(function () {});
+  }
+
+  function dayOf(k) {
+    if (!state.days[k] || typeof state.days[k] !== 'object') {
+      state.days[k] = { note: '', done: false };
+    }
+    var row = state.days[k];
+    QUEST_IDS.forEach(function (id) {
+      row[id] = depthOf(row, id);
+    });
+    if (typeof row.note !== 'string') row.note = '';
+    if (typeof row.done !== 'boolean') row.done = false;
+    return row;
+  }
+  function showedUp(map) { return anyDepth(map) > 0; }
+  function activityCount(map) { return anyDepth(map); }
+  function streak() {
+    var n = 0;
+    var d = new Date();
+    if (!showedUp(state.days[todayKey(d)])) d = addDays(d, -1);
+    while (showedUp(state.days[todayKey(d)])) {
+      n += 1;
+      d = addDays(d, -1);
+    }
+    return n;
+  }
+  function bestStreak() {
+    var best = 0;
+    var run = 0;
+    var d = addDays(new Date(), -900);
+    var end = new Date();
+    while (d <= end) {
+      if (showedUp(state.days[todayKey(d)])) {
+        run += 1;
+        if (run > best) best = run;
+      } else run = 0;
+      d = addDays(d, 1);
+    }
+    return Math.max(best, streak());
+  }
+  function habitTotal(id) {
+    return Object.keys(state.days).reduce(function (n, k) {
+      return n + depthOf(state.days[k], id);
+    }, 0);
+  }
+  function dayPoints(row) {
+    if (!row) return 0;
+    var n = 0;
+    TIERS.forEach(function (t) { n += tierDepth(row, t.id) * 12; });
+    if (row.done && anyDepth(row) > 0) n += 5;
+    return n;
+  }
+  function dayScore(k) { return dayPoints(state.days[k]); }
+  function totalXp() {
+    return Object.keys(state.days).reduce(function (n, k) {
+      return n + dayPoints(state.days[k]);
+    }, 0);
+  }
+  function rankName(lvl) {
+    if (lvl < 1) lvl = 1;
+    if (lvl > RANKS.length) return RANKS[RANKS.length - 1];
+    return RANKS[lvl - 1];
+  }
+  function levelInfo(xp) {
+    var lvl = 1;
+    var need = 60;
+    var rest = xp;
+    while (rest >= need && lvl < 80) {
+      rest -= need;
+      lvl += 1;
+      need = 60 + (lvl - 1) * 30;
+    }
+    return { lvl: lvl, rest: rest, need: need, rank: rankName(lvl) };
+  }
+  function snapshot() {
+    var row = dayOf(todayKey());
+    var xp = totalXp();
+    return {
+      xp: xp,
+      lvl: levelInfo(xp).lvl,
+      streak: streak(),
+      locked: row.done === true,
+      d1: tierDepth(row, 't1'),
+      d2: tierDepth(row, 't2'),
+      d3: tierDepth(row, 't3'),
+      weights: QUEST_IDS.map(function (id) { return depthOf(row, id); })
+    };
+  }
+  function pileCount(q) {
+    if (q.board === 'ugc') return state.ugcList.length;
+    if (q.board === 'formats') return state.formats.length;
+    if (q.log) return state.sources.filter(function (s) { return s.quest === q.id; }).length;
+    return 0;
+  }
+
+  function tone(freq, when, dur) {
+    if (!soundOn) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      var t = audioCtx.currentTime + when;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.05, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    } catch (e) { /* autoplay or missing audio */ }
+  }
+  function chord(kind) {
+    if (kind === 'off') { tone(240, 0, 0.08); return; }
+    if (kind === 'hit') { tone(523, 0, 0.07); tone(784, 0.06, 0.1); return; }
+    if (kind === 'tier') { tone(523, 0, 0.08); tone(659, 0.08, 0.1); tone(784, 0.16, 0.14); return; }
+    if (kind === 'sweep' || kind === 'lock' || kind === 'level') {
+      tone(392, 0, 0.08); tone(523, 0.09, 0.1); tone(659, 0.18, 0.12); tone(784, 0.28, 0.18);
+    }
+  }
+  function buzz(pattern) {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  }
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+  function celebrate(prev, e) {
+    save();
+    var now = snapshot();
+    paint();
+    if (now.streak > prev.streak) {
+      var s = document.getElementById('streakNum');
+      if (s && !reduced) {
+        s.classList.remove('pulse');
+        void s.offsetWidth;
+        s.classList.add('pulse');
+      }
+    }
+    if (now.lvl > prev.lvl) {
+      chord('level');
+      buzz(12);
+    } else if (now.locked && !prev.locked && now.d1 >= 4) {
+      chord('lock');
+      buzz(10);
+    } else if (now.xp > prev.xp) {
+      chord('hit');
+      buzz(8);
+    } else if (now.xp < prev.xp) {
+      chord('off');
+    }
+  }
+
+  function paintMute() {
+    var btn = document.getElementById('muteBtn');
+    btn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    btn.innerHTML = soundOn
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9a4 4 0 010 6"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M18 10l-4 4M14 10l4 4"/></svg>';
+  }
+  function leadCopy(row) {
+    var g = tierDepth(row, 't1');
+    if (row.done && g >= 4) return 'Locked in.';
+    if (row.done) return 'Closed.';
+    if (g >= 4) return 'That is the day. Lock it.';
+    if (g === 0) return 'One deep pass. Any form. They do not stack.';
+    return depthWord(g) + '. Only the deepest pass scores.';
+  }
+  function weekHtml() {
+    var now = new Date();
+    var start = addDays(now, -now.getDay());
+    var html = '<div class="week">';
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(start, i);
+      var k = todayKey(d);
+      var g = tierDepth(state.days[k], 't1');
+      var future = d > now;
+      var cls = (k === todayKey() ? ' today' : '') + (g >= 4 ? ' hot' : g ? ' on' : '') + (future ? ' empty' : '');
+      html += '<i class="' + cls + '" data-week="' + k + '"' + (future ? ' data-future="1"' : '') + '><em>' + (future ? '\u2013' : String(g)) + '</em>' + WEEK[i] + '</i>';
+    }
+    return html + '</div>';
+  }
+  function chipHtml(s) {
+    var label = esc(s.title);
+    var main = s.url
+      ? '<a href="' + esc(s.url) + '" target="_blank" rel="noreferrer">' + label + '</a>'
+      : '<span>' + label + '</span>';
+    return '<span class="chip">' + main +
+      '<button type="button" class="x" data-del-source="' + esc(s.id) + '" aria-label="Remove">×</button></span>';
+  }
+  function scaleHtml(id) {
+    var html = '<div class="scale">';
+    for (var n = 1; n <= DEPTH_MAX; n++) {
+      html += '<button type="button" class="pip" data-weight="' + id + '" data-n="' + n + '" aria-label="' + depthWord(n) + '"></button>';
+    }
+    return html + '</div>';
+  }
+  function ugcBody() {
+    var rows = state.ugcList.map(function (u) {
+      var who = u.url
+        ? '<a href="' + esc(u.url) + '" target="_blank" rel="noreferrer">' + esc(u.name) + '</a>'
+        : '<b>' + esc(u.name) + '</b>';
+      return '<div class="person"><div class="who">' + who + '</div>' +
+        '<input type="text" data-ugc-note="' + esc(u.id) + '" placeholder="why them" value="' + esc(u.note) + '" maxlength="200">' +
+        '<button type="button" class="x" data-del-ugc="' + esc(u.id) + '" aria-label="Remove">×</button></div>';
+    }).join('');
+    return '<div class="board-body">' +
+      (state.ugcList.length ? '' : '<p class="empty">Creators and pages to work with. Add one.</p>') +
+      '<div class="addbar"><input type="text" data-ugc-input placeholder="Name, @handle, or link" maxlength="200" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<button type="button" class="addbtn" data-add-ugc>Add</button></div>' + rows + '</div>';
+  }
+  function formatBody() {
+    var rows = state.formats.map(function (f) {
+      var title = f.url
+        ? '<a href="' + esc(f.url) + '" target="_blank" rel="noreferrer">' + esc(f.title) + '</a>'
+        : '<b>' + esc(f.title) + '</b>';
+      return '<div class="fmt"><div class="who">' + title + '</div>' +
+        '<input type="text" data-fmt-note="' + esc(f.id) + '" placeholder="why it works" value="' + esc(f.note) + '" maxlength="280">' +
+        '<button type="button" class="x" data-del-fmt="' + esc(f.id) + '" aria-label="Remove">×</button></div>';
+    }).join('');
+    return '<div class="board-body">' +
+      (state.formats.length ? '' : '<p class="empty">Steal a structure. Name it.</p>') +
+      '<div class="addbar"><input type="text" data-fmt-input placeholder="Name the format" maxlength="140" autocomplete="off">' +
+      '<button type="button" class="addbtn" data-add-fmt>Add</button></div>' + rows + '</div>';
+  }
+  function questBlock(q) {
+    var html = '<div class="qhead"><span class="qlabel">' + esc(q.label) + '</span><span class="qmeta" data-qmeta="' + q.id + '"></span></div>' + scaleHtml(q.id);
+    if (q.log) {
+      var mine = state.sources.filter(function (s) { return s.quest === q.id; });
+      var extra = mine.length > 3 ? '<span class="chip"><span>+' + (mine.length - 3) + '</span></span>' : '';
+      html += '<div class="under"><button type="button" class="logbtn" data-open-log="' + q.id + '" hidden>Log it</button>' +
+        '<div class="chips">' + mine.slice(0, 3).map(chipHtml).join('') + extra + '</div></div>' +
+        '<div class="composer" hidden><input type="text" data-src-title placeholder="' + esc(q.ph) + '" maxlength="140" autocomplete="off">' +
+        '<input type="url" data-src-url placeholder="Link" maxlength="500" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+        '<button type="button" class="savebtn" data-save-src="' + q.id + '">Log it</button></div>';
+    }
+    if (q.board === 'ugc') html += ugcBody();
+    if (q.board === 'formats') html += formatBody();
+    return '<div class="qblock' + (q.board ? ' board' : '') + '" data-block="' + q.id + '">' + html + '</div>';
+  }
+  function todayHtml() {
+    var row = dayOf(todayKey());
+    var info = levelInfo(totalXp());
+    var lanes = TIERS.map(function (t) {
+      var ids = tierIds(t.id);
+      return '<section class="lane lane-' + t.id + '" data-lane="' + t.id + '">' +
+        '<div class="lane-h"><div><p class="kicker">' + esc(t.kicker) + '</p><h3>' + esc(t.title) + '</h3>' +
+        '<p class="hint">' + esc(t.hint) + '</p></div><b class="frac" data-frac="' + t.id + '">0/' + ids.length + '</b></div>' +
+        '<div class="lane-bar"><i data-bar="' + t.id + '"></i></div>' +
+        QUESTS.filter(function (q) { return q.tier === t.id; }).map(questBlock).join('') +
+        '</section>';
+    }).join('');
+    var hero = '<section class="hero" id="hero">' +
+      '<div class="hero-top"><div><p class="kicker" id="heroKicker"></p><h2 id="heroTitle"></h2>' +
+      '<p class="lead" id="heroLead"></p><p class="vs" id="vs"></p></div>' +
+      '<div class="ring-wrap"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true">' +
+      '<circle class="track" cx="60" cy="60" r="52"></circle>' +
+      '<circle class="value" id="ring" cx="60" cy="60" r="52"></circle></svg>' +
+      '<div class="ring-label" id="ringLabel"><b id="streakNum">0</b><span>streak</span></div></div></div>' +
+      '<div class="xp-row"><span id="rankName"></span><span id="xpNum"></span></div>' +
+      '<div class="bar"><i id="xpBar"></i></div><p class="xp-next" id="xpNext"></p></section>';
+    return '<div class="stage"><aside class="stage-side">' + hero + weekHtml() +
+      '<div class="lockslot"><button type="button" id="lockDay">Lock the day</button></div></aside>' +
+      '<div class="stage-main">' + lanes +
+      '<div class="note-card"><h3>What stuck</h3>' +
+      '<textarea data-note maxlength="500" placeholder="One line. The thing to repeat.">' + esc(row.note) + '</textarea></div></div></div>';
+  }
+  function heatClass(n) {
+    if (!n) return '';
+    if (n <= 1) return ' l1';
+    if (n <= 2) return ' l2';
+    if (n <= 3) return ' l3';
+    return ' l4';
+  }
+  function recordHtml() {
+    var info = levelInfo(totalXp());
+    var end = new Date();
+    var start = addDays(end, -83);
+    start = addDays(start, -start.getDay());
+    var cells = '';
+    for (var d = new Date(start); d <= end; d = addDays(d, 1)) {
+      var k = todayKey(d);
+      var n = activityCount(state.days[k]);
+      cells += '<b class="' + heatClass(n) + (k === todayKey() ? ' today' : '') + '" title="' + k + ' · ' + n + '"></b>';
+    }
+    var max = 1;
+    QUESTS.forEach(function (q) { max = Math.max(max, habitTotal(q.id)); });
+    var habits = QUESTS.map(function (q) {
+      var n = habitTotal(q.id);
+      var tier = TIERS.filter(function (t) { return t.id === q.tier; })[0];
+      return '<div class="habit"><div class="row"><span>' + esc(tier.title) + ' · ' + esc(q.label) + '</span><b>' + n + '</b></div>' +
+        '<div class="track"><i style="width:' + Math.round((n / max) * 100) + '%"></i></div></div>';
+    }).join('');
+    var logs = state.sources.slice(0, 12).map(function (s) {
+      var q = questById(s.quest);
+      var label = q ? q.label : s.quest;
+      var main = s.url ? '<a href="' + esc(s.url) + '" target="_blank" rel="noreferrer">' + esc(s.title) + '</a>' : esc(s.title);
+      return '<div class="logline"><span>' + esc(label) + '</span>' + main + '</div>';
+    }).join('');
+    return '<div class="stats">' +
+      '<div class="stat"><b>' + streak() + '</b><span>streak</span></div>' +
+      '<div class="stat"><b>' + bestStreak() + '</b><span>best</span></div>' +
+      '<div class="stat"><b>' + totalXp() + '</b><span>xp</span></div>' +
+      '<div class="stat"><b>' + info.lvl + '</b><span>' + esc(info.rank) + '</span></div></div>' +
+      '<div class="card"><h3>12 weeks</h3><div class="heat">' + cells + '</div></div>' +
+      '<div class="card"><h3>Where the weight went</h3>' + habits + '</div>' +
+      '<div class="card"><h3>Latest logs</h3>' + (logs || '<p class="empty">Nothing logged yet.</p>') + '</div>';
+  }
+  function paint() {
+    paintMute();
+    if (view !== 'today') return;
+    var row = dayOf(todayKey());
+    var g = tierDepth(row, 't1');
+    var info = levelInfo(totalXp());
+    var yKey = todayKey(addDays(new Date(), -1));
+    var todayPts = dayScore(todayKey());
+    var yPts = dayScore(yKey);
+    document.getElementById('heroKicker').textContent = WEEK[new Date().getDay()] + ' · Meta + UGC';
+    document.getElementById('heroTitle').textContent = g ? depthWord(g) : 'Open';
+    document.getElementById('heroLead').textContent = leadCopy(row);
+    var vs = document.getElementById('vs');
+    var bits = [];
+    if (todayPts) bits.push('+' + todayPts + ' today');
+    if (yPts > 0 && todayPts > yPts) bits.push('ahead of yesterday');
+    else if (yPts > 0 && todayPts === yPts && todayPts > 0) bits.push('tied yesterday');
+    vs.textContent = bits.join(' · ');
+    var streakEl = document.getElementById('streakNum');
+    streakEl.textContent = String(streak());
+    document.getElementById('ringLabel').classList.toggle('lit', streak() > 0);
+    document.getElementById('ring').style.strokeDashoffset = String(326.7 * (1 - g / DEPTH_MAX));
+    document.getElementById('rankName').textContent = 'Lv ' + info.lvl + ' · ' + info.rank;
+    document.getElementById('xpNum').textContent = totalXp() + ' XP';
+    document.getElementById('hero').classList.toggle('won', row.done && g >= 4);
+    document.getElementById('xpBar').style.width = Math.round((info.rest / info.need) * 100) + '%';
+    var nextRank = info.lvl >= RANKS.length ? 'level ' + (info.lvl + 1) : rankName(info.lvl + 1);
+    document.getElementById('xpNext').textContent = (info.need - info.rest) + ' to ' + nextRank;
+    app.querySelectorAll('[data-week]').forEach(function (cell) {
+      if (cell.hasAttribute('data-future')) return;
+      var gDay = tierDepth(state.days[cell.getAttribute('data-week')], 't1');
+      var em = cell.querySelector('em');
+      if (em) em.textContent = String(gDay);
+      cell.classList.toggle('hot', gDay >= 4);
+      cell.classList.toggle('on', gDay > 0 && gDay < 4);
+    });
+    app.querySelectorAll('[data-block]').forEach(function (block) {
+      var id = block.getAttribute('data-block');
+      var d = depthOf(row, id);
+      var meta = block.querySelector('[data-qmeta]');
+      if (meta) {
+        meta.textContent = d ? depthWord(d) : '';
+        meta.classList.toggle('on', d > 0);
+      }
+      block.querySelectorAll('[data-n]').forEach(function (pip) {
+        var n = Number(pip.getAttribute('data-n'));
+        pip.classList.toggle('on', d >= n);
+        pip.classList.toggle('top', d === n);
+      });
+      var logBtn = block.querySelector('[data-open-log]');
+      if (logBtn) logBtn.hidden = d === 0 || openComposer === id;
+      var under = block.querySelector('.under');
+      if (under) under.hidden = d === 0 && !under.querySelector('.chip');
+      var comp = block.querySelector('.composer');
+      if (comp) comp.hidden = openComposer !== id;
+    });
+    TIERS.forEach(function (t) {
+      var n = tierDepth(row, t.id);
+      var frac = app.querySelector('[data-frac="' + t.id + '"]');
+      var bar = app.querySelector('[data-bar="' + t.id + '"]');
+      if (frac) frac.textContent = n ? depthWord(n) : '0';
+      if (bar) bar.style.width = Math.round((n / DEPTH_MAX) * 100) + '%';
+    });
+    var lock = document.getElementById('lockDay');
+    if (!lock) return;
+    lock.classList.toggle('on', row.done);
+    lock.classList.toggle('ready', !row.done && g >= 4);
+    if (row.done) lock.textContent = 'Reopen';
+    else if (g >= 4) lock.textContent = 'Lock the day';
+    else if (!showedUp(row)) lock.textContent = 'Set a weight to lock';
+    else lock.textContent = 'Lock the day';
+    if (focusSel) {
+      var focusEl = app.querySelector(focusSel);
+      if (focusEl) focusEl.focus();
+      focusSel = '';
+    }
+  }
+  function draw(keepScroll) {
+    var y = keepScroll ? window.scrollY : 0;
+    muteToggle = true;
+    var tabList = [
+      { id: 'today', label: 'Today' },
+      { id: 'notes', label: 'Notes' },
+      { id: 'record', label: 'Record' },
+      { id: 'followers', label: 'DM followers' },
+      { id: 'opinion', label: 'Opinion' },
+      { id: 'cofounder', label: 'Co-founder' },
+      { id: 'ugc', label: 'UGC' }
+    ];
+    tabs.innerHTML = tabList.map(function (t) {
+      return '<button type="button" class="tab' + (view === t.id ? ' on' : '') + '" data-view="' + t.id + '">' + t.label + '</button>';
+    }).join('');
+    var pages = {
+      today: todayHtml,
+      notes: notesHtml,
+      record: recordHtml,
+      followers: followersHtml,
+      opinion: function () { return libraryView('opinion', 'Opinion DMs', 'Want their take. Not a shout-out. Edit these. Add as many as you want. Copy dumps the text.'); },
+      cofounder: function () { return libraryView('cofounder', 'Co-founder DMs', 'Looking for a PT co-founder. Not a shout-out. Edit these. Add as many as you want. Copy dumps the text.'); },
+      ugc: function () { return libraryView('ugc', 'UGC DMs', 'Paid ask. Edit these. Add as many as you want. Copy dumps the text.'); }
+    };
+    app.innerHTML = (pages[view] || todayHtml)();
+    muteToggle = false;
+    if (!document.getElementById('sync').textContent) setSync('Saved');
+    paint();
+    if (keepScroll) {
+      if (y) window.scrollTo(0, y);
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
+  function setView(id) {
+    if (VIEWS.indexOf(id) === -1) id = 'today';
+    view = id;
+    var hash = '#' + id;
+    if (location.hash !== hash) history.replaceState(null, '', hash);
+    openComposer = '';
+    draw();
+  }
+
+  function addUgc(name, url, e) {
+    name = String(name || '').trim().slice(0, 80);
+    if (!name) { toast('Name it'); return; }
+    if (state.ugcList.length >= 200) { toast('List is full'); return; }
+    var prev = snapshot();
+    state.ugcList.unshift({ id: uid(), name: name, url: cleanUrl(url), note: '', day: todayKey(), at: new Date().toISOString() });
+    dayOf(todayKey());
+    draw(true);
+    celebrate(prev, e);
+  }
+  function parseLoose(text) {
+    var raw = String(text || '').trim();
+    var url = (raw.match(/https?:\/\/[^\s]+/i) || [''])[0];
+    var handle = '';
+    var ig = raw.match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+    var at = raw.match(/@([A-Za-z0-9._]{1,30})/);
+    if (ig) handle = ig[1];
+    else if (at) handle = at[1];
+    var name = handle ? '@' + handle.replace(/^@/, '') : raw.replace(url, '').trim();
+    if (!name) name = url ? url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60) : '';
+    return { name: name.slice(0, 80), url: url };
+  }
+  function addUgcFromInput(e) {
+    var input = app.querySelector('[data-ugc-input]');
+    if (!input) return;
+    var parsed = parseLoose(input.value);
+    if (!parsed.name && parsed.url) parsed.name = parsed.url.slice(0, 80);
+    addUgc(parsed.name, parsed.url || input.value, e);
+  }
+  function addFormat(title, e) {
+    title = String(title || '').trim().slice(0, 140);
+    if (!title) { toast('Name the format'); return; }
+    if (state.formats.length >= 200) { toast('List is full'); return; }
+    var prev = snapshot();
+    state.formats.unshift({ id: uid(), title: title, note: '', url: '', day: todayKey(), at: new Date().toISOString() });
+    dayOf(todayKey());
+    draw(true);
+    celebrate(prev, e);
+  }
+  function saveSource(quest, e) {
+    var block = app.querySelector('[data-block="' + quest + '"]');
+    if (!block) return;
+    var titleEl = block.querySelector('[data-src-title]');
+    var urlEl = block.querySelector('[data-src-url]');
+    var title = titleEl ? titleEl.value.trim().slice(0, 140) : '';
+    if (!title) { toast('Name it'); if (titleEl) titleEl.focus(); return; }
+    if (state.sources.length >= 400) { toast('Log is full'); return; }
+    var prev = snapshot();
+    state.sources.unshift({
+      id: uid(),
+      quest: quest,
+      title: title,
+      url: cleanUrl(urlEl ? urlEl.value : ''),
+      day: todayKey(),
+      at: new Date().toISOString()
+    });
+    openComposer = '';
+    draw(true);
+    celebrate(prev, e);
+  }
+  function classifyShare(text) {
+    var parsed = parseLoose(text);
+    var low = (parsed.url || text || '').toLowerCase();
+    if (/youtu\.be|youtube\.com/.test(low)) {
+      return { kind: 'src', quest: 't1yt', title: parsed.name || 'YouTube', url: parsed.url };
+    }
+    if (/spotify\.com\/episode|podcasts\.apple\.com|overcast\.fm/.test(low)) {
+      return { kind: 'src', quest: 't1pod', title: parsed.name || 'Podcast', url: parsed.url };
+    }
+    return { kind: 'ugc', name: parsed.name, url: parsed.url };
+  }
+
+  function handleAction(e) {
+    var weight = e.target.closest('[data-weight]');
+    if (weight) {
+      var id = weight.getAttribute('data-weight');
+      var n = Number(weight.getAttribute('data-n'));
+      var row = dayOf(todayKey());
+      var prev = snapshot();
+      var was = depthOf(row, id);
+      row[id] = was === n ? 0 : n;
+      if (row[id] === 0 && openComposer === id) openComposer = '';
+      celebrate(prev, e);
+      return;
+    }
+    var openLog = e.target.closest('[data-open-log]');
+    if (openLog) {
+      openComposer = openLog.getAttribute('data-open-log');
+      paint();
+      var srcInput = app.querySelector('[data-block="' + openComposer + '"] [data-src-title]');
+      if (srcInput) srcInput.focus();
+      return;
+    }
+    var saveSrc = e.target.closest('[data-save-src]');
+    if (saveSrc) { saveSource(saveSrc.getAttribute('data-save-src'), e); return; }
+    var lock = e.target.closest('#lockDay');
+    if (lock) {
+      var day = dayOf(todayKey());
+      if (!day.done && !showedUp(day)) { toast('Set a weight first'); return; }
+      var before = snapshot();
+      day.done = !day.done;
+      celebrate(before, e);
+      return;
+    }
+    var addU = e.target.closest('[data-add-ugc]');
+    if (addU) { addUgcFromInput(e); return; }
+    var addF = e.target.closest('[data-add-fmt]');
+    if (addF) {
+      var fmtInput = app.querySelector('[data-fmt-input]');
+      addFormat(fmtInput ? fmtInput.value : '', e);
+      return;
+    }
+    var saveDmsBtn = e.target.closest('[data-save-dms]');
+    if (saveDmsBtn) { saveDms(); return; }
+    var addTpl = e.target.closest('[data-add-tpl]');
+    if (addTpl) {
+      var kind = addTpl.getAttribute('data-add-tpl');
+      if (kind !== 'opinion' && kind !== 'cofounder' && kind !== 'ugc') return;
+      if (!Array.isArray(state[kind])) state[kind] = [];
+      state[kind].push({ id: uid(), name: 'New DM', body: '', updatedAt: new Date().toISOString() });
+      save();
+      draw(true);
+      return;
+    }
+    var delTpl = e.target.closest('[data-del-tpl]');
+    if (delTpl) {
+      var dk = delTpl.getAttribute('data-del-tpl');
+      var did = delTpl.getAttribute('data-id');
+      if ((dk !== 'opinion' && dk !== 'cofounder' && dk !== 'ugc') || !Array.isArray(state[dk]) || state[dk].length < 2) return;
+      state[dk] = state[dk].filter(function (t) { return t.id !== did; });
+      save();
+      draw(true);
+      return;
+    }
+    var copyFollower = e.target.closest('[data-copy-follower]');
+    if (copyFollower) {
+      var dmKey = copyFollower.getAttribute('data-copy-follower');
+      var dmText = (state.followerDms && state.followerDms[dmKey]) || '';
+      var copyBtn = copyFollower;
+      function doneFollowerCopy() {
+        copyBtn.textContent = 'Copied';
+        copyBtn.classList.add('copied');
+        setTimeout(function () { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1200);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(dmText).then(doneFollowerCopy).catch(function () { doneFollowerCopy(); });
+      } else doneFollowerCopy();
+      return;
+    }
+    var copy = e.target.closest('[data-copy]');
+    if (copy) {
+      var tpl = findTpl(copy.getAttribute('data-copy'), copy.getAttribute('data-id'));
+      if (!tpl) return;
+      var btn = copy;
+      function doneCopy() {
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1200);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tpl.body).then(doneCopy).catch(function () { doneCopy(); });
+      } else doneCopy();
+      return;
+    }
+    var addCreator = e.target.closest('[data-add-creator]');
+    if (addCreator) { addFromInput(addCreator.getAttribute('data-add-creator')); return; }
+    var clip = e.target.closest('[data-clip]');
+    if (clip) { addFromClipboard(clip.getAttribute('data-clip')); return; }
+    var delCreator = e.target.closest('[data-del-creator]');
+    if (delCreator) {
+      var lk = delCreator.getAttribute('data-del-creator');
+      var cid = delCreator.getAttribute('data-id');
+      var removed = findCreator(lk, cid);
+      state.creators[lk] = state.creators[lk].filter(function (c) { return c.id !== cid; });
+      if (removed) {
+        if (!state.removedCreators[lk]) state.removedCreators[lk] = {};
+        state.removedCreators[lk][removed.handle] = new Date().toISOString();
+      }
+      save();
+      draw(true);
+      return;
+    }
+    var copyHandle = e.target.closest('[data-copy-handle]');
+    if (copyHandle) {
+      var person = findCreator(copyHandle.getAttribute('data-copy-handle'), copyHandle.getAttribute('data-id'));
+      if (!person) return;
+      var hb = copyHandle;
+      function copiedH() {
+        hb.textContent = 'Copied';
+        hb.classList.add('copied');
+        setTimeout(function () { hb.textContent = 'Copy'; hb.classList.remove('copied'); }, 1200);
+      }
+      var handleText = '@' + person.handle;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(handleText).then(copiedH).catch(function () { copiedH(); });
+      } else copiedH();
+      return;
+    }
+    var pick = e.target.closest('[data-pick-list]');
+    if (pick && pendingShare) {
+      var dest = pick.getAttribute('data-pick-list');
+      var result = addHandles(dest, pendingShare.handles);
+      pendingShare = null;
+      setView(CREATOR_LISTS[dest].tab);
+      reportAdd(dest, result);
+      return;
+    }
+    var recBtn = e.target.closest('[data-rec]');
+    if (recBtn) {
+      var handle = recBtn.getAttribute('data-handle');
+      var verdict = recBtn.getAttribute('data-rec');
+      if (!handle || (verdict !== 'approve' && verdict !== 'reject')) return;
+      state.recVerdicts[handle] = verdict;
+      if (verdict === 'approve') {
+        var rec = RECS.filter(function (r) { return r.handle === handle; })[0];
+        if (rec) {
+          var added = addHandles(rec.tier, [handle]);
+          reportAdd(rec.tier, added);
+          if (!added.added.length) save();
+        } else save();
+      } else save();
+      draw(true);
+      return;
+    }
+    var markSent = e.target.closest('[data-dm-sent]');
+    if (markSent) {
+      var sentPerson = findCreator(markSent.getAttribute('data-dm-sent'), markSent.getAttribute('data-id'));
+      if (!sentPerson) return;
+      sentPerson.dmSent = true;
+      state.listsOpen['sent-' + CREATOR_LISTS[markSent.getAttribute('data-dm-sent')].tab] = true;
+      save();
+      draw(true);
+      return;
+    }
+    var undoSent = e.target.closest('[data-dm-undo]');
+    if (undoSent) {
+      var backPerson = findCreator(undoSent.getAttribute('data-dm-undo'), undoSent.getAttribute('data-id'));
+      if (!backPerson) return;
+      backPerson.dmSent = false;
+      save();
+      draw(true);
+      return;
+    }
+    var copyShare = e.target.closest('[data-copy-share]');
+    if (copyShare) {
+      var field = app.querySelector('.sharebox input');
+      if (field && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(field.value).then(function () { toast('Share link copied'); });
+      }
+      return;
+    }
+    var addStep = e.target.closest('[data-add-step]');
+    if (addStep) { addStepFor(addStep.getAttribute('data-add-step'), e); return; }
+    var togStep = e.target.closest('[data-step-toggle]');
+    if (togStep) {
+      var sk = togStep.getAttribute('data-step-toggle');
+      var step = (state.steps[sk] || []).filter(function (s) { return s.id === togStep.getAttribute('data-id'); })[0];
+      if (!step) return;
+      step.done = !step.done;
+      save();
+      draw(true);
+      return;
+    }
+    var delStep = e.target.closest('[data-del-step]');
+    if (delStep) {
+      var dk2 = delStep.getAttribute('data-del-step');
+      state.steps[dk2] = (state.steps[dk2] || []).filter(function (s) { return s.id !== delStep.getAttribute('data-id'); });
+      save();
+      draw(true);
+      return;
+    }
+    var delS = e.target.closest('[data-del-source]');
+    if (delS) {
+      var prevS = snapshot();
+      var sid = delS.getAttribute('data-del-source');
+      state.sources = state.sources.filter(function (s) { return s.id !== sid; });
+      draw(true);
+      celebrate(prevS, e);
+      return;
+    }
+    var delU = e.target.closest('[data-del-ugc]');
+    if (delU) {
+      var prevU = snapshot();
+      state.ugcList = state.ugcList.filter(function (u) { return u.id !== delU.getAttribute('data-del-ugc'); });
+      draw(true);
+      celebrate(prevU, e);
+      return;
+    }
+    var delF = e.target.closest('[data-del-fmt]');
+    if (delF) {
+      var prevF = snapshot();
+      state.formats = state.formats.filter(function (f) { return f.id !== delF.getAttribute('data-del-fmt'); });
+      draw(true);
+      celebrate(prevF, e);
+      return;
+    }
+    var tab = e.target.closest('[data-view]');
+    if (tab) setView(tab.getAttribute('data-view'));
+  }
+
+  function isField(e) {
+    return Boolean(e.target.closest('input, textarea, select, a'));
+  }
+  function isTap(e) {
+    return Boolean(e.target.closest('[data-weight], #lockDay, [data-open-log], [data-save-src], [data-add-ugc], [data-add-fmt], [data-del-source], [data-del-ugc], [data-del-fmt], [data-view], [data-save-dms], [data-add-tpl], [data-del-tpl], [data-copy], [data-copy-follower], [data-add-creator], [data-clip], [data-del-creator], [data-copy-handle], [data-pick-list], [data-copy-share], [data-rec], [data-dm-sent], [data-dm-undo], [data-add-step], [data-step-toggle], [data-del-step]'));
+  }
+  function onTouchEnd(e) {
+    if (isField(e) || !isTap(e)) return;
+    e.preventDefault();
+    tapLock = Date.now() + 500;
+    handleAction(e);
+  }
+  function onClick(e) {
+    if (isField(e) || !isTap(e)) return;
+    if (Date.now() < tapLock) { e.preventDefault(); return; }
+    handleAction(e);
+  }
+  document.body.addEventListener('touchend', onTouchEnd, { passive: false });
+  document.body.addEventListener('click', onClick);
+
+  app.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.hasAttribute('data-note')) {
+      dayOf(todayKey()).note = t.value;
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-ugc-note')) {
+      var u = state.ugcList.filter(function (item) { return item.id === t.getAttribute('data-ugc-note'); })[0];
+      if (!u) return;
+      u.note = t.value;
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-fmt-note')) {
+      var f = state.formats.filter(function (item) { return item.id === t.getAttribute('data-fmt-note'); })[0];
+      if (!f) return;
+      f.note = t.value;
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-follower-dm')) {
+      var dmId = t.getAttribute('data-follower-dm');
+      if (FOLLOWER_DM_IDS.indexOf(dmId) === -1) return;
+      if (!state.followerDms) state.followerDms = defaultFollowerDms();
+      if (state.followerDms[dmId] === t.value) return;
+      state.followerDms[dmId] = t.value.slice(0, 2000);
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-tpl')) {
+      var tpl = findTpl(t.getAttribute('data-tpl'), t.getAttribute('data-id'));
+      var field = t.getAttribute('data-field');
+      if (!tpl || (field !== 'name' && field !== 'body')) return;
+      if (tpl[field] === t.value) return;
+      tpl[field] = t.value;
+      tpl.updatedAt = new Date().toISOString();
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-creator-note')) {
+      var person = findCreator(t.getAttribute('data-creator-note'), t.getAttribute('data-id'));
+      if (!person) return;
+      person.note = t.value;
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-day-summary')) {
+      dayOf(t.getAttribute('data-day-summary')).note = t.value;
+      save();
+      return;
+    }
+    if (t.hasAttribute('data-step-text')) {
+      var list = state.steps[t.getAttribute('data-step-text')] || [];
+      var step = list.filter(function (s) { return s.id === t.getAttribute('data-id'); })[0];
+      if (!step) return;
+      step.text = t.value;
+      save();
+    }
+  });
+  app.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    if (e.target.hasAttribute('data-ugc-input')) { e.preventDefault(); addUgcFromInput(e); }
+    if (e.target.hasAttribute('data-fmt-input')) {
+      e.preventDefault();
+      addFormat(e.target.value, e);
+    }
+    var creatorInput = e.target.closest('[data-creator-input]');
+    if (creatorInput) {
+      e.preventDefault();
+      addFromInput(creatorInput.getAttribute('data-creator-input'));
+    }
+    if (e.target.hasAttribute('data-step-input')) {
+      e.preventDefault();
+      addStepFor(e.target.getAttribute('data-step-input'));
+    }
+    if (e.target.hasAttribute('data-src-title') || e.target.hasAttribute('data-src-url')) {
+      e.preventDefault();
+      var block = e.target.closest('[data-block]');
+      if (block) saveSource(block.getAttribute('data-block'), e);
+    }
+  });
+
+  app.addEventListener('toggle', function (e) {
+    if (muteToggle || !boardReady) return;
+    var el = e.target;
+    if (!el || !el.getAttribute) return;
+    if (el.hasAttribute('data-clist')) {
+      state.listsOpen[el.getAttribute('data-clist')] = el.open;
+      save();
+      return;
+    }
+    if (!el.hasAttribute('data-rlist')) return;
+    state.recsOpen[el.getAttribute('data-rlist')] = el.open;
+    save();
+  }, true);
+
+  document.getElementById('muteBtn').addEventListener('click', function () {
+    soundOn = !soundOn;
+    localStorage.setItem(SOUND_KEY, soundOn ? '1' : '0');
+    paintMute();
+    if (soundOn) chord('hit');
+  });
+  document.getElementById('exportBtn').onclick = function () {
+    var blob = new Blob([JSON.stringify(payload(), null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'remedy-prelaunch.json';
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
+  };
+  document.getElementById('importBtn').onclick = function () {
+    document.getElementById('importFile').click();
+  };
+  document.getElementById('importFile').onchange = function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var next = JSON.parse(String(reader.result || ''));
+        if (!next || next.epoch !== EPOCH) throw new Error('bad');
+        state = hydrate(next);
+        save();
+        draw();
+        toast('Imported');
+      } catch (err) {
+        alert('That file is not a pre-launch export.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  function readIncoming() {
+    var q = new URLSearchParams(location.search);
+    var chunks = [q.get('add'), q.get('text'), q.get('url'), q.get('title')].filter(Boolean);
+    if (!chunks.length) return '';
+    if (location.search) history.replaceState(null, '', location.pathname + (location.hash || ''));
+    return chunks.join('\n');
+  }
+  function applyIncoming(text) {
+    if (!text) return;
+    var handles = parseHandles(text);
+    if (handles.length && /instagram\.com|instagr\.am|ig\.me|@/i.test(text)) {
+      pendingShare = { handles: handles };
+      setView('opinion');
+      toast('Pick a list for @' + handles.join(' @'));
+      return;
+    }
+    var item = classifyShare(text);
+    var fake = { clientX: window.innerWidth / 2, clientY: 160 };
+    if (item.kind === 'src') {
+      var prev = snapshot();
+      state.sources.unshift({
+        id: uid(), quest: item.quest, title: item.title || 'Saved', url: cleanUrl(item.url),
+        day: todayKey(), at: new Date().toISOString()
+      });
+      var row = dayOf(todayKey());
+      if (!depthOf(row, item.quest)) row[item.quest] = 1;
+      setView('today');
+      celebrate(prev, fake);
+      toast('Logged under Meta ads');
+      return;
+    }
+    if (!item.name) { toast('Nothing to add'); return; }
+    addUgc(item.name, item.url, fake);
+    toast('Added to the UGC list');
+  }
+
+  window.addEventListener('pagehide', function () {
+    if (!boardReady) return;
+    syncOpenTpls();
+    if (!pushTimer && Date.now() - dirtyAt > 8000) return;
+    clearTimeout(pushTimer);
+    pushTimer = null;
+    persistLocal();
+    pushRemote(true);
+  });
+
+  paintMute();
+  draw();
+  var incoming = readIncoming();
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  pullRemote().then(function (result) {
+    if (result === 'applied') draw();
+    boardReady = true;
+    if (pendingSave) save();
+    applyIncoming(incoming);
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') refreshSharedLists();
+  });
+  if (location.hostname === 'marketing.remedyrecoveries.com' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/marketing-sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

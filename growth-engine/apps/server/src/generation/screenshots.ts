@@ -1,12 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ASSETS_DIR, BRAND, r2Configured } from "../config.js";
+import { ASSETS_DIR, BRAND, env, r2Configured } from "../config.js";
 import { SCREENSHOT_R2_PREFIX, uploadBuffer } from "../publish/r2.js";
 import { isScreenshotDeleted } from "./library-overrides.js";
 
 export const SCREENSHOT_META_FILE = "meta.json";
 const SKIP_FILES = new Set(["icon.png", "crop-config.json", SCREENSHOT_META_FILE, "library-overrides.json"]);
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+const VIDEO_EXT = new Set([".mp4", ".mov", ".webm"]);
+
+export function isVideoScreenshot(file: string): boolean {
+  return VIDEO_EXT.has(path.extname(file).toLowerCase());
+}
+
+export function screenshotContentType(file: string): string {
+  const ext = path.extname(file).toLowerCase();
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".mp4") return "video/mp4";
+  if (ext === ".mov") return "video/quicktime";
+  if (ext === ".webm") return "video/webm";
+  return "image/png";
+}
 /** Empty / duplicate frames — stay in Images, never auto-assign. Prefer the filled twin. */
 const NEVER_ASSIGN = new Set(["img_0528.png", "img_0532.png", "img_0535.png"]);
 
@@ -117,7 +132,10 @@ export function listLocalScreenshots(): string[] {
   if (!fs.existsSync(ASSETS_DIR)) return [];
   return fs
     .readdirSync(ASSETS_DIR)
-    .filter((file) => IMAGE_EXT.has(path.extname(file).toLowerCase()) && !SKIP_FILES.has(file) && !isScreenshotDeleted(file))
+    .filter((file) => {
+      const ext = path.extname(file).toLowerCase();
+      return (IMAGE_EXT.has(ext) || VIDEO_EXT.has(ext)) && !SKIP_FILES.has(file) && !isScreenshotDeleted(file);
+    })
     .sort();
 }
 
@@ -146,6 +164,8 @@ export function listCanonicalScreenshots(): string[] {
 
 /** Screenshots the picker may assign. Crops beat their full-screen source. */
 export function listAssignableScreenshots(): string[] {
+  // Pet-era crops replaced the old UI under the same filenames. Hold them back until launch.
+  if (!env.PET_UI_LIVE) return [];
   const meta = readScreenshotMeta();
   const croppedSources = new Set(
     Object.entries(meta)
@@ -154,7 +174,7 @@ export function listAssignableScreenshots(): string[] {
   );
   return listCanonicalScreenshots().filter((file) => {
     const entry = metaFor(file, meta);
-    if (entry.assign === false || NEVER_ASSIGN.has(file)) return false;
+    if (entry.assign === false || NEVER_ASSIGN.has(file) || isVideoScreenshot(file)) return false;
     if (file.startsWith("profile")) return false;
     if (croppedSources.has(screenshotStem(file)) && !isCroppedScreenshot(file, entry)) return false;
     // Full phone screens get a generic 45% top slice and look cut-off.
@@ -191,7 +211,8 @@ export function resolveCtaScreenshot(preferred?: string | null): string | null {
 
 export function isAllowedScreenshotFile(file: string): boolean {
   const name = path.basename(file);
-  return IMAGE_EXT.has(path.extname(name).toLowerCase()) && !SKIP_FILES.has(name) && !name.includes("..");
+  const ext = path.extname(name).toLowerCase();
+  return (IMAGE_EXT.has(ext) || VIDEO_EXT.has(ext)) && !SKIP_FILES.has(name) && !name.includes("..");
 }
 
 /** Fill missing descriptions so a new upload is usable on the next generate. */

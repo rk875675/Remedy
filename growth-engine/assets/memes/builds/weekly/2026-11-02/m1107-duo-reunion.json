@@ -1,0 +1,20 @@
+{
+  "id": "m1107-duo-reunion",
+  "format": "duo-reunion",
+  "variantOf": null,
+  "changed": "",
+  "background": "duo-reunion/02-background.jpg",
+  "gif": { "file": "duo-reunion/03-motion.gif", "x": 139, "y": 799, "width": 726 },
+  "audio": { "file": "duo-reunion/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 10.91,
+  "text": [
+    { "lines": ["Me and my heating pad", "after a full day at the desk"], "y": 270 },
+    { "lines": ["Me"], "x": 703, "y": 750, "size": 56 },
+    { "lines": ["My heating pad"], "x": 394, "y": 634, "size": 56 }
+  ],
+  "title": "Me and my heating pad after a full day at the desk",
+  "caption": "Me and my heating pad after a full day at the desk",
+  "description": "Living room, cat and meerkat reuniting, the sound from that format.",
+  "musicCredit": "Sound: original sound - jocrackz — Jack Crackzz ✓",
+  "results": []
+}

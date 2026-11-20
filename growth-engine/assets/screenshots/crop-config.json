@@ -122,5 +122,21 @@
   "crop_img_0540.png": {
     "skipTopPct": 0,
     "cropHPct": 1
+  },
+  "crop_pain_check_2.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_pain_check_10.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_home_done.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
+  },
+  "crop_pain_trend.png": {
+    "skipTopPct": 0,
+    "cropHPct": 1
   }
 }

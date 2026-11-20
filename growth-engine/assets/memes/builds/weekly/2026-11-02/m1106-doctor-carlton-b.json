@@ -1,0 +1,33 @@
+{
+  "id": "m1106-doctor-carlton-b",
+  "format": "DeNAShnIYAy",
+  "variantOf": "m1106-doctor-carlton-a",
+  "changed": "text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-carlton.gif",
+    "x": -27,
+    "y": 690,
+    "width": 760
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: any idea what",
+        "set your back off?",
+        "Me at the bachelorette party:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: any idea what set your back off? Me at the bachelorette party:",
+  "caption": "Doctor: any idea what set your back off? Me at the bachelorette party:",
+  "description": "Exam room, Carlton dance, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

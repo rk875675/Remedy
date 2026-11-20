@@ -20,8 +20,8 @@ import {
   onboardingStepExited,
   onboardingStepViewed,
 } from './events/onboarding';
-import { onboardingStepKey } from './events/enums';
-import type { OnboardingStepKey } from './events/enums';
+import { onboardingStepKey, screenName } from './events/enums';
+import type { OnboardingEntryPoint, OnboardingLeftTo, OnboardingStepKey } from './events/enums';
 
 export const ONBOARDING_STEP_KEYS = onboardingStepKey.options;
 
@@ -38,7 +38,7 @@ export function onboardingFunnelDurationMs(): number | undefined {
   return Math.max(0, Date.now() - funnelStartedAt);
 }
 
-/** Route pattern → step key. Mirrors ONBOARDING_STEP_PATHS plus the two post-quiz screens. */
+/** Route pattern → step key. Mirrors the onboarding step registry (welcome is the group index). */
 const STEP_BY_SCREEN: ReadonlyMap<string, OnboardingStepKey> = new Map(
   ONBOARDING_STEP_KEYS.map((key) => [
     key === 'welcome' ? '/(onboarding)' : `/(onboarding)/${key}`,
@@ -55,9 +55,35 @@ function indexOfStep(key: OnboardingStepKey): number {
   return ONBOARDING_STEP_KEYS.indexOf(key);
 }
 
-type ActiveStep = { key: OnboardingStepKey; index: number; enteredAt: number };
+type ActiveStep = {
+  key: OnboardingStepKey;
+  index: number;
+  enteredAt: number;
+  entry: OnboardingEntryPoint;
+  isRetake: boolean;
+};
 
 let active: ActiveStep | null = null;
+
+/**
+ * Developer Profile → Force Paywall opens match without a quiz. Set before the
+ * navigation so the visit is tagged `profile_preview` and kept out of onboarding.
+ */
+let profilePreview = false;
+
+export function markProfilePreview(): void {
+  profilePreview = true;
+}
+
+export function entryForStep(key: OnboardingStepKey, lapsed: boolean): OnboardingEntryPoint {
+  if (key === 'match' && profilePreview) return 'profile_preview';
+  if (key === 'match' && lapsed) return 'lapsed';
+  return 'funnel';
+}
+
+export function currentOnboardingEntry(): OnboardingEntryPoint {
+  return active?.entry ?? 'funnel';
+}
 
 /** Milliseconds spent on the current step, or null if no step is active. */
 export function activeStepDwellMs(): number | null {
@@ -68,19 +94,35 @@ export function activeStepKey(): OnboardingStepKey | null {
   return active?.key ?? null;
 }
 
-function enterStep(key: OnboardingStepKey, isRetake: boolean): void {
-  active = { key, index: indexOfStep(key), enteredAt: Date.now() };
-  onboardingStepViewed({ step_key: key, step_index: active.index, is_retake: isRetake });
+function enterStep(key: OnboardingStepKey, isRetake: boolean, lapsed: boolean): void {
+  const entry = entryForStep(key, lapsed);
+  active = { key, index: indexOfStep(key), enteredAt: Date.now(), entry, isRetake };
+  onboardingStepViewed({
+    step_key: key,
+    step_index: active.index,
+    is_retake: isRetake,
+    entry_point: entry,
+    flow: 'v2',
+  });
 }
 
-function leaveStep(exitType: 'forward' | 'backward' | 'backgrounded' | 'abandoned'): void {
+function leaveStep(
+  exitType: 'forward' | 'backward' | 'backgrounded' | 'abandoned',
+  leftTo: OnboardingLeftTo,
+): void {
   if (active === null) return;
+  const visit = active;
   onboardingStepExited({
-    step_key: active.key,
-    step_index: active.index,
-    time_on_step_ms: Math.max(0, Date.now() - active.enteredAt),
+    step_key: visit.key,
+    step_index: visit.index,
+    time_on_step_ms: Math.max(0, Date.now() - visit.enteredAt),
     exit_type: exitType,
+    left_to: leftTo,
+    is_retake: visit.isRetake,
+    entry_point: visit.entry,
+    flow: 'v2',
   });
+  if (visit.entry === 'profile_preview') profilePreview = false;
   active = null;
 }
 
@@ -89,8 +131,8 @@ function leaveStep(exitType: 'forward' | 'backward' | 'backgrounded' | 'abandone
  * handlers via `useOnboardingStepCompletion` so a completed step is never also
  * reported as a backward or abandoned exit by the route watcher.
  */
-export function closeStepAsCompleted(): void {
-  leaveStep('forward');
+export function closeStepAsCompleted(leftTo: OnboardingStepKey): void {
+  leaveStep('forward', leftTo);
 }
 
 /**
@@ -101,11 +143,11 @@ export function closeStepAsCompleted(): void {
  * Call it only when actually proceeding — calling it and then staying on the screen
  * ends the visit without starting a new one.
  */
-export function useOnboardingStepCompletion(): (answerCount?: number) => void {
+export function useOnboardingStepCompletion(): (answerCount?: number, leftTo?: OnboardingStepKey) => void {
   const { retaking } = useOnboarding();
 
   return useCallback(
-    (answerCount?: number) => {
+    (answerCount?: number, leftTo?: OnboardingStepKey) => {
       const current = active;
       if (current === null) return;
 
@@ -114,55 +156,70 @@ export function useOnboardingStepCompletion(): (answerCount?: number) => void {
         step_index: current.index,
         time_on_step_ms: Math.max(0, Date.now() - current.enteredAt),
         is_retake: retaking,
+        entry_point: current.entry,
+        flow: 'v2',
         ...(answerCount === undefined ? {} : { answer_count: answerCount }),
       });
-      closeStepAsCompleted();
+      closeStepAsCompleted(leftTo ?? current.key);
     },
     [retaking],
   );
+}
+
+function screenLeftTo(name: string | null): OnboardingLeftTo {
+  const parsed = screenName.safeParse(name);
+  return parsed.success ? parsed.data : 'left_app';
 }
 
 /**
  * Watches the active route and maintains step visits. Mounted once, inside
  * `AnalyticsBridge`.
  */
-export function useOnboardingStepTracking(screenName: string | null, isRetake: boolean): void {
-  const stepKey = stepForScreen(screenName);
+export function useOnboardingStepTracking(
+  screen: string | null,
+  isRetake: boolean,
+  lapsed: boolean,
+): void {
+  const stepKey = stepForScreen(screen);
 
   // Read through a ref so the route effect depends on the route alone.
   const isRetakeRef = useRef(isRetake);
   isRetakeRef.current = isRetake;
+  const lapsedRef = useRef(lapsed);
+  lapsedRef.current = lapsed;
 
   useEffect(() => {
     // Router hasn't settled on a route yet — not a transition out of the funnel.
-    if (screenName === null) return;
+    if (screen === null) return;
 
     const current = active;
 
     if (stepKey === null) {
       // Left the onboarding group without completing the step.
-      if (current !== null) leaveStep('abandoned');
+      if (current !== null) leaveStep('abandoned', screenLeftTo(screen));
       return;
     }
 
     if (current !== null && current.key === stepKey) return;
 
     if (current !== null) {
-      leaveStep(indexOfStep(stepKey) > current.index ? 'forward' : 'backward');
+      leaveStep(indexOfStep(stepKey) > current.index ? 'forward' : 'backward', stepKey);
     }
-    enterStep(stepKey, isRetakeRef.current);
-  }, [screenName, stepKey]);
+    enterStep(stepKey, isRetakeRef.current, lapsedRef.current);
+  }, [screen, stepKey]);
 
   useEffect(() => {
     function onAppStateChange(status: AppStateStatus): void {
-      if (status === 'background' || status === 'inactive') {
-        leaveStep('backgrounded');
+      // `inactive` is the app switcher and notification shade. Only a real
+      // background ends the visit, so a glance is not recorded as a leave.
+      if (status === 'background') {
+        leaveStep('backgrounded', 'app_background');
         return;
       }
       // Returned to the foreground still on a funnel step: start a fresh visit so
       // dwell time excludes however long the app was away.
       if (status === 'active' && active === null && stepKey !== null) {
-        enterStep(stepKey, isRetakeRef.current);
+        enterStep(stepKey, isRetakeRef.current, lapsedRef.current);
       }
     }
 

@@ -27,7 +27,7 @@ Keep these exact IDs.
 
 - `com.remedyapp.weekly` — 1 week, **7-day** trial, $4.99
 - `com.remedyapp.monthly` — 1 month, **14-day** trial, $12.99
-- `com.remedyapp.annual` — 1 year, **14-day** trial, $79.99
+- `com.remedyapp.annual` — 1 year, **7-day** trial, $79.99
 - `com.remedyapp.weekly.no.trial` — 1 week, no trial, $4.99
 - `com.remedyapp.monthly.no.trial` — 1 month, no trial, $12.99
 - `com.remedyapp.annual.no.trial` — 1 year, no trial, $79.99

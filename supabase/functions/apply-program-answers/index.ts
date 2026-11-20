@@ -8,7 +8,8 @@ import {
   type Answers,
   type CatalogExercise,
 } from '../_shared/assignment/engine.ts';
-import { loadAssignmentContext } from '../_shared/assignment/loadContext.ts';
+import { buildPlanWithFallback } from '../_shared/assignment/engineV2.ts';
+import { loadAssignmentContext, loadUserIntake } from '../_shared/assignment/loadContext.ts';
 import {
   classifyAnswerDiff,
   pendingApplyDecision,
@@ -207,13 +208,14 @@ Deno.serve(async (req: Request) => {
         : {}),
     };
 
-    await supabase
+    const { error: applyError } = await supabase
       .from('user_programs')
       .update({
         applied_answers: nextApplied,
         pending_apply_week: decision.pending_apply_week,
       })
       .eq('user_id', userId);
+    if (applyError) return json({ error: 'save_failed' }, 500);
 
     const action = decision.apply_now
       ? 'apply_now'
@@ -403,16 +405,28 @@ async function patchSessionsPerWeek(args: {
       }
     }
   } else {
-    const built = buildPlan({
-      answers: answers as Answers,
-      rules: ctx.rules,
-      rulesVersion: ctx.rulesVersion,
-      exercises: ctx.exercises,
-      template: ctx.template,
-      replacements: ctx.replacements,
-      startWeek: currentWeek,
-      progressionLevel,
-    });
+    const intake = await loadUserIntake(supabase, userId);
+    const built = buildPlanWithFallback({
+      intake,
+      details: ctx.details,
+      input: {
+        answers: answers as Answers,
+        exercises: ctx.exercises,
+        startWeek: currentWeek,
+        progressionLevel,
+      },
+      buildV1: () =>
+        buildPlan({
+          answers: answers as Answers,
+          rules: ctx.rules,
+          rulesVersion: ctx.rulesVersion,
+          exercises: ctx.exercises,
+          template: ctx.template,
+          replacements: ctx.replacements,
+          startWeek: currentWeek,
+          progressionLevel,
+        }),
+    }).plan;
     const weeks = Array.from({ length: durationWeeks - currentWeek + 1 }, (_, i) => currentWeek + i);
     const slots = sessionSlotsToAdd(weeks, oldSpw, newSpw, currentWeek, currentSession);
     for (const slot of slots) {

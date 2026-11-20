@@ -1,14 +1,15 @@
 # Remedy
 
-> Remedy (App Store name "Remedy: Back Pain Relief") is a consumer iPhone app for people with back pain. Users answer a short onboarding and get a structured 4 to 6 week back fitness program of short, video-guided sessions with before-and-after pain check-ins. Educational exercise guidance, not medical care.
+> Remedy (App Store name "Remedy: Back Pain Relief") is a consumer iPhone app for people with back pain. Users answer a short onboarding and get a structured 10 to 16 week back fitness program of short, video-guided sessions with before-and-after pain check-ins. Educational exercise guidance, not medical care.
 
 ## Key facts
 
 - App Store: https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106
 - Platform: iPhone, iOS 15.1 or later. No Android app.
-- Price: free to download; full access is an auto-renewing subscription: $4.99/week, $12.99/month, $79.99/year (US). Free trial where offered: 7 days weekly, 14 days monthly and annual.
-- Program: 4, 5, or 6 weeks depending on how long the pain has lasted; 3 to 7 sessions a week, chosen by the user.
+- Price: free to download; full access is an auto-renewing subscription: $4.99/week, $12.99/month, $79.99/year (US). Free trial where offered: 7 days weekly, 14 days monthly, and 7 days annual.
+- Program: 10 to 16 weeks depending on how long the pain has lasted and how the back behaves; 3 to 7 sessions a week, chosen by the user.
 - Personalization: rules from onboarding answers (pain location, duration, type, activity level, what makes it worse, equipment, goal, days per week). No clinician in the loop, no camera form scoring.
+- Pet: every account has a pet armadillo the user names. It starts curled in a ball and grows through 5 stages as the user finishes sessions (after 1, 4, 9 and 15 lifetime sessions). It never shrinks if a day is missed.
 - Library: 28 exercises across mobility, core stability, glutes, strength, and recovery stretches, each with a demonstration video. Harder variants replace an exercise once it reaches 15 reps.
 - Scope: back only (upper, lower, or both). Not neck, shoulder, hip, or knee.
 - Age: 17+. Released October 13, 2026.

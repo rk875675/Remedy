@@ -1,0 +1,356 @@
+{
+  "posts": [
+    {
+      "id": "couch-technique",
+      "kind": "still",
+      "photo": "gen/s01-couch.jpg",
+      "lines": [
+        "At some point, getting off",
+        "the couch turned into",
+        "a technique."
+      ],
+      "textAt": "bottom",
+      "caption": "Hand on the armrest, scoot to the edge, lean forward, and hope nobody is watching. If you have a method, tell us yours.\n\n#lowerbackpain #backpain",
+      "note": "Launch 9, post 1 (bottom-right of the grid).",
+      "shot": {
+        "scene": "A deep, low, slouchy fabric couch with sunken cushions and a throw blanket, a coffee table in front with a mug",
+        "light": "window-side"
+      }
+    },
+    {
+      "id": "one-leg",
+      "kind": "still",
+      "photo": "gen/s02-office-chair.jpg",
+      "lines": [
+        "Around hour six you start",
+        "sitting on one leg like",
+        "that's going to fix it."
+      ],
+      "textAt": "bottom",
+      "caption": "It never fixes it, but we all keep trying.\n\n#deskjob #lowerbackpain",
+      "note": "Launch 9, post 2.",
+      "shot": {
+        "scene": "An empty office chair pushed back from a desk with a closed laptop, a sweatshirt over the chair back",
+        "light": "low-sun"
+      }
+    },
+    {
+      "id": "shoes",
+      "kind": "still",
+      "photo": "gen/s03-shoes.jpg",
+      "lines": [
+        "Your back is fine right up",
+        "until you bend down",
+        "to tie your shoes."
+      ],
+      "textAt": "top",
+      "caption": "Slip-ons were a lifestyle choice, technically.\n\n#backpain #lowerbackpain",
+      "note": "Launch 9, post 3.",
+      "shot": {
+        "scene": "A pair of sneakers with untied laces on a wooden entryway floor next to a low bench",
+        "light": "window-side"
+      }
+    },
+    {
+      "id": "stood-up",
+      "kind": "still",
+      "photo": "gen/s04-desk.jpg",
+      "lines": [
+        "You stand up after a long",
+        "call and wait a second for",
+        "your back to catch up."
+      ],
+      "textAt": "top",
+      "caption": "That little pause before the first step is so normal now that you barely notice it anymore.\n\n#wfh #lowerbackpain",
+      "note": "Launch 9, post 4.",
+      "shot": {
+        "scene": "A wooden desk with a closed laptop, headphones and a mug, the chair pushed back as if someone just stood up",
+        "light": "window-side"
+      }
+    },
+    {
+      "id": "socks",
+      "kind": "card",
+      "tone": "bone",
+      "lines": [
+        "Nobody warns you that",
+        "putting on socks becomes",
+        "a whole decision."
+      ],
+      "caption": "Sitting on the bed, one foot up, and a quick negotiation with your lower back first.\n\n#lowerbackpain #backpain",
+      "note": "Launch 9, post 5. The only type card (center of the grid). Cards stay rare: about 1 in 12."
+    },
+    {
+      "id": "slow-walk",
+      "kind": "still",
+      "photo": "gen/s06-walk.jpg",
+      "lines": [
+        "Some days the plan is a slow",
+        "walk around the block,",
+        "and honestly that's fine."
+      ],
+      "textAt": "top",
+      "caption": "Not every day has to be a workout. Some days you just get outside and move a little.\n\n#backpain #walking",
+      "note": "Launch 9, post 6.",
+      "shot": {
+        "scene": "A quiet neighborhood sidewalk curving around the block, houses and leafy trees",
+        "light": "overcast-out"
+      }
+    },
+    {
+      "id": "standing-desk-shelf",
+      "kind": "still",
+      "photo": "gen/s07-standing-desk.jpg",
+      "lines": [
+        "You bought the good chair,",
+        "and the standing desk is",
+        "now a very nice shelf."
+      ],
+      "textAt": "top",
+      "caption": "Your back still hurts by 3pm, but the shelf looks great.\n\n#deskjob #backpain",
+      "note": "Launch 9, post 7.",
+      "shot": {
+        "scene": "A standing desk at sitting height piled with mail, folded laundry and a bag, a nice office chair in front",
+        "light": "window-side"
+      }
+    },
+    {
+      "id": "chair-picking",
+      "kind": "still",
+      "photo": "gen/s08-chairs.jpg",
+      "lines": [
+        "You've started choosing",
+        "where to sit based on how",
+        "hard it'll be to get up."
+      ],
+      "textAt": "top",
+      "caption": "The low couch at a friend's place has become a real threat.\n\n#lowerbackpain #backpain",
+      "note": "Launch 9, post 8.",
+      "shot": {
+        "scene": "A firm upright armchair next to a very low, soft beanbag chair, both empty",
+        "light": "window-side"
+      }
+    },
+    {
+      "id": "traffic",
+      "kind": "still",
+      "photo": "gen/s09-traffic.jpg",
+      "lines": [
+        "The drive home is forty",
+        "minutes, and your lower back",
+        "has opinions about all of them."
+      ],
+      "textAt": "top",
+      "caption": "You've tried every seat setting the car has, and you still feel it by the exit.\n\n#commute #lowerbackpain",
+      "note": "Launch 9, post 9 (top-left of the grid, newest).",
+      "shot": {
+        "scene": "Looking through the windshield at slow highway traffic, brake lights ahead, steering wheel low in frame",
+        "light": "car-day"
+      }
+    },
+    {
+      "id": "brushing-teeth",
+      "kind": "still",
+      "photo": "gen/s10-sink.jpg",
+      "shot": {
+        "scene": "A small white bathroom sink with a toothbrush resting on the edge and a hand towel on a ring beside it, mirror out of frame",
+        "light": "window-side"
+      },
+      "lines": [
+        "Brushing your teeth turns",
+        "out to be a forward bend",
+        "you do twice a day."
+      ],
+      "textAt": "top",
+      "caption": "Nobody counts it as exercise, but your lower back sure does.\n\n#lowerbackpain #backpain",
+      "note": "Static 10."
+    },
+    {
+      "id": "toys-floor",
+      "kind": "still",
+      "photo": "gen/s11-toys.jpg",
+      "shot": {
+        "scene": "Wooden toy blocks and a small toy truck scattered across a living room rug, a toy bin sitting empty in the corner",
+        "light": "low-sun"
+      },
+      "lines": [
+        "Picking toys up off the",
+        "floor is a lot of squats",
+        "nobody planned for."
+      ],
+      "textAt": "top",
+      "caption": "Forty squats before dinner, every night, unpaid.\n\n#parenting #backpain",
+      "note": "Static 11."
+    },
+    {
+      "id": "vacuum-stairs",
+      "kind": "still",
+      "photo": "gen/s12-vacuum.jpg",
+      "shot": {
+        "scene": "An upright vacuum cleaner parked at the bottom of a carpeted staircase, its cord coiled loosely on the floor",
+        "light": "dim-morning"
+      },
+      "lines": [
+        "Vacuuming the stairs is the",
+        "chore your back keeps",
+        "quietly skipping."
+      ],
+      "textAt": "top",
+      "caption": "The stairs can wait one more week, right?\n\n#lowerbackpain #cleaning",
+      "note": "Static 12."
+    },
+    {
+      "id": "groceries-one-trip",
+      "kind": "still",
+      "photo": "gen/s13-groceries.jpg",
+      "shot": {
+        "scene": "Paper grocery bags packed tight in the open trunk of a car parked in a driveway, a carton of plain eggs on top",
+        "light": "overcast-out"
+      },
+      "lines": [
+        "You carry all the groceries",
+        "in one trip out of pride,",
+        "and your back sends a bill."
+      ],
+      "textAt": "top",
+      "caption": "Two trips is allowed. We checked.\n\n#lowerbackpain #backpain",
+      "note": "Static 13."
+    },
+    {
+      "id": "sneeze",
+      "kind": "still",
+      "photo": "gen/s14-tissues.jpg",
+      "shot": {
+        "scene": "A plain white tissue box on a small side table by a window, one tissue pulled halfway out",
+        "light": "window-side"
+      },
+      "lines": [
+        "You brace for a sneeze now",
+        "like you're about to be",
+        "in a minor car accident."
+      ],
+      "textAt": "top",
+      "caption": "Hand on the counter, knees soft, here it comes.\n\n#backpain #lowerbackpain",
+      "note": "Static 14."
+    },
+    {
+      "id": "windshield",
+      "kind": "still",
+      "photo": "gen/s15-windshield.jpg",
+      "shot": {
+        "scene": "A frosted car windshield in a driveway on a cold morning, a plain plastic ice scraper resting on the hood, half of the glass scraped clear",
+        "light": "overcast-out"
+      },
+      "lines": [
+        "Scraping the windshield is",
+        "fine until you reach for",
+        "the middle of it."
+      ],
+      "textAt": "top",
+      "caption": "Every winter the windshield gets a little wider. Driver's side first or passenger side first?\n\n#lowerbackpain #backpain",
+      "note": "Static 15, Nov 10 playbook: movement moment (reach)."
+    },
+    {
+      "id": "dishwasher",
+      "kind": "still",
+      "photo": "gen/s16-dishwasher.jpg",
+      "shot": {
+        "scene": "A built-in dishwasher under a kitchen counter with its door folded down flat and the bottom rack rolled out onto the open door, clean plates and a cutlery basket in the rack",
+        "light": "window-side"
+      },
+      "lines": [
+        "Unloading the dishwasher",
+        "is ten bends and one strong",
+        "opinion from your back."
+      ],
+      "textAt": "top",
+      "caption": "The bottom rack is where the forks go to test you. Who unloads at your house?\n\n#backpain #lowerbackpain",
+      "note": "Static 16, movement moment (bend)."
+    },
+    {
+      "id": "dog-bowl",
+      "kind": "still",
+      "photo": "gen/s17-dog-bowl.jpg",
+      "shot": {
+        "scene": "A stainless steel dog bowl on a kitchen floor beside a measuring scoop and a plain paper bag of kibble, an empty dog bed in the corner",
+        "light": "window-side"
+      },
+      "lines": [
+        "Filling the dog bowl is the",
+        "lowest you go all day, and",
+        "your back knows the spot."
+      ],
+      "textAt": "top",
+      "caption": "The dog has never once said thank you. What's the lowest thing you reach for every day?\n\n#lowerbackpain #backpain",
+      "note": "Static 17, movement moment (bend)."
+    },
+    {
+      "id": "neighbor-car",
+      "kind": "still",
+      "photo": "gen/s18-car-door.jpg",
+      "shot": {
+        "scene": "A parked car at the curb in front of a house with the driver's door wide open, a grocery bag on the passenger seat, a lawn across the street",
+        "light": "low-sun"
+      },
+      "lines": [
+        "My neighbor watched me get",
+        "out of the car and asked if",
+        "I'd just driven from Ohio."
+      ],
+      "textAt": "top",
+      "caption": "It was ten minutes from the grocery store. Who has caught you getting out of the car?\n\n#lowerbackpain #backpain",
+      "note": "Static 18, 20% test other-person-hook (first person allowed in tests only)."
+    },
+    {
+      "id": "oven-door",
+      "kind": "still",
+      "photo": "gen/s19-oven.jpg",
+      "shot": {
+        "scene": "An open kitchen oven door with a roasting pan on the middle rack, a pair of oven mitts on the counter beside it",
+        "light": "evening-lamp"
+      },
+      "lines": [
+        "Most of Thanksgiving is",
+        "bending over an open oven",
+        "with something hot in hand."
+      ],
+      "textAt": "top",
+      "caption": "The turkey gets basted four times and your back notices every one. Who's on oven duty this year?\n\n#thanksgiving #lowerbackpain",
+      "note": "Static 19, movement moment (bend), seasonal."
+    },
+    {
+      "id": "bathtub",
+      "kind": "still",
+      "photo": "gen/s20-bathtub.jpg",
+      "shot": {
+        "scene": "A white bathtub with a long-handled scrub brush and a plain spray bottle on its edge, a folded towel on the bath mat",
+        "light": "window-side"
+      },
+      "lines": [
+        "Cleaning the bathtub is the",
+        "one chore where you kneel",
+        "on purpose and regret it."
+      ],
+      "textAt": "top",
+      "caption": "The brush has a long handle and you still end up on your knees. Tub or shower, which is worse?\n\n#backpain #lowerbackpain",
+      "note": "Static 20, movement moment (kneel)."
+    },
+    {
+      "id": "remote-gap",
+      "kind": "still",
+      "photo": "gen/s21-remote.jpg",
+      "shot": {
+        "scene": "The narrow gap between the back of a fabric couch and a living room wall, a TV remote lying on the floor in the gap with a little dust",
+        "light": "evening-lamp"
+      },
+      "lines": [
+        "The remote fell between",
+        "the couch and the wall,",
+        "and it lives there now."
+      ],
+      "textAt": "top",
+      "caption": "It still works from back there if you aim at the ceiling. What have you stopped reaching for?\n\n#lowerbackpain #backpain",
+      "note": "Static 21, movement moment (reach)."
+    }
+  ]
+}

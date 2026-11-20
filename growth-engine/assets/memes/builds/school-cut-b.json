@@ -1,0 +1,18 @@
+{
+  "id": "school-cut-b",
+  "clip": "assets/memes/clips/school-shock.mp4",
+  "seconds": 5.6,
+  "trim": 0.9,
+  "zoom": 1.11,
+  "pan": 0.18,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 880, "h": 270 },
+  "text": [
+    { "lines": ["When you stand up", "after sitting all day", "and your back locks"], "y": 906, "size": 44, "font": "black" }
+  ],
+  "title": "Cut B — stand up, back locks",
+  "caption": "When you stand up after sitting all day and your back locks",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — tino.q7z"
+}

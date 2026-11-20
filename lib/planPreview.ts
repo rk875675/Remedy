@@ -1,3 +1,5 @@
+import type { Intake } from './intake';
+import { completeIntake } from './intakeSummary';
 import { supabase } from './supabase';
 import {
   onboardingAnswersInputSchema,
@@ -16,15 +18,29 @@ export type PreviewLoad =
 const previewByAnswers = new Map<string, Promise<PreviewLoad>>();
 const resolvedByAnswers = new Map<string, PreviewLoad>();
 
-export function answersPreviewKey(answers: OnboardingAnswersInput): string {
-  return [
+function intakeHash(intake: Intake): string {
+  const json = JSON.stringify(intake);
+  let hash = 2166136261;
+  for (let i = 0; i < json.length; i++) {
+    hash ^= json.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+export function answersPreviewKey(answers: OnboardingAnswersInput, intake?: Intake | null): string {
+  const base = [
     answers.pain_location,
     answers.pain_duration,
     answers.activity_level,
     answers.equipment,
     answers.sessions_per_week_preference,
     answers.main_goal[0] ?? '',
+    answers.pain_type.join(','),
+    answers.pain_trigger.join(','),
   ].join(':');
+  if (!intake) return base;
+  return `${base}:i${intakeHash(intake)}`;
 }
 
 type AnswerSource = {
@@ -52,12 +68,18 @@ export function parseCompleteAnswers(answers: AnswerSource): OnboardingAnswersIn
   return result.success ? result.data : null;
 }
 
-export function loadPlanPreview(answers: OnboardingAnswersInput): Promise<PreviewLoad> {
-  const key = answersPreviewKey(answers);
+export function loadPlanPreview(
+  answers: OnboardingAnswersInput,
+  intake?: Intake | null,
+): Promise<PreviewLoad> {
+  const key = answersPreviewKey(answers, intake);
   const existing = previewByAnswers.get(key);
   if (existing) return existing;
+  const body = intake
+    ? { preview_only: true as const, answers, intake }
+    : { preview_only: true as const, answers };
   const pending = supabase.functions
-    .invoke('assign-program', { body: { preview_only: true, answers } })
+    .invoke('assign-program', { body })
     .then(({ data, error: invokeError }) => {
       const parsed = invokeError ? null : planPreviewSchema.safeParse(data);
       return parsed?.success ? { ok: true as const, data: parsed.data } : { ok: false as const };
@@ -71,12 +93,17 @@ export function loadPlanPreview(answers: OnboardingAnswersInput): Promise<Previe
   return pending;
 }
 
-export function peekPlanPreview(answers: OnboardingAnswersInput): PreviewLoad | null {
-  return resolvedByAnswers.get(answersPreviewKey(answers)) ?? null;
+export function peekPlanPreview(
+  answers: OnboardingAnswersInput,
+  intake?: Intake | null,
+): PreviewLoad | null {
+  return resolvedByAnswers.get(answersPreviewKey(answers, intake)) ?? null;
 }
 
 /** Kick off assign-program preview during the building animation so match has copy ready. */
-export function prefetchPlanPreview(answers: AnswerSource): void {
+export function prefetchPlanPreview(answers: AnswerSource, intakePartial?: unknown): void {
   const complete = parseCompleteAnswers(answers);
-  if (complete) void loadPlanPreview(complete);
+  if (!complete) return;
+  const intake = intakePartial === undefined ? null : completeIntake(answers, intakePartial);
+  void loadPlanPreview(complete, intake);
 }

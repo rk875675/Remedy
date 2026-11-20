@@ -1,0 +1,1830 @@
+{
+  "exercises": [
+    {
+      "id": "cccc0001-0000-0000-0000-000000000001",
+      "name": "Cat-Cow Stretch",
+      "sets": 2,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 20,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "lumbar_mobility",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "morning",
+        "sitting"
+      ],
+      "goals_weight": {
+        "mobility": 0.8,
+        "reduce_pain": 0.6,
+        "return_to_exercise": 0.3,
+        "sleep": 0.4
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 1,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000002",
+      "name": "Thoracic Extension (Chair-Assisted)",
+      "sets": 2,
+      "reps": 8,
+      "duration_seconds": null,
+      "rest_seconds": 20,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "upper",
+        "middle",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "thoracic_mobility",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting"
+      ],
+      "goals_weight": {
+        "mobility": 0.8,
+        "reduce_pain": 0.6
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000003",
+      "name": "Open-Book Rotation",
+      "sets": 2,
+      "reps": 8,
+      "duration_seconds": null,
+      "rest_seconds": 20,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "upper",
+        "middle"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "thoracic_mobility",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "morning"
+      ],
+      "goals_weight": {
+        "mobility": 0.8,
+        "reduce_pain": 0.5
+      },
+      "effectiveness": 3,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000004",
+      "name": "Standing Hip Flexor Stretch",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 30,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "hip_mobility",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "standing"
+      ],
+      "goals_weight": {
+        "mobility": 0.7,
+        "reduce_pain": 0.6
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000006",
+      "name": "Bird Dog",
+      "sets": 3,
+      "reps": 5,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "spinal_stability",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending",
+        "standing"
+      ],
+      "goals_weight": {
+        "mobility": 0.3,
+        "reduce_pain": 0.8,
+        "return_to_exercise": 0.6
+      },
+      "effectiveness": 5,
+      "fatigue_cost": 2,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000007",
+      "name": "Dead Bug",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 20,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "core_activation",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.8,
+        "return_to_exercise": 0.6
+      },
+      "effectiveness": 5,
+      "fatigue_cost": 2,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000008",
+      "name": "Glute Bridge",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "glute_activation",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "standing"
+      ],
+      "goals_weight": {
+        "mobility": 0.3,
+        "reduce_pain": 0.7,
+        "return_to_exercise": 0.6
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000009",
+      "name": "Side Plank (Knees)",
+      "sets": 3,
+      "reps": 4,
+      "duration_seconds": 10,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "spinal_stability",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.7,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000011",
+      "name": "Bodyweight Hip Hinge",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "hip_hinge",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending"
+      ],
+      "goals_weight": {
+        "mobility": 0.3,
+        "reduce_pain": 0.7,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000012",
+      "name": "Banded Romanian Deadlift",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 45,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "hip_hinge",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000013",
+      "name": "Dumbbell Romanian Deadlift",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 60,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "hip_hinge",
+      "pain_types_safe": [
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending",
+        "exercise"
+      ],
+      "goals_weight": {
+        "return_to_exercise": 0.9
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 4,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000014",
+      "name": "Goblet Squat",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 60,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "lower_body_strength",
+      "pain_types_safe": [
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "exercise",
+        "standing"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.4,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000015",
+      "name": "Barbell Hip Thrust",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 75,
+      "equipment_tier": "gym",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "glute_activation",
+      "pain_types_safe": [
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "exercise",
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.4,
+        "return_to_exercise": 0.9
+      },
+      "effectiveness": 5,
+      "fatigue_cost": 4,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 6
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000016",
+      "name": "Seated Cable Row",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 60,
+      "equipment_tier": "gym",
+      "pain_areas": [
+        "upper",
+        "middle",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "posterior_chain_strength",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000017",
+      "name": "Leg Press",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 75,
+      "equipment_tier": "gym",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "lower_body_strength",
+      "pain_types_safe": [
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "exercise"
+      ],
+      "goals_weight": {
+        "return_to_exercise": 0.9
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 4,
+      "usefulness": 3,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000018",
+      "name": "Child's Pose Hold",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 40,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "stretch_recovery",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "morning"
+      ],
+      "goals_weight": {
+        "mobility": 0.5,
+        "reduce_pain": 0.6,
+        "sleep": 0.7
+      },
+      "effectiveness": 3,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "recovery",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000019",
+      "name": "Supine Figure-4 Stretch",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 30,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "stretch_recovery",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting"
+      ],
+      "goals_weight": {
+        "mobility": 0.5,
+        "reduce_pain": 0.6,
+        "sleep": 0.6
+      },
+      "effectiveness": 3,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "recovery",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000022",
+      "name": "McKenzie Press-Up",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 20,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "lumbar_extension",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "bending",
+        "standing"
+      ],
+      "goals_weight": {
+        "mobility": 0.7,
+        "reduce_pain": 0.9
+      },
+      "effectiveness": 5,
+      "fatigue_cost": 1,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000026",
+      "name": "Single-Leg Glute Bridge",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "glute_activation",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.6,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000028",
+      "name": "Bodyweight Squat",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "lower_body_strength",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "exercise",
+        "bending"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.4,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000029",
+      "name": "Single-Leg Romanian Deadlift",
+      "sets": 3,
+      "reps": 8,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "hip_hinge",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.4,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000030",
+      "name": "Supine Hamstring Stretch",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 30,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "stretch_recovery",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "morning"
+      ],
+      "goals_weight": {
+        "mobility": 0.7,
+        "reduce_pain": 0.6,
+        "sleep": 0.6
+      },
+      "effectiveness": 3,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "recovery",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000031",
+      "name": "Side Plank (Full)",
+      "sets": 3,
+      "reps": 4,
+      "duration_seconds": 10,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "spinal_stability",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.6,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000032",
+      "name": "Split Squat",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 45,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "lower_body_strength",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "exercise",
+        "standing"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.4,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000033",
+      "name": "Banded Row",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 45,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "upper",
+        "middle",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "posterior_chain_strength",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000034",
+      "name": "Suitcase Carry",
+      "sets": 3,
+      "reps": null,
+      "duration_seconds": 30,
+      "rest_seconds": 45,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "spinal_stability",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.9
+      },
+      "effectiveness": 5,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000035",
+      "name": "Kettlebell Deadlift",
+      "sets": 3,
+      "reps": 8,
+      "duration_seconds": null,
+      "rest_seconds": 90,
+      "equipment_tier": "gym",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "hip_hinge",
+      "pain_types_safe": [
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.9
+      },
+      "effectiveness": 5,
+      "fatigue_cost": 4,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 6
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000036",
+      "name": "Back Extension (45°)",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 60,
+      "equipment_tier": "gym",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 4,
+      "movement_pattern": "posterior_chain_strength",
+      "pain_types_safe": [
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "bending",
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.6,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000005",
+      "name": "Knee-to-Chest",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 30,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "lumbar_flexion",
+      "pain_types_safe": [
+        "stiffness",
+        "ache",
+        "all"
+      ],
+      "triggers_addressed": [
+        "morning"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.7,
+        "mobility": 0.6,
+        "sleep": 0.5
+      },
+      "effectiveness": 3,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000021",
+      "name": "Double Knee-to-Chest",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 20,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "lumbar_flexion",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "morning",
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.8,
+        "mobility": 0.6,
+        "sleep": 0.5
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 1,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000037",
+      "name": "Seated Sciatic Nerve Slider",
+      "sets": 2,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "nerve_glide",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "bending"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.7,
+        "mobility": 0.6
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "mobility",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000038",
+      "name": "Side-Lying Hip Abduction",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "hip_abduction",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing",
+        "walking"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.6,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000039",
+      "name": "Banded Lateral Walk",
+      "sets": 3,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "hip_abduction",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing",
+        "walking"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000040",
+      "name": "Plank Shoulder Taps",
+      "sets": 2,
+      "reps": 8,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "anti_rotation",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "standing",
+        "exercise"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.7,
+        "return_to_exercise": 0.6
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000042",
+      "name": "Wall Angel",
+      "sets": 2,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "upper",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "scapular",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.6,
+        "mobility": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "activation",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000043",
+      "name": "Band Pull-Apart",
+      "sets": 3,
+      "reps": 12,
+      "duration_seconds": null,
+      "rest_seconds": 45,
+      "equipment_tier": "bands_dumbbells",
+      "pain_areas": [
+        "upper",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "scapular",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 4
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000044",
+      "name": "Sit-to-Stand",
+      "sets": 2,
+      "reps": 10,
+      "duration_seconds": null,
+      "rest_seconds": 30,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 2,
+      "movement_pattern": "functional",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "sitting",
+        "standing"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.5,
+        "return_to_exercise": 0.7
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 2,
+      "usefulness": 5,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 3
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000045",
+      "name": "Step-Up",
+      "sets": 3,
+      "reps": 8,
+      "duration_seconds": null,
+      "rest_seconds": 45,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "general"
+      ],
+      "intensity_tier": 3,
+      "movement_pattern": "functional",
+      "pain_types_safe": [
+        "ache",
+        "stiffness",
+        "all"
+      ],
+      "triggers_addressed": [
+        "exercise",
+        "standing"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.4,
+        "return_to_exercise": 0.8
+      },
+      "effectiveness": 4,
+      "fatigue_cost": 3,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "strength",
+      "duration_minutes_est": 5
+    },
+    {
+      "id": "cccc0001-0000-0000-0000-000000000046",
+      "name": "90-90 Breathing",
+      "sets": 2,
+      "reps": null,
+      "duration_seconds": 60,
+      "rest_seconds": 15,
+      "equipment_tier": "open_space",
+      "pain_areas": [
+        "lower",
+        "upper",
+        "general"
+      ],
+      "intensity_tier": 1,
+      "movement_pattern": "breathing",
+      "pain_types_safe": [
+        "all"
+      ],
+      "triggers_addressed": [
+        "morning",
+        "sitting"
+      ],
+      "goals_weight": {
+        "reduce_pain": 0.6,
+        "sleep": 0.7,
+        "mobility": 0.4
+      },
+      "effectiveness": 3,
+      "fatigue_cost": 1,
+      "usefulness": 4,
+      "aggravates": [],
+      "phase": "recovery",
+      "duration_minutes_est": 3
+    }
+  ],
+  "details": [
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000001",
+      "slug": "cat-cow",
+      "dose_class": "mobility_dynamic",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bed",
+        "sitting"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000002",
+      "slug": "thoracic-extension",
+      "dose_class": "mobility_dynamic",
+      "spine_bias": "extension",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "overhead"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000003",
+      "slug": "open-book-rotation",
+      "dose_class": "mobility_dynamic",
+      "spine_bias": "rotation",
+      "contra": [
+        "rotation_endrange"
+      ],
+      "function_targets": [
+        "twisting",
+        "overhead"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000004",
+      "slug": "hip-flexor-stretch",
+      "dose_class": "stretch_static",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "standing",
+        "walking"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000006",
+      "slug": "bird-dog",
+      "dose_class": "motor_control",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bed",
+        "bending",
+        "standing",
+        "walking"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000007",
+      "slug": "dead-bug",
+      "dose_class": "motor_control",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bed",
+        "bending",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000008",
+      "slug": "glute-bridge",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bed",
+        "stairs",
+        "walking",
+        "standing",
+        "sitting"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000009",
+      "slug": "side-plank-knees",
+      "dose_class": "isometric_core",
+      "spine_bias": "lateral",
+      "contra": [],
+      "function_targets": [
+        "standing",
+        "walking",
+        "stairs"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000011",
+      "slug": "bodyweight-hip-hinge",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bending",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000012",
+      "slug": "banded-romanian-deadlift",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [
+        "flexion_loaded"
+      ],
+      "function_targets": [
+        "bending",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000013",
+      "slug": "dumbbell-romanian-deadlift",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [
+        "flexion_loaded"
+      ],
+      "function_targets": [
+        "bending",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000014",
+      "slug": "goblet-squat",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [
+        "flexion_loaded"
+      ],
+      "function_targets": [
+        "stairs",
+        "bending",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000015",
+      "slug": "barbell-hip-thrust",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [
+        "high_iap"
+      ],
+      "function_targets": [
+        "exercise",
+        "stairs",
+        "bending"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000016",
+      "slug": "seated-cable-row",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000017",
+      "slug": "leg-press",
+      "dose_class": "loaded_strength",
+      "spine_bias": "flexion",
+      "contra": [
+        "flexion_loaded"
+      ],
+      "function_targets": [
+        "stairs",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000018",
+      "slug": "childs-pose",
+      "dose_class": "stretch_static",
+      "spine_bias": "flexion",
+      "contra": [
+        "flexion_endrange"
+      ],
+      "function_targets": [
+        "sleep",
+        "standing",
+        "walking"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000019",
+      "slug": "figure-4-stretch",
+      "dose_class": "stretch_static",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "sleep",
+        "walking"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000022",
+      "slug": "mckenzie-press-up",
+      "dose_class": "mobility_dynamic",
+      "spine_bias": "extension",
+      "contra": [
+        "extension_endrange",
+        "prone"
+      ],
+      "function_targets": [
+        "sitting",
+        "bending",
+        "bed"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000026",
+      "slug": "single-leg-glute-bridge",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [
+        "balance_challenge"
+      ],
+      "function_targets": [
+        "stairs",
+        "walking",
+        "exercise"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000028",
+      "slug": "bodyweight-squat",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "stairs",
+        "bending",
+        "standing"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000029",
+      "slug": "single-leg-romanian-deadlift",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [
+        "balance_challenge"
+      ],
+      "function_targets": [
+        "bending",
+        "stairs",
+        "walking"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000030",
+      "slug": "hamstring-stretch",
+      "dose_class": "stretch_static",
+      "spine_bias": "neutral",
+      "contra": [
+        "neural_tension"
+      ],
+      "function_targets": [
+        "bending",
+        "sitting"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000031",
+      "slug": "side-plank",
+      "dose_class": "isometric_core",
+      "spine_bias": "lateral",
+      "contra": [
+        "high_iap"
+      ],
+      "function_targets": [
+        "standing",
+        "walking",
+        "stairs",
+        "exercise"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000032",
+      "slug": "split-squat",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [
+        "balance_challenge"
+      ],
+      "function_targets": [
+        "stairs",
+        "walking",
+        "exercise"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000033",
+      "slug": "banded-row",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "overhead",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000034",
+      "slug": "suitcase-carry",
+      "dose_class": "isometric_core",
+      "spine_bias": "lateral",
+      "contra": [],
+      "function_targets": [
+        "walking",
+        "standing",
+        "stairs",
+        "bending"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000035",
+      "slug": "kettlebell-deadlift",
+      "dose_class": "loaded_strength",
+      "spine_bias": "neutral",
+      "contra": [
+        "flexion_loaded",
+        "high_iap"
+      ],
+      "function_targets": [
+        "bending",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000036",
+      "slug": "back-extension",
+      "dose_class": "loaded_strength",
+      "spine_bias": "extension",
+      "contra": [
+        "extension_loaded",
+        "prone"
+      ],
+      "function_targets": [
+        "bending",
+        "exercise",
+        "standing"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000005",
+      "slug": "knee-to-chest",
+      "dose_class": "stretch_static",
+      "spine_bias": "flexion",
+      "contra": [
+        "flexion_endrange"
+      ],
+      "function_targets": [
+        "standing",
+        "walking",
+        "sleep"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000021",
+      "slug": "double-knee-to-chest",
+      "dose_class": "stretch_static",
+      "spine_bias": "flexion",
+      "contra": [
+        "flexion_endrange"
+      ],
+      "function_targets": [
+        "standing",
+        "bed",
+        "walking"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000037",
+      "slug": "seated-sciatic-nerve-slider",
+      "dose_class": "neural_mobilization",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "bending",
+        "walking"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000038",
+      "slug": "side-lying-hip-abduction",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "walking",
+        "stairs",
+        "standing"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000039",
+      "slug": "banded-lateral-walk",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [
+        "balance_challenge"
+      ],
+      "function_targets": [
+        "walking",
+        "stairs",
+        "standing"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000040",
+      "slug": "plank-shoulder-taps",
+      "dose_class": "motor_control",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bending",
+        "standing",
+        "exercise"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000042",
+      "slug": "wall-angel",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "overhead"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000043",
+      "slug": "band-pull-apart",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "overhead",
+        "exercise"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000044",
+      "slug": "sit-to-stand",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "sitting",
+        "standing",
+        "stairs"
+      ],
+      "per_side": false
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000045",
+      "slug": "step-up",
+      "dose_class": "strength_endurance",
+      "spine_bias": "neutral",
+      "contra": [
+        "balance_challenge"
+      ],
+      "function_targets": [
+        "stairs",
+        "walking",
+        "exercise"
+      ],
+      "per_side": true
+    },
+    {
+      "exercise_id": "cccc0001-0000-0000-0000-000000000046",
+      "slug": "90-90-breathing",
+      "dose_class": "breathing",
+      "spine_bias": "neutral",
+      "contra": [],
+      "function_targets": [
+        "bed",
+        "sleep",
+        "sitting"
+      ],
+      "per_side": false
+    }
+  ]
+}

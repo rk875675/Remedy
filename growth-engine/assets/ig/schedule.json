@@ -1,0 +1,67 @@
+{
+  "tz": "America/Chicago",
+  "items": [
+    { "at": "2026-11-02T11:38:00-06:00", "kind": "carousel", "id": "bed-office" },
+    { "at": "2026-11-02T19:52:00-06:00", "kind": "static", "id": "couch-technique" },
+
+    { "at": "2026-11-03T13:06:00-06:00", "kind": "static", "id": "one-leg" },
+    { "at": "2026-11-03T20:41:00-06:00", "kind": "carousel", "id": "laundry" },
+
+    { "at": "2026-11-04T08:23:00-06:00", "kind": "static", "id": "shoes" },
+    { "at": "2026-11-04T18:12:00-06:00", "kind": "carousel", "id": "cooking" },
+
+    { "at": "2026-11-05T12:17:00-06:00", "kind": "carousel", "id": "car-seat" },
+    { "at": "2026-11-05T21:03:00-06:00", "kind": "static", "id": "stood-up" },
+
+    { "at": "2026-11-06T07:36:00-06:00", "kind": "static", "id": "socks" },
+    { "at": "2026-11-06T21:31:00-06:00", "kind": "carousel", "id": "pillows" },
+
+    { "at": "2026-11-07T10:27:00-06:00", "kind": "carousel", "id": "yard" },
+    { "at": "2026-11-07T17:44:00-06:00", "kind": "static", "id": "slow-walk" },
+
+    { "at": "2026-11-08T09:08:00-06:00", "kind": "carousel", "id": "slow-morning" },
+    { "at": "2026-11-08T19:19:00-06:00", "kind": "static", "id": "standing-desk-shelf" },
+
+    { "at": "2026-11-09T08:11:00-06:00", "kind": "static", "id": "chair-picking" },
+    { "at": "2026-11-09T19:26:00-06:00", "kind": "carousel", "id": "gym-return" },
+
+    { "at": "2026-11-10T11:09:00-06:00", "kind": "carousel", "id": "back-drawer" },
+    { "at": "2026-11-10T17:37:00-06:00", "kind": "static", "id": "traffic" },
+
+    { "at": "2026-11-11T07:58:00-06:00", "kind": "static", "id": "brushing-teeth" },
+    { "at": "2026-11-11T18:46:00-06:00", "kind": "carousel", "id": "dog-walk" },
+
+    { "at": "2026-11-12T14:14:00-06:00", "kind": "static", "id": "toys-floor" },
+    { "at": "2026-11-12T20:07:00-06:00", "kind": "carousel", "id": "bleachers" },
+
+    { "at": "2026-11-13T10:18:00-06:00", "kind": "static", "id": "vacuum-stairs" },
+    { "at": "2026-11-13T16:51:00-06:00", "kind": "carousel", "id": "road-trip" },
+
+    { "at": "2026-11-14T09:43:00-06:00", "kind": "carousel", "id": "pickleball" },
+    { "at": "2026-11-14T15:29:00-06:00", "kind": "static", "id": "groceries-one-trip" },
+
+    { "at": "2026-11-15T11:56:00-06:00", "kind": "static", "id": "sneeze" },
+    { "at": "2026-11-15T17:23:00-06:00", "kind": "carousel", "id": "holiday-bins" },
+
+    { "at": "2026-11-16T08:17:00-06:00", "kind": "static", "id": "windshield" },
+    { "at": "2026-11-16T19:41:00-06:00", "kind": "carousel", "id": "bath-time" },
+
+    { "at": "2026-11-17T12:09:00-06:00", "kind": "carousel", "id": "first-shovel" },
+    { "at": "2026-11-17T20:33:00-06:00", "kind": "static", "id": "dishwasher" },
+
+    { "at": "2026-11-18T09:47:00-06:00", "kind": "static", "id": "dog-bowl" },
+    { "at": "2026-11-18T18:29:00-06:00", "kind": "carousel", "id": "tried-ranked" },
+
+    { "at": "2026-11-19T10:53:00-06:00", "kind": "carousel", "id": "fitted-sheet" },
+    { "at": "2026-11-19T17:11:00-06:00", "kind": "static", "id": "neighbor-car" },
+
+    { "at": "2026-11-20T13:37:00-06:00", "kind": "static", "id": "oven-door" },
+    { "at": "2026-11-20T19:03:00-06:00", "kind": "carousel", "id": "thanksgiving-plan" },
+
+    { "at": "2026-11-21T11:19:00-06:00", "kind": "carousel", "id": "holiday-suitcase" },
+    { "at": "2026-11-21T16:47:00-06:00", "kind": "static", "id": "bathtub" },
+
+    { "at": "2026-11-22T09:13:00-06:00", "kind": "static", "id": "remote-gap" },
+    { "at": "2026-11-22T18:59:00-06:00", "kind": "carousel", "id": "tree-water" }
+  ]
+}

@@ -8,6 +8,9 @@ const LIBRARY_OVERRIDES_KEY = "growth/library-overrides.json";
 const RATE_LIMIT_KEY = "growth/rate-limits.json";
 const FORMATS_KEY = "growth/format-refs.json";
 const MEMES_KEY = "growth/memes.json";
+const BITEPAL_HIDDEN_KEY = "growth/bitepal-hidden.json";
+const BITEPAL_LABELS_KEY = "growth/bitepal-labels.json";
+const BITEPAL_LABEL_MAX = 800;
 
 interface R2Object {
   text(): Promise<string>;
@@ -438,6 +441,63 @@ function advanceManual(dash: Dashboard, postId: number): ManualPosting {
   return state;
 }
 
+function normalizeBitepalHidden(raw: unknown): string[] {
+  if (!raw || typeof raw !== "object") return [];
+  const ids = (raw as { ids?: unknown }).ids;
+  if (!Array.isArray(ids)) return [];
+  const out: string[] = [];
+  for (const id of ids) {
+    if (typeof id === "string" && /^bp-\d{3}$/.test(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
+async function readBitepalHidden(bucket: R2Bucket): Promise<string[]> {
+  try {
+    const obj = await bucket.get(BITEPAL_HIDDEN_KEY);
+    if (!obj) return [];
+    return normalizeBitepalHidden(JSON.parse(await obj.text()));
+  } catch {
+    return [];
+  }
+}
+
+async function writeBitepalHidden(bucket: R2Bucket, ids: string[]): Promise<void> {
+  await bucket.put(BITEPAL_HIDDEN_KEY, JSON.stringify({ ids: normalizeBitepalHidden({ ids }) }), {
+    httpMetadata: { contentType: "application/json" },
+  });
+}
+
+function normalizeBitepalLabels(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object") return {};
+  const labels = (raw as { labels?: unknown }).labels;
+  if (!labels || typeof labels !== "object") return {};
+  const out: Record<string, string> = {};
+  for (const [id, value] of Object.entries(labels)) {
+    if (!/^bp-\d{3}$/.test(id) || typeof value !== "string") continue;
+    const text = value.trim();
+    if (!text || text.length > BITEPAL_LABEL_MAX) continue;
+    out[id] = text;
+  }
+  return out;
+}
+
+async function readBitepalLabels(bucket: R2Bucket): Promise<Record<string, string>> {
+  try {
+    const obj = await bucket.get(BITEPAL_LABELS_KEY);
+    if (!obj) return {};
+    return normalizeBitepalLabels(JSON.parse(await obj.text()));
+  } catch {
+    return {};
+  }
+}
+
+async function writeBitepalLabels(bucket: R2Bucket, labels: Record<string, string>): Promise<void> {
+  await bucket.put(BITEPAL_LABELS_KEY, JSON.stringify({ labels: normalizeBitepalLabels({ labels }) }), {
+    httpMetadata: { contentType: "application/json" },
+  });
+}
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -705,6 +765,33 @@ export const onRequest = async (context: { request: Request; env: Env; params: {
       await writeFormats(bucket, items.filter((item) => item.id !== parts[1]));
       return json({ ok: true });
     }
+  }
+  if (parts[0] === "bitepal") {
+    if (me.role !== "operator") return json({ ok: false, error: "Not allowed" }, 403);
+    if (method === "GET" && parts[1] === "hidden" && !parts[2]) return json({ ids: await readBitepalHidden(bucket) });
+    if (method === "GET" && parts[1] === "labels" && !parts[2]) return json({ labels: await readBitepalLabels(bucket) });
+    if (method === "PUT" && parts[2] === "label" && parts[1] && /^bp-\d{3}$/.test(parts[1]) && !parts[3]) {
+      const body = (await context.request.json().catch(() => null)) as { label?: unknown } | null;
+      const label = body && typeof body.label === "string" ? body.label.trim() : null;
+      if (label === null) return json({ ok: false, error: "Description is required." }, 400);
+      if (label.length > BITEPAL_LABEL_MAX) {
+        return json({ ok: false, error: `Description must be ${BITEPAL_LABEL_MAX} characters or fewer.` }, 400);
+      }
+      const labels = await readBitepalLabels(bucket);
+      if (label) labels[parts[1]] = label;
+      else delete labels[parts[1]];
+      await writeBitepalLabels(bucket, labels);
+      return json({ ok: true, label });
+    }
+    if (method === "DELETE" && parts[1] && /^bp-\d{3}$/.test(parts[1]) && !parts[2]) {
+      const blocked = await checkWriteLimit(bucket);
+      if (blocked) return json({ ok: false, error: blocked }, 429);
+      const ids = await readBitepalHidden(bucket);
+      if (!ids.includes(parts[1])) ids.push(parts[1]);
+      await writeBitepalHidden(bucket, ids);
+      return json({ ok: true, ids });
+    }
+    return json({ ok: false, error: "Not found" }, 404);
   }
   if (parts[0] === "memes") {
     if (me.role !== "operator") return json({ ok: false, error: "Not allowed" }, 403);

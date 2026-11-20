@@ -1,0 +1,33 @@
+{
+  "id": "doctor-legs",
+  "format": "DeNAShnIYAy",
+  "variantOf": "picked-that-box",
+  "changed": "gif box lift, new text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-box-lift.gif",
+    "x": -104,
+    "y": 792,
+    "width": 902
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: did you lift",
+        "with your legs?",
+        "Me:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: did you lift with your legs?",
+  "caption": "Doctor: did you lift with your legs? Me:",
+  "description": "Exam room, overhead box lift, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

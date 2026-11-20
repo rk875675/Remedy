@@ -1,0 +1,33 @@
+{
+  "id": "doctor-work-party",
+  "format": "DeNAShnIYAy",
+  "variantOf": "picked-that-box",
+  "changed": "gif napoleon, new text",
+  "background": "DeNAShnIYAy/02-background.jpg",
+  "gif": {
+    "file": "DeNAShnIYAy/gif-napoleon.gif",
+    "x": -150,
+    "y": 610,
+    "width": 1200
+  },
+  "audio": {
+    "file": "DeNAShnIYAy/05-audio-original-sound.mp3",
+    "start": 0
+  },
+  "seconds": 12,
+  "text": [
+    {
+      "lines": [
+        "Doctor: so when did the",
+        "back pain start?",
+        "Me at the work party:"
+      ],
+      "y": 140
+    }
+  ],
+  "title": "Doctor: so when did the back pain start?",
+  "caption": "Doctor: so when did the back pain start? Me at the work party:",
+  "description": "Exam room, Napoleon Dynamite dance, the sound from that format.",
+  "musicCredit": "Sound: original sound — Anthony Fuhrman",
+  "results": []
+}

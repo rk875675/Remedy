@@ -1,0 +1,18 @@
+{
+  "id": "oreo-cut-a",
+  "clip": "assets/memes/clips/oreo-mug.mp4",
+  "seconds": 7.2,
+  "trim": 0.3,
+  "zoom": 1.06,
+  "pan": 0.5,
+  "speed": 1.05,
+  "pitch": 1.03,
+  "wipe": { "y": 460, "h": 360 },
+  "text": [
+    { "lines": ["POV: you bent down", "to grab one sock and", "your back gave out"], "y": 490, "size": 64, "font": "impact" }
+  ],
+  "title": "Cut A — sock, back gave out",
+  "caption": "POV: you bent down to grab one sock and your back gave out",
+  "description": "Outlined caption, no white panel. Audio pitched up 3%. Inspo: tiktok.com/@memesource060/video/7676207091266096406",
+  "musicCredit": "Sound: original, 5% faster, pitch up 3% — memesource060"
+}

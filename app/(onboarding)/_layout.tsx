@@ -15,6 +15,9 @@ export default function OnboardingLayout() {
         gestureEnabled: true,
         ...screenTransitionOptions,
       }}
-    />
+    >
+      <Stack.Screen name="finalizing" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="match" options={{ gestureEnabled: false }} />
+    </Stack>
   );
 }

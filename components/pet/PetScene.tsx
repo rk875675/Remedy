@@ -85,6 +85,8 @@ import {
   restBody,
 } from './petMotion';
 import { usePetFace } from './usePetFace';
+import { MeadowStage } from '../onboarding/coldopen/MeadowStage';
+import type { DaySky } from '../../lib/daySky';
 
 type PetSceneProps = {
   topInset: number;
@@ -93,6 +95,8 @@ type PetSceneProps = {
   onPressFirstName?: () => void;
   pet: PetState | null;
   mood: PetMood;
+  /** Clock sky. Home only. */
+  sky?: DaySky;
   children?: React.ReactNode;
 };
 
@@ -222,7 +226,7 @@ function legPuffs(
   }));
 }
 
-/** Home hero: forest-green panel with the pet on a soft hill and the day's action on the hill. */
+/** Home hero: the onboarding meadow, with the pet and the day's action on the near hill. */
 export function PetScene({
   topInset,
   greeting,
@@ -230,14 +234,14 @@ export function PetScene({
   onPressFirstName,
   pet,
   mood,
+  sky,
   children,
 }: PetSceneProps) {
   const { width, height } = useWindowDimensions();
   const petSize = Math.min(240, Math.max(170, Math.round(height * 0.27)));
   const petAreaHeight = topInset + 30 + petSize;
-  // The hill is the top of a large circle. A wide box with a big corner radius
-  // would not work: the radius is clamped to half the shorter side, leaving a flat band.
-  const hillSize = width * 1.8;
+  const [panelH, setPanelH] = useState(0);
+  const meadowH = panelH > 0 ? panelH : petAreaHeight + 240;
   const petName = pet?.name ?? 'Your armadillo';
 
   // --- The pet is alive: it rolls in, fidgets, sleeps, reads, and has feelings when tapped. ---
@@ -1567,20 +1571,14 @@ export function PetScene({
   }, [ready, reduceMotion, body]);
 
   return (
-    <View style={styles.panel}>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.hill,
-          {
-            width: hillSize,
-            height: hillSize,
-            borderRadius: hillSize / 2,
-            left: (width - hillSize) / 2,
-            top: petAreaHeight - petSize * 0.24,
-          },
-        ]}
-      />
+    <View
+      style={[styles.panel, sky ? { backgroundColor: sky.top } : null]}
+      onLayout={(event) => {
+        const next = Math.round(event.nativeEvent.layout.height);
+        setPanelH((current) => (current === next ? current : next));
+      }}
+    >
+      <MeadowStage width={width} height={meadowH} groundY={petAreaHeight} frame={false} day={sky} />
 
       <View style={{ height: petAreaHeight }} pointerEvents="box-none">
         {/* Dust kicked up on the hill; x is measured from the centre of the scene. */}
@@ -1661,7 +1659,7 @@ export function PetScene({
       {/* After the pet so the text stays readable and tappable where they meet. */}
       <View style={[styles.header, { paddingTop: topInset + 16 }]}>
         <View style={styles.greetingRow}>
-          <Text style={styles.greeting}>
+          <Text style={[styles.greeting, sky?.ink === 'light' ? styles.greetingLight : null]}>
             {greeting}
             {firstName ? ', ' : ''}
           </Text>
@@ -1674,13 +1672,13 @@ export function PetScene({
               accessibilityLabel="Edit name"
               style={styles.greetingHit}
             >
-              <Text style={styles.greeting}>{firstName}</Text>
+              <Text style={[styles.greeting, sky?.ink === 'light' ? styles.greetingLight : null]}>{firstName}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
         <Text
           // Long names shrink a little, then wrap once, rather than running under the pet.
-          style={styles.petName}
+          style={[styles.petName, sky?.ink === 'light' ? styles.petNameLight : null]}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.75}
@@ -1712,12 +1710,14 @@ export function SceneLabel({ children }: { children: React.ReactNode }) {
 export function SceneTitle({
   children,
   hasBody,
+  lines = 2,
 }: {
   children: React.ReactNode;
   hasBody?: boolean;
+  lines?: number;
 }) {
   return (
-    <Text style={[styles.sceneTitle, hasBody ? styles.sceneTitleWithBody : null]} numberOfLines={2}>
+    <Text style={[styles.sceneTitle, hasBody ? styles.sceneTitleWithBody : null]} numberOfLines={lines}>
       {children}
     </Text>
   );
@@ -1727,15 +1727,25 @@ export function SceneBody({ children }: { children: React.ReactNode }) {
   return <Text style={styles.sceneBody}>{children}</Text>;
 }
 
-export function SceneButton({ label, onPress }: { label: string; onPress: () => void }) {
+export function SceneButton({
+  label,
+  detail,
+  onPress,
+}: {
+  label: string;
+  detail?: string;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
-      style={styles.sceneButton}
+      style={[styles.sceneButton, detail ? styles.sceneButtonWithDetail : null]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
+      accessibilityLabel={detail ? `${label}. ${detail}` : label}
     >
       <Text style={styles.sceneButtonText}>{label}</Text>
+      {detail ? <Text style={styles.sceneButtonDetail}>{detail}</Text> : null}
     </TouchableOpacity>
   );
 }
@@ -1750,14 +1760,10 @@ export function SceneLink({ label, onPress }: { label: string; onPress: () => vo
 const styles = StyleSheet.create({
   panel: {
     width: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.background,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     overflow: 'hidden',
-  },
-  hill: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
   },
   // Kept to the left so the name sits beside the pet, not across it.
   header: {
@@ -1776,15 +1782,21 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 15,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: colors.primaryDeep,
+  },
+  greetingLight: {
+    color: 'rgba(255, 255, 255, 0.88)',
   },
   greetingHit: {
     maxWidth: '100%',
   },
   petName: {
     ...type.title,
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     marginTop: 2,
+  },
+  petNameLight: {
+    color: '#FFFFFF',
   },
   petSlot: {
     position: 'absolute',
@@ -1908,10 +1920,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sceneButtonWithDetail: {
+    height: undefined,
+    minHeight: 54,
+    paddingVertical: 10,
+  },
   sceneButtonText: {
     fontSize: 17,
     fontWeight: '700',
     color: colors.primaryDeep,
+  },
+  sceneButtonDetail: {
+    marginTop: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
   },
   sceneLink: {
     fontSize: 14,

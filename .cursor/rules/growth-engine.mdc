@@ -29,7 +29,7 @@ If a deploy just ran and the live site looks stale:
 
 ## Nav
 
-Formats · Memes · Review · Edit · Images · SVGs · Library · Insights · Studio · UGC · Engine · Settings
+Formats · Memes · Review · Edit · Images · BITEPAL · SVGs · Library · Insights · Studio · UGC · Engine · Settings
 
 - **Memes** — `#memes`. Review, Parts, and Library. Parts (`#memes/parts`) browses backgrounds, reactions, lines, and music from `assets/memes/catalog.json`. Copy title, caption, and description, then Save to Photos. Reject moves a meme into Library. Videos live in R2 `growth/memes/`.
 
@@ -38,6 +38,7 @@ Formats · Memes · Review · Edit · Images · SVGs · Library · Insights · S
 - **Edit** — founder videos at `#edit`. One video holds ordered clips (talking head, screen, voiceover). Originals upload in 8MB parts to R2 `growth/editor/`. No transcode on ingest. Finishing one as a Reel (captions, header, zooms) follows `.cursor/skills/edit/SKILL.md`.
 
 - **Images** — screenshots; Crop tab; Upload from Photos → local + R2 `growth/screenshots/`
+- **BITEPAL** — `#bitepal`. Reference stills from a BitePal screen recording, in order, grouped Onboarding / Paywall / In app. Images in `apps/web/public/bitepal/`. Descriptions save on blur (R2 `growth/bitepal-labels.json`). Delete hides a slide (R2 `growth/bitepal-hidden.json`).
 - **SVGs** — carousel illustrations
 
 ## Posting cadence

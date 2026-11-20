@@ -1,0 +1,20 @@
+{
+  "id": "m1106-duo-barber-s",
+  "format": "duo-barber",
+  "variantOf": "m1106-duo-barber",
+  "changed": "stories text",
+  "background": "duo-barber/02-background.jpg",
+  "gif": { "file": "duo-barber/03-motion.gif", "x": -2, "y": 853, "width": 1084 },
+  "audio": { "file": "duo-barber/05-audio-original-sound.mp3", "start": 0 },
+  "seconds": 9.0,
+  "text": [
+    { "lines": ["My back brought up", "the couch nap again.", "Me: we're fine."], "y": 423, "box": "white" },
+    { "lines": ["Me"], "x": 212, "y": 941, "size": 56 },
+    { "lines": ["My back"], "x": 762, "y": 941, "size": 56 }
+  ],
+  "title": "My back brought up the couch nap again. Me: we're fine.",
+  "caption": "My back brought up the couch nap again. Me: we're fine.",
+  "description": "Pink living room, the barber duo, Stories caption on a white box.",
+  "musicCredit": "Sound: original sound - jayjayb1231 — JustJamieThings",
+  "results": []
+}

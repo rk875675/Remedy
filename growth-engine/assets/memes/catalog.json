@@ -1,0 +1,977 @@
+{
+  "captions": [
+    {
+      "id": "bed-edge",
+      "situation": "morning",
+      "tones": [
+        "wince",
+        "tired"
+      ],
+      "tags": [
+        "morning",
+        "bed",
+        "wake",
+        "stand"
+      ],
+      "lines": [
+        "Getting out of bed",
+        "means sitting on the edge",
+        "until your back agrees."
+      ]
+    },
+    {
+      "id": "couch-stand",
+      "situation": "stand",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ],
+      "tags": [
+        "couch",
+        "stand",
+        "sit"
+      ],
+      "lines": [
+        "Stood up from the couch",
+        "and had to stay there",
+        "until your back calmed down."
+      ]
+    },
+    {
+      "id": "sock-stay",
+      "situation": "bend",
+      "tones": [
+        "embarrassed",
+        "wince"
+      ],
+      "tags": [
+        "sock",
+        "bend",
+        "shoe"
+      ],
+      "lines": [
+        "Went down for one sock",
+        "and stayed there longer",
+        "than the sock needed."
+      ]
+    },
+    {
+      "id": "heat-quiet",
+      "situation": "heat",
+      "tones": [
+        "denial",
+        "caught"
+      ],
+      "tags": [
+        "heat",
+        "heating",
+        "pad"
+      ],
+      "lines": [
+        "The heating pad is warm.",
+        "Your back still hurts.",
+        "Nobody is bringing it up."
+      ]
+    },
+    {
+      "id": "pill-noon",
+      "situation": "pills",
+      "tones": [
+        "caught",
+        "denial"
+      ],
+      "tags": [
+        "pill",
+        "ibuprofen",
+        "noon"
+      ],
+      "lines": [
+        "Took the ibuprofen at ten.",
+        "It is noon now.",
+        "Your back still hurts anyway."
+      ]
+    },
+    {
+      "id": "good-chair",
+      "situation": "chair",
+      "tones": [
+        "gave-up",
+        "fake-fine"
+      ],
+      "tags": [
+        "chair",
+        "bought",
+        "sit"
+      ],
+      "lines": [
+        "You bought the good chair.",
+        "You sat in it all day.",
+        "Your back still hurts tonight."
+      ]
+    },
+    {
+      "id": "same-morning",
+      "situation": "mattress",
+      "tones": [
+        "denial",
+        "tired"
+      ],
+      "tags": [
+        "mattress",
+        "morning",
+        "bed"
+      ],
+      "lines": [
+        "New mattress. Same morning.",
+        "You still need one hand",
+        "on the nightstand to stand."
+      ]
+    },
+    {
+      "id": "gun-after",
+      "situation": "gun",
+      "tones": [
+        "gave-up",
+        "caught"
+      ],
+      "tags": [
+        "massage",
+        "gun"
+      ],
+      "lines": [
+        "You used the massage gun.",
+        "It was loud. You felt it.",
+        "Your back still hurts after."
+      ]
+    },
+    {
+      "id": "brace-drawer",
+      "situation": "brace",
+      "tones": [
+        "gave-up",
+        "denial"
+      ],
+      "tags": [
+        "brace",
+        "drawer"
+      ],
+      "lines": [
+        "The back brace is in",
+        "the drawer. You wore it",
+        "twice. The pain stayed."
+      ]
+    },
+    {
+      "id": "video-three",
+      "situation": "video",
+      "tones": [
+        "caught",
+        "tired"
+      ],
+      "tags": [
+        "stretch",
+        "video",
+        "morning"
+      ],
+      "lines": [
+        "You did the stretch video",
+        "this morning. By three",
+        "your back was loud again."
+      ]
+    },
+    {
+      "id": "counter-coffee",
+      "situation": "morning",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ],
+      "tags": [
+        "coffee",
+        "stretch",
+        "morning",
+        "wince"
+      ],
+      "lines": [
+        "Morning stretches happened.",
+        "You still winced reaching",
+        "the coffee on the counter."
+      ]
+    },
+    {
+      "id": "three-pm",
+      "situation": "desk",
+      "tones": [
+        "fake-fine",
+        "tired"
+      ],
+      "tags": [
+        "desk",
+        "afternoon",
+        "sit",
+        "3pm"
+      ],
+      "lines": [
+        "It is three in the afternoon.",
+        "Your low back started hurting.",
+        "You have been sitting all day."
+      ]
+    },
+    {
+      "id": "said-yes",
+      "situation": "work",
+      "tones": [
+        "fake-fine",
+        "embarrassed"
+      ],
+      "tags": [
+        "work",
+        "fine",
+        "chair"
+      ],
+      "lines": [
+        "Someone asked if you",
+        "were okay. You said yes",
+        "and stayed in the chair."
+      ]
+    },
+    {
+      "id": "parked",
+      "situation": "car",
+      "tones": [
+        "embarrassed",
+        "wince"
+      ],
+      "tags": [
+        "car",
+        "parking",
+        "drive"
+      ],
+      "lines": [
+        "You parked the car",
+        "and sat an extra minute",
+        "before the first step."
+      ]
+    },
+    {
+      "id": "high-shelf",
+      "situation": "errand",
+      "tones": [
+        "embarrassed",
+        "gave-up"
+      ],
+      "tags": [
+        "cereal",
+        "grocery",
+        "shelf"
+      ],
+      "lines": [
+        "The good cereal is up",
+        "on the high shelf.",
+        "You are not reaching today."
+      ]
+    },
+    {
+      "id": "one-sneeze",
+      "situation": "sneeze",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ],
+      "tags": [
+        "sneeze",
+        "counter"
+      ],
+      "lines": [
+        "You sneezed one time",
+        "and had to hold the counter",
+        "like it was going to help."
+      ]
+    },
+    {
+      "id": "dinner-laugh",
+      "situation": "laugh",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ],
+      "tags": [
+        "laugh",
+        "dinner"
+      ],
+      "lines": [
+        "You laughed too hard",
+        "at dinner. Then you had",
+        "to wait the pain out."
+      ]
+    },
+    {
+      "id": "shoe-plan",
+      "situation": "shoes",
+      "tones": [
+        "embarrassed",
+        "recognize"
+      ],
+      "tags": [
+        "shoes",
+        "tie"
+      ],
+      "lines": [
+        "Tying your shoes took",
+        "a plan. One knee down.",
+        "One hand on the wall."
+      ]
+    },
+    {
+      "id": "slow-kitchen",
+      "situation": "walk",
+      "tones": [
+        "recognize",
+        "embarrassed"
+      ],
+      "tags": [
+        "walk",
+        "kitchen"
+      ],
+      "lines": [
+        "You walked to the kitchen",
+        "slower than you meant to.",
+        "It was a normal Tuesday."
+      ]
+    },
+    {
+      "id": "years-plans",
+      "situation": "years",
+      "tones": [
+        "tired",
+        "recognize"
+      ],
+      "tags": [
+        "years",
+        "plans"
+      ],
+      "lines": [
+        "It has been years.",
+        "You still check your back",
+        "before you say yes."
+      ]
+    },
+    {
+      "id": "rested",
+      "situation": "rest",
+      "tones": [
+        "denial",
+        "tired"
+      ],
+      "tags": [
+        "doctor",
+        "rest",
+        "weekend"
+      ],
+      "lines": [
+        "The doctor said to rest.",
+        "You rested all weekend.",
+        "Monday your back still hurt."
+      ]
+    },
+    {
+      "id": "folder",
+      "situation": "visits",
+      "tones": [
+        "tired",
+        "gave-up"
+      ],
+      "tags": [
+        "visits",
+        "papers"
+      ],
+      "lines": [
+        "The visits are over.",
+        "The papers are in a folder.",
+        "Getting up still hurts."
+      ]
+    },
+    {
+      "id": "ice-night",
+      "situation": "ice",
+      "tones": [
+        "denial",
+        "tired"
+      ],
+      "tags": [
+        "ice",
+        "morning",
+        "night"
+      ],
+      "lines": [
+        "Ice pack every night.",
+        "Morning still starts with",
+        "that same slow stand-up."
+      ]
+    },
+    {
+      "id": "roller-night",
+      "situation": "roller",
+      "tones": [
+        "caught",
+        "denial"
+      ],
+      "tags": [
+        "foam",
+        "roller",
+        "night"
+      ],
+      "lines": [
+        "You foam rolled again",
+        "last night. This morning",
+        "your back still hurt the same."
+      ]
+    },
+    {
+      "id": "pen-floor",
+      "situation": "drop",
+      "tones": [
+        "embarrassed",
+        "gave-up"
+      ],
+      "tags": [
+        "pen",
+        "floor",
+        "bend"
+      ],
+      "lines": [
+        "The pen fell down.",
+        "You looked at it",
+        "for a while before trying."
+      ]
+    },
+    {
+      "id": "seatbelt",
+      "situation": "drive",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ],
+      "tags": [
+        "seatbelt",
+        "car",
+        "drive"
+      ],
+      "lines": [
+        "Clicking the seatbelt",
+        "should be nothing. Today",
+        "your back made it hard."
+      ]
+    },
+    {
+      "id": "standing-desk",
+      "situation": "desk",
+      "tones": [
+        "caught",
+        "gave-up"
+      ],
+      "tags": [
+        "standing",
+        "desk",
+        "sit"
+      ],
+      "lines": [
+        "You bought the standing desk.",
+        "Your back still hurts",
+        "when you sit back down."
+      ]
+    },
+    {
+      "id": "cream-on",
+      "situation": "cream",
+      "tones": [
+        "denial",
+        "caught"
+      ],
+      "tags": [
+        "cream",
+        "rub"
+      ],
+      "lines": [
+        "You rubbed the cream on.",
+        "That is not a plan.",
+        "Your back still hurts after."
+      ]
+    },
+    {
+      "id": "sunday-flat",
+      "situation": "weekend",
+      "tones": [
+        "gave-up",
+        "tired"
+      ],
+      "tags": [
+        "sunday",
+        "couch",
+        "weekend"
+      ],
+      "lines": [
+        "You spent Sunday flat",
+        "on the couch. Monday,",
+        "standing up still took time."
+      ]
+    },
+    {
+      "id": "whole-turn",
+      "situation": "careful",
+      "tones": [
+        "recognize",
+        "embarrassed"
+      ],
+      "tags": [
+        "fine",
+        "turn"
+      ],
+      "lines": [
+        "You say you are fine,",
+        "then turn your whole body",
+        "just to look behind you."
+      ]
+    },
+    {
+      "id": "first-thought",
+      "situation": "wake",
+      "tones": [
+        "tired",
+        "recognize"
+      ],
+      "tags": [
+        "morning",
+        "wake",
+        "coffee"
+      ],
+      "lines": [
+        "First thought this morning",
+        "was your back, before",
+        "coffee or the clock."
+      ]
+    },
+    {
+      "id": "laundry-stare",
+      "situation": "laundry",
+      "tones": [
+        "gave-up",
+        "embarrassed"
+      ],
+      "tags": [
+        "laundry",
+        "floor"
+      ],
+      "lines": [
+        "The laundry is on",
+        "the floor. You are staring",
+        "at it from up here."
+      ]
+    },
+    {
+      "id": "long-movie",
+      "situation": "movie",
+      "tones": [
+        "wince",
+        "recognize"
+      ],
+      "tags": [
+        "movie",
+        "credits"
+      ],
+      "lines": [
+        "The movie was long.",
+        "Standing up at the credits",
+        "took longer than you wanted."
+      ]
+    },
+    {
+      "id": "pill-coffee",
+      "situation": "pills",
+      "tones": [
+        "caught",
+        "recognize"
+      ],
+      "tags": [
+        "pill",
+        "coffee",
+        "morning"
+      ],
+      "lines": [
+        "The pill bottle sits",
+        "by the coffee maker.",
+        "That is the morning plan."
+      ]
+    },
+    {
+      "id": "stairs-full",
+      "situation": "stairs",
+      "tones": [
+        "wince",
+        "recognize"
+      ],
+      "tags": [
+        "stairs",
+        "carry"
+      ],
+      "lines": [
+        "You do not trust",
+        "your back on the stairs",
+        "when your hands are full."
+      ]
+    },
+    {
+      "id": "chair-stretch",
+      "situation": "desk",
+      "tones": [
+        "caught",
+        "fake-fine"
+      ],
+      "tags": [
+        "chair",
+        "stretch",
+        "desk"
+      ],
+      "lines": [
+        "You stretched in the chair.",
+        "Your back hurt anyway.",
+        "Sitting down did not help."
+      ]
+    }
+  ],
+  "wallpapers": [
+    {
+      "id": "morning-soft",
+      "file": "morning-soft.jpg",
+      "tones": [
+        "wince",
+        "recognize",
+        "tired"
+      ],
+      "tags": [
+        "morning",
+        "bed",
+        "window"
+      ],
+      "look": "Open bedroom window, plants on the rail, rumpled bed below."
+    },
+    {
+      "id": "night-quiet",
+      "file": "night-quiet.jpg",
+      "tones": [
+        "denial",
+        "tired"
+      ],
+      "tags": [
+        "night",
+        "bed",
+        "window"
+      ],
+      "look": "Dark bedroom, blind half down, striped bed, bright window."
+    },
+    {
+      "id": "rain-gray",
+      "file": "rain-gray.jpg",
+      "tones": [
+        "tired",
+        "wince"
+      ],
+      "tags": [
+        "rain",
+        "window",
+        "gray"
+      ],
+      "look": "Raindrops on glass, the street behind them blurred."
+    },
+    {
+      "id": "lot-day",
+      "file": "lot-day.jpg",
+      "tones": [
+        "embarrassed",
+        "caught",
+        "gave-up"
+      ],
+      "tags": [
+        "parking",
+        "garage",
+        "night"
+      ],
+      "look": "Empty parking garage, fluorescent light down the lane."
+    },
+    {
+      "id": "kitchen-warm",
+      "file": "kitchen-warm.jpg",
+      "tones": [
+        "recognize",
+        "gave-up",
+        "wince"
+      ],
+      "tags": [
+        "kitchen",
+        "stove",
+        "morning"
+      ],
+      "look": "White kitchen, stove and island, light from the side."
+    },
+    {
+      "id": "car-dusk",
+      "file": "car-dusk.jpg",
+      "tones": [
+        "embarrassed",
+        "tired",
+        "wince"
+      ],
+      "tags": [
+        "car",
+        "cabin",
+        "drive"
+      ],
+      "look": "Car cabin in daylight, steering wheel close, empty seat."
+    },
+    {
+      "id": "office-flat",
+      "file": "office-flat.jpg",
+      "tones": [
+        "fake-fine",
+        "caught",
+        "denial"
+      ],
+      "tags": [
+        "office",
+        "desk",
+        "chair"
+      ],
+      "look": "Office chair at a wood desk, laptop open."
+    },
+    {
+      "id": "couch-dim",
+      "file": "couch-dim.jpg",
+      "tones": [
+        "gave-up",
+        "recognize",
+        "tired"
+      ],
+      "tags": [
+        "couch",
+        "leather",
+        "room"
+      ],
+      "look": "Black leather couch filling the lower frame, poster on the wall."
+    }
+  ],
+  "reactions": [
+    {
+      "id": "wince",
+      "file": "wince.gif",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ],
+      "tags": [
+        "wince",
+        "pain"
+      ],
+      "look": "Face to camera, small wince, eyes narrowed, shoulders still. Original, not a known character."
+    },
+    {
+      "id": "dead-stare",
+      "file": "dead-stare.gif",
+      "tones": [
+        "denial",
+        "tired"
+      ],
+      "tags": [
+        "stare",
+        "blank"
+      ],
+      "look": "Face to camera, blank stare, mouth closed, not smiling. Original performance."
+    },
+    {
+      "id": "side-eye",
+      "file": "side-eye.gif",
+      "tones": [
+        "caught",
+        "gave-up"
+      ],
+      "tags": [
+        "side",
+        "caught"
+      ],
+      "look": "Eyes cut to the side, face almost still, caught in the act. Original performance."
+    },
+    {
+      "id": "slow-nod",
+      "file": "slow-nod.gif",
+      "tones": [
+        "recognize",
+        "tired"
+      ],
+      "tags": [
+        "nod",
+        "agree"
+      ],
+      "look": "Small nod toward camera, knowing, not a big grin. Original performance."
+    },
+    {
+      "id": "shrug",
+      "file": "shrug.gif",
+      "tones": [
+        "gave-up",
+        "denial"
+      ],
+      "tags": [
+        "shrug",
+        "give"
+      ],
+      "look": "Shoulders up, hands open, nothing left to try. Original performance."
+    },
+    {
+      "id": "fake-smile",
+      "file": "fake-smile.gif",
+      "tones": [
+        "fake-fine"
+      ],
+      "tags": [
+        "smile",
+        "fine"
+      ],
+      "look": "Tight polite smile that misses the eyes, still seated. Original performance."
+    },
+    {
+      "id": "sigh",
+      "file": "sigh.gif",
+      "tones": [
+        "tired",
+        "wince"
+      ],
+      "tags": [
+        "sigh",
+        "tired"
+      ],
+      "look": "Eyes closed for a beat, one long exhale, then back to camera. Original performance."
+    },
+    {
+      "id": "look-away",
+      "file": "look-away.gif",
+      "tones": [
+        "embarrassed",
+        "caught"
+      ],
+      "tags": [
+        "away",
+        "awkward"
+      ],
+      "look": "Chin turned off camera, face still visible, awkward pause. Original performance."
+    }
+  ],
+  "music": [
+    {
+      "id": "heartwarming",
+      "title": "Heartwarming",
+      "mood": "warm",
+      "tones": [
+        "wince",
+        "recognize"
+      ]
+    },
+    {
+      "id": "deliberate-thought",
+      "title": "Deliberate Thought",
+      "mood": "warm",
+      "tones": [
+        "denial",
+        "fake-fine"
+      ]
+    },
+    {
+      "id": "mellowtron",
+      "title": "Mellowtron",
+      "mood": "ambient",
+      "tones": [
+        "tired",
+        "denial"
+      ]
+    },
+    {
+      "id": "wallpaper",
+      "title": "Wallpaper",
+      "mood": "ambient",
+      "tones": [
+        "tired",
+        "wince"
+      ]
+    },
+    {
+      "id": "porch-swing",
+      "title": "Porch Swing Days",
+      "mood": "folk",
+      "tones": [
+        "recognize",
+        "gave-up"
+      ]
+    },
+    {
+      "id": "easy-lemon",
+      "title": "Easy Lemon",
+      "mood": "folk",
+      "tones": [
+        "caught",
+        "gave-up"
+      ]
+    },
+    {
+      "id": "dreamy-flashback",
+      "title": "Dreamy Flashback",
+      "mood": "ambient",
+      "tones": [
+        "tired",
+        "embarrassed"
+      ]
+    },
+    {
+      "id": "meditation-01",
+      "title": "Meditation Impromptu 01",
+      "mood": "piano",
+      "tones": [
+        "wince",
+        "recognize"
+      ]
+    },
+    {
+      "id": "folk-round",
+      "title": "Folk Round",
+      "mood": "folk",
+      "tones": [
+        "recognize",
+        "embarrassed"
+      ]
+    },
+    {
+      "id": "inspired",
+      "title": "Inspired",
+      "mood": "ambient",
+      "tones": [
+        "fake-fine",
+        "gave-up"
+      ]
+    },
+    {
+      "id": "frost-waltz",
+      "title": "Frost Waltz",
+      "mood": "piano",
+      "tones": [
+        "wince",
+        "embarrassed"
+      ]
+    },
+    {
+      "id": "enchanted-valley",
+      "title": "Enchanted Valley",
+      "mood": "pastoral",
+      "tones": [
+        "tired",
+        "recognize"
+      ]
+    }
+  ]
+}

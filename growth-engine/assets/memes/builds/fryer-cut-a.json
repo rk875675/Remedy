@@ -1,0 +1,18 @@
+{
+  "id": "fryer-cut-a",
+  "clip": "assets/memes/clips/fryer-leave.mp4",
+  "seconds": 6.8,
+  "trim": 0.3,
+  "zoom": 1.06,
+  "pan": 0.5,
+  "speed": 1.05,
+  "pitch": 1.03,
+  "wipe": { "y": 1280, "h": 460 },
+  "text": [
+    { "lines": ["When you try to stand", "after sitting and your", "back just gives out"], "y": 1340, "size": 54, "font": "impact" }
+  ],
+  "title": "Cut A — stand, back gives out",
+  "caption": "When you try to stand after sitting and your back just gives out",
+  "description": "Blurred caption on the leaving clip. Inspo: tiktok.com/@giftok.professional/video/7699958163713297697",
+  "musicCredit": "Sound: original, 5% faster, pitch up 3% — giftok.professional"
+}

@@ -3,14 +3,20 @@ import { petStateSchema, type PetState } from './pet';
 import { rememberPetName } from './petNameCache';
 import { refreshScheduledRemindersForPetName } from './notifications';
 
+// Bumped when a name is saved, so a fetch that started earlier cannot write
+// the previous name back over the one the user just chose.
+let nameRevision = 0;
+
 /** Null on any failure: the pet must never break the screen it sits on. */
 export async function fetchPetState(): Promise<PetState | null> {
+  const seen = nameRevision;
   try {
     const { data, error } = await supabase.rpc('get_pet_state');
     if (error || data == null) return null;
     const parsed = petStateSchema.safeParse(data);
-    if (parsed.success) void rememberPetName(parsed.data.name);
-    return parsed.success ? parsed.data : null;
+    if (!parsed.success) return null;
+    if (seen === nameRevision) void rememberPetName(parsed.data.name);
+    return parsed.data;
   } catch {
     return null;
   }
@@ -26,6 +32,7 @@ export async function setPetName(
     }
     const parsed = petStateSchema.safeParse(data);
     if (parsed.success) {
+      nameRevision += 1;
       // Memory updates before the first await, so the refresh below reads the new name.
       void rememberPetName(parsed.data.name);
       refreshScheduledRemindersForPetName();

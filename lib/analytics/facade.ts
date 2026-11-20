@@ -300,6 +300,22 @@ export async function isFeatureEnabled(key: string): Promise<boolean> {
   }
 }
 
+/**
+ * Dev-server sessions are internal before the first event. A Metro build that
+ * walks onboarding must not land in the onboarding boards, including the
+ * anonymous stretch before sign-in. Queued at import so it replays ahead of
+ * anything a screen effect captures.
+ */
+function tagDevBuild(): void {
+  if (typeof __DEV__ === 'undefined' || !__DEV__ || !ANALYTICS_ENABLED) return;
+  enqueueOrRun('dev-build', (c) => {
+    void c.register({ client_build: 'dev' });
+    c.setPersonProperties({ is_internal: true });
+  });
+}
+
+tagDevBuild();
+
 /** Best-effort drain. Returns void by design — no caller ever awaits analytics. */
 export function flush(): void {
   if (!ANALYTICS_ENABLED) return;

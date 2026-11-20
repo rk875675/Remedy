@@ -17,6 +17,7 @@ import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { shadows } from '../../constants/shadows';
 import { hapticPrimaryAction, hapticError } from '../../lib/haptics';
+import { friendlyAuthError } from '../../lib/passwordValidation';
 import {
   beginAuthAttempt,
   classifyAuthError,
@@ -172,7 +173,15 @@ export default function SignInScreen() {
       // (expo-apple-authentication has used both codes across versions.)
       if (err.code !== 'ERR_REQUEST_CANCELED' && err.code !== 'ERR_CANCELED') {
         hapticError();
-        Alert.alert(isSignUp ? 'Sign Up Error' : 'Sign In Error', err.message ?? 'Something went wrong');
+        Alert.alert(
+          isSignUp ? 'Sign Up Error' : 'Sign In Error',
+          friendlyAuthError(
+            e,
+            isSignUp
+              ? 'Could not create your account. Please try again.'
+              : 'Could not sign in. Please try again.',
+          ),
+        );
       }
     } finally {
       setLoading(false);
@@ -228,7 +237,15 @@ export default function SignInScreen() {
       failAuthAttempt(classifyAuthError(e));
       if (err.code !== 'SIGN_IN_CANCELLED') {
         hapticError();
-        Alert.alert(isSignUp ? 'Sign Up Error' : 'Sign In Error', err.message ?? 'Something went wrong');
+        Alert.alert(
+          isSignUp ? 'Sign Up Error' : 'Sign In Error',
+          friendlyAuthError(
+            e,
+            isSignUp
+              ? 'Could not create your account. Please try again.'
+              : 'Could not sign in. Please try again.',
+          ),
+        );
       }
     } finally {
       setLoading(false);

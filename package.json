@@ -12,6 +12,9 @@
     "verify:p0": "tsx --test scripts/verify_p0_recovery.ts",
     "verify:program-answers": "tsx --test scripts/verify_program_answers.ts",
     "verify:next-program": "tsx --test scripts/verify_next_program.ts",
+    "verify:intake": "tsx --test scripts/verify_intake.ts",
+    "verify:engine-v2": "tsx --test scripts/verify_engine_v2.ts",
+    "verify:intake-summary": "tsx --test scripts/verify_intake_summary.ts",
     "eas:ios:development": "eas build --platform ios --profile development"
   },
   "dependencies": {

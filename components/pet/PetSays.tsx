@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -8,6 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../constants/colors';
 import type { PetMood, PetStage } from '../../constants/petImages';
 import { PET_POKE_LINES, PET_WAKE_LINE, fillPetLine } from '../../constants/petOnboardingLines';
@@ -25,7 +26,7 @@ import { useReduceMotion } from '../../lib/useReduceMotion';
 import { Dust, easedTimeAt, type DustHandle } from './Dust';
 import { PetBadge } from './PetBadge';
 import { PetEmotes, type PetEmotesHandle } from './PetEmotes';
-import { PET_UNFURL_MS, petCurlMs, petUnfurlMs } from './Pet';
+import { Pet, PET_UNFURL_MS, petCurlMs, petUnfurlMs } from './Pet';
 import {
   call,
   createPetBody,
@@ -61,8 +62,13 @@ type PetSaysProps = {
   line: string;
   mood: PetMood;
   stage?: PetStage;
-  /** Size of the pet badge beside the bubble. */
+  /** Size of the pet beside the bubble. */
   size?: number;
+  /**
+   * `question` is the onboarding ask: larger bold type, sized like the
+   * reference bubble. Other lines stay the quieter default.
+   */
+  variant?: 'default' | 'question';
   /**
    * The pet's name, shown as a small tag on the bubble. Leave undefined to use
    * the name the device remembers; pass null to hide the tag.
@@ -115,6 +121,7 @@ export function PetSays({
   mood,
   stage = 1,
   size = 64,
+  variant = 'default',
   name: nameProp,
   entrance = 'pop',
   side = 'left',
@@ -153,6 +160,16 @@ export function PetSays({
   const [curled, setCurled] = useState(entrance === 'roll' && !quiet);
   const [entered, setEntered] = useState(quiet);
   const [typed, setTyped] = useState(quiet ? spoken.length : 0);
+  // A new line must not paint at the previous line's caret. That flash shows
+  // the new sentence whole, then wipes it and types it again.
+  const finishedLine = useRef<string | null>(null);
+  const spokenNow = useRef(spoken);
+  if (spokenNow.current !== spoken) {
+    spokenNow.current = spoken;
+    const showWhole = reduceMotion !== false || finishedLine.current === spoken;
+    const next = showWhole ? spoken.length : 0;
+    if (typed !== next) setTyped(next);
+  }
   const talking = entered && !napping && typed < spoken.length;
 
   const enteredRef = useRef(quiet);
@@ -226,6 +243,21 @@ export function PetSays({
       if (moveRef.current === next) moveRef.current = null;
     });
   };
+
+  // Leaving freezes this screen mid-move. Park a finished arrival before that
+  // snapshot, or swiping back shows the pet stuck mid-spin.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (!enteredRef.current) return;
+        const running = moveRef.current;
+        if (!running) return;
+        moveRef.current = null;
+        running.stop();
+        restBody(body);
+      };
+    }, [body]),
+  );
 
   const bodyStyles = useMemo(
     () => petBodyStyles(body, { height: size, hop: size * 0.16 }),
@@ -502,6 +534,15 @@ export function PetSays({
   useEffect(() => {
     if (!entered) return;
     if (reduceMotion !== false) {
+      finishedLine.current = spoken;
+      setTyped(spoken.length);
+      return;
+    }
+    // Showing this screen again re-runs the effect. The line already on screen
+    // should stay put, not clear and type itself a second time. Question
+    // screens paint the first line whole (entrance "none"); do not wipe that.
+    if (finishedLine.current === spoken || (finishedLine.current === null && typed >= spoken.length)) {
+      finishedLine.current = spoken;
       setTyped(spoken.length);
       return;
     }
@@ -511,18 +552,25 @@ export function PetSays({
     const id = setInterval(() => {
       n = Math.min(spoken.length, n + step);
       setTyped(n);
-      if (n >= spoken.length) clearInterval(id);
+      if (n >= spoken.length) {
+        finishedLine.current = spoken;
+        clearInterval(id);
+      }
     }, TYPE_MS);
     return () => clearInterval(id);
   }, [spoken, entered, reduceMotion]);
 
   // A new line: the bubble bounces, and the pet nods, then hops, then nods.
   const firstLine = useRef(true);
+  const seenLine = useRef<string | null>(null);
   useEffect(() => {
     if (firstLine.current) {
       firstLine.current = false;
+      seenLine.current = spoken;
       return;
     }
+    if (seenLine.current === spoken) return;
+    seenLine.current = spoken;
     if (!enteredRef.current || reduceRef.current !== false) {
       pokeOwnsLine.current = false;
       return;
@@ -606,6 +654,8 @@ export function PetSays({
       firstMood.current = false;
       return;
     }
+    // Same mood again means the screen was shown again, not a new feeling.
+    if (from === mood) return;
     if (!enteredRef.current || reduceRef.current !== false) return;
     if (mood === 'celebrating' || mood === 'proud') {
       beginMoveRef.current(
@@ -866,14 +916,14 @@ export function PetSays({
   const shadowH = size * 0.08;
 
   return (
-    <View style={[styles.row, onRight ? styles.rowReversed : null]}>
+    <View style={[styles.row, variant === 'question' ? styles.questionRow : null, onRight ? styles.rowReversed : null]}>
       <Pressable
         onPress={handlePoke}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={tag ?? 'Your armadillo'}
       >
-        {/* Ground shadow under the disc. Absolute, so the row does not grow. */}
+        {/* Ground shadow under the pet. Absolute, so the row does not grow. */}
         <Animated.View
           pointerEvents="none"
           style={[
@@ -907,7 +957,11 @@ export function PetSays({
         <Animated.View style={[{ width: size, height: size }, entranceStyle]}>
           <Animated.View style={bodyStyles.mover}>
             <Animated.View style={bodyStyles.squash}>
-              <PetBadge stage={badgeStage} mood={badgeMood} size={size} />
+              {variant === 'question' ? (
+                <Pet stage={badgeStage} mood={badgeMood} size={size} shadow={false} />
+              ) : (
+                <PetBadge stage={badgeStage} mood={badgeMood} size={size} />
+              )}
             </Animated.View>
           </Animated.View>
         </Animated.View>
@@ -923,9 +977,12 @@ export function PetSays({
           accessibilityLabel={spoken}
         >
           <View style={onRight ? styles.tailRight : styles.tail} />
-          <View style={styles.bubble}>
+          <View style={[styles.bubble, variant === 'question' && styles.questionBubble]}>
             {/* The untyped part is laid out but invisible, so the bubble never resizes mid-line. */}
-            <Text style={styles.line}>
+            <Text
+              style={[styles.line, variant === 'question' && styles.questionLine]}
+              numberOfLines={variant === 'question' ? 2 : undefined}
+            >
               {spoken.slice(0, typed)}
               <Text style={styles.untyped}>{spoken.slice(typed)}</Text>
             </Text>
@@ -1022,6 +1079,12 @@ export function PetBubble({ line }: { line: string }) {
   const pop = useRef(new Animated.Value(1)).current;
   const [typed, setTyped] = useState(line.length);
   const first = useRef(true);
+  const lineNow = useRef(line);
+  if (lineNow.current !== line) {
+    lineNow.current = line;
+    const next = reduceMotion !== false ? line.length : 0;
+    if (typed !== next) setTyped(next);
+  }
 
   useEffect(() => {
     if (first.current) {
@@ -1124,6 +1187,22 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  // Always two lines tall, so a one-line question and a two-line reply
+  // take the same row. The bubble itself still hugs its text.
+  questionRow: {
+    minHeight: 28 * 2 + 14 * 2 + 4,
+    alignItems: 'center',
+  },
+  questionBubble: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  questionLine: {
+    fontSize: 21,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   untyped: {
     color: 'transparent',

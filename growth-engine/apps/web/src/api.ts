@@ -1024,6 +1024,25 @@ export const api = {
       method: "POST",
       credentials: "include",
     }).then((r) => json<{ ok: boolean; item?: MemeItem; error?: string }>(r)),
+  bitepalHidden: () =>
+    fetch("/api/bitepal/hidden", { credentials: "include", cache: "no-store" }).then((r) =>
+      json<{ ids: string[] }>(r),
+    ),
+  bitepalLabels: () =>
+    fetch("/api/bitepal/labels", { credentials: "include", cache: "no-store" }).then((r) =>
+      json<{ labels: Record<string, string> }>(r),
+    ),
+  saveBitepalLabel: (id: string, label: string) =>
+    fetch(`/api/bitepal/${encodeURIComponent(id)}/label`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    }).then((r) => json<{ ok: boolean; label?: string; error?: string }>(r)),
+  deleteBitepalSlide: (id: string) =>
+    fetch(`/api/bitepal/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" }).then((r) =>
+      json<{ ok: boolean; ids?: string[]; error?: string }>(r),
+    ),
 };
 
 export interface FormatRef {

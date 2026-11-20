@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "id": "mascot-cover",
+      "hypothesis": "A deck whose cover or payoff slide features the armadillo gets more views than the same hook with people only, because the pet is a new, shareable face.",
+      "source": "Our own plan (marketing/pet-launch-plan.md). No outside study; nothing measured yet.",
+      "arms": { "mascot": "yes" },
+      "brief": "Same exploit slot as normal; replace one photo slide (never the app slide, never the locked CTA) with a pet sticker slide from assets/pet-formats. Everything else stays exploit.",
+      "minPosts": 4,
+      "status": "paused"
+    },
+    {
+      "id": "pet-stage-reveal-deck",
+      "hypothesis": "A 5-slide stage-reveal carousel (0, 1, 4, 9, 15 sessions) holds attention better than a standard deck of the same length.",
+      "source": "Our own plan (marketing/pet-launch-plan.md). No outside study; nothing measured yet.",
+      "arms": { "mascot": "yes", "structure": "stage-reveal" },
+      "brief": "Cover on the ball, one slide per stage with the session count, closing line. Whether it ends on the locked CTA is an owner decision.",
+      "minPosts": 4,
+      "status": "paused"
+    }
+  ]
+}

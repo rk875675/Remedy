@@ -1,0 +1,42 @@
+{
+  "name": "Lindsey",
+  "age": 42,
+  "handle": "lindsey.vs.herback",
+  "bio": "42 · 2 kids · desk job · my back has opinions 🙃 search Remedy in the app store",
+  "life": "Hybrid office job (three days at home), married, two kids (8 and 5), lives in the suburbs. Sits most of the day; her back aches after sitting and catches when she bends for laundry, car seats, or the dishwasher.",
+  "look": {
+    "ethnicity": "white",
+    "skin": "fair to light, visible pores, fine lines at the outer eyes, a few freckles on the nose and cheeks, light under-eye shadows, a little redness by the nose; bare face or just mascara and lip balm",
+    "hair": "dirty blonde, shoulder length, loose natural wave, flyaways; half up in a tortoiseshell claw clip most days",
+    "eyes": "blue-gray",
+    "face": "soft oval face, natural brows, pretty in a normal way, not a model",
+    "build": "average mom build, about 5'5\""
+  },
+  "face": {
+    "anchor": "anchor.png",
+    "turnaround": "turnaround.png",
+    "source": "Downloads hf_20261112_222627 (4K face) and hf_20261112_223340 (4K sheet)"
+  },
+  "always": ["small gold hoop earrings", "wedding ring", "tortoiseshell claw clip", "big insulated tumbler nearby"],
+  "wardrobe": [
+    "black leggings and a gray quarter-zip pullover",
+    "light jeans and an oatmeal sweater (school pickup)",
+    "gray cardigan over a white tee (work-from-home days)",
+    "oversized crewneck sweatshirt (evenings)"
+  ],
+  "places": [
+    "kitchen island with stools, lived-in counter (mail, kids' cups, coffee maker)",
+    "SUV front seat, daylight",
+    "home office corner in the house",
+    "basement laundry room, washer and dryer",
+    "living room couch with a throw blanket",
+    "bedroom, unmade quilt, nightstand with phone charger"
+  ],
+  "voice": "Tired-funny mom. Dry, honest, laughs at herself. Lowercase captions.",
+  "rules": [
+    "Every post carries the platform AI label (TikTok, Instagram, YouTube).",
+    "She never claims results: no 'Remedy fixed my back', no pain numbers.",
+    "References in refs/ are real camera photos for skin, hair, clothes, rooms, and light only. Never pass a full face as an identity reference."
+  ],
+  "prompt_spine": "Candid iPhone photo, natural window light only, uneven light with one side in shadow, slight grain, a touch soft, slightly off-center, muted colors, not retouched, not a stock or ad photo. A 42-year-old white woman with fair skin, visible pores, fine lines at the eyes, a few freckles, light under-eye shadows, no makeup or just mascara. Dirty blonde shoulder-length hair, slight wave, flyaways, often in a claw clip. Average mom build. Small gold hoop earrings, wedding ring. Ordinary tidy-but-lived-in suburban home with small real details."
+}

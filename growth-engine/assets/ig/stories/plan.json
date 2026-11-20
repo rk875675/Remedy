@@ -1,0 +1,172 @@
+{
+  "posts": [
+    {
+      "id": "lamp-on",
+      "photo": "bedside.jpg",
+      "line": "the lamp stayed on",
+      "textAt": "bottom",
+      "focus": "centre",
+      "caption": "It was supposed to be a minute. The water is still sitting there too.\n\n#backpain"
+    },
+    {
+      "id": "second-cup",
+      "photo": "green-cup.jpg",
+      "line": "the second cup came to me",
+      "textAt": "bottom",
+      "focus": "attention",
+      "caption": "Got up for the first one. The second one did not require standing.\n\n#backpain"
+    },
+    {
+      "id": "blank-page",
+      "photo": "notebook.jpg",
+      "line": "wrote nothing down",
+      "textAt": "bottom",
+      "focus": "centre",
+      "caption": "The pen has been on that notebook since yesterday. Opening it felt like more than it was.\n\n#backpain"
+    },
+    {
+      "id": "easy-dinner",
+      "photo": "fruit.jpg",
+      "line": "something easy tonight",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "No plan for dinner. Whatever was already out is enough.\n\n#backpain"
+    },
+    {
+      "id": "late-plant",
+      "photo": "plant.jpg",
+      "line": "still alive, somehow",
+      "textAt": "bottom",
+      "focus": "west",
+      "caption": "It asks for almost nothing and still gets watered late.\n\n#backpain"
+    },
+    {
+      "id": "door-shut",
+      "photo": "quiet-room.jpg",
+      "line": "door shut, day outside",
+      "textAt": "top",
+      "focus": "north",
+      "caption": "Books stacked, blanket pulled up, the rest of the day can wait in the hall.\n\n#backpain"
+    },
+    {
+      "id": "small-light",
+      "photo": "wall-lamp.jpg",
+      "line": "this light, not the overhead",
+      "textAt": "bottom",
+      "focus": "east",
+      "caption": "The big light stays off. This one is enough for the evening.\n\n#backpain"
+    },
+    {
+      "id": "sock-bed",
+      "photo": "sock-bed.jpg",
+      "line": "nobody tells you socks become a plan",
+      "textAt": "bottom",
+      "focus": "attention",
+      "caption": "Sitting on the edge of the bed for this one is allowed.\n\n#backpain"
+    },
+    {
+      "id": "pen-floor",
+      "photo": "pen-floor.jpg",
+      "line": "deciding if the pen is worth bending for",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "It can live on the floor until someone with a better back walks by.\n\n#backpain"
+    },
+    {
+      "id": "heating-pad",
+      "photo": "heating-pad.jpg",
+      "line": "the heating pad knows you better than most",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "Is it still a nap if the heating pad does most of the work?\n\n#backpain"
+    },
+    {
+      "id": "low-shelf",
+      "photo": "low-shelf.jpg",
+      "line": "anything below the knees is a negotiation",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "Whatever is on the bottom shelf can stay there until the afternoon.\n\n#backpain"
+    },
+    {
+      "id": "armchair",
+      "photo": "armchair.jpg",
+      "line": "she asked if i was okay getting up",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "I said yes and used both armrests anyway.\n\n#backpain"
+    },
+    {
+      "id": "mat-rug",
+      "photo": "mat-rug.jpg",
+      "line": "getting down to the mat is the workout",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "Getting down there and back up again should count for something.\n\n#backpain"
+    },
+    {
+      "id": "stair-shoes",
+      "photo": "stair-shoes.jpg",
+      "line": "sitting down to tie shoes, at your age",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "The bottom step has turned out to be the best seat in the house for shoes.\n\n#backpain"
+    },
+    {
+      "id": "kettle-lean",
+      "photo": "kettle-lean.jpg",
+      "line": "leaning on the counter so it looks casual",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "Leaning on the counter while the kettle boils looks relaxed, and that's the whole idea.\n\n#backpain"
+    },
+    {
+      "id": "two-bags",
+      "photo": "two-bags.jpg",
+      "line": "two trips so nobody sees you wince",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "An extra trip from the car is easier than explaining the face you make lifting one heavy bag.\n\n#backpain"
+    },
+    {
+      "id": "desk-chair",
+      "photo": "desk-chair.jpg",
+      "line": "standing up from the chair in stages",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "It starts with both hands on the desk, and the rest of you catches up eventually.\n\n#backpain"
+    },
+    {
+      "id": "car-minute",
+      "photo": "car-minute.jpg",
+      "line": "anyone else brace before leaving the car?",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "There's always one quiet second with a hand on the door before the twist to get out.\n\n#backpain"
+    },
+    {
+      "id": "laundry-half",
+      "photo": "laundry-half.jpg",
+      "line": "half a basket so tomorrow isn't ruined",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "A half-full basket now beats a whole evening on the heating pad later.\n\n#backpain"
+    },
+    {
+      "id": "corner-walk",
+      "photo": "corner-walk.jpg",
+      "line": "you walk slower now and hate that it shows",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "People pass you on the sidewalk, and you keep going anyway.\n\n#backpain"
+    },
+    {
+      "id": "pillow-knees",
+      "photo": "pillow-knees.jpg",
+      "line": "you sleep in one position now, on purpose",
+      "textAt": "top",
+      "focus": "attention",
+      "caption": "The long pillow has a permanent spot on the bed, and you've stopped pretending it's decorative.\n\n#backpain"
+    }
+  ]
+}

@@ -23,6 +23,17 @@ import {
   painTypeSchema,
   sessionsPerWeekSchema,
 } from '../../schemas';
+import {
+  FLARE_SETTLE,
+  HARD_NOW,
+  LIMITATION,
+  MOVEMENT_FEEL,
+  ONSET,
+  RELIEF_DIRECTION,
+  SPREAD,
+  TREND,
+  TRIED,
+} from '../../intake';
 import { KNOWN_SCREENS, UNKNOWN_SCREEN } from '../routes';
 
 // --- Derived from the persisted answer schemas -------------------------------
@@ -47,31 +58,41 @@ export const sessionsPerWeek = sessionsPerWeekSchema;
 // --- Onboarding --------------------------------------------------------------
 
 /**
- * The members of ONBOARDING_FLOW plus the two post-quiz screens. Declared
- * literally rather than imported, because context/OnboardingContext.tsx imports
- * the onboarding events module and a value import here would be a runtime cycle.
- * A type-level assertion in ./onboarding.ts keeps the two in step.
+ * Ordered funnel steps. Declared literally rather than imported, because
+ * context/OnboardingContext.tsx imports the onboarding events module and a
+ * value import here would be a runtime cycle. A type-level assertion in
+ * ./onboarding.ts keeps the two in step. `step_index` is this array's index.
  */
 export const onboardingStepKey = z.enum([
   'welcome',
+  'meet',
   'pet',
-  'grow',
-  'founder',
-  'education',
-  'proof',
-  'q0',
-  'q9',
-  'recognize',
-  'seen',
-  'q6',
-  'q1',
-  'q2',
-  'q3',
-  'q4',
-  'q5',
-  'q7',
-  'q8',
-  'commit',
+  'open_goals',
+  'goal',
+  'hard_now',
+  'outlook',
+  'open_back',
+  'location',
+  'spread',
+  'duration',
+  'onset',
+  'feel',
+  'leg',
+  'intensity',
+  'open_pattern',
+  'movement',
+  'relief',
+  'rapid',
+  'ns',
+  'ns_result',
+  'open_you',
+  'conditions',
+  'age',
+  'activity',
+  'equipment',
+  'time',
+  'reminders',
+  'safety',
   'finalizing',
   'match',
 ]);
@@ -105,6 +126,44 @@ export const recognizePattern = z.enum(['effort', 'return_loop', 'flinch', 'perm
 export const stepExitType = z.enum(['forward', 'backward', 'backgrounded', 'abandoned']);
 
 /**
+ * How this visit entered the funnel. Profile's developer paywall preview and the
+ * lapsed-subscriber shortcut land on match without walking the quiz, so they must
+ * not be counted as onboarding.
+ */
+export const onboardingEntryPoint = z.enum(['funnel', 'profile_preview', 'lapsed']);
+export type OnboardingEntryPoint = z.infer<typeof onboardingEntryPoint>;
+
+/**
+ * One closed choice, recorded without the raw answer when the answer is a name.
+ * Sensitive clinical steps (leg, intensity, ns, conditions, age) stay off this list.
+ */
+export const onboardingDecisionKey = z.enum([
+  'pet_name_source',
+  'first_name',
+  'legal_assent',
+  'goal',
+  'hard_now',
+  'location',
+  'spread',
+  'duration',
+  'onset',
+  'feel',
+  'movement',
+  'relief',
+  'flare_settle',
+  'pain_trend',
+  'limitation',
+  'activity',
+  'equipment',
+  'session_length',
+  'days_per_week',
+  'reminder',
+  'acquisition_source',
+  'safety_gate',
+]);
+export type OnboardingDecisionKey = z.infer<typeof onboardingDecisionKey>;
+
+/**
  * q8 — daily time commitment. Named rather than bare numbers because q8 has two
  * option groups and `"15"` next to `"3"` would be unreadable in a breakdown.
  */
@@ -132,6 +191,104 @@ export const trainingCadence = z.enum([
  */
 export const legalAssent = z.literal('legal_assent');
 
+const HARD_OPTION_VALUES = [
+  'hard_bed',
+  'hard_bending',
+  'hard_stairs',
+  'hard_walking',
+  'hard_sitting',
+  'hard_standing',
+  'hard_twisting',
+  'hard_overhead',
+  'hard_sleep',
+  'hard_exercise',
+] as const satisfies readonly `hard_${(typeof HARD_NOW)[number]}`[];
+const SPREAD_OPTION_VALUES = [
+  'spread_one_spot',
+  'spread_one_side',
+  'spread_moves',
+  'spread_leg',
+  'spread_unsure',
+] as const satisfies readonly `spread_${(typeof SPREAD)[number]}`[];
+const ONSET_OPTION_VALUES = [
+  'onset_injury',
+  'onset_lifting',
+  'onset_surgery',
+  'onset_gradual',
+  'onset_sudden',
+  'onset_pregnancy',
+  'onset_unsure',
+] as const satisfies readonly `onset_${(typeof ONSET)[number]}`[];
+const MOVEMENT_OPTION_VALUES = [
+  'movement_stiff',
+  'movement_weak',
+  'movement_unstable',
+  'movement_uneven',
+  'movement_unsafe',
+  'movement_guarded',
+] as const satisfies readonly `movement_${(typeof MOVEMENT_FEEL)[number]}`[];
+const RELIEF_OPTION_VALUES = [
+  'relief_flexion',
+  'relief_extension',
+  'relief_neither',
+] as const satisfies readonly `relief_${(typeof RELIEF_DIRECTION)[number]}`[];
+const FLARE_OPTION_VALUES = [
+  'flare_none',
+  'flare_minutes',
+  'flare_hours',
+  'flare_day',
+  'flare_days',
+] as const satisfies readonly `flare_${(typeof FLARE_SETTLE)[number]}`[];
+const TREND_OPTION_VALUES = [
+  'trend_better',
+  'trend_same',
+  'trend_worse',
+  'trend_up_down',
+] as const satisfies readonly `trend_${(typeof TREND)[number]}`[];
+const LIMIT_OPTION_VALUES = [
+  'limit_none',
+  'limit_little',
+  'limit_some_days',
+  'limit_most_days',
+  'limit_a_lot',
+  'limit_unsure',
+] as const satisfies readonly `limit_${(typeof LIMITATION)[number]}`[];
+const TRIED_OPTION_VALUES = [
+  'tried_doctor',
+  'tried_pt',
+  'tried_chiro',
+  'tried_massage',
+  'tried_acupuncture',
+  'tried_medication',
+  'tried_stretching',
+  'tried_rest',
+] as const satisfies readonly `tried_${(typeof TRIED)[number]}`[];
+
+type OptionListCovers<Prefix extends string, Values extends readonly string[], Listed extends readonly string[]> =
+  Exclude<`${Prefix}${Values[number]}`, Listed[number]> extends never ? true : never;
+
+const hardNowOption = z.enum(HARD_OPTION_VALUES);
+const spreadOption = z.enum(SPREAD_OPTION_VALUES);
+const onsetOption = z.enum(ONSET_OPTION_VALUES);
+const movementOption = z.enum(MOVEMENT_OPTION_VALUES);
+const reliefOption = z.enum(RELIEF_OPTION_VALUES);
+const flareOption = z.enum(FLARE_OPTION_VALUES);
+const trendOption = z.enum(TREND_OPTION_VALUES);
+const limitOption = z.enum(LIMIT_OPTION_VALUES);
+const triedOption = z.enum(TRIED_OPTION_VALUES);
+const reminderOption = z.enum(['reminder_morning', 'reminder_midday', 'reminder_evening']);
+
+const optionListsCoverIntake: OptionListCovers<'hard_', typeof HARD_NOW, typeof HARD_OPTION_VALUES> &
+  OptionListCovers<'spread_', typeof SPREAD, typeof SPREAD_OPTION_VALUES> &
+  OptionListCovers<'onset_', typeof ONSET, typeof ONSET_OPTION_VALUES> &
+  OptionListCovers<'movement_', typeof MOVEMENT_FEEL, typeof MOVEMENT_OPTION_VALUES> &
+  OptionListCovers<'relief_', typeof RELIEF_DIRECTION, typeof RELIEF_OPTION_VALUES> &
+  OptionListCovers<'flare_', typeof FLARE_SETTLE, typeof FLARE_OPTION_VALUES> &
+  OptionListCovers<'trend_', typeof TREND, typeof TREND_OPTION_VALUES> &
+  OptionListCovers<'limit_', typeof LIMITATION, typeof LIMIT_OPTION_VALUES> &
+  OptionListCovers<'tried_', typeof TRIED, typeof TRIED_OPTION_VALUES> = true;
+void optionListsCoverIntake;
+
 /** Every value an OptionCard (or the assent button) can carry. */
 export const optionValue = z.union([
   painLocation,
@@ -148,6 +305,16 @@ export const optionValue = z.union([
   sessionLength,
   trainingCadence,
   legalAssent,
+  hardNowOption,
+  spreadOption,
+  onsetOption,
+  movementOption,
+  reliefOption,
+  flareOption,
+  trendOption,
+  limitOption,
+  triedOption,
+  reminderOption,
 ]);
 
 export const previewSource = z.enum(['server', 'fallback']);
@@ -239,6 +406,7 @@ export const progressionLevel = z.number().int().min(-1).max(3);
 /** Mirrors StartNextProgramError in lib/nextProgram.ts. */
 export const nextProgramFailureReason = z.enum([
   'already_started',
+  'not_finished',
   'not_entitled',
   'rate_limited',
   'network',
@@ -392,6 +560,21 @@ export const rampSuggestion = z.enum(['progress', 'hold']);
  */
 export const screenName = z.enum([UNKNOWN_SCREEN, ...KNOWN_SCREENS]);
 export type ScreenName = z.infer<typeof screenName>;
+
+/** Where an onboarding visit went. Step key, screen, or the app leaving the foreground. */
+export const onboardingLeftTo = z.union([
+  onboardingStepKey,
+  screenName,
+  z.enum(['app_background', 'left_app']),
+]);
+export type OnboardingLeftTo = z.infer<typeof onboardingLeftTo>;
+
+/** Decision values. Names are never included — only typed vs random, provided vs skipped. */
+export const onboardingDecisionValue = z.union([
+  optionValue,
+  z.enum(['typed', 'random', 'provided', 'skipped', 'none', 'acknowledged']),
+]);
+export type OnboardingDecisionValue = z.infer<typeof onboardingDecisionValue>;
 
 /** How a screen visit ended. `inactive` (app switcher glance) is not an exit. */
 export const screenExitType = z.enum(['navigate', 'backgrounded']);

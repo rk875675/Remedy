@@ -1,0 +1,18 @@
+{
+  "id": "suits-cut-b",
+  "clip": "assets/memes/clips/suits-walk.mp4",
+  "seconds": 7.2,
+  "trim": 1.0,
+  "zoom": 1.11,
+  "pan": 0.85,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 800, "h": 440 },
+  "text": [
+    { "lines": ["How a thrown-out back", "walks into work", "and acts like", "it is fine"], "y": 848, "size": 46, "font": "black" }
+  ],
+  "title": "Cut B — back walks into work",
+  "caption": "How a thrown-out back walks into work and acts like it is fine",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — 7foot.feminist"
+}

@@ -27,18 +27,20 @@ import {
   SUPERWALL_AVAILABLE,
   setSuperwallSubscriptionInactive,
 } from '../../lib/superwall';
-import { restoreRemedyTransaction } from '../../lib/iap';
+import { getLatestRemedyTransaction, restoreRemedyTransaction } from '../../lib/iap';
 import { supabase } from '../../lib/supabase';
 import {
   requestPermissions,
   cancelWorkoutReminders,
   scheduleStretchReminders,
   cancelStretchReminders,
+  STRETCH_PAUSED_KEY,
 } from '../../lib/notifications';
 import { colors, serifFont } from '../../constants/colors';
 import { radius } from '../../constants/spacing';
 import { hapticWarning, hapticSelection } from '../../lib/haptics';
 import { accountDeletionFailed, signedOut } from '../../lib/analytics/events/auth';
+import { markProfilePreview } from '../../lib/analytics/onboardingSteps';
 import {
   restoreFailed,
   restoreStarted,
@@ -397,12 +399,7 @@ function getPlanInfo(entitlement: Entitlement | null): PlanInfo {
     return { label: 'Dev Plan', isNegative: false, tappable: false };
   }
 
-  // Reserved for a future free tier (and any leftover Apple trial status).
-  if (subscription_status === 'trial') {
-    return { label: 'Free Plan', isNegative: false, tappable: false };
-  }
-
-  if (subscription_status === 'active') {
+  if (subscription_status === 'active' || subscription_status === 'trial') {
     if (product_id?.startsWith('com.remedyapp.annual')) {
       return { label: 'Annual Plan', isNegative: false, tappable: false };
     }
@@ -444,7 +441,40 @@ export default function ProfileScreen() {
   const { registerPlacement } = usePlacement({
     onDismiss: async (_info, result) => {
       if (result.type === 'purchased' || result.type === 'restored') {
+        if (user) {
+          try {
+            const tx =
+              result.type === 'restored'
+                ? await restoreRemedyTransaction()
+                : await getLatestRemedyTransaction();
+            if (tx?.jws && tx.originalTransactionId) {
+              const restored = result.type === 'restored';
+              await supabase.functions.invoke(restored ? 'restore-purchases' : 'verify-purchase', {
+                body: restored
+                  ? { originalTransactionId: tx.originalTransactionId, signedTransaction: tx.jws }
+                  : {
+                      transactionId: tx.originalTransactionId,
+                      productId: tx.productId,
+                      signedTransaction: tx.jws,
+                    },
+                headers: {
+                  'Idempotency-Key': `${restored ? 'restore' : 'verify'}_${user.id}_${tx.originalTransactionId}`,
+                },
+              });
+            }
+          } catch {
+            // The entitlement read below is what unlocks the account.
+          }
+        }
         await refreshPremium();
+        if (user) {
+          const { data: freshEnt } = await supabase
+            .from('entitlements')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          if (freshEnt) setEntitlement(freshEnt);
+        }
       }
     },
     onSkip: () => {
@@ -452,6 +482,7 @@ export default function ProfileScreen() {
     },
   });
   const nameInputRef = useRef<TextInput>(null);
+  const petInputRef = useRef<TextInput>(null);
 
   // Existing state
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -566,7 +597,8 @@ export default function ProfileScreen() {
         setStretchInterval(next);
         if (!allowed) {
           await AsyncStorage.setItem(STORAGE_STRETCH_INTERVAL, '60');
-          if (stretchMap[STORAGE_STRETCH] === 'true') {
+          const paused = (await AsyncStorage.getItem(STRETCH_PAUSED_KEY)) === 'true';
+          if (stretchMap[STORAGE_STRETCH] === 'true' && !paused) {
             await scheduleStretchReminders(60, startHour, endHour);
           }
         }
@@ -640,26 +672,25 @@ export default function ProfileScreen() {
     setPetInput(pet?.name ?? '');
     setPetError(null);
     setEditingPet(true);
+    setTimeout(() => petInputRef.current?.focus(), 50);
   }
 
-  function cancelEditingPet() {
-    setEditingPet(false);
-    setPetError(null);
-  }
-
-  async function savePet() {
-    if (!pet || petSaveLock.current) return;
-    const trimmed = petInput.trim();
-    if (!trimmed) return;
-    if (trimmed.length > PET_NAME_MAX_LENGTH) {
-      setPetError(PET_NAME_INVALID);
-      return;
-    }
-    if (trimmed === (pet.name ?? '')) {
-      cancelEditingPet();
-      return;
-    }
+  async function commitPetName() {
+    if (!pet || petSaveLock.current || !editingPet) return;
     petSaveLock.current = true;
+    const trimmed = petInput.trim();
+    if (!trimmed || trimmed === (pet.name ?? '')) {
+      petSaveLock.current = false;
+      setEditingPet(false);
+      setPetError(null);
+      return;
+    }
+    if (trimmed.length > PET_NAME_MAX_LENGTH) {
+      petSaveLock.current = false;
+      setPetError(PET_NAME_INVALID);
+      setTimeout(() => petInputRef.current?.focus(), 50);
+      return;
+    }
     setPetSaving(true);
     setPetError(null);
     const hadName = Boolean(pet.name);
@@ -672,6 +703,7 @@ export default function ProfileScreen() {
       petNamed({ source_screen: 'profile', renamed: hadName });
     } else {
       setPetError(result.reason === 'invalid' ? PET_NAME_INVALID : 'Could not save. Try again.');
+      setTimeout(() => petInputRef.current?.focus(), 50);
     }
   }
 
@@ -685,33 +717,28 @@ export default function ProfileScreen() {
   // ---------------------------------------------------------------------------
   // Subscription helpers
   // ---------------------------------------------------------------------------
-  function getRestoreErrorMessage(
-    invokeError: { message?: string } | null,
-    data: { success?: boolean; error?: string } | null,
-  ): string {
-    const code = data?.error;
-    if (code === 'transaction_already_linked') {
+  function getRestoreErrorMessage(reason: string): string {
+    if (reason === 'transaction_already_linked') {
       return (
         'This subscription is linked to a different Remedy account. Sign in with the ' +
         'account that purchased it to restore access.'
       );
     }
-    if (code === 'invalid_transaction') {
+    if (
+      reason === 'invalid_transaction' ||
+      reason === 'transaction_expired' ||
+      reason === 'no_active_subscription' ||
+      reason === 'invalid_receipt'
+    ) {
       return 'No active subscription found for this Apple ID.';
     }
-    if (code === 'rate_limited') {
+    if (reason === 'rate_limited') {
       return 'Too many restore attempts. Please wait a few minutes and try again.';
     }
-    if (code === 'missing_auth') {
+    if (reason === 'missing_auth') {
       return 'Please sign in again and try again.';
     }
-    if (invokeError) {
-      return 'Could not reach the server. Check your connection and try again.';
-    }
-    if (data?.success === false) {
-      return 'No active subscription found for this Apple ID.';
-    }
-    return 'Could not restore purchases. Try again later.';
+    return 'Could not reach the server. Check your connection and try again.';
   }
 
   async function handleRestorePurchases() {
@@ -737,11 +764,12 @@ export default function ProfileScreen() {
       });
 
       if (error || !data?.success) {
+        const reason = await extractInvokeError(data, error);
         restoreFailed({
           source_screen: 'profile',
-          reason: toRestoreReason(await extractInvokeError(data, error)),
+          reason: toRestoreReason(reason),
         });
-        Alert.alert('Restore Purchases', getRestoreErrorMessage(error, data));
+        Alert.alert('Restore Purchases', getRestoreErrorMessage(reason));
         return;
       }
 
@@ -929,6 +957,7 @@ export default function ProfileScreen() {
       if (!granted) {
         setStretchEnabled(false);
         await AsyncStorage.setItem(STORAGE_STRETCH, 'false');
+        await AsyncStorage.setItem(STRETCH_PAUSED_KEY, 'false');
         Alert.alert(
           'Reminders are off',
           'Remedy needs notification permission for stretch breaks. Turn on Notifications for Remedy in iOS Settings, then try again.',
@@ -937,6 +966,7 @@ export default function ProfileScreen() {
       }
 
       await AsyncStorage.setItem(STORAGE_STRETCH, 'true');
+      await AsyncStorage.setItem(STRETCH_PAUSED_KEY, 'false');
       stretchRemindersEnabled({
         interval_minutes: stretchInterval,
         start_hour: stretchStartHour,
@@ -944,6 +974,7 @@ export default function ProfileScreen() {
       });
     } else {
       await AsyncStorage.setItem(STORAGE_STRETCH, 'false');
+      await AsyncStorage.setItem(STRETCH_PAUSED_KEY, 'false');
       setStretchExpanded(false);
       await cancelStretchReminders();
       stretchRemindersDisabled();
@@ -956,6 +987,7 @@ export default function ProfileScreen() {
     await AsyncStorage.setItem(STORAGE_STRETCH_INTERVAL, String(interval));
     if (stretchEnabled) {
       await scheduleStretchReminders(interval, stretchStartHour, stretchEndHour);
+      await AsyncStorage.setItem(STRETCH_PAUSED_KEY, 'false');
     }
   }
 
@@ -964,6 +996,7 @@ export default function ProfileScreen() {
     await AsyncStorage.setItem(STORAGE_STRETCH_START, String(hour24));
     if (stretchEnabled) {
       await scheduleStretchReminders(stretchInterval, hour24, stretchEndHour);
+      await AsyncStorage.setItem(STRETCH_PAUSED_KEY, 'false');
     }
   }
 
@@ -972,6 +1005,7 @@ export default function ProfileScreen() {
     await AsyncStorage.setItem(STORAGE_STRETCH_END, String(hour24));
     if (stretchEnabled) {
       await scheduleStretchReminders(stretchInterval, stretchStartHour, hour24);
+      await AsyncStorage.setItem(STRETCH_PAUSED_KEY, 'false');
     }
   }
 
@@ -1036,6 +1070,7 @@ export default function ProfileScreen() {
   }
 
   function handleForcePaywall() {
+    markProfilePreview();
     router.push('/(onboarding)/match');
   }
 
@@ -1054,147 +1089,138 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Profile</Text>
 
         {/* ── Identity ── */}
-        <View style={[styles.identity, pet && styles.identityWithPet]}>
-          {pet && (
-            <View style={styles.identityPet}>
-              <PetBadge stage={pet.stage} mood="idle" size={84} />
-            </View>
-          )}
-          <View style={[styles.nameBox, editingName && styles.nameBoxEditing]}>
-            {editingName ? (
-              <TextInput
-                ref={nameInputRef}
-                style={styles.nameInput}
-                value={nameInput}
-                onChangeText={setNameInput}
-                onBlur={commitNameEdit}
-                onSubmitEditing={commitNameEdit}
-                returnKeyType="done"
-                autoCorrect={false}
-                autoCapitalize="words"
-                maxLength={50}
-              />
-            ) : (
+        <View style={styles.identity}>
+          <View style={styles.identityRow}>
+            <View style={styles.identityMain}>
+              <View style={[styles.nameBox, editingName && styles.nameBoxEditing]}>
+                {editingName ? (
+                  <TextInput
+                    ref={nameInputRef}
+                    style={styles.nameInput}
+                    value={nameInput}
+                    onChangeText={setNameInput}
+                    onBlur={commitNameEdit}
+                    onSubmitEditing={commitNameEdit}
+                    returnKeyType="done"
+                    autoCorrect={false}
+                    autoCapitalize="words"
+                    maxLength={50}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => startEditingName()}
+                    activeOpacity={0.7}
+                    style={styles.nameRow}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit name"
+                  >
+                    <Text style={styles.name} numberOfLines={1}>{resolvedName}</Text>
+                    <Ionicons
+                      name="pencil-outline"
+                      size={18}
+                      color={colors.textTertiary}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.nameRule} />
+              {user.email ? <Text style={styles.email}>{user.email}</Text> : null}
               <TouchableOpacity
-                onPress={() => startEditingName()}
-                activeOpacity={0.7}
-                style={styles.nameRow}
-                accessibilityRole="button"
-                accessibilityLabel="Edit name"
+                style={[styles.planChip, planInfo.isNegative && styles.planChipNegative]}
+                onPress={planInfo.tappable ? () => { void handleResubscribe(); } : undefined}
+                activeOpacity={planInfo.tappable ? 0.7 : 1}
+                disabled={!planInfo.tappable || openingPaywall}
+                accessibilityRole={planInfo.tappable ? 'button' : 'text'}
+                accessibilityLabel={planInfo.label}
               >
-                <Text style={styles.name} numberOfLines={1}>{resolvedName}</Text>
-                <Ionicons
-                  name="pencil-outline"
-                  size={18}
-                  color={colors.textTertiary}
-                />
+                {openingPaywall && planInfo.tappable ? (
+                  <ActivityIndicator size="small" color={colors.secondary} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.planChipText,
+                      planInfo.isNegative && styles.planChipTextNegative,
+                    ]}
+                  >
+                    {planInfo.label}
+                  </Text>
+                )}
               </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.nameRule} />
-          {user.email ? <Text style={styles.email}>{user.email}</Text> : null}
-          <TouchableOpacity
-            style={[styles.planChip, planInfo.isNegative && styles.planChipNegative]}
-            onPress={planInfo.tappable ? () => { void handleResubscribe(); } : undefined}
-            activeOpacity={planInfo.tappable ? 0.7 : 1}
-            disabled={!planInfo.tappable || openingPaywall}
-            accessibilityRole={planInfo.tappable ? 'button' : 'text'}
-            accessibilityLabel={planInfo.label}
-          >
-            {openingPaywall && planInfo.tappable ? (
-              <ActivityIndicator size="small" color={colors.secondary} />
-            ) : (
-              <Text
-                style={[
-                  styles.planChipText,
-                  planInfo.isNegative && styles.planChipTextNegative,
-                ]}
-              >
-                {planInfo.label}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Program ── */}
-        <Text style={styles.sectionLabel}>Program</Text>
-        <View style={styles.settingsCard}>
-          {pet && (
-            <>
-              {editingPet ? (
-                <View style={styles.petEditRow}>
-                  <View style={[styles.nameBox, styles.nameBoxEditing]}>
+            </View>
+            {pet && (
+              <View style={[styles.identityPet, editingPet && styles.identityPetEditing]}>
+                <TouchableOpacity
+                  onPress={startEditingPet}
+                  disabled={editingPet}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={pet.name ? `Rename ${pet.name}` : 'Name your armadillo'}
+                  accessibilityState={{ disabled: editingPet }}
+                >
+                  <PetBadge stage={pet.stage} mood="idle" size={84} />
+                </TouchableOpacity>
+                {editingPet ? (
+                  <View style={styles.petNameField}>
                     <TextInput
-                      style={styles.petInput}
+                      ref={petInputRef}
+                      style={styles.petNameInput}
                       value={petInput}
                       onChangeText={(t) => {
                         setPetInput(t);
                         setPetError(null);
                       }}
-                      onSubmitEditing={() => { void savePet(); }}
+                      onBlur={() => { void commitPetName(); }}
+                      onSubmitEditing={() => { void commitPetName(); }}
                       returnKeyType="done"
                       placeholder={PET_NAME_PLACEHOLDER}
                       placeholderTextColor={colors.textTertiary}
                       maxLength={PET_NAME_MAX_LENGTH}
                       autoCapitalize="words"
                       autoCorrect={false}
+                      selectTextOnFocus
                       editable={!petSaving}
-                      autoFocus
+                      accessibilityLabel="Armadillo name"
                     />
                   </View>
-                  {petError ? <Text style={styles.petError}>{petError}</Text> : null}
-                  <View style={styles.petEditActions}>
-                    <TouchableOpacity
-                      style={styles.compactChip}
-                      onPress={cancelEditingPet}
-                      activeOpacity={0.7}
-                      disabled={petSaving}
-                      accessibilityRole="button"
-                      accessibilityLabel="Cancel"
+                ) : (
+                  <TouchableOpacity
+                    style={styles.petNameButton}
+                    onPress={startEditingPet}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 6, bottom: 8, left: 8, right: 8 }}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  >
+                    <Text
+                      style={[styles.petName, !pet.name && styles.petNameEmpty]}
+                      numberOfLines={1}
                     >
-                      <Text style={styles.compactChipText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.compactChip, styles.compactChipSelected]}
-                      onPress={() => { void savePet(); }}
-                      activeOpacity={0.7}
-                      disabled={petSaving || !petInput.trim()}
-                      accessibilityRole="button"
-                      accessibilityLabel="Save"
-                    >
-                      <Text style={[styles.compactChipText, styles.compactChipTextSelected]}>Save</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.chevronRow}
-                  onPress={startEditingPet}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Rename your armadillo"
-                >
-                  <View style={styles.chevronRowTextCol}>
-                    <Text style={styles.editProgramLabel}>Your armadillo</Text>
-                    <Text style={styles.chevronRowCaption}>{pet.name ?? 'Name it'}</Text>
-                  </View>
-                  <Text style={styles.editProgramChevron}>›</Text>
-                </TouchableOpacity>
-              )}
-              <View style={styles.divider} />
-            </>
-          )}
+                      {pet.name ?? 'Name it'}
+                    </Text>
+                    <Ionicons name="pencil-outline" size={13} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+          {petError ? <Text style={styles.petError}>{petError}</Text> : null}
+        </View>
+
+        {/* ── Program ── */}
+        <Text style={styles.sectionLabel}>Program</Text>
+        <View style={styles.settingsCard}>
           <TouchableOpacity
             style={styles.chevronRow}
             onPress={() => router.push('/onboarding-answers')}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Edit your program"
+            accessibilityLabel="Edit answers"
           >
             <View style={styles.chevronRowTextCol}>
-              <Text style={styles.editProgramLabel}>
-                {programName ?? 'Edit your program'}
-              </Text>
+              <Text style={styles.editProgramLabel}>Edit answers</Text>
+              {programName ? (
+                <Text style={styles.chevronRowCaption}>{programName}</Text>
+              ) : null}
               <Text style={styles.chevronRowCaption}>
                 Pain, equipment, schedule, and goals
               </Text>
@@ -1590,33 +1616,64 @@ const styles = StyleSheet.create({
   identity: {
     marginBottom: 28,
   },
-  identityWithPet: {
-    paddingRight: 96,
-    minHeight: 84,
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  identityMain: {
+    flex: 1,
+    minWidth: 0,
   },
   identityPet: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
+    width: 108,
+    alignItems: 'center',
   },
-  petEditRow: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 10,
+  identityPetEditing: {
+    width: 168,
   },
-  petInput: {
-    fontSize: 16,
+  petNameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 2,
+    maxWidth: 108,
+    paddingVertical: 4,
+  },
+  petName: {
+    flexShrink: 1,
+    fontFamily: serifFont,
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  petNameEmpty: {
+    color: colors.textTertiary,
+  },
+  petNameField: {
+    alignSelf: 'stretch',
+    marginTop: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: radius.chip,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  petNameInput: {
+    fontFamily: serifFont,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
     paddingVertical: 0,
   },
   petError: {
+    marginTop: 8,
     fontSize: 13,
     color: colors.secondary,
-  },
-  petEditActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
   },
   nameRule: {
     width: 28,

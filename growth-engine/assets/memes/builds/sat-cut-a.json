@@ -1,0 +1,18 @@
+{
+  "id": "sat-cut-a",
+  "clip": "assets/memes/clips/sat-face.mp4",
+  "seconds": 6.0,
+  "trim": 0.3,
+  "zoom": 1.06,
+  "pan": 0.5,
+  "speed": 1.05,
+  "pitch": 1.03,
+  "wipe": { "y": 800, "h": 320 },
+  "text": [
+    { "lines": ["When you sat all day", "and your back is having", "the time of its life"], "y": 860, "size": 54, "font": "impact" }
+  ],
+  "title": "Cut A — sat all day",
+  "caption": "When you sat all day and your back is having the time of its life",
+  "description": "Blurred caption on the deadpan clip. Inspo: tiktok.com/@therealcoopjt/video/7674953488828353805",
+  "musicCredit": "Sound: original, 5% faster, pitch up 3% — therealcoopjt"
+}

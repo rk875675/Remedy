@@ -1,0 +1,18 @@
+{
+  "id": "once-cut-b",
+  "clip": "assets/memes/clips/once-bear.mp4",
+  "seconds": 8,
+  "trim": 1.2,
+  "zoom": 1.11,
+  "pan": 0.15,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 1056, "h": 460 },
+  "text": [
+    { "lines": ["When one stretch", "is finally working", "your back quits", "halfway through"], "y": 1096, "size": 50, "font": "black" }
+  ],
+  "title": "Cut B — stretch, back quits",
+  "caption": "When one stretch is finally working your back quits halfway through",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — thegreatbananafry"
+}

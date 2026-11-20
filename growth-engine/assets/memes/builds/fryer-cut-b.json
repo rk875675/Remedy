@@ -1,0 +1,18 @@
+{
+  "id": "fryer-cut-b",
+  "clip": "assets/memes/clips/fryer-leave.mp4",
+  "seconds": 6.2,
+  "trim": 1.0,
+  "zoom": 1.11,
+  "pan": 0.84,
+  "speed": 0.92,
+  "pitch": 0.97,
+  "wipe": { "y": 1280, "h": 460 },
+  "text": [
+    { "lines": ["When you try to stand", "after sitting and your", "back just gives out"], "y": 1340, "size": 42, "font": "black" }
+  ],
+  "title": "Cut B — stand, back gives out",
+  "caption": "When you try to stand after sitting and your back just gives out",
+  "description": "Stories cut. Later start, closer, slower, pitch down 3%. Same line and position as cut A.",
+  "musicCredit": "Sound: original, 8% slower, pitch down 3% — giftok.professional"
+}

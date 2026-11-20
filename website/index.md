@@ -2,13 +2,13 @@ Back pain app for iPhone
 
 # Back pain, made simple
 
-Answer a few questions about your back. Remedy builds a 4 to 6 week program around your answers, then gives you one short, video-guided session at a time.
+Answer a few questions about your back. Remedy builds a 10 to 16 week program around your answers, then gives you one short, video-guided session at a time. You also get an armadillo to keep you company.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[See how it works](#how-it-works)
 
 Free to download. A fitness program, not medical care.
 
-- **4–6**weeks in a structured program
+- **10–16**weeks in a structured program
 
 - **3–7**days a week, your choice
 
@@ -16,7 +16,35 @@ Free to download. A fitness program, not medical care.
 
 - **Demo**on every exercise
 
-01How it works
+01Your armadillo
+
+## Name it. Then help it uncurl.
+
+Every Remedy account comes with a pet armadillo. You name it when you start. It begins curled up in a tight ball, a bit stiff, like you. Each session you finish, it uncurls a little more.
+
+-
+### Curled up
+Day one
+
+-
+### Peeking out
+1 session
+
+-
+### Sitting up
+4 sessions
+
+-
+### On its feet
+9 sessions
+
+-
+### All grown
+15 sessions
+
+Five stages, and it never shrinks. Miss a day and it just waits for you. It also naps, sleeps at night, and gets grumpy if you poke it too much.
+
+02How it works
 
 ## From “my back hurts” to a plan in a few minutes
 
@@ -39,7 +67,7 @@ A multi-week plan on the days you choose. Every session has a warm-up, the main 
 ### Follow along, then check in
 Each exercise has a video. Rate your pain before and after, and watch the trend build over the weeks.
 
-02Inside a session
+03Inside a session
 
 ## What today’s session looks like
 
@@ -54,26 +82,26 @@ The demonstration plays in the session, so you can match the movement.
 
 - 2
 ### A focus for the day
-Each session has a focus, like activation, so you know what the work is for.
+Each session has a focus, like strength, so you know what the work is for.
 
 ### Set and reps
 The dose sits under the name. This screen is on set 1 of 3.
 
 - 3
 ### Equipment listed first
-This one needs a mat and a dumbbell. The session is built around the setup you already have.
+This one needs an exercise mat. The session is built around the setup you already have.
 
 ### One form cue
 A single line for what to think about while you move.
 
 - 4
 ### A demo for every move
-Each exercise plays in the session, with sets, reps, and a short cue.
+Each exercise plays in the session, with sets, reps, a short cue, and your armadillo coaching from the corner.
 
 ### Then mark it done
 Tap when the set is finished. The next set follows.
 
-03The program
+04The program
 
 ## A plan that gets harder at the right pace
 
@@ -94,18 +122,18 @@ Each week has an intensity target that climbs across the program, on the 3 to 7 
 ### A harder version swaps in
 When an exercise gets easy, a harder variant replaces it, like the glute bridge giving way to the single-leg bridge.
 
-- Week 4 to 6
+- Week 10 to 16
 
 ### Finish, then keep going
 When the program ends, start a new one or a harder one.
 
 ### Progress you can see
-Before-and-after pain check-ins feed a pain trend chart, next to your week and sessions done.
+See your week on a path and your armadillo’s growth. Before-and-after pain check-ins feed a pain trend chart.
 
 ### Back only, on purpose
 Lower back, upper back, or both. No generic full-body filler.
 
-04Exercise library
+05Exercise library
 
 ## A few of the moves
 
@@ -119,7 +147,7 @@ Examples of what a session can include, with form cues and easier and harder ver
 
 - [03Glute bridgeLying on your back with knees bent, you drive through your heels to lift your hips.Glutes and hips · No equipment · Beginner→](https://remedyrecoveries.com/exercises/glute-bridge)
 
-05Guides
+06Guides
 
 ## Plain answers for a sore back
 
@@ -149,7 +177,7 @@ For athletes whose back is sore and whose head is the part that wants to skip th
 ### Back pain apps compared
 Hinge Health, Sword, Curable, YouTube, PT, and Remedy: which fits which situation.](https://remedyrecoveries.com/guides/best-back-pain-apps)
 
-06How it compares
+07How it compares
 
 ## Where Remedy fits among your options
 
@@ -173,7 +201,7 @@ Remedy is built by [Rahul Kumar](https://remedyrecoveries.com/about), a computer
 
 [About Remedy](https://remedyrecoveries.com/about)
 
-07FAQ
+08FAQ
 
 ## Quick questions
 
@@ -181,7 +209,7 @@ Remedy is built by [Rahul Kumar](https://remedyrecoveries.com/about), a computer
 
 ### What is Remedy?
 
-Remedy is an iPhone app for people with back pain. You answer a few questions about your back, and it builds a 4 to 6 week back fitness program of short, video-guided sessions. It is educational exercise guidance, not medical care.
+Remedy is an iPhone app for people with back pain. You answer a few questions about your back, and it builds a 10 to 16 week back fitness program of short, video-guided sessions. It is educational exercise guidance, not medical care.
 
 ### Is Remedy physical therapy?
 
@@ -194,6 +222,10 @@ No. You tell Remedy whether you have full gym access, bands and light dumbbells,
 ### Is there an Android version?
 
 Not yet. Remedy is iPhone only for now.
+
+### What is the armadillo?
+
+Every Remedy account comes with a pet armadillo that you name. It starts curled up in a ball and uncurls as you finish sessions. It never shrinks if you miss a day. [More about the armadillo](https://remedyrecoveries.com/faq#armadillo).
 
 ## Get a back program you can actually keep
 

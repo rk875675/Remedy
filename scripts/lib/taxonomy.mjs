@@ -34,7 +34,13 @@ export function loadOnboardingFlow() {
     // Mirrors STEP_BY_SCREEN in lib/analytics/onboardingSteps.ts: welcome is the group index.
     const file = new URL(key === 'welcome' ? 'index.tsx' : `${key}.tsx`, ONBOARDING_DIR);
     const src = existsSync(file) ? readFileSync(file, 'utf8') : '';
-    if (src.includes('useOnboardingStepCompletion')) questionStepIndices.push(index);
+    // Screens complete a step through goNext (directly or via SelectQuestion).
+    // useOnboardingStepCompletion lives in the shared hook, not in the screen file.
+    const completes =
+      src.includes('useOnboardingStepCompletion') ||
+      src.includes('goNext(') ||
+      src.includes('<SelectQuestion');
+    if (completes) questionStepIndices.push(index);
     else interstitials.push(key);
   });
   return { stepKeys, questionStepIndices, interstitials };
@@ -135,6 +141,7 @@ export const PERSON_PROPS = new Set([
   'acquisition_source', 'signup_method', 'activity_level', 'pain_duration', 'pain_location',
   'equipment_tier', 'sessions_per_week_preference', 'primary_goal', 'paywall_variant_id',
   'has_red_flag', 'prior_attempts', 'app_belief', 'session_length',
+  'pet_name_source', 'first_name_provided',
   'paywall_experiment_id', 'program_week', 'first_session_completed_at',
 ]);
 
