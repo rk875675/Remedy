@@ -1,5 +1,3 @@
-Strength exercise
-
 # Dumbbell Romanian deadlift
 
 A hip hinge holding a dumbbell in each hand. A slow lower builds strength through the hamstrings, glutes, and the muscles along the spine.
@@ -73,9 +71,9 @@ Band or dumbbells · Intermediate](https://remedyrecoveries.com/exercises/goblet
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

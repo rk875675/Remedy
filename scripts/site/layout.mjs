@@ -14,7 +14,7 @@ export const SCREENS = {
   session: { src: '/assets/screens/session.webp', alt: 'Remedy session screen with a demonstration video of the glute bridge, set 1 of 3, and the armadillo coach saying “I am here. Keep going.”' },
   progress: { src: '/assets/screens/progress.webp', alt: 'Remedy progress screen showing this week at 0 of 3 sessions, Arnie fully grown, and the five growth stages from 0 to 15 sessions' },
   preview: { src: '/assets/screens/session_preview.webp', alt: 'Remedy session preview: week 2 session 3, Thoracic Strength and Function, 19 minutes, 5 exercises, exercise mat needed, with the armadillo coach' },
-  painCheck: { src: '/assets/screens/pain_check.webp', alt: 'Remedy pain check-in before a session, with a 1 to 10 slider set to 5 and the armadillo saying it will take it easy' },
+  painCheck: { src: '/assets/screens/pain_check.webp', alt: 'Remedy pain check-in before a session. The pain scale includes 0 and is set to 5.' },
   days: { src: '/assets/screens/workout_days.webp', alt: 'Remedy workout days picker with Tuesday, Friday and Sunday selected, 3 of 3, and a workout reminder switch' },
   catCow: { src: '/assets/screens/cat_cow.webp', alt: 'Remedy session screen with a demonstration video of the cat-cow stretch, set 1 of 2, and the armadillo coach' },
   birdDog: { src: '/assets/screens/bird_dog.webp', alt: 'Remedy session screen with a demonstration video of the bird dog, set 1 of 3, and the armadillo coach' },
@@ -26,6 +26,12 @@ const PHONE_SIZES = {
   '': '(max-width: 860px) 250px, 300px',
   'phone-sm': '(max-width: 860px) 200px, 220px',
   'phone-step': '(max-width: 860px) 110px, 190px',
+  'phone-lg': '(max-width: 700px) 86vw, 380px',
+  'phone-bento': '(max-width: 900px) 78vw, 340px',
+  'phone-bento-sm': '(max-width: 900px) 62vw, 230px',
+  'phone-showcase': '(max-width: 900px) 68vw, 290px',
+  'phone-showcase-sm': '(max-width: 900px) 56vw, 235px',
+  'phone-cta': '(max-width: 900px) 70vw, 290px',
 };
 
 export const screenSrcset = (src) => {
@@ -77,7 +83,7 @@ export function orgGraph() {
       '@id': `${SITE}/#app`,
       name: APP.storeName,
       alternateName: 'Remedy',
-      description: 'iPhone back pain app. Answer a short onboarding about your back and get a structured multi-week back fitness program with short, video-guided daily sessions and before-and-after pain check-ins. Educational exercise guidance, not medical care.',
+      description: 'iPhone back pain app. Answer a short onboarding about your back and get a structured multi-week back fitness program with short, video-guided sessions and before-and-after pain check-ins. Educational exercise guidance, not medical care.',
       operatingSystem: APP.minOS,
       applicationCategory: 'HealthApplication',
       applicationSubCategory: 'Back fitness',
@@ -96,7 +102,7 @@ export function orgGraph() {
         'Before-and-after pain check-ins with a pain trend chart',
         'Workout day picker and reminders',
         'Exercises for mobility, core stability, strength, and recovery',
-        'A pet armadillo you name that grows as you finish sessions',
+        'A pet armadillo you name. It moves up at 1, 4, 9, and 15 finished sessions. Missed days do not shrink it.',
       ],
       offers: PLANS.map((p) => ({
         '@type': 'Offer',
@@ -153,6 +159,9 @@ export function head(p) {
   const preload = p.preload
     ? `\n  <link rel="preload" as="image" href="${p.preload}" imagesrcset="${screenSrcset(p.preload)}" imagesizes="${PHONE_SIZES['']}" fetchpriority="high" />`
     : '';
+  const preloadImage = p.preloadImage
+    ? `\n  <link rel="preload" as="image" href="${p.preloadImage}" fetchpriority="high" />`
+    : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,7 +192,7 @@ export function head(p) {
   <meta name="format-detection" content="telephone=no" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
-  <link rel="manifest" href="/site.webmanifest" />${preload}
+  <link rel="manifest" href="/site.webmanifest" />${preload}${preloadImage}
   <link rel="stylesheet" href="/styles.css?v=${CSS_VERSION}" />
   <script type="application/ld+json">${JSON.stringify(graph).replace(/</g, '\\u003c')}</script>
 </head>`;
@@ -219,6 +228,7 @@ export function nav(current = '') {
           <a href="/back-pain-app">Back pain app</a>
           <a href="/about">About</a>
           <a href="/contact">Contact</a>
+          <a href="${STORE}">Get the app</a>
         </nav>
       </details>
     </div>
@@ -234,18 +244,15 @@ export function crumbs(items) {
 }
 
 export const storeBadge = (cls = '', { eager = false } = {}) =>
-  `<a class="store-badge ${cls}" href="${STORE}"><img src="/assets/app-store-badge.svg" width="162" height="54" alt="Download Remedy on the App Store"${eager ? '' : ' loading="lazy"'} /></a>`;
+  `<a class="store-badge ${cls}" href="${STORE}"><img src="/assets/app-store-badge.svg" width="162" height="54" alt="Download Remedy on the App Store" decoding="async"${eager ? '' : ' loading="lazy"'} /></a>`;
 
-export function cta({ title = 'Get a back program you can actually keep', sub = 'Free to download on the App Store. Answer a few questions and your first session is ready in minutes.' } = {}) {
+export function cta({ title = 'Download Remedy', sub = 'Free to download. You pay in the App Store.' } = {}) {
   return `
     <section class="cta-band" id="get">
-      <div class="container cta-inner">
-        <div>
-          <h2>${title}</h2>
-          <p>${sub}</p>
-          <div class="cta-row">${storeBadge()}<a class="link-arrow" href="/guides/">Read the guides</a></div>
-        </div>
-        ${phone('session', { cls: 'phone-sm' })}
+      <div class="container cta-inner stack">
+        <h2>${title}</h2>
+        <p>${sub}</p>
+        <div class="cta-row cluster">${storeBadge()}<a class="link-arrow" href="/guides/">Read the guides</a></div>
       </div>
     </section>`;
 }
@@ -259,7 +266,7 @@ export function footer() {
       <div class="footer-grid">
         <div class="footer-about">
           <a href="/" class="footer-brand" aria-label="Remedy home"><img src="/assets/logo-64.png" width="28" height="28" alt="" loading="lazy" /> Remedy</a>
-          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short daily sessions built around your answers.</p>
+          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short sessions on the days you pick.</p>
           ${storeBadge('store-badge-sm')}
         </div>
         <nav aria-label="App">
@@ -300,11 +307,19 @@ export const MENU_SCRIPT = `
       var menu = document.querySelector('.nav-menu[open]');
       if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
     });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var menu = document.querySelector('.nav-menu[open]');
+      if (!menu) return;
+      menu.removeAttribute('open');
+      var summary = menu.querySelector('summary');
+      if (summary) summary.focus();
+    });
   </script>`;
 
 export function page(p, body) {
   return `${head(p)}${nav(p.navCurrent)}
-  <main id="main">
+  <main id="main" tabindex="-1">
 ${body}
   </main>
 ${footer()}${p.script || ''}${MENU_SCRIPT}

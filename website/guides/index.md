@@ -1,5 +1,3 @@
-Guides
-
 # Guides for a sore back
 
 Plain-language answers to the questions people actually search when their back hurts, each one sourced to clinical guidelines and research. General fitness information, not medical advice.
@@ -54,9 +52,9 @@ If you want a plan instead of assembling one yourself, the [Remedy app](https://
 
 How we write these: [editorial standards](https://remedyrecoveries.com/about#editorial).
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

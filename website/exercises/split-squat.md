@@ -1,5 +1,3 @@
-Strength exercise
-
 # Split squat
 
 A squat in a staggered stance, one foot forward and one back. It trains one leg at a time.
@@ -78,9 +76,9 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

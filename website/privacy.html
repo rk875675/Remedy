@@ -16,7 +16,7 @@
   <link rel="manifest" href="/site.webmanifest" />
   <meta property="og:image" content="https://remedyrecoveries.com/assets/og-1200.png?v=fa533dd3" />
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=0bc49f33" />
-  <link rel="stylesheet" href="/styles.css?v=23" />
+  <link rel="stylesheet" href="/styles.css?v=41" />
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://remedyrecoveries.com/privacy#page","url":"https://remedyrecoveries.com/privacy","name":"Privacy Policy","inLanguage":"en-US","isPartOf":{"@id":"https://remedyrecoveries.com/#website"},"publisher":{"@id":"https://remedyrecoveries.com/#org"},"dateModified":"2026-10-15"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://remedyrecoveries.com/"},{"@type":"ListItem","position":2,"name":"Privacy Policy","item":"https://remedyrecoveries.com/privacy"}]}]}</script>
 </head>
 <body>
@@ -45,11 +45,12 @@
           <a href="/back-pain-app">Back pain app</a>
           <a href="/about">About</a>
           <a href="/contact">Contact</a>
+          <a href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106">Get the app</a>
         </nav>
       </details>
     </div>
   </header>
-  <main id="main" class="legal">
+  <main id="main" tabindex="-1" class="legal">
     <h1>Privacy Policy</h1>
     <p class="updated">Last updated: October 15, 2026</p>
 
@@ -131,49 +132,49 @@
         </thead>
         <tbody>
           <tr>
-            <td>Supabase</td>
-            <td>Authentication, database, and storage</td>
-            <td>Account credentials, profile, onboarding answers, pain check-ins, session progress, entitlements, legal acceptances, push token, in-app feedback</td>
+            <td data-label="Provider">Supabase</td>
+            <td data-label="What it does">Authentication, database, and storage</td>
+            <td data-label="Information involved">Account credentials, profile, onboarding answers, pain check-ins, session progress, entitlements, legal acceptances, push token, in-app feedback</td>
           </tr>
           <tr>
-            <td>PostHog</td>
-            <td>Product analytics</td>
-            <td>Usage events and technical data tied to your account identifier, including coarse pain scores and pain-profile fields used to measure how programs are used; not used for advertising</td>
+            <td data-label="Provider">PostHog</td>
+            <td data-label="What it does">Product analytics</td>
+            <td data-label="Information involved">Usage events and technical data tied to your account identifier, including coarse pain scores and pain-profile fields used to measure how programs are used; not used for advertising</td>
           </tr>
           <tr>
-            <td>Superwall</td>
-            <td>Subscription paywall and purchase flow</td>
-            <td>Device and usage information its SDK collects to display paywalls, plus subscription/entitlement status</td>
+            <td data-label="Provider">Superwall</td>
+            <td data-label="What it does">Subscription paywall and purchase flow</td>
+            <td data-label="Information involved">Device and usage information its SDK collects to display paywalls, plus subscription/entitlement status</td>
           </tr>
           <tr>
-            <td>Apple</td>
-            <td>Sign in with Apple and in-app purchases</td>
-            <td>Payment handled by Apple; we receive subscription status and the Apple account identifier/email you share</td>
+            <td data-label="Provider">Apple</td>
+            <td data-label="What it does">Sign in with Apple and in-app purchases</td>
+            <td data-label="Information involved">Payment handled by Apple; we receive subscription status and the Apple account identifier/email you share</td>
           </tr>
           <tr>
-            <td>Google</td>
-            <td>Sign in with Google</td>
-            <td>Account identifier and email Google shares with us</td>
+            <td data-label="Provider">Google</td>
+            <td data-label="What it does">Sign in with Google</td>
+            <td data-label="Information involved">Account identifier and email Google shares with us</td>
           </tr>
           <tr>
-            <td>Cloudflare</td>
-            <td>Website hosting and exercise video delivery</td>
-            <td>Technical request data (such as IP address) needed to serve the site and signed video streams</td>
+            <td data-label="Provider">Cloudflare</td>
+            <td data-label="What it does">Website hosting and exercise video delivery</td>
+            <td data-label="Information involved">Technical request data (such as IP address) needed to serve the site and signed video streams</td>
           </tr>
           <tr>
-            <td>Upstash</td>
-            <td>Rate limiting for our backend functions</td>
-            <td>Technical request identifiers only</td>
+            <td data-label="Provider">Upstash</td>
+            <td data-label="What it does">Rate limiting for our backend functions</td>
+            <td data-label="Information involved">Technical request identifiers only</td>
           </tr>
           <tr>
-            <td>Resend</td>
-            <td>Transactional email</td>
-            <td>Email address, for account confirmation, password reset, and notifying us when you send in-app feedback</td>
+            <td data-label="Provider">Resend</td>
+            <td data-label="What it does">Transactional email</td>
+            <td data-label="Information involved">Email address, for account confirmation, password reset, and notifying us when you send in-app feedback</td>
           </tr>
           <tr>
-            <td>Expo</td>
-            <td>App framework and delivery</td>
-            <td>Technical and diagnostic data</td>
+            <td data-label="Provider">Expo</td>
+            <td data-label="What it does">App framework and delivery</td>
+            <td data-label="Information involved">Technical and diagnostic data</td>
           </tr>
         </tbody>
       </table>
@@ -243,8 +244,8 @@
       <div class="footer-grid">
         <div class="footer-about">
           <a href="/" class="footer-brand" aria-label="Remedy home"><img src="/assets/logo-64.png?v=b71df1f6" width="28" height="28" alt="" loading="lazy" /> Remedy</a>
-          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short daily sessions built around your answers.</p>
-          <a class="store-badge store-badge-sm" href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106"><img src="/assets/app-store-badge.svg?v=2f2fe1cb" width="162" height="54" alt="Download Remedy on the App Store" loading="lazy" /></a>
+          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short sessions on the days you pick.</p>
+          <a class="store-badge store-badge-sm" href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106"><img src="/assets/app-store-badge.svg?v=2f2fe1cb" width="162" height="54" alt="Download Remedy on the App Store" decoding="async" loading="lazy" /></a>
         </div>
         <nav aria-label="App">
           <h2>App</h2>
@@ -280,6 +281,14 @@
     document.addEventListener('click', function (e) {
       var menu = document.querySelector('.nav-menu[open]');
       if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var menu = document.querySelector('.nav-menu[open]');
+      if (!menu) return;
+      menu.removeAttribute('open');
+      var summary = menu.querySelector('summary');
+      if (summary) summary.focus();
     });
   </script>
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { DOC_BLOCKS, DOC_UPDATED } from "./doc.data";
 import { FORMATS } from "./formats.data";
 import type { FormatSection, Learning, UgcFormat, WorkflowStep } from "./types";
-import { LEARNINGS, WORKFLOW, WORKFLOW_SOURCE } from "./workflow.data";
+import { LEARNINGS, UP_NEXT, WORKFLOW, WORKFLOW_SOURCE } from "./workflow.data";
 
 const GREEN = "#33663f";
 
@@ -81,6 +81,13 @@ function WorkflowPanel() {
           ✋ marks the points where you approve before we continue. {fixes} steps need work before the next video.
         </p>
         <p className="text-[11px] text-white/70 mt-2">{WORKFLOW_SOURCE}</p>
+      </section>
+      <section className="rounded-2xl bg-white border border-stone-200 px-4 py-3">
+        <p className="text-[12px] font-bold text-stone-500 uppercase tracking-wide">After this video</p>
+        <a className="mt-1 block text-[13px] font-semibold underline" style={{ color: GREEN }} href={UP_NEXT.url} target="_blank" rel="noreferrer">
+          {UP_NEXT.url}
+        </a>
+        <p className="mt-1 text-[13px] text-stone-700 leading-snug">{UP_NEXT.note}</p>
       </section>
       <ol>
         {WORKFLOW.map((step, i) => (

@@ -1,5 +1,3 @@
-Guide
-
 # Exercises for lower back pain: what actually helps
 
 Exercise is one of the most recommended things you can do for a sore lower back. There is no single magic move. What works is a sensible mix, done regularly and made a little harder over time.
@@ -154,8 +152,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -166,9 +162,9 @@ What “core” really means for a sore back, and a progression from floor to st
 ### Back routine with no equipment
 What a home routine for a sore back needs, using only the floor.Read the guide](https://remedyrecoveries.com/guides/back-exercises-no-equipment)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

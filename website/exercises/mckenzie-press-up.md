@@ -1,5 +1,3 @@
-Mobility exercise
-
 # McKenzie press-up
 
 A press-up from lying on your stomach where the hips stay on the floor and the lower back extends. It comes from the McKenzie method, also called Mechanical Diagnosis and Therapy.
@@ -79,9 +77,9 @@ For people whose back gets tight from a chair and a screen.Read the guide](https
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

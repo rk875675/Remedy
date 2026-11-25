@@ -66,7 +66,6 @@ import type { PetState } from '../../lib/pet';
 import { PET_NAME_INVALID, PET_NAME_MAX_LENGTH, PET_NAME_PLACEHOLDER } from '../../constants/petLines';
 import { TabFadeWrapper } from '../../components/ui/TabFadeWrapper';
 import { WorkoutDaysModal } from '../../components/progress/WorkoutDaysModal';
-import { PromoCodeSheet } from '../../components/PromoCodeSheet';
 import type { Entitlement, Profile, UserProgram } from '../../types/database';
 
 // ---------------------------------------------------------------------------
@@ -519,9 +518,6 @@ export default function ProfileScreen() {
   // Restore state
   const [restoring, setRestoring] = useState(false);
   const [openingPaywall, setOpeningPaywall] = useState(false);
-
-  // "Have a code?" promo sheet (backend creator codes + Apple offer-code fallback).
-  const [promoVisible, setPromoVisible] = useState(false);
 
   // Delete account state
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -1357,18 +1353,6 @@ export default function ProfileScreen() {
             )}
           </TouchableOpacity>
 
-          <View style={styles.divider} />
-
-          {/* Have a code? — backend creator codes + Apple offer-code fallback */}
-          <TouchableOpacity
-            style={styles.settingsRow}
-            onPress={() => setPromoVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingsRowLabel}>Have a code?</Text>
-            <Text style={styles.chevronIcon}>›</Text>
-          </TouchableOpacity>
-
           {/* Resubscribe — cancelled, expired, or no plan. Opens Superwall in place
               (navigating to match would bounce a still-premium cancelled user home). */}
           {entitlement?.subscription_status !== 'active' &&
@@ -1573,23 +1557,6 @@ export default function ProfileScreen() {
         onEditProgram={() => {
           void closeWorkoutDaysSheet();
           router.push('/onboarding-answers');
-        }}
-      />
-      <PromoCodeSheet
-        visible={promoVisible}
-        onClose={() => setPromoVisible(false)}
-        // Already inside the app — refreshPremium ran inside the sheet; re-read the
-        // entitlement row so the Plan card reflects the fresh grant immediately.
-        onAccessGranted={() => {
-          if (!user) return;
-          void supabase
-            .from('entitlements')
-            .select('*')
-            .eq('user_id', user.id)
-            .single()
-            .then(({ data }) => {
-              if (data) setEntitlement(data);
-            });
         }}
       />
     </TabFadeWrapper>

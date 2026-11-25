@@ -1,5 +1,3 @@
-Mobility exercise
-
 # Cat-cow stretch
 
 An all-fours movement that alternates rounding and arching your spine. It is one of the gentlest ways to get a stiff back moving, which is why Remedy often uses it at the start of a session.
@@ -88,9 +86,9 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

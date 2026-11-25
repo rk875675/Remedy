@@ -1,5 +1,3 @@
-Guide
-
 # Exercises for upper and middle back pain
 
 A tight upper back usually responds well to two things: moving it more, especially into extension and rotation, and making the muscles between your shoulder blades stronger.
@@ -132,8 +130,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -144,9 +140,9 @@ Gentle stretches that ease a stiff lower back, and why stretching alone is not e
 ### When to see a doctor
 The warning signs that mean you need medical care, not an exercise routine.Read the guide](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

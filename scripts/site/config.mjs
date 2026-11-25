@@ -4,7 +4,7 @@
 export const SITE = 'https://remedyrecoveries.com';
 export const APP_ID = '6813745106';
 export const STORE = `https://apps.apple.com/us/app/remedy-back-pain-relief/id${APP_ID}`;
-export const CSS_VERSION = 23;
+export const CSS_VERSION = 41;
 export const UPDATED = '2026-10-23';
 export const OUT = 'website';
 

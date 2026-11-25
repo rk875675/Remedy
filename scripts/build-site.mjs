@@ -48,15 +48,18 @@ const write = (file, content) => {
 
 // Label table cells with their column header so tables can stack on phones.
 const labelTables = (html) =>
-  html.replace(/<table class="compare">([\s\S]*?)<\/table>/g, (table, inner) => {
-    const heads = [...(inner.match(/<thead>([\s\S]*?)<\/thead>/)?.[1] ?? '').matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, '').replace(/"/g, '&quot;'));
+  html.replace(/<table(\s[^>]*)?>([\s\S]*?)<\/table>/g, (table, attrs = '', inner) => {
+    const heads = [...(inner.match(/<thead>([\s\S]*?)<\/thead>/)?.[1] ?? '').matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, '').replace(/"/g, '&quot;').trim());
     if (!heads.length) return table;
-    const body = inner.replace(/<tr([^>]*)>([\s\S]*?)<\/tr>/g, (row, attrs, cells) => {
-      if (row.includes('scope="col"')) return row;
-      let i = 0;
-      return `<tr${attrs}>${cells.replace(/<(td|th)(\s[^>]*)?>/g, (tag, name, rest = '') => `<${name}${rest} data-label="${heads[i++] ?? ''}">`)}</tr>`;
+    const cleaned = inner.replace(/\sdata-label="[^"]*"/g, '');
+    const body = cleaned.replace(/<tbody>([\s\S]*?)<\/tbody>/g, (tbody, rows) => {
+      const next = rows.replace(/<tr([^>]*)>([\s\S]*?)<\/tr>/g, (row, trAttrs, cells) => {
+        let i = 0;
+        return `<tr${trAttrs}>${cells.replace(/<(td|th)(\s[^>]*)?>/g, (tag, name, rest = '') => `<${name}${rest} data-label="${heads[i++] ?? ''}">`)}</tr>`;
+      });
+      return `<tbody>${next}</tbody>`;
     });
-    return `<table class="compare">${body}</table>`;
+    return `<table${attrs}>${body}</table>`;
   });
 // WebPage.name mirrors the visible H1 so schema and page text agree.
 function alignPageName(html) {
@@ -117,6 +120,7 @@ for (const h of HAND) {
     .replace(/<body>[\s\S]*?(?=<main)/, `${nav().trim()}\n  `)
     .replace(/<main class="legal/, '<main id="main" class="legal')
     .replace(/<main id="main" id="main"/, '<main id="main"')
+    .replace(/<main id="main"(?![^>]*\btabindex=)/, '<main id="main" tabindex="-1"')
     .replace(/<footer[\s\S]*?<\/footer>(\s*<script>[\s\S]*?<\/script>)?/, `${footer().trim()}${MENU_SCRIPT}`)
     .replace(/\/styles\.css\?v=\d+/g, `/styles.css?v=${CSS_VERSION}`);
   if (!html.includes('name="twitter:card"')) {
@@ -144,7 +148,7 @@ for (const h of HAND) {
   if (!/<meta name="robots"/.test(html) && !h.noindex) {
     html = html.replace('<link rel="canonical"', '<meta name="robots" content="index, follow, max-image-preview:large" />\n  <link rel="canonical"');
   }
-  writeFileSync(join(OUT, h.file), emailOff(alignPageName(html)));
+  writeFileSync(join(OUT, h.file), emailOff(alignPageName(labelTables(html))));
 }
 
 // ---- Markdown twins (for assistants) and llms-full.txt.
@@ -226,8 +230,8 @@ write(
 - Price: free to download; full access is an auto-renewing subscription: ${PLANS.map((p) => `$${p.price}/${p.per}`).join(', ')} (US). Free trial where offered: 7 days weekly, 14 days monthly, and 7 days annual.
 - Program: 10 to 16 weeks depending on how long the pain has lasted and how the back behaves; 3 to 7 sessions a week, chosen by the user.
 - Personalization: rules from onboarding answers (pain location, duration, type, activity level, what makes it worse, equipment, goal, days per week). No clinician in the loop, no camera form scoring.
-- Pet: every account has a pet armadillo the user names. It starts curled in a ball and grows through 5 stages as the user finishes sessions (after 1, 4, 9 and 15 lifetime sessions). It never shrinks if a day is missed.
-- Library: ${APP.exerciseCount} exercises across mobility, core stability, glutes, strength, and recovery stretches, each with a demonstration video. Harder variants replace an exercise once it reaches 15 reps.
+- Pet: every account has a pet armadillo the user names. It starts curled in a ball at 0 finished sessions. It moves up at 1, 4, 9, and 15 finished sessions. Missed days do not shrink it. It never shrinks if a day is missed. It does not describe the person's back.
+- Library: mobility, core stability, glutes, strength, and recovery stretches, each with a demonstration video. The work gets harder across the weeks.
 - Scope: back only (upper, lower, or both). Not neck, shoulder, hip, or knee.
 - Age: ${APP.age}. Released ${APP.releasedLabel}.
 - Operator: ${ORG.legalName}, d/b/a Remedy, ${ORG.city}, Kansas, USA. Contact: ${ORG.email}

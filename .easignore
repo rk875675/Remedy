@@ -1,9 +1,39 @@
-# Local EAS inspect output — never upload (was doubling archive to ~1GB).
+# .easignore replaces every .gitignore. Secret rules have to live here too.
+# .git and node_modules are always skipped by EAS.
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.jks
+*.key
+*.pem
+*.mobileprovision
+
+# Local caches
+.expo/
+dist/
+web-build/
+tmp/
+.wrangler/
+*.log
+*.tsbuildinfo
 .eas-archive/
 .eas-prebuild-test/
 
-# Not needed for iOS app builds
+# Not used to compile the iOS app
 growth-engine/
 ugc-refs/
-scripts/output/
+.edit-work/
 .cursor/
+.claude/
+scripts/
+app-store/
+marketing/
+website/
+website-v1-baseline/
+meme-study/
+docs/
+supabase/.temp/

@@ -1,8 +1,8 @@
-Pricing
-
 # Remedy pricing
 
-Free to download. Full access is an auto-renewing subscription billed through Apple. These are US prices.
+Free to download. Full access is a subscription billed through Apple. It renews until you cancel.
+
+These are US prices. There is no checkout on this website.
 
 Weekly
 
@@ -16,8 +16,6 @@ $12.99 / month
 
 14-day free trial where offered
 
-Best value
-
 Annual
 
 $79.99 / year
@@ -30,17 +28,17 @@ About $6.67 a month
 
 ## Every plan includes
 
-- A personalized 10 to 16 week program
+- A 10 to 16 week program built from your answers
 
-- A demonstration video for every exercise
+- A video on every exercise
 
-- Before-and-after pain check-ins and a pain trend
+- Sessions of 15, 20, or 30 minutes, on 3 to 7 days you pick
 
-- Workout days and reminders
+- A pain rating before and after each session
 
 - A new program, or a harder one, when you finish
 
-- Gym, band and dumbbell, or no-equipment versions
+- An armadillo that moves up at 1, 4, 9, and 15 finished sessions. Missed days do not shrink it.
 
 ## Billing, cancelling, and refunds
 
@@ -68,7 +66,7 @@ Yes. These are US prices. The App Store shows the price in your local currency b
 
 No. Remedy is a consumer app you subscribe to yourself. It is not an employer benefit or a covered medical service.
 
-Payment is charged to your Apple ID account at confirmation of purchase. The subscription renews automatically unless you cancel at least 24 hours before the end of the current period. See the [Terms of Service](https://remedyrecoveries.com/terms).
+Payment is charged to your Apple ID at confirmation of purchase. The subscription renews unless you cancel at least 24 hours before the end of the current period. See the [Terms of Service](https://remedyrecoveries.com/terms).
 
 ## Try Remedy free
 

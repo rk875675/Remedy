@@ -1,10 +1,18 @@
-Guide
-
 # Back pain from sitting all day
 
 If your back gets tight from a chair and a screen, the fix is less about perfect posture and more about moving often and building a back that handles long days.
 
 By [the Remedy team](https://remedyrecoveries.com/about#editorial) · Published September 8, 2026 · Updated October 23, 2026 · 2 min read · 3 sources
+
+The session is already chosen. You do not build the workout.
+
+- **Hinge Health**Digital physical therapy with a care team, usually through work or a health plan. If yours includes it, start there.
+
+- **Sword**The same kind of program. Sword acquired Kaia Health. Also usually a work benefit, not a download you buy yourself.
+
+- **Curable**Pain education and mind-body practice. Not an exercise program. It can sit beside one.
+
+- **Remedy**The iPhone program you download yourself. Short sessions for a back that sits all day. No care team.
 
 On this page
 
@@ -135,8 +143,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -147,9 +153,9 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 ### Stretches for lower back pain
 Gentle stretches that ease a stiff lower back, and why stretching alone is not enough.Read the guide](https://remedyrecoveries.com/guides/stretches-for-lower-back-pain)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

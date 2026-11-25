@@ -1,5 +1,3 @@
-Mobility exercise
-
 # Hip flexor stretch
 
 A lunge-position stretch for the front of the hip. Remedy’s version starts half-kneeling, with one knee on the floor.
@@ -80,9 +78,9 @@ What a 2024 trial found about walking and back pain, and how to build up.Read th
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

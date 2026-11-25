@@ -21,6 +21,10 @@ The dashboard tab AI UGC (slides.remedyrecoveries) shows this workflow, the form
 
 Approval gates: the owner confirms the reference video, then the idea and script, before any credits are spent. Then the owner approves the stills and the voice before motion.
 
+Current video: M2, pet reacts to the log. Reference confirmed Nov 24. https://www.tiktok.com/@healthyjenna/video/7512126714080693534
+
+Parked for the video after M2. Remind the owner before the next reference pick. Do not start it during M2. https://x.com/jonnyscales/status/2125244380483084498 — the 56s clip on that post. Shape: curiosity open, then she talks as if to a friend, then the demo is the video, payoff at the end. Do not copy his wording.
+
 ## Character
 
 The star is Lindsey: `growth-engine/assets/characters/lindsey/`.

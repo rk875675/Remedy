@@ -1,5 +1,3 @@
-Guide
-
 # Is walking good for back pain?
 
 Walking is free, needs no equipment, and has some of the most encouraging recent evidence of any activity for people who keep getting back pain.
@@ -121,8 +119,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -133,9 +129,9 @@ Why a back routine is measured in weeks, and what progress looks like.Read the g
 ### Lower back stiff in the morning
 Why mornings feel worst, what usually helps, and when stiffness needs a doctor.Read the guide](https://remedyrecoveries.com/guides/morning-back-stiffness)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

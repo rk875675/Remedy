@@ -1,12 +1,12 @@
-About
-
 # About Remedy
 
-Remedy makes a back pain app for iPhone: a structured, video-guided back fitness program for people who want a plan instead of a pile of videos.
+Remedy makes a back pain app for iPhone. It is a program of short sessions, with a video on every exercise.
+
+A fitness program, not medical care.
 
 ## What we make
 
-Remedy: Back Pain Relief is a consumer iPhone app. You answer a short onboarding about your back, and it builds a 10 to 16 week program of short sessions, with a demonstration video for every exercise and a pain check-in before and after. It also comes with a pet armadillo that you name and that grows as you finish sessions. It launched on the App Store on October 13, 2026.
+Remedy: Back Pain Relief is an iPhone app. You answer a short onboarding about your back. It builds a 10 to 16 week program. Sessions are 15, 20, or 30 minutes, on 3 to 7 days you pick. You rate pain before the session and after it. You also name an armadillo. It moves up at 1, 4, 9, and 15 finished sessions, and missed days do not shrink it. It does not describe your back. It launched on the App Store on October 13, 2026.
 
 - **What it is:** Back fitness app for people with back pain
 
@@ -30,7 +30,11 @@ Remedy: Back Pain Relief is a consumer iPhone app. You answer a short onboarding
 
 ## Why it exists
 
-Most people with a sore back end up in one of two places: guessing with random videos they stop doing within a week, or paying for care they can’t keep up with. Exercise is one of the best-supported options for everyday back pain, but it only works if you keep doing it for weeks and it gets harder at the right pace. Remedy is built to be that middle path: a real plan in your pocket, one session at a time.
+People with a sore back often save a few videos and stop. Or they pay for care they cannot keep up with.
+
+Guidelines often recommend exercise for everyday back pain. It takes weeks, and it should get harder at a steady pace.
+
+Remedy is that program. One session at a time. The armadillo is there so the next session is easier to start. It does not talk about your back.
 
 ## Who builds it
 
@@ -38,7 +42,7 @@ Most people with a sore back end up in one of two places: guessing with random v
 
 Founder and developer
 
-Rahul studies computer engineering and computer science at the University of Wisconsin–Madison and competes in powerlifting. He built Remedy end to end: the iOS app, the program engine that turns onboarding answers into a progressive plan, and subscriptions. He also co-founded [Relentless](https://relentlesstough.com/), a mental training app for athletes.
+Rahul studies computer engineering and computer science at the University of Wisconsin–Madison and competes in powerlifting. He built Remedy end to end: the iOS app, the program engine that turns onboarding answers into a plan, and subscriptions. He also co-founded [Relentless](https://relentlesstough.com/), a mental training app for athletes.
 
 [Rahul on LinkedIn](https://www.linkedin.com/in/rahul-kumar-aa1a8b32a/)
 
@@ -60,9 +64,9 @@ Rahul studies computer engineering and computer science at the University of Wis
 
 Remedy is operated by Kumar Holdings LLC, doing business as Remedy.8209 W 127th Cir, Overland Park, KS 66213, USA[social@remedyrecoveries.com](mailto:social@remedyrecoveries.com)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

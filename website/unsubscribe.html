@@ -15,7 +15,7 @@
   <link rel="canonical" href="https://remedyrecoveries.com/unsubscribe" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png?v=113584ba" />
   <link rel="manifest" href="/site.webmanifest" />
-  <link rel="stylesheet" href="/styles.css?v=23" />
+  <link rel="stylesheet" href="/styles.css?v=41" />
 </head>
 <body>
 <!--email_off-->
@@ -43,11 +43,12 @@
           <a href="/back-pain-app">Back pain app</a>
           <a href="/about">About</a>
           <a href="/contact">Contact</a>
+          <a href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106">Get the app</a>
         </nav>
       </details>
     </div>
   </header>
-  <main id="main" class="legal contact-page">
+  <main id="main" tabindex="-1" class="legal contact-page">
     <h1>Unsubscribe</h1>
     <p class="updated">Marketing emails only. Account and security messages still send.</p>
 
@@ -70,8 +71,8 @@
       <div class="footer-grid">
         <div class="footer-about">
           <a href="/" class="footer-brand" aria-label="Remedy home"><img src="/assets/logo-64.png?v=b71df1f6" width="28" height="28" alt="" loading="lazy" /> Remedy</a>
-          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short daily sessions built around your answers.</p>
-          <a class="store-badge store-badge-sm" href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106"><img src="/assets/app-store-badge.svg?v=2f2fe1cb" width="162" height="54" alt="Download Remedy on the App Store" loading="lazy" /></a>
+          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short sessions on the days you pick.</p>
+          <a class="store-badge store-badge-sm" href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106"><img src="/assets/app-store-badge.svg?v=2f2fe1cb" width="162" height="54" alt="Download Remedy on the App Store" decoding="async" loading="lazy" /></a>
         </div>
         <nav aria-label="App">
           <h2>App</h2>
@@ -107,6 +108,14 @@
     document.addEventListener('click', function (e) {
       var menu = document.querySelector('.nav-menu[open]');
       if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var menu = document.querySelector('.nav-menu[open]');
+      if (!menu) return;
+      menu.removeAttribute('open');
+      var summary = menu.querySelector('summary');
+      if (summary) summary.focus();
     });
   </script>
 

@@ -1,8 +1,6 @@
-FAQ
-
 # Frequently asked questions
 
-Everything people ask about Remedy. Can’t find your answer? [Contact us](https://remedyrecoveries.com/contact).
+Price, safety, equipment, and the armadillo. If your question is missing, [contact us](https://remedyrecoveries.com/contact).
 
 ## The app
 
@@ -12,7 +10,7 @@ Remedy: Back Pain Relief is an iPhone app for people with back pain. You answer 
 
 ### Who is Remedy for?
 
-Adults 17 and older with everyday back pain or stiffness who want a structured plan: desk workers, parents, people who lift, and people who just want to move more comfortably. It is not for people with warning signs or a new injury.
+Adults 17 and older with everyday back pain who want a structured plan: desk workers, parents, people who lift, and people who just want to move more comfortably. It is not for people with warning signs or a new injury.
 
 ### Is it for lower back or upper back pain?
 
@@ -24,7 +22,7 @@ Both. Onboarding asks whether it is your upper back, lower back, or all over, an
 
 ### How long is each session?
 
-Each session shows its length and number of exercises before you start. A typical example is about 19 minutes with five exercises.
+You choose 15, 20, or 30 minutes. Each session shows its length and its exercises before you start.
 
 ### Do I need equipment?
 
@@ -32,7 +30,7 @@ No. You choose full gym access, bands and light dumbbells, or open floor space, 
 
 ### Is Remedy on Android?
 
-Not yet. Remedy is iPhone only, and needs iOS 15.1 or later.
+No. Remedy is iPhone only. It needs iOS 15.1 or later.
 
 ## Price and subscriptions
 
@@ -56,7 +54,7 @@ App Store refunds are handled by Apple at [reportaproblem.apple.com](https://rep
 
 ### Is Remedy physical therapy?
 
-No. Remedy is a fitness and wellness app. It does not diagnose or treat conditions and is not a substitute for a doctor or physical therapist.
+No. Remedy is a fitness app. It does not diagnose or treat conditions and is not a substitute for a doctor or physical therapist.
 
 ### Is Remedy safe to use with back pain?
 
@@ -74,15 +72,15 @@ The Remedy team. Guides are general fitness information based on published clini
 
 ### What is the armadillo?
 
-Every Remedy account comes with a pet armadillo that you name. It starts curled up in a ball and uncurls as you finish sessions. It is company, not a replacement for the program.
+Every Remedy account comes with one armadillo that you name. It shows how many sessions you have finished. It is not a comment on your back, and it is not a promise about pain.
 
-### How does the armadillo grow?
+### When does the armadillo move up?
 
-It has five stages. It moves up after your 1st, 4th, 9th, and 15th finished session, counted across your whole account. Missing a day never shrinks it. It just waits.
+It has five stages. Curled is 0 finished sessions. It moves up at 1, 4, 9, and 15 finished sessions, the 1st, 4th, 9th, and 15th. Missed days do not shrink it. It does not describe your back.
 
 ### What does the armadillo do all day?
 
-It has moods. It sleeps at night, naps on rest days, reads a book upside down, and gets grumpy if you poke it too much. Its job is to be on your side.
+It stays at the stage you have reached. It does not describe your back.
 
 ## Account and data
 
@@ -98,9 +96,9 @@ In the app, go to Profile and choose Delete Account, or [email us](https://remed
 
 Email [social@remedyrecoveries.com](mailto:social@remedyrecoveries.com).
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

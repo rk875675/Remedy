@@ -9,8 +9,8 @@
 - Price: free to download; full access is an auto-renewing subscription: $4.99/week, $12.99/month, $79.99/year (US). Free trial where offered: 7 days weekly, 14 days monthly, and 7 days annual.
 - Program: 10 to 16 weeks depending on how long the pain has lasted and how the back behaves; 3 to 7 sessions a week, chosen by the user.
 - Personalization: rules from onboarding answers (pain location, duration, type, activity level, what makes it worse, equipment, goal, days per week). No clinician in the loop, no camera form scoring.
-- Pet: every account has a pet armadillo the user names. It starts curled in a ball and grows through 5 stages as the user finishes sessions (after 1, 4, 9 and 15 lifetime sessions). It never shrinks if a day is missed.
-- Library: 28 exercises across mobility, core stability, glutes, strength, and recovery stretches, each with a demonstration video. Harder variants replace an exercise once it reaches 15 reps.
+- Pet: every account has a pet armadillo the user names. It starts curled in a ball at 0 finished sessions. It moves up at 1, 4, 9, and 15 finished sessions. Missed days do not shrink it. It never shrinks if a day is missed. It does not describe the person's back.
+- Library: mobility, core stability, glutes, strength, and recovery stretches, each with a demonstration video. The work gets harder across the weeks.
 - Scope: back only (upper, lower, or both). Not neck, shoulder, hip, or knee.
 - Age: 17+. Released October 13, 2026.
 - Operator: Kumar Holdings LLC, d/b/a Remedy, Overland Park, Kansas, USA. Contact: social@remedyrecoveries.com

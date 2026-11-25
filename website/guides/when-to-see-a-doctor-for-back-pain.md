@@ -1,5 +1,3 @@
-Guide
-
 # When to see a doctor for back pain
 
 Most back pain gets better on its own with time and staying active. A few warning signs mean you should get medical care instead of starting an exercise routine.
@@ -99,8 +97,6 @@ See a doctor if it is not improving after a few weeks, is getting worse, or is s
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -111,9 +107,9 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 ### Lower back stiff in the morning
 Why mornings feel worst, what usually helps, and when stiffness needs a doctor.Read the guide](https://remedyrecoveries.com/guides/morning-back-stiffness)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

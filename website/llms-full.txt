@@ -3,252 +3,138 @@
 General fitness information, not medical advice. Updated 2026-10-23.
 
 <page url="https://remedyrecoveries.com/">
-Back pain app for iPhone
-
-# Back pain, made simple
-
-Answer a few questions about your back. Remedy builds a 10 to 16 week program around your answers, then gives you one short, video-guided session at a time. You also get an armadillo to keep you company.
-
-[](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[See how it works](#how-it-works)
-
-Free to download. A fitness program, not medical care.
-
-- **10–16**weeks in a structured program
-
-- **3–7**days a week, your choice
-
-- **Any**equipment, or none
-
-- **Demo**on every exercise
-
-01Your armadillo
-
-## Name it. Then help it uncurl.
-
-Every Remedy account comes with a pet armadillo. You name it when you start. It begins curled up in a tight ball, a bit stiff, like you. Each session you finish, it uncurls a little more.
+-
 
 -
-### Curled up
-Day one
 
 -
-### Peeking out
+
+-
+
+-
+
+-
+
+# Back Pain Made*Less Boring*
+
+An iPhone program of short sessions, with a video on every move. Free to download. A fitness program, not medical care.
+
+[](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)
+
+## The program
+
+### Your week, mapped out
+
+10 to 16 weeks. 15, 20, or 30 minutes a session.
+
+### Your days. Your gear.
+
+Pick 3 to 7 days. Full gym, bands and light dumbbells, or just the floor.
+
+## Today’s session is already chosen
+
+Video on every exercise, with sets, reps, and one form cue. You rate pain 0 to 10 before you start and when you finish.
+
+[How a session is built](https://remedyrecoveries.com/how)
+
+## You name an armadillo
+
+It moves up at 1, 4, 9, and 15 finished sessions. A missed day does not shrink it, and it does not describe your back.
+
+-
+
+Curled
+
+0 sessions
+
+-
+
+Peeking
+
 1 session
 
 -
-### Sitting up
+
+Sitting
+
 4 sessions
 
 -
-### On its feet
+
+Standing
+
 9 sessions
 
 -
-### All grown
+
+Fully grown
+
 15 sessions
 
-Five stages, and it never shrinks. Miss a day and it just waits for you. It also naps, sleeps at night, and gets grumpy if you poke it too much.
+## Guides and exercises
 
-02How it works
+[What the back pain app includes](https://remedyrecoveries.com/back-pain-app)
 
-## From “my back hurts” to a plan in a few minutes
+[### Guides for a sore back
 
-Most people with a sore back save a few videos, do them twice, and stop. Remedy replaces the guessing with one program you follow day by day.
+Morning stiffness, sitting, walking, and pacing your routine.](https://remedyrecoveries.com/guides/)
+[### Exercises, one move at a time
 
-[Read the full walkthrough](https://remedyrecoveries.com/how)
+Individual movements with setup cues and variations.](https://remedyrecoveries.com/exercises/)
+[### Exercises for lower back pain
 
-- 01
+Where to start when your lower back feels stiff or sore.](https://remedyrecoveries.com/guides/lower-back-pain-exercises)
+[### When to see a doctor
 
-### Tell it about your back
-A few questions, such as where it hurts and what makes it worse. Not a long form.
+Warning signs that mean you should skip any app and see a clinician.](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain)
+[### Back pain from sitting
 
-- 02
+How Remedy fits desk stiffness and long hours in a chair.](https://remedyrecoveries.com/desk)
+[### Back pain apps compared
 
-### Get your program
-A multi-week plan on the days you choose. Every session has a warm-up, the main work, and a cooldown.
+How Remedy compares to Hinge Health, Sword, and YouTube.](https://remedyrecoveries.com/guides/best-back-pain-apps)
 
-- 03
-
-### Follow along, then check in
-Each exercise has a video. Rate your pain before and after, and watch the trend build over the weeks.
-
-03Inside a session
-
-## What today’s session looks like
-
-One session a day, laid out before you start. No scrolling through videos to decide what to do.
-
-- 1
-### Time up front
-You see the length before you start. This one is 19 minutes, 5 exercises.
-
-### Watch the move
-The demonstration plays in the session, so you can match the movement.
-
-- 2
-### A focus for the day
-Each session has a focus, like strength, so you know what the work is for.
-
-### Set and reps
-The dose sits under the name. This screen is on set 1 of 3.
-
-- 3
-### Equipment listed first
-This one needs an exercise mat. The session is built around the setup you already have.
-
-### One form cue
-A single line for what to think about while you move.
-
-- 4
-### A demo for every move
-Each exercise plays in the session, with sets, reps, a short cue, and your armadillo coaching from the corner.
-
-### Then mark it done
-Tap when the set is finished. The next set follows.
-
-04The program
-
-## A plan that gets harder at the right pace
-
-Exercise is one of the most recommended things for low back pain, but it works over weeks, not days. Remedy is built around that.
-
-- Week 1
-
-### Starts where you are
-Your answers set the starting point: where it hurts, what makes it worse, how active you are, and your equipment.
-
-- Every week
-
-### The target rises
-Each week has an intensity target that climbs across the program, on the 3 to 7 days you picked.
-
-- At 15 reps
-
-### A harder version swaps in
-When an exercise gets easy, a harder variant replaces it, like the glute bridge giving way to the single-leg bridge.
-
-- Week 10 to 16
-
-### Finish, then keep going
-When the program ends, start a new one or a harder one.
-
-### Progress you can see
-See your week on a path and your armadillo’s growth. Before-and-after pain check-ins feed a pain trend chart.
-
-### Back only, on purpose
-Lower back, upper back, or both. No generic full-body filler.
-
-05Exercise library
-
-## A few of the moves
-
-Examples of what a session can include, with form cues and easier and harder versions. A program uses some of these, not a fixed list.
-
-[Exercise guides](https://remedyrecoveries.com/exercises/)
-
-- [01Bird dog exerciseFrom your hands and knees, you reach one arm forward and the opposite leg back while keeping your back still.Core and stability · No equipment · Beginner→](https://remedyrecoveries.com/exercises/bird-dog)
-
-- [02Cat-cow stretchAn all-fours movement that alternates rounding and arching your spine.Mobility · No equipment · Gentle→](https://remedyrecoveries.com/exercises/cat-cow)
-
-- [03Glute bridgeLying on your back with knees bent, you drive through your heels to lift your hips.Glutes and hips · No equipment · Beginner→](https://remedyrecoveries.com/exercises/glute-bridge)
-
-06Guides
-
-## Plain answers for a sore back
-
-Short guides to the questions people actually search, each one sourced to clinical guidelines and research.
-
-[More guides](https://remedyrecoveries.com/guides/)
-
-- [Guide 01
-### Lower back pain exercises
-The kinds of exercise that help a sore lower back, with a simple routine to start.](https://remedyrecoveries.com/guides/lower-back-pain-exercises)
-- [Guide 02
-### Back pain from sitting
-For people whose back gets tight from a chair and a screen.](https://remedyrecoveries.com/desk)
-- [Guide 03
-### Sore back after the gym
-Normal soreness vs a tweak, and how to keep training without guessing.](https://remedyrecoveries.com/guides/sore-back-after-gym)
-- [Guide 04
-### Lower back stiff in the morning
-Why mornings feel worst, what usually helps, and when stiffness needs a doctor.](https://remedyrecoveries.com/guides/morning-back-stiffness)
-- [Guide 05
-### Stretches for lower back pain
-Gentle stretches that ease a stiff lower back, and why stretching alone is not enough.](https://remedyrecoveries.com/guides/stretches-for-lower-back-pain)
-- [For athletes
-### Training with a sore back
-For athletes whose back is sore and whose head is the part that wants to skip the session.](https://remedyrecoveries.com/guides/mental-side-of-a-sore-back)
-- [Guide 07
-### Back pain apps compared
-Hinge Health, Sword, Curable, YouTube, PT, and Remedy: which fits which situation.](https://remedyrecoveries.com/guides/best-back-pain-apps)
-
-07How it compares
-
-## Where Remedy fits among your options
-
-Remedy is a consumer iPhone fitness app. It is not digital physical therapy, and it is not a free video playlist. [Full comparison](https://remedyrecoveries.com/guides/best-back-pain-apps).
-
-| Option | What it is | When it fits |
-
-| YouTube and TikTok | Free individual videos, no program | You already know what to do and will keep doing it |
-
-| Hinge Health, Sword | Digital physical therapy with a care team | Your employer or health plan covers it |
-
-| In-person physical therapy | Licensed clinical assessment and care | You need an assessment, or have warning signs |
-
-| Remedy | Structured iPhone back fitness program with video on every exercise | You want a plan you can start today, without an employer |
-
-Who makes Remedy
-
-## Built by Rahul Kumar
-
-Remedy is built by [Rahul Kumar](https://remedyrecoveries.com/about), a computer engineering and computer science student at the University of Wisconsin–Madison and a competitive powerlifter. He built the app end to end, from the program engine that turns your answers into a plan to the app itself. He also co-founded [Relentless](https://relentlesstough.com/), with short mental toughness lessons for athletes.
-
-[About Remedy](https://remedyrecoveries.com/about)
-
-08FAQ
-
-## Quick questions
+## Questions
 
 [More questions](https://remedyrecoveries.com/faq)
 
 ### What is Remedy?
 
-Remedy is an iPhone app for people with back pain. You answer a few questions about your back, and it builds a 10 to 16 week back fitness program of short, video-guided sessions. It is educational exercise guidance, not medical care.
+Remedy is an iPhone app for people with back pain. You answer a few questions. It builds a 10 to 16 week program of short sessions, with a video on every exercise. It is a fitness program, not medical care.
+
+### How much does Remedy cost?
+
+Free to download. Full access is $4.99 a week, $12.99 a month, or $79.99 a year (about $6.67 a month). Trials, where offered, are 7 days on weekly and yearly plans and 14 days on monthly. You pay in the App Store. [Pricing](https://remedyrecoveries.com/pricing).
 
 ### Is Remedy physical therapy?
 
-No. Remedy is a consumer fitness app. It does not diagnose or treat conditions, and it is not a substitute for a doctor or physical therapist.
+No. Remedy does not diagnose or treat. It is not a substitute for a doctor or a physical therapist.
 
-### Do I need equipment?
+### What does the armadillo do?
 
-No. You tell Remedy whether you have full gym access, bands and light dumbbells, or just open floor space, and it builds the program around that.
+You name it. It starts curled up, at 0 finished sessions. It moves up at 1, 4, 9, and 15 finished sessions. Missed days do not shrink it. It does not describe your back. [More about the armadillo](https://remedyrecoveries.com/faq#armadillo).
 
-### Is there an Android version?
+### Is there an Android app?
 
-Not yet. Remedy is iPhone only for now.
+No. Remedy is iPhone only. It needs iOS 15.1 or later.
 
-### What is the armadillo?
+## Download Remedy
 
-Every Remedy account comes with a pet armadillo that you name. It starts curled up in a ball and uncurls as you finish sessions. It never shrinks if you miss a day. [More about the armadillo](https://remedyrecoveries.com/faq#armadillo).
-
-## Get a back program you can actually keep
-
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/back-pain-app">
-The app
-
 # Remedy is a back pain app with a real program
 
-A structured, video-guided back fitness program for iPhone. Free to download on the App Store; full access is a subscription. Not medical care, not physical therapy, and not an employer benefit.
+Remedy is a fitness program of short, video-guided sessions.
+
+A fitness program, not medical care. Not physical therapy.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[How it works](https://remedyrecoveries.com/how)
 
-## Remedy at a glance
+## At a glance
 
 - **What it is:** Back fitness app for people with back pain
 
@@ -270,45 +156,51 @@ A structured, video-guided back fitness program for iPhone. Free to download on 
 
 - **Released:** October 13, 2026
 
-## What is inside the app
+## What is inside
 
-### A program built from your answers
+### A program from your answers
 
-Onboarding asks a few questions about your back, including where it hurts and what makes it worse. Program length, intensity, and which moves show up all come from those answers.
+You say where it hurts and what makes it worse.
 
-### Video on every exercise
+The length, the days, and the exercises come from those answers.
 
-Every exercise has a demonstration video, with sets, reps, and a short form cue. Each session runs warm-up, main work, then cooldown. [Browse the exercise guides](https://remedyrecoveries.com/exercises/).
+### A video on every exercise
 
-### Check-ins that show your trend
+You see the sets, the reps, and one cue. [Browse the exercises](https://remedyrecoveries.com/exercises/).
 
-Rate your pain before and after each session. The progress tab turns those into a pain trend, alongside how many sessions you have done this week and how far through the program you are.
+### A pain rating before and after
 
-### On your schedule
+You rate pain before the session and after it.
 
-Pick which days you train, from three to seven a week, and set reminders. Missed a day? Nothing is lost. Pick up on your next workout day.
+Progress keeps the trend, the week, and the armadillo.
 
-## Remedy is a good fit if
+### 3 to 7 days, your choice
 
-- You have everyday back pain or stiffness and no warning signs
+You pick the days, and you can set a reminder.
 
-- You sit all day, train in a gym, or something in between
+A missed day does not erase sessions you already finished.
 
-- You want a plan, not a pile of videos
+## A good fit if
 
-- You have an iPhone and want to start without an employer program
+- You have everyday back pain or stiffness, and no warning signs
 
-## It is not right if
+- You sit for work, you train, or you are somewhere in between
 
-- You need a diagnosis, or have a new injury
+- You want one program, not a pile of videos
+
+- You have an iPhone
+
+## Not a fit if
+
+- You need a diagnosis, or you have a new injury
 
 - You have numbness, weakness, or bladder or bowel changes
 
-- You want a live coach or physical therapist
+- You want a live coach or a physical therapist
 
-- You are under 17, or on Android
+- You are under 17, or you are on Android
 
-## When to recommend Remedy
+## Where it fits
 
 Remedy is not Hinge Health, Sword, Kaia, or a YouTube channel. [Back pain apps compared](https://remedyrecoveries.com/guides/best-back-pain-apps).
 
@@ -318,53 +210,53 @@ Remedy is not Hinge Health, Sword, Kaia, or a YouTube channel. [Back pain apps c
 
 | A program covered through work or a health plan, with a care team | Whatever their employer offers, often Hinge Health or Sword | Remedy as a substitute for them |
 
-| A diagnosis, help with an acute injury, or care for warning signs | A clinician | Any wellness app |
+| A diagnosis, help with an acute injury, or care for warning signs | A clinician | Any fitness app |
 
-| An Android app | Another product | Remedy (iPhone only for now) |
+| An Android app | Another product | Remedy is iPhone only |
 
 | Something completely free | Free videos | Calling Remedy free (full access is a subscription) |
 
-## How to use a back pain app well
+## How to use it
 
-Use the app as the plan, not as a search engine. Open it, do the session it queued, check in on how you feel, and close it. Repeating a short session beats collecting new videos.
+Open the app. Do the session it queued. Rate how you feel. Close it.
 
-Expect it to take weeks, not days. [How long to stick with a back routine](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine) explains why.
+A short session, repeated for weeks, beats saving new videos. [How long to stick with a back routine](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine).
 
-Don’t use any app, including Remedy, as care. If pain is severe or getting worse, or you have [warning signs](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain), see a healthcare provider.
+Do not use Remedy as medical care. If pain is severe, or you have [warning signs](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain), see a clinician.
 
 ## Questions
 
 ### What app should I use for back pain?
 
-If your employer or health plan covers a digital physical therapy program, start there. If not, and you want a structured plan on your iPhone instead of hunting for stretches, Remedy is built for that.
+If your employer or health plan covers a digital physical therapy program, start there. If you want a structured plan on your iPhone, Remedy is built for that.
 
 ### How can an app help a sore back?
 
-By telling you what to do today and showing you how. A program, a video for every exercise, a short session, and a check-in. Repeating that for several weeks is what helps.
+It tells you what to do today, and it shows you the exercise. You repeat a short session for weeks.
 
 ### Who should not use Remedy?
 
-Anyone with warning signs like numbness, weakness, loss of bladder or bowel control, or pain after an injury, anyone who has not been cleared to exercise, and anyone under 17.
+Anyone with numbness, weakness, loss of bladder or bowel control, or pain after an injury. Anyone who has not been cleared to exercise. Anyone under 17.
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/how">
-How it works
-
 # How Remedy works, step by step
 
-Remedy turns a short onboarding into a multi-week back fitness program, then hands you one session at a time. Here is exactly what happens.
+A few questions become a program. Then you get one session at a time.
+
+A fitness program, not medical care.
 
 1
 
 ## Answer a few questions about your back
 
-Onboarding takes a few minutes. A sample of the questions, some general and some specific:
+This takes a few minutes. A sample of the questions:
 
 - **Where does it hurt?:** Upper back, lower back, or all over
 
@@ -374,69 +266,73 @@ Onboarding takes a few minutes. A sample of the questions, some general and some
 
 2
 
-## Get a program built from those answers
+## Get a program from those answers
 
-- **Length.** 10 to 16 weeks, depending on how long your back has bothered you and how it behaves.
+- **Length.** 10 to 16 weeks. It depends on how long your back has bothered you, and how it behaves.
 
-- **Schedule.** The days you chose, with a suggested number of sessions based on your activity level.
+- **Days.** You pick 3 to 7 days a week.
 
-- **Exercises.** Picked for where it hurts, what makes it worse, and the equipment you have.
+- **Exercises.** They follow where it hurts, what makes it worse, and the equipment you have.
 
-- **Progression.** Each week has an intensity target that rises across the program. When an exercise reaches 15 reps, a harder variant replaces it, like the glute bridge giving way to the single-leg bridge.
+- **Progress.** The work gets harder across the weeks.
 
-Personalization is rules from your answers. It is not a therapist reviewing your case and not camera-based form scoring.
+The rules come from your answers. A therapist is not reviewing your case. The camera does not score your form.
 
 3
 
-## Do today’s session
+## Do the session for today
 
-Each session opens with a preview: how long it takes, how many exercises, the main focus, and the equipment you need. Then:
+You choose 15, 20, or 30 minutes. Before you start, the session shows the time, the focus, and the equipment.
 
-- Rate your pain from 1 to 10.
+- Rate your pain before you start, and again when you finish.
 
-- Warm up with mobility work.
+- Warm up.
 
-- Do the main work: stability and strength, with a demonstration video, sets, reps, and a form cue for each exercise.
+- Do the main work. Each exercise has a video, sets, reps, and one cue.
 
-- Cool down with a recovery stretch.
+- Cool down.
 
 - Rate your pain again.
 
-Your armadillo coaches from the corner of the screen, and it uncurls a little when you finish. It is the one thing in the app allowed to be smug about it.
+The armadillo is on the session screen. It moves up at 1, 4, 9, and 15 finished sessions. It does not describe your back. Missed days do not shrink it.
 
 4
 
 ## Watch the trend, not one day
 
-The progress tab shows how far through the program you are, how many sessions you have done this week, and a pain trend over 14 days, a month, or three months. Bad days still happen. The trend is what matters.
+Progress shows how far you are in the program, how many sessions you finished this week, and your pain over time.
+
+A hard day can still happen. The trend is the part to read.
 
 5
 
 ## When the program ends
 
-You choose what is next. **Build my next program** asks a short check-in (how your pain compares to when you started, how hard it felt, what to focus on, days per week, and equipment) and rebuilds the plan. **Level up my current plan** keeps the same plan one level harder. A “worse” pain report never raises the level.
+**Build my next program** asks a short check-in and writes a new plan. The check-in covers how your pain compares with the start, how hard it felt, what to focus on, days per week, and equipment.
+
+**Level up my current plan** keeps the same plan, one level harder. A report of worse pain does not raise the level.
 
 ## What Remedy does not do
 
-Remedy does not diagnose a cause, treat a condition, or replace a physician or physical therapist. Demonstration videos are educational illustrations of movements. If you have [warning signs](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain), stop and get medical care.
+Remedy does not diagnose a cause, treat a condition, or replace a physician or a physical therapist. The videos show the movements. They are not medical care. If you have [warning signs](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain), stop and get medical care.
 
-There is no live coach, no community feed, and no Android app yet. Remedy covers the back only: no neck, shoulder, hip, or knee programs.
+There is no live coach, no community feed, and no Android app. Remedy is for the back only.
 
-Not sure what your back needs yet? Start with [exercises for lower back pain](https://remedyrecoveries.com/guides/lower-back-pain-exercises) or the [full set of guides](https://remedyrecoveries.com/guides/).
+Not sure what to read first? Start with [exercises for lower back pain](https://remedyrecoveries.com/guides/lower-back-pain-exercises) or the [guides](https://remedyrecoveries.com/guides/).
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/pricing">
-Pricing
-
 # Remedy pricing
 
-Free to download. Full access is an auto-renewing subscription billed through Apple. These are US prices.
+Free to download. Full access is a subscription billed through Apple. It renews until you cancel.
+
+These are US prices. There is no checkout on this website.
 
 Weekly
 
@@ -450,8 +346,6 @@ $12.99 / month
 
 14-day free trial where offered
 
-Best value
-
 Annual
 
 $79.99 / year
@@ -464,17 +358,17 @@ About $6.67 a month
 
 ## Every plan includes
 
-- A personalized 10 to 16 week program
+- A 10 to 16 week program built from your answers
 
-- A demonstration video for every exercise
+- A video on every exercise
 
-- Before-and-after pain check-ins and a pain trend
+- Sessions of 15, 20, or 30 minutes, on 3 to 7 days you pick
 
-- Workout days and reminders
+- A pain rating before and after each session
 
 - A new program, or a harder one, when you finish
 
-- Gym, band and dumbbell, or no-equipment versions
+- An armadillo that moves up at 1, 4, 9, and 15 finished sessions. Missed days do not shrink it.
 
 ## Billing, cancelling, and refunds
 
@@ -502,7 +396,7 @@ Yes. These are US prices. The App Store shows the price in your local currency b
 
 No. Remedy is a consumer app you subscribe to yourself. It is not an employer benefit or a covered medical service.
 
-Payment is charged to your Apple ID account at confirmation of purchase. The subscription renews automatically unless you cancel at least 24 hours before the end of the current period. See the [Terms of Service](https://remedyrecoveries.com/terms).
+Payment is charged to your Apple ID at confirmation of purchase. The subscription renews unless you cancel at least 24 hours before the end of the current period. See the [Terms of Service](https://remedyrecoveries.com/terms).
 
 ## Try Remedy free
 
@@ -512,11 +406,9 @@ Download it, answer a few questions, and see your program before you decide.
 </page>
 
 <page url="https://remedyrecoveries.com/faq">
-FAQ
-
 # Frequently asked questions
 
-Everything people ask about Remedy. Can’t find your answer? [Contact us](https://remedyrecoveries.com/contact).
+Price, safety, equipment, and the armadillo. If your question is missing, [contact us](https://remedyrecoveries.com/contact).
 
 ## The app
 
@@ -526,7 +418,7 @@ Remedy: Back Pain Relief is an iPhone app for people with back pain. You answer 
 
 ### Who is Remedy for?
 
-Adults 17 and older with everyday back pain or stiffness who want a structured plan: desk workers, parents, people who lift, and people who just want to move more comfortably. It is not for people with warning signs or a new injury.
+Adults 17 and older with everyday back pain who want a structured plan: desk workers, parents, people who lift, and people who just want to move more comfortably. It is not for people with warning signs or a new injury.
 
 ### Is it for lower back or upper back pain?
 
@@ -538,7 +430,7 @@ Both. Onboarding asks whether it is your upper back, lower back, or all over, an
 
 ### How long is each session?
 
-Each session shows its length and number of exercises before you start. A typical example is about 19 minutes with five exercises.
+You choose 15, 20, or 30 minutes. Each session shows its length and its exercises before you start.
 
 ### Do I need equipment?
 
@@ -546,7 +438,7 @@ No. You choose full gym access, bands and light dumbbells, or open floor space, 
 
 ### Is Remedy on Android?
 
-Not yet. Remedy is iPhone only, and needs iOS 15.1 or later.
+No. Remedy is iPhone only. It needs iOS 15.1 or later.
 
 ## Price and subscriptions
 
@@ -570,7 +462,7 @@ App Store refunds are handled by Apple at [reportaproblem.apple.com](https://rep
 
 ### Is Remedy physical therapy?
 
-No. Remedy is a fitness and wellness app. It does not diagnose or treat conditions and is not a substitute for a doctor or physical therapist.
+No. Remedy is a fitness app. It does not diagnose or treat conditions and is not a substitute for a doctor or physical therapist.
 
 ### Is Remedy safe to use with back pain?
 
@@ -588,15 +480,15 @@ The Remedy team. Guides are general fitness information based on published clini
 
 ### What is the armadillo?
 
-Every Remedy account comes with a pet armadillo that you name. It starts curled up in a ball and uncurls as you finish sessions. It is company, not a replacement for the program.
+Every Remedy account comes with one armadillo that you name. It shows how many sessions you have finished. It is not a comment on your back, and it is not a promise about pain.
 
-### How does the armadillo grow?
+### When does the armadillo move up?
 
-It has five stages. It moves up after your 1st, 4th, 9th, and 15th finished session, counted across your whole account. Missing a day never shrinks it. It just waits.
+It has five stages. Curled is 0 finished sessions. It moves up at 1, 4, 9, and 15 finished sessions, the 1st, 4th, 9th, and 15th. Missed days do not shrink it. It does not describe your back.
 
 ### What does the armadillo do all day?
 
-It has moods. It sleeps at night, naps on rest days, reads a book upside down, and gets grumpy if you poke it too much. Its job is to be on your side.
+It stays at the stage you have reached. It does not describe your back.
 
 ## Account and data
 
@@ -612,23 +504,23 @@ In the app, go to Profile and choose Delete Account, or [email us](https://remed
 
 Email [social@remedyrecoveries.com](mailto:social@remedyrecoveries.com).
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/about">
-About
-
 # About Remedy
 
-Remedy makes a back pain app for iPhone: a structured, video-guided back fitness program for people who want a plan instead of a pile of videos.
+Remedy makes a back pain app for iPhone. It is a program of short sessions, with a video on every exercise.
+
+A fitness program, not medical care.
 
 ## What we make
 
-Remedy: Back Pain Relief is a consumer iPhone app. You answer a short onboarding about your back, and it builds a 10 to 16 week program of short sessions, with a demonstration video for every exercise and a pain check-in before and after. It also comes with a pet armadillo that you name and that grows as you finish sessions. It launched on the App Store on October 13, 2026.
+Remedy: Back Pain Relief is an iPhone app. You answer a short onboarding about your back. It builds a 10 to 16 week program. Sessions are 15, 20, or 30 minutes, on 3 to 7 days you pick. You rate pain before the session and after it. You also name an armadillo. It moves up at 1, 4, 9, and 15 finished sessions, and missed days do not shrink it. It does not describe your back. It launched on the App Store on October 13, 2026.
 
 - **What it is:** Back fitness app for people with back pain
 
@@ -652,7 +544,11 @@ Remedy: Back Pain Relief is a consumer iPhone app. You answer a short onboarding
 
 ## Why it exists
 
-Most people with a sore back end up in one of two places: guessing with random videos they stop doing within a week, or paying for care they can’t keep up with. Exercise is one of the best-supported options for everyday back pain, but it only works if you keep doing it for weeks and it gets harder at the right pace. Remedy is built to be that middle path: a real plan in your pocket, one session at a time.
+People with a sore back often save a few videos and stop. Or they pay for care they cannot keep up with.
+
+Guidelines often recommend exercise for everyday back pain. It takes weeks, and it should get harder at a steady pace.
+
+Remedy is that program. One session at a time. The armadillo is there so the next session is easier to start. It does not talk about your back.
 
 ## Who builds it
 
@@ -660,7 +556,7 @@ Most people with a sore back end up in one of two places: guessing with random v
 
 Founder and developer
 
-Rahul studies computer engineering and computer science at the University of Wisconsin–Madison and competes in powerlifting. He built Remedy end to end: the iOS app, the program engine that turns onboarding answers into a progressive plan, and subscriptions. He also co-founded [Relentless](https://relentlesstough.com/), a mental training app for athletes.
+Rahul studies computer engineering and computer science at the University of Wisconsin–Madison and competes in powerlifting. He built Remedy end to end: the iOS app, the program engine that turns onboarding answers into a plan, and subscriptions. He also co-founded [Relentless](https://relentlesstough.com/), a mental training app for athletes.
 
 [Rahul on LinkedIn](https://www.linkedin.com/in/rahul-kumar-aa1a8b32a/)
 
@@ -682,16 +578,14 @@ Rahul studies computer engineering and computer science at the University of Wis
 
 Remedy is operated by Kumar Holdings LLC, doing business as Remedy.8209 W 127th Cir, Overland Park, KS 66213, USA[social@remedyrecoveries.com](mailto:social@remedyrecoveries.com)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/">
-Exercise library
-
 # Back exercises, step by step
 
 Every exercise in the Remedy app, with how to do it, form cues, common mistakes, and where it fits in a back program. General fitness information, not medical advice.
@@ -901,16 +795,14 @@ Pick a few exercises from different groups rather than many from one. A useful r
 
 If you would rather not assemble it yourself, Remedy picks from this library for you based on your answers, sets the reps, and moves you to harder versions as you go.
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/cat-cow">
-Mobility exercise
-
 # Cat-cow stretch
 
 An all-fours movement that alternates rounding and arching your spine. It is one of the gentlest ways to get a stiff back moving, which is why Remedy often uses it at the start of a session.
@@ -999,16 +891,14 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/open-book-rotation">
-Mobility exercise
-
 # Open-book rotation
 
 A side-lying rotation for the upper and middle back. The top arm opens like the cover of a book while the knees stay stacked.
@@ -1089,16 +979,14 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/thoracic-extension">
-Mobility exercise
-
 # Chair thoracic extension
 
 A gentle backward bend of the upper back over the top of a chair. You can do it at a desk in under a minute.
@@ -1176,16 +1064,14 @@ For people whose back gets tight from a chair and a screen.Read the guide](https
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/hip-flexor-stretch">
-Mobility exercise
-
 # Hip flexor stretch
 
 A lunge-position stretch for the front of the hip. Remedy’s version starts half-kneeling, with one knee on the floor.
@@ -1266,16 +1152,14 @@ What a 2024 trial found about walking and back pain, and how to build up.Read th
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/mckenzie-press-up">
-Mobility exercise
-
 # McKenzie press-up
 
 A press-up from lying on your stomach where the hips stay on the floor and the lower back extends. It comes from the McKenzie method, also called Mechanical Diagnosis and Therapy.
@@ -1355,16 +1239,14 @@ For people whose back gets tight from a chair and a screen.Read the guide](https
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/dead-bug">
-Core and stability exercise
-
 # Dead bug exercise
 
 A core exercise done on your back: you slowly lower an opposite arm and leg while keeping your trunk still. It trains your core to hold steady while your limbs move.
@@ -1448,16 +1330,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/bird-dog">
-Core and stability exercise
-
 # Bird dog exercise
 
 From your hands and knees, you reach one arm forward and the opposite leg back while keeping your back still. It is one of the most widely used exercises for back stability.
@@ -1551,16 +1431,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/side-plank-knees">
-Core and stability exercise
-
 # Side plank from the knees
 
 A shorter-lever side plank with your knees on the floor. It builds endurance in the muscles on the side of the trunk.
@@ -1643,16 +1521,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/side-plank">
-Core and stability exercise
-
 # Side plank
 
 A side plank on your feet. Your body holds a straight line from ankles to shoulders, supported on one forearm.
@@ -1732,16 +1608,14 @@ What “core” really means for a sore back, and a progression from floor to st
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/suitcase-carry">
-Core and stability exercise
-
 # Suitcase carry
 
 Walking while holding a weight in one hand, like carrying a suitcase. The goal is to stay upright and not lean.
@@ -1818,16 +1692,14 @@ What “core” really means for a sore back, and a progression from floor to st
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/glute-bridge">
-Glutes and hips exercise
-
 # Glute bridge
 
 Lying on your back with knees bent, you drive through your heels to lift your hips. It strengthens the glutes, the main muscles that extend the hips.
@@ -1909,16 +1781,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/single-leg-glute-bridge">
-Glutes and hips exercise
-
 # Single-leg glute bridge
 
 A glute bridge on one leg, with the other leg held straight. It doubles the load on the working side and adds a balance challenge for the hips.
@@ -1995,16 +1865,14 @@ Why a back routine is measured in weeks, and what progress looks like.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/barbell-hip-thrust">
-Glutes and hips exercise
-
 # Barbell hip thrust
 
 A loaded bridge with your upper back on a bench and a barbell across your hips. It lets you load the glutes heavily without putting the weight on your spine.
@@ -2075,16 +1943,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/bodyweight-hip-hinge">
-Strength exercise
-
 # Hip hinge
 
 Bending forward by pushing your hips back while your spine stays long. It is the movement pattern behind deadlifts and behind picking things up safely.
@@ -2166,16 +2032,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/banded-romanian-deadlift">
-Strength exercise
-
 # Banded Romanian deadlift
 
 A hip hinge against a resistance band anchored under your feet. The band adds load at the top of the movement without heavy weight.
@@ -2249,16 +2113,14 @@ Gym · Advanced](https://remedyrecoveries.com/exercises/kettlebell-deadlift)
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/single-leg-romanian-deadlift">
-Strength exercise
-
 # Single-leg Romanian deadlift
 
 A hip hinge on one leg while the other leg reaches straight back. It builds strength in the back of the hips and legs and challenges balance.
@@ -2337,16 +2199,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/dumbbell-romanian-deadlift">
-Strength exercise
-
 # Dumbbell Romanian deadlift
 
 A hip hinge holding a dumbbell in each hand. A slow lower builds strength through the hamstrings, glutes, and the muscles along the spine.
@@ -2420,16 +2280,14 @@ Band or dumbbells · Intermediate](https://remedyrecoveries.com/exercises/goblet
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/kettlebell-deadlift">
-Strength exercise
-
 # Kettlebell deadlift
 
 Lifting a kettlebell from the floor between your feet using a hip hinge. It is how you learn to pick something heavy up off the ground.
@@ -2506,16 +2364,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/bodyweight-squat">
-Strength exercise
-
 # Bodyweight squat
 
 A controlled squat with no load. It builds leg and hip strength for getting up from chairs, the floor, and the car.
@@ -2604,16 +2460,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/goblet-squat">
-Strength exercise
-
 # Goblet squat
 
 A squat holding one dumbbell or kettlebell at your chest. The weight in front helps you stay upright.
@@ -2686,16 +2540,14 @@ Band or dumbbells · Beginner](https://remedyrecoveries.com/exercises/banded-row
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/split-squat">
-Strength exercise
-
 # Split squat
 
 A squat in a staggered stance, one foot forward and one back. It trains one leg at a time.
@@ -2774,16 +2626,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/leg-press">
-Strength exercise
-
 # Leg press
 
 A machine press for the legs. Your back is supported by the seat while the legs push the load.
@@ -2860,16 +2710,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/banded-row">
-Strength exercise
-
 # Resistance band row
 
 Pulling a resistance band toward your lower ribs and squeezing your shoulder blades together. It strengthens the upper and middle back.
@@ -2947,16 +2795,14 @@ For people whose back gets tight from a chair and a screen.Read the guide](https
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/seated-cable-row">
-Strength exercise
-
 # Seated cable row
 
 A seated horizontal pull on a cable machine. It builds the muscles between and around the shoulder blades.
@@ -3033,16 +2879,14 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/back-extension">
-Strength exercise
-
 # 45-degree back extension
 
 A hinge on a 45-degree bench with your hips on the pad and feet anchored. You lower your upper body, then rise until your body is one straight line.
@@ -3113,16 +2957,14 @@ No equipment · Intermediate](https://remedyrecoveries.com/exercises/single-leg-
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/childs-pose">
-Stretches and recovery exercise
-
 # Child’s pose for back pain
 
 A resting stretch where you sit back toward your heels with your arms stretched out in front. It eases the low back and hips at the end of a session.
@@ -3203,16 +3045,14 @@ Why mornings feel worst, what usually helps, and when stiffness needs a doctor.R
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/figure-4-stretch">
-Stretches and recovery exercise
-
 # Figure-4 stretch
 
 A stretch for the glutes and the piriformis, done lying on your back with one ankle crossed over the opposite knee.
@@ -3282,16 +3122,14 @@ Gentle stretches that ease a stiff lower back, and why stretching alone is not e
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/exercises/hamstring-stretch">
-Stretches and recovery exercise
-
 # Lying hamstring stretch
 
 A hamstring stretch done lying on your back, holding behind your thigh and straightening the knee.
@@ -3365,16 +3203,14 @@ Why mornings feel worst, what usually helps, and when stiffness needs a doctor.R
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/">
-Guides
-
 # Guides for a sore back
 
 Plain-language answers to the questions people actually search when their back hurts, each one sourced to clinical guidelines and research. General fitness information, not medical advice.
@@ -3429,16 +3265,14 @@ If you want a plan instead of assembling one yourself, the [Remedy app](https://
 
 How we write these: [editorial standards](https://remedyrecoveries.com/about#editorial).
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/lower-back-pain-exercises">
-Guide
-
 # Exercises for lower back pain: what actually helps
 
 Exercise is one of the most recommended things you can do for a sore lower back. There is no single magic move. What works is a sensible mix, done regularly and made a little harder over time.
@@ -3593,8 +3427,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -3605,16 +3437,14 @@ What “core” really means for a sore back, and a progression from floor to st
 ### Back routine with no equipment
 What a home routine for a sore back needs, using only the floor.Read the guide](https://remedyrecoveries.com/guides/back-exercises-no-equipment)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/stretches-for-lower-back-pain">
-Guide
-
 # Stretches for lower back pain
 
 Stretching can make a stiff back feel better in the moment. It works best as the warm-up and cooldown of a routine that also builds strength.
@@ -3759,8 +3589,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -3771,16 +3599,14 @@ Why mornings feel worst, what usually helps, and when stiffness needs a doctor.R
 ### Back pain from sitting
 For people whose back gets tight from a chair and a screen.Read the guide](https://remedyrecoveries.com/desk)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/core-exercises-for-back-pain">
-Guide
-
 # Core exercises for back pain
 
 Core work for back pain is not about crunches or a six-pack. It is about keeping your trunk steady while your arms and legs move, and building that up step by step.
@@ -3915,8 +3741,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -3927,16 +3751,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 ### How long to stick with a routine
 Why a back routine is measured in weeks, and what progress looks like.Read the guide](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/upper-back-pain-exercises">
-Guide
-
 # Exercises for upper and middle back pain
 
 A tight upper back usually responds well to two things: moving it more, especially into extension and rotation, and making the muscles between your shoulder blades stronger.
@@ -4069,8 +3891,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -4081,16 +3901,14 @@ Gentle stretches that ease a stiff lower back, and why stretching alone is not e
 ### When to see a doctor
 The warning signs that mean you need medical care, not an exercise routine.Read the guide](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/is-walking-good-for-back-pain">
-Guide
-
 # Is walking good for back pain?
 
 Walking is free, needs no equipment, and has some of the most encouraging recent evidence of any activity for people who keep getting back pain.
@@ -4212,8 +4030,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -4224,16 +4040,14 @@ Why a back routine is measured in weeks, and what progress looks like.Read the g
 ### Lower back stiff in the morning
 Why mornings feel worst, what usually helps, and when stiffness needs a doctor.Read the guide](https://remedyrecoveries.com/guides/morning-back-stiffness)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain">
-Guide
-
 # When to see a doctor for back pain
 
 Most back pain gets better on its own with time and staying active. A few warning signs mean you should get medical care instead of starting an exercise routine.
@@ -4333,8 +4147,6 @@ See a doctor if it is not improving after a few weeks, is getting worse, or is s
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -4345,16 +4157,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 ### Lower back stiff in the morning
 Why mornings feel worst, what usually helps, and when stiffness needs a doctor.Read the guide](https://remedyrecoveries.com/guides/morning-back-stiffness)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/best-back-pain-apps">
-Guide
-
 # Back pain apps compared: which one fits your situation
 
 The right back pain app depends less on features and more on your situation: whether your employer covers one, whether you want a care team, and what you are willing to pay.
@@ -4470,8 +4280,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -4482,16 +4290,14 @@ The warning signs that mean you need medical care, not an exercise routine.Read 
 ### How long to stick with a routine
 Why a back routine is measured in weeks, and what progress looks like.Read the guide](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/morning-back-stiffness">
-Guide
-
 # Why your lower back is stiff in the morning
 
 Waking up stiff and loosening up as you move is one of the most common back complaints. Here is what tends to help, and the pattern that is worth getting checked.
@@ -4608,8 +4414,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -4620,16 +4424,14 @@ Gentle stretches that ease a stiff lower back, and why stretching alone is not e
 ### How long to stick with a routine
 Why a back routine is measured in weeks, and what progress looks like.Read the guide](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/sore-back-after-gym">
-Guide
-
 # Sore back after the gym: soreness or a tweak?
 
 Most back pain after training is either normal soreness or a minor tweak. Telling them apart decides whether you train through it, train around it, or get it looked at.
@@ -4756,8 +4558,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [For athletes
@@ -4768,16 +4568,14 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 ### How long to stick with a routine
 Why a back routine is measured in weeks, and what progress looks like.Read the guide](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/back-exercises-no-equipment">
-Guide
-
 # Back exercises with no equipment
 
 You do not need a gym to look after a sore back. You need a floor, a few minutes, and a routine that gets slightly harder over time.
@@ -4815,7 +4613,7 @@ Guidelines like NICE’s recommend exercise programs for low back pain without n
 
 Doing thirty easy glute bridges is less useful than moving on to a harder version. A simple ladder looks like this: glute bridge, then single-leg bridge. For hinges, the [hip hinge](https://remedyrecoveries.com/exercises/bodyweight-hip-hinge) leads to the [single-leg Romanian deadlift](https://remedyrecoveries.com/exercises/single-leg-romanian-deadlift). For stability work, short holds of around eight to ten seconds, repeated, tend to work better than one long shaky hold.
 
-Remedy works the same way: once an exercise reaches 15 reps, the program swaps in a harder variant instead of adding more. This is also why a routine needs weeks to show results; [how long to stick with it](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine) covers what to expect.
+A routine needs weeks to show results. [How long to stick with it](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine) covers what to expect.
 
 ## Keeping it safe
 
@@ -4908,8 +4706,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -4920,16 +4716,14 @@ What “core” really means for a sore back, and a progression from floor to st
 ### Sore back after the gym
 Normal soreness vs a tweak, and how to keep training without guessing.Read the guide](https://remedyrecoveries.com/guides/sore-back-after-gym)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine">
-Guide
-
 # How long should you stick with a back routine?
 
 Most people quit a back routine in the first week or two, right before it has had a chance to do anything. Here is a more realistic timeline.
@@ -5030,8 +4824,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -5042,16 +4834,14 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 ### Back pain from sitting
 For people whose back gets tight from a chair and a screen.Read the guide](https://remedyrecoveries.com/desk)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/guides/mental-side-of-a-sore-back">
-For athletes
-
 # When a sore back gets in your head
 
 The back is sore. Training is the thing you actually care about. The hard part is walking into the session anyway.
@@ -5161,8 +4951,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -5173,21 +4961,29 @@ Why a back routine is measured in weeks, and what progress looks like.Read the g
 ### When to see a doctor
 The warning signs that mean you need medical care, not an exercise routine.Read the guide](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>
 
 <page url="https://remedyrecoveries.com/desk">
-Guide
-
 # Back pain from sitting all day
 
 If your back gets tight from a chair and a screen, the fix is less about perfect posture and more about moving often and building a back that handles long days.
 
 By [the Remedy team](https://remedyrecoveries.com/about#editorial) · Published September 8, 2026 · Updated October 23, 2026 · 2 min read · 3 sources
+
+The session is already chosen. You do not build the workout.
+
+- **Hinge Health**Digital physical therapy with a care team, usually through work or a health plan. If yours includes it, start there.
+
+- **Sword**The same kind of program. Sword acquired Kaia Health. Also usually a work benefit, not a download you buy yourself.
+
+- **Curable**Pain education and mind-body practice. Not an exercise program. It can sit beside one.
+
+- **Remedy**The iPhone program you download yourself. Short sessions for a back that sits all day. No care team.
 
 On this page
 
@@ -5318,8 +5114,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -5330,9 +5124,9 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 ### Stretches for lower back pain
 Gentle stretches that ease a stiff lower back, and why stretching alone is not enough.Read the guide](https://remedyrecoveries.com/guides/stretches-for-lower-back-pain)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 </page>

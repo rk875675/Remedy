@@ -16,7 +16,7 @@
   <link rel="manifest" href="/site.webmanifest" />
   <meta property="og:image" content="https://remedyrecoveries.com/assets/og-1200.png?v=fa533dd3" />
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=0bc49f33" />
-  <link rel="stylesheet" href="/styles.css?v=23" />
+  <link rel="stylesheet" href="/styles.css?v=41" />
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://remedyrecoveries.com/terms#page","url":"https://remedyrecoveries.com/terms","name":"Terms of Service","inLanguage":"en-US","isPartOf":{"@id":"https://remedyrecoveries.com/#website"},"publisher":{"@id":"https://remedyrecoveries.com/#org"},"dateModified":"2026-10-15"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://remedyrecoveries.com/"},{"@type":"ListItem","position":2,"name":"Terms of Service","item":"https://remedyrecoveries.com/terms"}]}]}</script>
 </head>
 <body>
@@ -45,11 +45,12 @@
           <a href="/back-pain-app">Back pain app</a>
           <a href="/about">About</a>
           <a href="/contact">Contact</a>
+          <a href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106">Get the app</a>
         </nav>
       </details>
     </div>
   </header>
-  <main id="main" class="legal">
+  <main id="main" tabindex="-1" class="legal">
     <h1>Terms of Service</h1>
     <p class="updated">Last updated: October 15, 2026</p>
 
@@ -149,8 +150,8 @@
       <div class="footer-grid">
         <div class="footer-about">
           <a href="/" class="footer-brand" aria-label="Remedy home"><img src="/assets/logo-64.png?v=b71df1f6" width="28" height="28" alt="" loading="lazy" /> Remedy</a>
-          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short daily sessions built around your answers.</p>
-          <a class="store-badge store-badge-sm" href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106"><img src="/assets/app-store-badge.svg?v=2f2fe1cb" width="162" height="54" alt="Download Remedy on the App Store" loading="lazy" /></a>
+          <p>Remedy: Back Pain Relief is a structured, video-guided back fitness program for iPhone. Short sessions on the days you pick.</p>
+          <a class="store-badge store-badge-sm" href="https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106"><img src="/assets/app-store-badge.svg?v=2f2fe1cb" width="162" height="54" alt="Download Remedy on the App Store" decoding="async" loading="lazy" /></a>
         </div>
         <nav aria-label="App">
           <h2>App</h2>
@@ -186,6 +187,14 @@
     document.addEventListener('click', function (e) {
       var menu = document.querySelector('.nav-menu[open]');
       if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var menu = document.querySelector('.nav-menu[open]');
+      if (!menu) return;
+      menu.removeAttribute('open');
+      var summary = menu.querySelector('summary');
+      if (summary) summary.focus();
     });
   </script>
 

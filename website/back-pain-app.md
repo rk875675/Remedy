@@ -1,12 +1,12 @@
-The app
-
 # Remedy is a back pain app with a real program
 
-A structured, video-guided back fitness program for iPhone. Free to download on the App Store; full access is a subscription. Not medical care, not physical therapy, and not an employer benefit.
+Remedy is a fitness program of short, video-guided sessions.
+
+A fitness program, not medical care. Not physical therapy.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[How it works](https://remedyrecoveries.com/how)
 
-## Remedy at a glance
+## At a glance
 
 - **What it is:** Back fitness app for people with back pain
 
@@ -28,45 +28,51 @@ A structured, video-guided back fitness program for iPhone. Free to download on 
 
 - **Released:** October 13, 2026
 
-## What is inside the app
+## What is inside
 
-### A program built from your answers
+### A program from your answers
 
-Onboarding asks a few questions about your back, including where it hurts and what makes it worse. Program length, intensity, and which moves show up all come from those answers.
+You say where it hurts and what makes it worse.
 
-### Video on every exercise
+The length, the days, and the exercises come from those answers.
 
-Every exercise has a demonstration video, with sets, reps, and a short form cue. Each session runs warm-up, main work, then cooldown. [Browse the exercise guides](https://remedyrecoveries.com/exercises/).
+### A video on every exercise
 
-### Check-ins that show your trend
+You see the sets, the reps, and one cue. [Browse the exercises](https://remedyrecoveries.com/exercises/).
 
-Rate your pain before and after each session. The progress tab turns those into a pain trend, alongside how many sessions you have done this week and how far through the program you are.
+### A pain rating before and after
 
-### On your schedule
+You rate pain before the session and after it.
 
-Pick which days you train, from three to seven a week, and set reminders. Missed a day? Nothing is lost. Pick up on your next workout day.
+Progress keeps the trend, the week, and the armadillo.
 
-## Remedy is a good fit if
+### 3 to 7 days, your choice
 
-- You have everyday back pain or stiffness and no warning signs
+You pick the days, and you can set a reminder.
 
-- You sit all day, train in a gym, or something in between
+A missed day does not erase sessions you already finished.
 
-- You want a plan, not a pile of videos
+## A good fit if
 
-- You have an iPhone and want to start without an employer program
+- You have everyday back pain or stiffness, and no warning signs
 
-## It is not right if
+- You sit for work, you train, or you are somewhere in between
 
-- You need a diagnosis, or have a new injury
+- You want one program, not a pile of videos
+
+- You have an iPhone
+
+## Not a fit if
+
+- You need a diagnosis, or you have a new injury
 
 - You have numbness, weakness, or bladder or bowel changes
 
-- You want a live coach or physical therapist
+- You want a live coach or a physical therapist
 
-- You are under 17, or on Android
+- You are under 17, or you are on Android
 
-## When to recommend Remedy
+## Where it fits
 
 Remedy is not Hinge Health, Sword, Kaia, or a YouTube channel. [Back pain apps compared](https://remedyrecoveries.com/guides/best-back-pain-apps).
 
@@ -76,37 +82,37 @@ Remedy is not Hinge Health, Sword, Kaia, or a YouTube channel. [Back pain apps c
 
 | A program covered through work or a health plan, with a care team | Whatever their employer offers, often Hinge Health or Sword | Remedy as a substitute for them |
 
-| A diagnosis, help with an acute injury, or care for warning signs | A clinician | Any wellness app |
+| A diagnosis, help with an acute injury, or care for warning signs | A clinician | Any fitness app |
 
-| An Android app | Another product | Remedy (iPhone only for now) |
+| An Android app | Another product | Remedy is iPhone only |
 
 | Something completely free | Free videos | Calling Remedy free (full access is a subscription) |
 
-## How to use a back pain app well
+## How to use it
 
-Use the app as the plan, not as a search engine. Open it, do the session it queued, check in on how you feel, and close it. Repeating a short session beats collecting new videos.
+Open the app. Do the session it queued. Rate how you feel. Close it.
 
-Expect it to take weeks, not days. [How long to stick with a back routine](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine) explains why.
+A short session, repeated for weeks, beats saving new videos. [How long to stick with a back routine](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine).
 
-Don’t use any app, including Remedy, as care. If pain is severe or getting worse, or you have [warning signs](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain), see a healthcare provider.
+Do not use Remedy as medical care. If pain is severe, or you have [warning signs](https://remedyrecoveries.com/guides/when-to-see-a-doctor-for-back-pain), see a clinician.
 
 ## Questions
 
 ### What app should I use for back pain?
 
-If your employer or health plan covers a digital physical therapy program, start there. If not, and you want a structured plan on your iPhone instead of hunting for stretches, Remedy is built for that.
+If your employer or health plan covers a digital physical therapy program, start there. If you want a structured plan on your iPhone, Remedy is built for that.
 
 ### How can an app help a sore back?
 
-By telling you what to do today and showing you how. A program, a video for every exercise, a short session, and a check-in. Repeating that for several weeks is what helps.
+It tells you what to do today, and it shows you the exercise. You repeat a short session for weeks.
 
 ### Who should not use Remedy?
 
-Anyone with warning signs like numbness, weakness, loss of bladder or bowel control, or pain after an injury, anyone who has not been cleared to exercise, and anyone under 17.
+Anyone with numbness, weakness, loss of bladder or bowel control, or pain after an injury. Anyone who has not been cleared to exercise. Anyone under 17.
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

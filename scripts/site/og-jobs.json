@@ -1,251 +1,202 @@
 [
   {
     "key": "home",
-    "title": "Back pain, made simple"
+    "title": "Back Pain MadeLess Boring"
   },
   {
     "key": "back-pain-app",
-    "title": "Remedy is a back pain app with a real program",
-    "kicker": "The app"
+    "title": "Remedy is a back pain app with a real program"
   },
   {
     "key": "how",
-    "title": "How Remedy works, step by step",
-    "kicker": "How it works"
+    "title": "How Remedy works, step by step"
   },
   {
     "key": "pricing",
-    "title": "Remedy pricing",
-    "kicker": "Pricing"
+    "title": "Remedy pricing"
   },
   {
     "key": "faq",
-    "title": "Frequently asked questions",
-    "kicker": "FAQ"
+    "title": "Frequently asked questions"
   },
   {
     "key": "about",
-    "title": "About Remedy",
-    "kicker": "About"
+    "title": "About Remedy"
   },
   {
     "key": "contact",
-    "title": "Contact Remedy",
-    "kicker": "Contact"
+    "title": "Contact Remedy"
   },
   {
     "key": "exercises",
-    "title": "Back exercises, step by step",
-    "kicker": "Exercise library"
+    "title": "Back exercises, step by step"
   },
   {
     "key": "ex-cat-cow",
-    "title": "Cat-cow stretch",
-    "kicker": "Mobility exercise"
+    "title": "Cat-cow stretch"
   },
   {
     "key": "ex-open-book-rotation",
-    "title": "Open-book rotation",
-    "kicker": "Mobility exercise"
+    "title": "Open-book rotation"
   },
   {
     "key": "ex-thoracic-extension",
-    "title": "Chair thoracic extension",
-    "kicker": "Mobility exercise"
+    "title": "Chair thoracic extension"
   },
   {
     "key": "ex-hip-flexor-stretch",
-    "title": "Hip flexor stretch",
-    "kicker": "Mobility exercise"
+    "title": "Hip flexor stretch"
   },
   {
     "key": "ex-mckenzie-press-up",
-    "title": "McKenzie press-up",
-    "kicker": "Mobility exercise"
+    "title": "McKenzie press-up"
   },
   {
     "key": "ex-dead-bug",
-    "title": "Dead bug exercise",
-    "kicker": "Core and stability exercise"
+    "title": "Dead bug exercise"
   },
   {
     "key": "ex-bird-dog",
-    "title": "Bird dog exercise",
-    "kicker": "Core and stability exercise"
+    "title": "Bird dog exercise"
   },
   {
     "key": "ex-side-plank-knees",
-    "title": "Side plank from the knees",
-    "kicker": "Core and stability exercise"
+    "title": "Side plank from the knees"
   },
   {
     "key": "ex-side-plank",
-    "title": "Side plank",
-    "kicker": "Core and stability exercise"
+    "title": "Side plank"
   },
   {
     "key": "ex-suitcase-carry",
-    "title": "Suitcase carry",
-    "kicker": "Core and stability exercise"
+    "title": "Suitcase carry"
   },
   {
     "key": "ex-glute-bridge",
-    "title": "Glute bridge",
-    "kicker": "Glutes and hips exercise"
+    "title": "Glute bridge"
   },
   {
     "key": "ex-single-leg-glute-bridge",
-    "title": "Single-leg glute bridge",
-    "kicker": "Glutes and hips exercise"
+    "title": "Single-leg glute bridge"
   },
   {
     "key": "ex-barbell-hip-thrust",
-    "title": "Barbell hip thrust",
-    "kicker": "Glutes and hips exercise"
+    "title": "Barbell hip thrust"
   },
   {
     "key": "ex-bodyweight-hip-hinge",
-    "title": "Hip hinge",
-    "kicker": "Strength exercise"
+    "title": "Hip hinge"
   },
   {
     "key": "ex-banded-romanian-deadlift",
-    "title": "Banded Romanian deadlift",
-    "kicker": "Strength exercise"
+    "title": "Banded Romanian deadlift"
   },
   {
     "key": "ex-single-leg-romanian-deadlift",
-    "title": "Single-leg Romanian deadlift",
-    "kicker": "Strength exercise"
+    "title": "Single-leg Romanian deadlift"
   },
   {
     "key": "ex-dumbbell-romanian-deadlift",
-    "title": "Dumbbell Romanian deadlift",
-    "kicker": "Strength exercise"
+    "title": "Dumbbell Romanian deadlift"
   },
   {
     "key": "ex-kettlebell-deadlift",
-    "title": "Kettlebell deadlift",
-    "kicker": "Strength exercise"
+    "title": "Kettlebell deadlift"
   },
   {
     "key": "ex-bodyweight-squat",
-    "title": "Bodyweight squat",
-    "kicker": "Strength exercise"
+    "title": "Bodyweight squat"
   },
   {
     "key": "ex-goblet-squat",
-    "title": "Goblet squat",
-    "kicker": "Strength exercise"
+    "title": "Goblet squat"
   },
   {
     "key": "ex-split-squat",
-    "title": "Split squat",
-    "kicker": "Strength exercise"
+    "title": "Split squat"
   },
   {
     "key": "ex-leg-press",
-    "title": "Leg press",
-    "kicker": "Strength exercise"
+    "title": "Leg press"
   },
   {
     "key": "ex-banded-row",
-    "title": "Resistance band row",
-    "kicker": "Strength exercise"
+    "title": "Resistance band row"
   },
   {
     "key": "ex-seated-cable-row",
-    "title": "Seated cable row",
-    "kicker": "Strength exercise"
+    "title": "Seated cable row"
   },
   {
     "key": "ex-back-extension",
-    "title": "45-degree back extension",
-    "kicker": "Strength exercise"
+    "title": "45-degree back extension"
   },
   {
     "key": "ex-childs-pose",
-    "title": "Child’s pose for back pain",
-    "kicker": "Stretches and recovery exercise"
+    "title": "Child’s pose for back pain"
   },
   {
     "key": "ex-figure-4-stretch",
-    "title": "Figure-4 stretch",
-    "kicker": "Stretches and recovery exercise"
+    "title": "Figure-4 stretch"
   },
   {
     "key": "ex-hamstring-stretch",
-    "title": "Lying hamstring stretch",
-    "kicker": "Stretches and recovery exercise"
+    "title": "Lying hamstring stretch"
   },
   {
     "key": "guides",
-    "title": "Guides for a sore back",
-    "kicker": "Guides"
+    "title": "Guides for a sore back"
   },
   {
     "key": "lower-back-pain-exercises",
-    "title": "Exercises for lower back pain: what actually helps",
-    "kicker": "Guide"
+    "title": "Exercises for lower back pain: what actually helps"
   },
   {
     "key": "stretches-for-lower-back-pain",
-    "title": "Stretches for lower back pain",
-    "kicker": "Guide"
+    "title": "Stretches for lower back pain"
   },
   {
     "key": "core-exercises-for-back-pain",
-    "title": "Core exercises for back pain",
-    "kicker": "Guide"
+    "title": "Core exercises for back pain"
   },
   {
     "key": "upper-back-pain-exercises",
-    "title": "Exercises for upper and middle back pain",
-    "kicker": "Guide"
+    "title": "Exercises for upper and middle back pain"
   },
   {
     "key": "is-walking-good-for-back-pain",
-    "title": "Is walking good for back pain?",
-    "kicker": "Guide"
+    "title": "Is walking good for back pain?"
   },
   {
     "key": "when-to-see-a-doctor-for-back-pain",
-    "title": "When to see a doctor for back pain",
-    "kicker": "Guide"
+    "title": "When to see a doctor for back pain"
   },
   {
     "key": "best-back-pain-apps",
-    "title": "Back pain apps compared: which one fits your situation",
-    "kicker": "Guide"
+    "title": "Back pain apps compared: which one fits your situation"
   },
   {
     "key": "morning-back-stiffness",
-    "title": "Why your lower back is stiff in the morning",
-    "kicker": "Guide"
+    "title": "Why your lower back is stiff in the morning"
   },
   {
     "key": "sore-back-after-gym",
-    "title": "Sore back after the gym: soreness or a tweak?",
-    "kicker": "Guide"
+    "title": "Sore back after the gym: soreness or a tweak?"
   },
   {
     "key": "back-exercises-no-equipment",
-    "title": "Back exercises with no equipment",
-    "kicker": "Guide"
+    "title": "Back exercises with no equipment"
   },
   {
     "key": "how-long-to-stick-with-a-back-routine",
-    "title": "How long should you stick with a back routine?",
-    "kicker": "Guide"
+    "title": "How long should you stick with a back routine?"
   },
   {
     "key": "mental-side-of-a-sore-back",
-    "title": "When a sore back gets in your head",
-    "kicker": "For athletes"
+    "title": "When a sore back gets in your head"
   },
   {
     "key": "desk",
-    "title": "Back pain from sitting all day",
-    "kicker": "Guide"
+    "title": "Back pain from sitting all day"
   }
 ]

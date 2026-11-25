@@ -1,5 +1,3 @@
-Strength exercise
-
 # 45-degree back extension
 
 A hinge on a 45-degree bench with your hips on the pad and feet anchored. You lower your upper body, then rise until your body is one straight line.
@@ -70,9 +68,9 @@ No equipment · Intermediate](https://remedyrecoveries.com/exercises/single-leg-
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

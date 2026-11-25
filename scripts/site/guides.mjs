@@ -568,7 +568,7 @@ export const GUIDES = [
 
         <h2 id="progress">Progress by getting harder, not just longer</h2>
         <p>Doing thirty easy glute bridges is less useful than moving on to a harder version. A simple ladder looks like this: glute bridge, then single-leg bridge. For hinges, the {{exl:bodyweight-hip-hinge}} leads to the {{exl:single-leg-romanian-deadlift}}. For stability work, short holds of around eight to ten seconds, repeated, tend to work better than one long shaky hold.</p>
-        <p>Remedy works the same way: once an exercise reaches 15 reps, the program swaps in a harder variant instead of adding more. This is also why a routine needs weeks to show results; <a href="/guides/how-long-to-stick-with-a-back-routine">how long to stick with it</a> covers what to expect.</p>
+        <p>A routine needs weeks to show results. <a href="/guides/how-long-to-stick-with-a-back-routine">How long to stick with it</a> covers what to expect.</p>
 
         <h2 id="safety">Keeping it safe</h2>
         <ul>

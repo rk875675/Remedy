@@ -1,5 +1,3 @@
-Guide
-
 # Sore back after the gym: soreness or a tweak?
 
 Most back pain after training is either normal soreness or a minor tweak. Telling them apart decides whether you train through it, train around it, or get it looked at.
@@ -126,8 +124,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [For athletes
@@ -138,9 +134,9 @@ What a home routine for a sore back needs, using only the floor.Read the guide](
 ### How long to stick with a routine
 Why a back routine is measured in weeks, and what progress looks like.Read the guide](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

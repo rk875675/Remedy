@@ -1,5 +1,3 @@
-Guide
-
 # Back exercises with no equipment
 
 You do not need a gym to look after a sore back. You need a floor, a few minutes, and a routine that gets slightly harder over time.
@@ -37,7 +35,7 @@ Guidelines like NICE’s recommend exercise programs for low back pain without n
 
 Doing thirty easy glute bridges is less useful than moving on to a harder version. A simple ladder looks like this: glute bridge, then single-leg bridge. For hinges, the [hip hinge](https://remedyrecoveries.com/exercises/bodyweight-hip-hinge) leads to the [single-leg Romanian deadlift](https://remedyrecoveries.com/exercises/single-leg-romanian-deadlift). For stability work, short holds of around eight to ten seconds, repeated, tend to work better than one long shaky hold.
 
-Remedy works the same way: once an exercise reaches 15 reps, the program swaps in a harder variant instead of adding more. This is also why a routine needs weeks to show results; [how long to stick with it](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine) covers what to expect.
+A routine needs weeks to show results. [How long to stick with it](https://remedyrecoveries.com/guides/how-long-to-stick-with-a-back-routine) covers what to expect.
 
 ## Keeping it safe
 
@@ -130,8 +128,6 @@ Get medical care, not an exercise routine, if you have back pain with any of the
 
 This guide is general fitness information, not medical advice. [How we write our guides](https://remedyrecoveries.com/about#editorial).
 
-Keep reading
-
 ## Related guides
 
 [Guide
@@ -142,9 +138,9 @@ What “core” really means for a sore back, and a progression from floor to st
 ### Sore back after the gym
 Normal soreness vs a tweak, and how to keep training without guessing.Read the guide](https://remedyrecoveries.com/guides/sore-back-after-gym)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

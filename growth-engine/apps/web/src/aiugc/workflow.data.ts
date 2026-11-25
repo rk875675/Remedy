@@ -2,6 +2,12 @@ import type { Learning, WorkflowStep } from "./types";
 
 export const WORKFLOW_SOURCE = "Ernesto's workflow · .cursor/skills/ai-video-workflow/SKILL.md";
 
+export const UP_NEXT = {
+  after: "M2 · Pet reacts to the log",
+  url: "https://x.com/jonnyscales/status/2125244380483084498",
+  note: "56s clip on the post. Curiosity open, she talks like she is telling a friend, the demo is the video, the payoff is at the end. Bring this up before the next reference.",
+};
+
 export const WORKFLOW: WorkflowStep[] = [
   {
     n: 1,

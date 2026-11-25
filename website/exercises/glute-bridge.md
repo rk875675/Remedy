@@ -1,5 +1,3 @@
-Glutes and hips exercise
-
 # Glute bridge
 
 Lying on your back with knees bent, you drive through your heels to lift your hips. It strengthens the glutes, the main muscles that extend the hips.
@@ -81,9 +79,9 @@ Normal soreness vs a tweak, and how to keep training without guessing.Read the g
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

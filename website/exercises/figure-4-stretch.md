@@ -1,5 +1,3 @@
-Stretches and recovery exercise
-
 # Figure-4 stretch
 
 A stretch for the glutes and the piriformis, done lying on your back with one ankle crossed over the opposite knee.
@@ -69,9 +67,9 @@ Gentle stretches that ease a stiff lower back, and why stretching alone is not e
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 

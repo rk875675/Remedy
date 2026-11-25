@@ -1,5 +1,3 @@
-Mobility exercise
-
 # Open-book rotation
 
 A side-lying rotation for the upper and middle back. The top arm opens like the cover of a book while the knees stay stacked.
@@ -80,9 +78,9 @@ Mobility and strength for a tight upper or middle back, especially if you sit a 
 
 [More exercise guides](https://remedyrecoveries.com/exercises/)
 
-## Get a back program you can actually keep
+## Download Remedy
 
-Free to download on the App Store. Answer a few questions and your first session is ready in minutes.
+Free to download. You pay in the App Store.
 
 [](https://apps.apple.com/us/app/remedy-back-pain-relief/id6813745106)[Read the guides](https://remedyrecoveries.com/guides/)
 
